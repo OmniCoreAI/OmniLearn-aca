@@ -1,0 +1,56 @@
+import { Callout } from 'nextra/components'
+
+# Self-Hosting OmniLearn
+
+OmniLearn can be self-hosted on your own infrastructure using the **OmniLearn CLI**. The CLI handles everything from initial setup to ongoing maintenance, including Docker Compose generation, environment file management, service orchestration, backups, and health checks.
+
+## Quick Start
+
+Make sure you have **Docker Engine 20.10+**, **Docker Compose 2.0+**, and **Node.js 18+** installed, then run:
+
+```bash
+npx omnilearn@latest setup
+```
+
+The interactive setup wizard will walk you through domain configuration, database settings, admin credentials, and optional features. Once complete, start all services:
+
+```bash
+npx omnilearn start
+```
+
+OmniLearn will be available at **http://localhost** (or your configured domain). Log in with the admin credentials you provided during setup.
+
+<Callout type="info">
+The CLI generates `docker-compose.yml`, `.env`, and reverse proxy configuration for you. You do not need to write or maintain these files manually.
+</Callout>
+
+### Verify the installation
+
+```bash
+npx omnilearn doctor
+```
+
+### Common management commands
+
+```bash
+npx omnilearn stop       # Stop all services
+npx omnilearn start      # Start all services
+npx omnilearn logs       # Stream container logs
+npx omnilearn config     # View current configuration
+npx omnilearn backup     # Backup or restore the database
+npx omnilearn doctor     # Diagnose issues
+```
+
+## Documentation
+
+### [Installation](/self-hosting/installation)
+
+System requirements, quick install steps, and the full CLI command reference.
+
+### [Configuration](/self-hosting/configuration)
+
+Environment variables, AI features, email delivery, content storage, and SSL/domain setup.
+
+### [Maintenance](/self-hosting/maintenance)
+
+Updates, backups, monitoring, and troubleshooting guides.

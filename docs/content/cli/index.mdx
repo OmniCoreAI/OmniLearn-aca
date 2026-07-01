@@ -1,0 +1,79 @@
+import { Callout } from 'nextra/components'
+
+# CLI
+
+The OmniLearn CLI is the primary tool for deploying, managing, and developing OmniLearn. It orchestrates Docker Compose services and provides an interactive setup wizard for production deployments, as well as a full local development environment.
+
+<img src="/img/pages/cli/cli-screenshot.png" alt="OmniLearn CLI" style={{ borderRadius: '12px', marginTop: '1rem' }} />
+
+**Package**: [`omnilearn`](https://www.npmjs.com/package/omnilearn) on npm
+
+## Installation
+
+### Quick Start (recommended)
+
+```bash
+npx omnilearn@latest setup
+```
+
+### One-line Install (macOS / Linux)
+
+Installs Docker, Node.js, and launches the CLI:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/omnilearn/omnilearn/main/apps/cli/install.sh | bash
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/omnilearn/omnilearn/main/apps/cli/install.ps1 | iex
+```
+
+## Requirements
+
+- **Node.js** 18+
+- **Docker** with Docker Compose v2
+
+## What It Does
+
+The CLI handles two main workflows:
+
+### Production Deployment
+
+The [setup wizard](/cli/setup-wizard) generates a complete Docker Compose deployment with:
+
+- **OmniLearn app** container (Next.js + FastAPI)
+- **PostgreSQL** database (with optional pgvector for AI)
+- **Redis** cache
+- **Caddy** or **Nginx** reverse proxy (with optional auto-SSL)
+
+Each deployment gets a unique ID, allowing multiple instances on the same machine.
+
+### Local Development
+
+The [`dev` command](/cli/dev-mode) starts infrastructure in Docker and runs the API, web, and collaboration servers locally with hot reload.
+
+## Quick Reference
+
+| Command | Description |
+| --- | --- |
+| `npx omnilearn setup` | Interactive setup wizard |
+| `npx omnilearn start` | Start all services |
+| `npx omnilearn stop` | Stop all services |
+| `npx omnilearn update` | Update to latest or a specific version |
+| `npx omnilearn status` | Show service status |
+| `npx omnilearn health` | Run health checks |
+| `npx omnilearn logs` | Stream container logs |
+| `npx omnilearn config` | Show installation info |
+| `npx omnilearn env` | Edit environment variables |
+| `npx omnilearn backup` | Backup database |
+| `npx omnilearn restore <archive>` | Restore database from backup |
+| `npx omnilearn doctor` | Run diagnostics |
+| `npx omnilearn deployments` | Manage deployments & resource limits |
+| `npx omnilearn shell` | Open shell in a container |
+| `npx omnilearn dev` | Start dev environment |
+
+<Callout type="info">
+See [Commands](/cli/commands) for the full reference including all flags.
+</Callout>

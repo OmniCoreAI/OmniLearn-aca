@@ -1,0 +1,89 @@
+# Environment Variables
+
+The CLI generates a `.env` file during setup with all configuration variables. These can also be edited interactively with `npx omnilearn env`.
+
+## Domain & Hosting
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `OMNILEARN_DOMAIN` | Hostname | `localhost` |
+| `HTTP_PORT` | HTTP port for reverse proxy | `80` |
+| `NEXT_PUBLIC_OMNILEARN_API_URL` | Public API URL | `http://localhost/api/v1/` |
+| `NEXT_PUBLIC_OMNILEARN_BACKEND_URL` | Backend URL | `http://localhost` |
+| `NEXT_PUBLIC_OMNILEARN_DOMAIN` | Public domain | `localhost` |
+| `NEXT_PUBLIC_OMNILEARN_TOP_DOMAIN` | Top-level domain | `localhost` |
+| `NEXT_PUBLIC_OMNILEARN_MULTI_ORG` | Multi-org mode | `false` |
+| `NEXT_PUBLIC_OMNILEARN_DEFAULT_ORG` | Default org slug | `my-school` |
+| `NEXT_PUBLIC_OMNILEARN_HTTPS` | HTTPS enabled | `false` |
+
+## Database & Redis
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `OMNILEARN_SQL_CONNECTION_STRING` | PostgreSQL connection | `postgresql://omnilearn:pass@db:5432/omnilearn` |
+| `OMNILEARN_REDIS_CONNECTION_STRING` | Redis connection | `redis://redis:6379/omnilearn` |
+| `OMNILEARN_REDIS_URL` | Redis URL | `redis://redis:6379/omnilearn` |
+| `POSTGRES_USER` | Database user (local only) | `omnilearn` |
+| `POSTGRES_PASSWORD` | Database password (local only) | Auto-generated |
+| `POSTGRES_DB` | Database name (local only) | `omnilearn` |
+
+## Security & Authentication
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `OMNILEARN_AUTH_JWT_SECRET_KEY` | JWT signing key | Auto-generated |
+| `OMNILEARN_INITIAL_ADMIN_EMAIL` | First admin email | `admin@example.com` |
+| `OMNILEARN_INITIAL_ADMIN_PASSWORD` | First admin password | Set during setup |
+| `OMNILEARN_COOKIE_DOMAIN` | Cookie domain | `localhost` |
+| `COLLAB_INTERNAL_KEY` | Collaboration service key | Auto-generated |
+| `NEXTAUTH_SECRET` | NextAuth secret | Auto-generated |
+| `NEXTAUTH_URL` | NextAuth URL | `http://localhost` |
+
+## Application
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `OMNILEARN_PORT` | Internal API port | `9000` |
+| `OMNILEARN_DEVELOPMENT_MODE` | Dev mode flag | `False` |
+| `NEXT_PUBLIC_COLLAB_URL` | WebSocket collab URL | `ws://localhost/collab` |
+
+## AI
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `OMNILEARN_IS_AI_ENABLED` | Enable AI features | `True` / `False` |
+| `OMNILEARN_GEMINI_API_KEY` | Gemini API key | Your API key |
+
+## Email
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `OMNILEARN_EMAIL_PROVIDER` | Email provider | `resend` / `smtp` |
+| `OMNILEARN_SYSTEM_EMAIL_ADDRESS` | From address | `noreply@example.com` |
+| `OMNILEARN_RESEND_API_KEY` | Resend API key | Your API key |
+| `OMNILEARN_SMTP_HOST` | SMTP host | `smtp.gmail.com` |
+| `OMNILEARN_SMTP_PORT` | SMTP port | `587` |
+| `OMNILEARN_SMTP_USERNAME` | SMTP username | `user@example.com` |
+| `OMNILEARN_SMTP_PASSWORD` | SMTP password | Your password |
+| `OMNILEARN_SMTP_USE_TLS` | Enable TLS | `True` / `False` |
+
+## S3 Storage
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `OMNILEARN_CONTENT_DELIVERY_TYPE` | Storage type | `filesystem` / `s3api` |
+| `OMNILEARN_S3_API_BUCKET_NAME` | S3 bucket name | `my-bucket` |
+| `OMNILEARN_S3_API_ENDPOINT_URL` | S3 endpoint (optional for AWS) | `https://s3.amazonaws.com` |
+
+## OAuth
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `OMNILEARN_GOOGLE_CLIENT_ID` | Google OAuth client ID | Your client ID |
+| `OMNILEARN_GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Your secret |
+
+## Unsplash
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `NEXT_PUBLIC_UNSPLASH_ACCESS_KEY` | Unsplash API key | Your access key |
