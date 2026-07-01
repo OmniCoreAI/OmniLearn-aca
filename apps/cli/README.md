@@ -22,7 +22,20 @@ curl -fsSL https://raw.githubusercontent.com/omnilearn/omnilearn/main/apps/cli/i
 irm https://raw.githubusercontent.com/omnilearn/omnilearn/main/apps/cli/install.ps1 | iex
 ```
 
-### Using npx
+### From this repo (local CLI)
+
+```bash
+# From repo root — build once, then run any command
+npm run prepare:cli
+npm run dev          # local development
+npm run setup        # self-hosted Docker setup
+
+# Or directly
+cd apps/cli && bun install && bun run build
+node dist/bin/omnilearn.js dev
+```
+
+### Using npx (when published)
 
 ```bash
 npx omnilearn@latest setup

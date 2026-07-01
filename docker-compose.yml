@@ -1,0 +1,71 @@
+name: omnilearn
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: omnilearn-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-omnilearn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omnilearn}
+      POSTGRES_DB: ${POSTGRES_DB:-omnilearn}
+    volumes:
+      - omnilearn_db_data:/var/lib/postgresql/data
+    networks:
+      - omnilearn-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omnilearn}"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+
+  redis:
+    image: redis:7.2.3-alpine
+    container_name: omnilearn-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - omnilearn_redis_data:/data
+    networks:
+      - omnilearn-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: omnilearn:local
+    container_name: omnilearn-app
+    restart: unless-stopped
+    env_file:
+      - docker/.env
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    volumes:
+      - omnilearn_content:/app/api/content
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omnilearn-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+networks:
+  omnilearn-network:
+    driver: bridge
+
+volumes:
+  omnilearn_db_data:
+  omnilearn_redis_data:
+  omnilearn_content:

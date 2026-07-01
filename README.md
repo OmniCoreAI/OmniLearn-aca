@@ -63,10 +63,13 @@ npx omnilearn doctor      # Diagnose issues
 ```bash
 git clone https://github.com/omnilearn/omnilearn.git
 cd omnilearn
-npx omnilearn dev
+npm run prepare:cli   # build the local CLI (first time only)
+npm run dev
 ```
 
 This spins up PostgreSQL and Redis, installs dependencies, and starts the API, Web, and Collab servers with hot reload.
+
+> **Note:** The `omnilearn` npm package is not published yet. Use `npm run dev` from the repo root, or run `node apps/cli/dist/bin/omnilearn.js dev` directly after building the CLI in `apps/cli`.
 
 > See the full [CLI documentation](apps/cli/README.md) for all commands and options.
 

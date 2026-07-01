@@ -1,0 +1,22 @@
+{
+  "name": "omnilearn-monorepo",
+  "private": true,
+  "description": "OmniLearn LMS monorepo — use npm scripts to run the local CLI",
+  "scripts": {
+    "cli:build": "npm run build --prefix apps/cli",
+    "cli:install": "npm install --prefix apps/cli",
+    "prepare:cli": "npm run cli:install && npm run cli:build",
+    "omnilearn": "node apps/cli/dist/bin/omnilearn.js",
+    "dev": "node apps/cli/dist/bin/omnilearn.js dev",
+    "setup": "node apps/cli/dist/bin/omnilearn.js setup",
+    "start": "node apps/cli/dist/bin/omnilearn.js start",
+    "stop": "node apps/cli/dist/bin/omnilearn.js stop",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f app"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
