@@ -1,5 +1,5 @@
 import React from 'react'
-import omnilearnAI_icon from 'public/omnilearn_ai_simple.png'
+import omnilearnAI_icon from '@public/lrn.svg'
 import { motion, AnimatePresence } from 'motion/react'
 import Image from 'next/image'
 import {

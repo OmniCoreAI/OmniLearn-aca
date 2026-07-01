@@ -2,7 +2,7 @@
 import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import omnilearnIcon from 'public/omnilearn_bigicon_1.png'
+import omnilearnIcon from '@public/lrn.svg'
 import { getOrgLogoMediaDirectory, getOrgAuthBackgroundMediaDirectory } from '@services/media/media'
 import { getUriWithOrg } from '@services/config/config'
 

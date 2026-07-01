@@ -12,7 +12,7 @@ import {
   startMagicBlockSession,
   iterateMagicBlock,
 } from '@services/ai/magicblocks'
-import lrnaiIcon from 'public/lrnai_icon.png'
+import lrnaiIcon from '@public/lrn.svg'
 import { useTranslation } from 'react-i18next'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
 

@@ -12,7 +12,7 @@ const ToolbarButtons = dynamic(
 import { motion } from 'motion/react'
 import Image from 'next/image'
 import { DividerVerticalIcon, SlashIcon } from '@radix-ui/react-icons'
-import omnilearnAI_icon from 'public/omnilearn_ai_simple.png'
+import omnilearnAI_icon from '@public/lrn.svg'
 import {
   AIEditorStateTypes,
   useAIEditor,

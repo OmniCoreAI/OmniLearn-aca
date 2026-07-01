@@ -43,6 +43,12 @@ services:
     restart: unless-stopped
     env_file:
       - docker/.env
+    environment:
+      OMNILEARN_SQL_CONNECTION_STRING: postgresql://${POSTGRES_USER:-omnilearn}:${POSTGRES_PASSWORD:-omnilearn}@db:5432/${POSTGRES_DB:-omnilearn}
+      OMNILEARN_REDIS_CONNECTION_STRING: redis://redis:6379/omnilearn
+      OMNILEARN_FRONTEND_DOMAIN: ${OMNILEARN_FRONTEND_DOMAIN:-localhost:${HTTP_PORT:-8080}}
+      NEXT_PUBLIC_OMNILEARN_DOMAIN: ${OMNILEARN_FRONTEND_DOMAIN:-localhost:${HTTP_PORT:-8080}}
+      NEXT_PUBLIC_OMNILEARN_BACKEND_URL: http://localhost:${OMNILEARN_PORT:-9000}
     ports:
       - "${HTTP_PORT:-8080}:80"
     volumes:

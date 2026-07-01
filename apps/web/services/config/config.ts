@@ -153,6 +153,13 @@ const deriveAPIUrl = (): string => {
 
 // For direct usage, these call the getters
 export const getAPIUrl = () => {
+  // In Docker/self-hosted localhost setups the browser may be served from a
+  // mapped port (for example localhost:8080). Use same-origin so API calls keep
+  // the browser's current port instead of falling back to localhost:80.
+  if (typeof window !== 'undefined' && isLocalhostCheck(window.location.hostname)) {
+    return '/api/v1/'
+  }
+
   // On custom domains (client-side), use relative path to go through Next.js proxy
   // This ensures cookies work correctly (same-origin)
   if (isOnCustomDomain()) {

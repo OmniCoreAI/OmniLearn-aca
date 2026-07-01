@@ -92,7 +92,7 @@ const OrgEditAI: React.FC = () => {
         {/* Header */}
         <div className="flex items-center gap-3">
           <Image
-            src="/omnilearn_ai_simple_colored.png"
+            src="/lrn.svg"
             alt="OmniLearn AI"
             width={28}
             height={28}

@@ -1,7 +1,7 @@
 import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import omnilearnIcon from 'public/black_logo.png'
+import omnilearnIcon from '@public/lrn-text.svg'
 
 export default function NotFound() {
   return (

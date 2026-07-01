@@ -168,7 +168,7 @@ function EmbedActivityClient({ activityId, courseuuid, orgslug, bgcolor }: Embed
         <div className="bg-white rounded-2xl nice-shadow p-8 max-w-md w-full text-center">
           <div className="mb-6">
             <Image
-              src="/omnilearn_bigicon.png"
+              src="/lrn.svg"
               alt="OmniLearn"
               width={64}
               height={64}

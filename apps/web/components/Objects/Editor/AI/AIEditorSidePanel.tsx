@@ -22,8 +22,8 @@ import {
   Type,
   Box,
 } from 'lucide-react'
-import omnilearnAI_icon from 'public/omnilearn_ai_simple.png'
-import omnilearnAI_logo_black from 'public/omnilearn_ai_black_logo.png'
+import omnilearnAI_icon from '@public/lrn.svg'
+import omnilearnAI_logo_black from '@public/lrn-text.svg'
 import {
   AIEditorStateTypes,
   useAIEditor,

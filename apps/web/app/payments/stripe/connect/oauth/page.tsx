@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import { verifyStripeConnection } from '@services/payments/providers/stripe'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
 import Image from 'next/image'
-import omnilearnIcon from 'public/omnilearn_bigicon_1.png'
+import omnilearnIcon from '@public/lrn.svg'
 import { useTranslation } from 'react-i18next'
 
 function StripeConnectCallbackInner() {

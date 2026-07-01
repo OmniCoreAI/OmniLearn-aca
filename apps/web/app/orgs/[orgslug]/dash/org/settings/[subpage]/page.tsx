@@ -41,7 +41,7 @@ const getSettingTabs = (t: any): TabConfig[] => [
   { id: 'menu', label: t('dashboard.organization.settings.tabs.menu') || 'Menu', icon: MenuIcon },
   { id: 'landing', label: t('dashboard.organization.settings.tabs.landing'), icon: LayoutDashboardIcon },
   { id: 'seo', label: 'SEO', icon: Search },
-  { id: 'ai', label: t('dashboard.organization.settings.tabs.ai') || 'AI', customIcon: '/omnilearn_ai_simple_colored.png', requiredPlan: 'standard' },
+  { id: 'ai', label: t('dashboard.organization.settings.tabs.ai') || 'AI', customIcon: '/lrn.svg', requiredPlan: 'standard' },
   { id: 'domains', label: t('dashboard.organization.settings.tabs.domains') || 'Domains', icon: Globe, requiredPlan: 'standard' },
   { id: 'automations', label: t('dashboard.organization.settings.tabs.automations') || 'Automations', icon: Zap, requiredPlan: 'pro' },
   { id: 'api', label: t('dashboard.organization.settings.tabs.api') || 'API Access', icon: KeyIcon, requiredPlan: 'pro' },
