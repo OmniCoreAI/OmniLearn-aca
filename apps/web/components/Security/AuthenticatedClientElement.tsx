@@ -19,6 +19,8 @@ interface AuthenticatedClientElementProps {
   | 'podcasts'
   | 'boards'
   | 'playgrounds'
+  | 'programs'
+  | 'training_programs'
   action?: 'create' | 'update' | 'delete' | 'read'
 }
 

@@ -37,7 +37,11 @@ const _validationSchema = Yup.object().shape({
   thumbnail: Yup.mixed().nullable()
 })
 
-function CreateCourseModal({ closeModal, orgslug }: any) {
+// `onCreated` is an optional hook used by the Academic Management layer
+// (Semesters / Training Programs). When provided, the created course_uuid is
+// handed back to the caller (e.g. to link it to a semester) and the default
+// redirect to the course editor is skipped so the user stays in context.
+function CreateCourseModal({ closeModal, orgslug, onCreated }: any) {
   const { t } = useTranslation()
   const { track } = useOmniLearnAnalytics('dashboard')
   const router = useRouter()
@@ -103,6 +107,14 @@ function CreateCourseModal({ closeModal, orgslug }: any) {
           queryClient.invalidateQueries({ queryKey: queryKeys.courses.list(orgslug) })
           toast.dismiss(toast_loading)
           toast.success(t('courses.course_created_success'))
+
+          // Academic layer: hand the created course back to the caller (link
+          // it to a semester / training program) and stay in place.
+          if (typeof onCreated === 'function') {
+            await onCreated(res.data.course_uuid)
+            closeModal()
+            return
+          }
 
           closeModal()
           // Redirect to the course dashboard - remove 'course_' prefix if present

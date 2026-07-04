@@ -19,6 +19,12 @@ from src.routers.orgs import ai_credits
 from src.routers.orgs import custom_domains
 from src.routers.orgs import packs
 from src.routers.courses import chapters, courses, assignments, certifications
+from src.routers.academic import (
+    programs as programs_router_module,
+    cohorts as cohorts_router_module,
+    semesters as semesters_router_module,
+    training_programs as training_programs_router_module,
+)
 from src.routers.folders import folders as folders_router_module
 from src.routers.media import media as media_router_module
 from src.routers.courses import migration as migration_router_module
@@ -162,6 +168,31 @@ v1_router.include_router(
     prefix="/courses",
     tags=["migration"],
     dependencies=[Depends(require_authenticated_user)]
+)
+# Academic Management layer (sits above the existing course implementation)
+v1_router.include_router(
+    programs_router_module.router,
+    prefix="/programs",
+    tags=["academic", "programs"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    cohorts_router_module.router,
+    prefix="/cohorts",
+    tags=["academic", "cohorts"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    semesters_router_module.router,
+    prefix="/semesters",
+    tags=["academic", "semesters"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    training_programs_router_module.router,
+    prefix="/training-programs",
+    tags=["academic", "training-programs"],
+    dependencies=[Depends(require_authenticated_user)],
 )
 v1_router.include_router(search.router, prefix="/search", tags=["search"])
 v1_router.include_router(

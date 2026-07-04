@@ -68,6 +68,27 @@ RESOURCE_CONFIGS: dict[str, ResourceConfig] = {
         uuid_field="board_uuid",
     ),
 
+    # Academic Management: Postgraduate Studies (top-level Program) and
+    # Training Programs. Both behave like courses for access purposes.
+    "programs": ResourceConfig(
+        resource_type="programs",
+        uuid_prefix="program_",
+        has_published_field=True,
+        supports_usergroups=True,
+        supports_authorship=True,
+        model_name="Program",
+        uuid_field="program_uuid",
+    ),
+    "training_programs": ResourceConfig(
+        resource_type="training_programs",
+        uuid_prefix="trainingprogram_",
+        has_published_field=True,
+        supports_usergroups=True,
+        supports_authorship=True,
+        model_name="TrainingProgram",
+        uuid_field="trainingprogram_uuid",
+    ),
+
     # ============================================
     # CHILD RESOURCES (inherit access from parent)
     # ============================================
@@ -114,6 +135,31 @@ RESOURCE_CONFIGS: dict[str, ResourceConfig] = {
         uuid_field="discussion_uuid",
         parent_resource_type="communities",
         parent_id_field="community_id",
+    ),
+    # Postgraduate hierarchy: Cohort -> Semester both delegate their access
+    # decision up to the owning Program (like chapters -> courses). Courses are
+    # linked directly to a Semester and keep their own (course_) RBAC.
+    "cohorts": ResourceConfig(
+        resource_type="cohorts",
+        uuid_prefix="cohort_",
+        has_published_field=False,  # Inherits from program
+        supports_usergroups=False,  # Access via program
+        supports_authorship=False,  # Authorship on program level
+        model_name="Cohort",
+        uuid_field="cohort_uuid",
+        parent_resource_type="programs",
+        parent_id_field="program_id",
+    ),
+    "semesters": ResourceConfig(
+        resource_type="semesters",
+        uuid_prefix="semester_",
+        has_published_field=False,
+        supports_usergroups=False,
+        supports_authorship=False,
+        model_name="Semester",
+        uuid_field="semester_uuid",
+        parent_resource_type="cohorts",  # Semester -> Cohort -> Program
+        parent_id_field="cohort_id",
     ),
 }
 

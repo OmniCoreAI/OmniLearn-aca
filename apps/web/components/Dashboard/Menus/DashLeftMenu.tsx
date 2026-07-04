@@ -39,6 +39,8 @@ import {
   Cube,
   ShoppingBag,
   FolderSimple,
+  GraduationCap,
+  Certificate,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import CommandPaletteTrigger from '@components/Dashboard/CommandPalette/CommandPaletteTrigger'
@@ -257,75 +259,25 @@ function DashLeftMenu() {
               onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'home' })}
             />
 
-            {/* Courses with hover menu */}
-            <HoverMenu
-              content={
-                <HoverMenuContent className="w-64">
-                  <HoverMenuLabel className="text-white/70 font-medium">{t('courses.courses')}</HoverMenuLabel>
-                  <HoverMenuSeparator />
-                  <HoverMenuItem asChild>
-                    <Link href="/dash/courses" className="flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/[0.08] cursor-pointer transition-colors">
-                      <BookOpen size={16} weight="fill" />
-                      <span>{t('common.all_courses')}</span>
-                    </Link>
-                  </HoverMenuItem>
-                  {recentCourses.length > 0 && (
-                    <>
-                      <HoverMenuSeparator />
-                      <HoverMenuLabel className="text-white/40">{t('common.recent')}</HoverMenuLabel>
-                      {recentCourses.map((course: any) => (
-                        <HoverMenuItem key={course.course_uuid} asChild>
-                          <Link
-                            href={`/dash/courses/course/${course.course_uuid.replace('course_', '')}/settings`}
-                            className="flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/[0.08] cursor-pointer transition-colors"
-                          >
-                            <PencilSimple size={14} className="text-white/40" />
-                            <span className="truncate">{course.name}</span>
-                          </Link>
-                        </HoverMenuItem>
-                      ))}
-                    </>
-                  )}
-                </HoverMenuContent>
-              }
-            >
-              {(() => {
-                const active = isActivePath('/dash/courses')
-                return (
-                  <Link
-                    href="/dash/courses"
-                    aria-label="Open courses menu"
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(
-                      "relative flex items-center w-full rounded-lg transition-all",
-                      active
-                        ? "text-white bg-white/[0.08]"
-                        : "text-white/50 hover:text-white hover:bg-white/[0.08]",
-                      isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
-                    )}
-                  >
-                    {active && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-0.5 top-1/2 -translate-y-1/2 h-5 w-[3px] bg-white rounded-full"
-                      />
-                    )}
-                    <span className="relative flex items-center justify-center">
-                      <BookOpen size={20} weight="fill" />
-                      {isCollapsed && (
-                        <CaretDown aria-hidden="true" size={8} weight="bold" className={cn("absolute -right-2.5", active ? "text-white/60" : "text-white/30")} />
-                      )}
-                    </span>
-                    {!isCollapsed && (
-                      <>
-                        <span className="text-sm font-medium flex-1 text-left">{t('courses.courses')}</span>
-                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-white/70" : "text-white/40"} />
-                      </>
-                    )}
-                  </Link>
-                )
-              })()}
-            </HoverMenu>
+            {/* Academic Management: Postgraduate Studies */}
+            <MenuLink
+              href="/dash/postgraduate"
+              icon={<GraduationCap size={20} weight="fill" />}
+              label={t('academic.postgraduate_studies', 'Postgraduate Studies')}
+              isCollapsed={isCollapsed}
+              active={isActivePath('/dash/postgraduate')}
+              onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'postgraduate' })}
+            />
+
+            {/* Academic Management: Training Programs */}
+            <MenuLink
+              href="/dash/training-programs"
+              icon={<Certificate size={20} weight="fill" />}
+              label={t('academic.training_programs', 'Training Programs')}
+              isCollapsed={isCollapsed}
+              active={isActivePath('/dash/training-programs')}
+              onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'training_programs' })}
+            />
 
             {/* Assignments with hover menu */}
             <div onMouseEnter={fetchAssignments}>

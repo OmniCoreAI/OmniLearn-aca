@@ -42,6 +42,16 @@ async def check_element_type(element_uuid):
         return "boards"
     elif element_uuid.startswith("playground_"):
         return "playgrounds"
+    elif element_uuid.startswith("trainingprogram_"):
+        return "training_programs"
+    elif (
+        element_uuid.startswith("program_")
+        or element_uuid.startswith("cohort_")
+        or element_uuid.startswith("semester_")
+    ):
+        # Postgraduate hierarchy shares a single rights bucket; child levels
+        # delegate their access decision up to the owning Program.
+        return "programs"
     else:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -206,5 +216,22 @@ async def get_element_organization_id(
     elif element_type == "playgrounds":
         from src.db.playgrounds import Playground
         return (await db_session.execute(select(Playground.org_id).where(Playground.playground_uuid == element_uuid))).scalars().first()
+
+    elif element_type == "programs":
+        # The postgraduate hierarchy all resolves to "programs"; disambiguate by
+        # UUID prefix so org boundary checks work for every level.
+        if element_uuid.startswith("cohort_"):
+            from src.db.academic.cohorts import Cohort
+            return (await db_session.execute(select(Cohort.org_id).where(Cohort.cohort_uuid == element_uuid))).scalars().first()
+        elif element_uuid.startswith("semester_"):
+            from src.db.academic.semesters import Semester
+            return (await db_session.execute(select(Semester.org_id).where(Semester.semester_uuid == element_uuid))).scalars().first()
+        else:
+            from src.db.academic.programs import Program
+            return (await db_session.execute(select(Program.org_id).where(Program.program_uuid == element_uuid))).scalars().first()
+
+    elif element_type == "training_programs":
+        from src.db.academic.training_programs import TrainingProgram
+        return (await db_session.execute(select(TrainingProgram.org_id).where(TrainingProgram.trainingprogram_uuid == element_uuid))).scalars().first()
 
     return None

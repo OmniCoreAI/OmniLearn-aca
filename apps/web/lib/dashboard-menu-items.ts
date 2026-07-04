@@ -1,6 +1,5 @@
 import {
   House,
-  BookOpen,
   Files,
   Users,
   CurrencyCircleDollar,
@@ -8,6 +7,8 @@ import {
   ChatsCircle,
   ChalkboardSimple,
   Cube,
+  GraduationCap,
+  Certificate,
 } from '@phosphor-icons/react'
 
 export interface DashboardMenuItem {
@@ -29,10 +30,16 @@ export const DASHBOARD_MENU_ITEMS: DashboardMenuItem[] = [
     labelKey: 'common.home',
   },
   {
-    id: 'courses',
-    href: '/dash/courses',
-    icon: BookOpen,
-    labelKey: 'courses.courses',
+    id: 'postgraduate',
+    href: '/dash/postgraduate',
+    icon: GraduationCap,
+    labelKey: 'academic.postgraduate_studies',
+  },
+  {
+    id: 'training-programs',
+    href: '/dash/training-programs',
+    icon: Certificate,
+    labelKey: 'academic.training_programs',
   },
   {
     id: 'assignments',

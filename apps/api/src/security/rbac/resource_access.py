@@ -705,6 +705,24 @@ class ResourceAccessChecker:
             parent = (await self.db_session.execute(statement)).scalars().first()
             return parent.chapter_uuid if parent else None
 
+        elif parent_config.resource_type == "programs":
+            from src.db.academic.programs import Program
+            statement = select(Program).where(Program.id == parent_id)
+            parent = (await self.db_session.execute(statement)).scalars().first()
+            return parent.program_uuid if parent else None
+
+        elif parent_config.resource_type == "cohorts":
+            from src.db.academic.cohorts import Cohort
+            statement = select(Cohort).where(Cohort.id == parent_id)
+            parent = (await self.db_session.execute(statement)).scalars().first()
+            return parent.cohort_uuid if parent else None
+
+        elif parent_config.resource_type == "semesters":
+            from src.db.academic.semesters import Semester
+            statement = select(Semester).where(Semester.id == parent_id)
+            parent = (await self.db_session.execute(statement)).scalars().first()
+            return parent.semester_uuid if parent else None
+
         return None
 
     async def _is_public_and_published(
@@ -887,6 +905,27 @@ class ResourceAccessChecker:
         elif config.resource_type == "discussions":
             from src.db.communities.discussions import Discussion
             statement = select(Discussion).where(Discussion.discussion_uuid == resource_uuid)
+            resource = (await self.db_session.execute(statement)).scalars().first()
+
+        # Academic Management resources
+        elif config.resource_type == "programs":
+            from src.db.academic.programs import Program
+            statement = select(Program).where(Program.program_uuid == resource_uuid)
+            resource = (await self.db_session.execute(statement)).scalars().first()
+
+        elif config.resource_type == "training_programs":
+            from src.db.academic.training_programs import TrainingProgram
+            statement = select(TrainingProgram).where(TrainingProgram.trainingprogram_uuid == resource_uuid)
+            resource = (await self.db_session.execute(statement)).scalars().first()
+
+        elif config.resource_type == "cohorts":
+            from src.db.academic.cohorts import Cohort
+            statement = select(Cohort).where(Cohort.cohort_uuid == resource_uuid)
+            resource = (await self.db_session.execute(statement)).scalars().first()
+
+        elif config.resource_type == "semesters":
+            from src.db.academic.semesters import Semester
+            statement = select(Semester).where(Semester.semester_uuid == resource_uuid)
             resource = (await self.db_session.execute(statement)).scalars().first()
 
         self._resource_cache[resource_uuid] = resource

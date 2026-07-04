@@ -86,6 +86,27 @@ class Rights(BaseModel):
         action_delete=False,
         action_delete_own=False,
     )  # Default: read-only for backward compat with existing roles
+    # Academic Management layer (Postgraduate Studies). Covers Program, Cohort
+    # and Semester — child levels delegate access to their parent Program.
+    programs: PermissionsWithOwn = PermissionsWithOwn(
+        action_create=False,
+        action_read=True,
+        action_read_own=True,
+        action_update=False,
+        action_update_own=False,
+        action_delete=False,
+        action_delete_own=False,
+    )  # Default: read-only for backward compat with existing roles
+    # Academic Management layer (Training Programs).
+    training_programs: PermissionsWithOwn = PermissionsWithOwn(
+        action_create=False,
+        action_read=True,
+        action_read_own=True,
+        action_update=False,
+        action_update_own=False,
+        action_delete=False,
+        action_delete_own=False,
+    )  # Default: read-only for backward compat with existing roles
 
     def __getitem__(self, item):
         return getattr(self, item)
