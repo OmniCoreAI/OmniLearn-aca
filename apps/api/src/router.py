@@ -24,6 +24,7 @@ from src.routers.academic import (
     cohorts as cohorts_router_module,
     semesters as semesters_router_module,
     training_programs as training_programs_router_module,
+    course_profiles as course_profiles_router_module,
 )
 from src.routers.folders import folders as folders_router_module
 from src.routers.media import media as media_router_module
@@ -192,6 +193,13 @@ v1_router.include_router(
     training_programs_router_module.router,
     prefix="/training-programs",
     tags=["academic", "training-programs"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+# Course academic profile (1:1 course extension) — reuses course RBAC.
+v1_router.include_router(
+    course_profiles_router_module.router,
+    prefix="/courses",
+    tags=["academic", "course-profiles"],
     dependencies=[Depends(require_authenticated_user)],
 )
 v1_router.include_router(search.router, prefix="/search", tags=["search"])

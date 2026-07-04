@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 from datetime import datetime
 from fastapi import HTTPException, Request
@@ -7,18 +7,29 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.users import PublicUser, AnonymousUser, APITokenUser
 from src.db.organizations import Organization
-from src.db.courses.courses import Course, CourseRead
+from src.db.courses.courses import Course
 from src.db.academic.training_programs import (
     TrainingProgram,
     TrainingProgramCreate,
     TrainingProgramRead,
     TrainingProgramUpdate,
 )
-from src.db.academic.links import TrainingProgramCourse
+from src.db.academic.links import TrainingProgramCourse, TrainingProgramCourseRead
 from src.security.auth import resolve_acting_user_id
 from src.security.org_auth import require_org_membership
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
-from src.services.academic.authors import build_creator_author, get_resource_authors
+from src.services.academic.authors import (
+    build_creator_author,
+    ensure_coordinator_authorship,
+    get_resource_authors,
+    get_user_author,
+)
+from src.services.academic.course_profiles import get_profile_read_for_course
+from src.services.academic.validation import (
+    assert_trainingprogram_code_unique,
+    resolve_coordinator,
+    validate_training_program_payload,
+)
 
 
 async def _get_tp_or_404(db_session: AsyncSession, tp_uuid: str) -> TrainingProgram:
@@ -29,6 +40,13 @@ async def _get_tp_or_404(db_session: AsyncSession, tp_uuid: str) -> TrainingProg
     if not tp:
         raise HTTPException(status_code=404, detail="Training program not found")
     return tp
+
+
+async def _to_read(db_session: AsyncSession, tp: TrainingProgram) -> TrainingProgramRead:
+    """Assemble a TrainingProgramRead with authors + embedded coordinator."""
+    authors = await get_resource_authors(db_session, tp.trainingprogram_uuid)
+    coordinator = await get_user_author(db_session, tp.coordinator_id)
+    return TrainingProgramRead(**tp.model_dump(), authors=authors, coordinator=coordinator)
 
 
 async def create_training_program(
@@ -53,7 +71,14 @@ async def create_training_program(
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
 
+    validate_training_program_payload(tp_object.model_dump())
+    await assert_trainingprogram_code_unique(db_session, org_id, tp_object.code)
+    coordinator_id = await resolve_coordinator(
+        db_session, org_id, tp_object.coordinator_uuid
+    )
+
     tp.org_id = org_id
+    tp.coordinator_id = coordinator_id
     tp.trainingprogram_uuid = f"trainingprogram_{uuid4()}"
     tp.creation_date = str(datetime.now())
     tp.update_date = str(datetime.now())
@@ -67,14 +92,15 @@ async def create_training_program(
         await db_session.flush()
         await db_session.refresh(tp)
         db_session.add(author)
+        # Coordinator gets maintainer access so they can manage their program.
+        await ensure_coordinator_authorship(db_session, tp.trainingprogram_uuid, coordinator_id)
         await db_session.commit()
         await db_session.refresh(tp)
     except Exception:
         await db_session.rollback()
         raise
 
-    authors = await get_resource_authors(db_session, tp.trainingprogram_uuid)
-    return TrainingProgramRead(**tp.model_dump(), authors=authors)
+    return await _to_read(db_session, tp)
 
 
 async def get_training_program(
@@ -92,8 +118,7 @@ async def get_training_program(
         AccessAction.READ,
         context=AccessContext.DASHBOARD,
     )
-    authors = await get_resource_authors(db_session, tp.trainingprogram_uuid)
-    return TrainingProgramRead(**tp.model_dump(), authors=authors)
+    return await _to_read(db_session, tp)
 
 
 async def get_training_programs_by_org(
@@ -117,11 +142,7 @@ async def get_training_programs_by_org(
     )
     tps = (await db_session.execute(statement)).scalars().all()
 
-    result: List[TrainingProgramRead] = []
-    for tp in tps:
-        authors = await get_resource_authors(db_session, tp.trainingprogram_uuid)
-        result.append(TrainingProgramRead(**tp.model_dump(), authors=authors))
-    return result
+    return [await _to_read(db_session, tp) for tp in tps]
 
 
 async def update_training_program(
@@ -137,16 +158,62 @@ async def update_training_program(
     )
 
     update_data = tp_object.model_dump(exclude_unset=True)
+
+    # Validate the merged view (fee coherence, date coherence, bounds).
+    merged = {**tp.model_dump(), **update_data}
+    validate_training_program_payload(merged)
+
+    if "code" in update_data:
+        await assert_trainingprogram_code_unique(
+            db_session, tp.org_id, update_data["code"], exclude_id=tp.id
+        )
+
+    new_coordinator_id = None
+    coordinator_changed = "coordinator_uuid" in update_data
+    if coordinator_changed:
+        coordinator_uuid = update_data.pop("coordinator_uuid")
+        new_coordinator_id = await resolve_coordinator(
+            db_session, tp.org_id, coordinator_uuid
+        )
+        tp.coordinator_id = new_coordinator_id
+
     for key, value in update_data.items():
         setattr(tp, key, value)
     tp.update_date = str(datetime.now())
 
     db_session.add(tp)
+    if coordinator_changed:
+        await ensure_coordinator_authorship(
+            db_session, tp.trainingprogram_uuid, new_coordinator_id
+        )
     await db_session.commit()
     await db_session.refresh(tp)
 
-    authors = await get_resource_authors(db_session, tp.trainingprogram_uuid)
-    return TrainingProgramRead(**tp.model_dump(), authors=authors)
+    return await _to_read(db_session, tp)
+
+
+async def set_training_program_coordinator(
+    request: Request,
+    tp_uuid: str,
+    coordinator_uuid: Optional[str],
+    current_user: PublicUser | AnonymousUser,
+    db_session: AsyncSession,
+) -> TrainingProgramRead:
+    """Assign (or clear, with empty string) the training program coordinator."""
+    tp = await _get_tp_or_404(db_session, tp_uuid)
+    await check_resource_access(
+        request, db_session, current_user, tp.trainingprogram_uuid, AccessAction.UPDATE
+    )
+
+    coordinator_id = await resolve_coordinator(db_session, tp.org_id, coordinator_uuid)
+    tp.coordinator_id = coordinator_id
+    tp.update_date = str(datetime.now())
+
+    db_session.add(tp)
+    await ensure_coordinator_authorship(db_session, tp.trainingprogram_uuid, coordinator_id)
+    await db_session.commit()
+    await db_session.refresh(tp)
+    return await _to_read(db_session, tp)
 
 
 async def delete_training_program(
@@ -260,7 +327,7 @@ async def get_training_program_courses(
     tp_uuid: str,
     current_user: PublicUser | AnonymousUser,
     db_session: AsyncSession,
-) -> List[CourseRead]:
+) -> List[TrainingProgramCourseRead]:
     tp = await _get_tp_or_404(db_session, tp_uuid)
     await check_resource_access(
         request,
@@ -272,15 +339,23 @@ async def get_training_program_courses(
     )
 
     statement = (
-        select(Course)
+        select(Course, TrainingProgramCourse)
         .join(TrainingProgramCourse, TrainingProgramCourse.course_id == Course.id)  # type: ignore
         .where(TrainingProgramCourse.training_program_id == tp.id)
         .order_by(TrainingProgramCourse.order.asc())  # type: ignore
     )
-    courses = (await db_session.execute(statement)).scalars().all()
+    rows = (await db_session.execute(statement)).all()
 
-    result: List[CourseRead] = []
-    for course in courses:
+    result: List[TrainingProgramCourseRead] = []
+    for course, link in rows:
         authors = await get_resource_authors(db_session, course.course_uuid)
-        result.append(CourseRead(**course.model_dump(), authors=authors))
+        profile = await get_profile_read_for_course(db_session, course)
+        result.append(
+            TrainingProgramCourseRead(
+                **course.model_dump(),
+                authors=authors,
+                academic_order=link.order,
+                academic_profile=profile,
+            )
+        )
     return result

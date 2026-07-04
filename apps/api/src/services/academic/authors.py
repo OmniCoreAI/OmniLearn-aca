@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -9,7 +9,7 @@ from src.db.resource_authors import (
     ResourceAuthorshipEnum,
     ResourceAuthorshipStatusEnum,
 )
-from src.db.users import User, UserRead
+from src.db.users import User, UserRead, UserReadAuthor
 
 
 async def get_resource_authors(
@@ -49,4 +49,50 @@ def build_creator_author(resource_uuid: str, user_id: int) -> ResourceAuthor:
         authorship_status=ResourceAuthorshipStatusEnum.ACTIVE,
         creation_date=str(datetime.now()),
         update_date=str(datetime.now()),
+    )
+
+
+async def get_user_author(
+    db_session: AsyncSession, user_id: Optional[int]
+) -> Optional[UserReadAuthor]:
+    """Minimal author projection for a user id (used to embed a coordinator)."""
+    if not user_id:
+        return None
+    user = (
+        await db_session.execute(select(User).where(User.id == user_id))
+    ).scalars().first()
+    if not user:
+        return None
+    return UserReadAuthor.model_validate(user)
+
+
+async def ensure_coordinator_authorship(
+    db_session: AsyncSession, resource_uuid: str, user_id: Optional[int]
+) -> None:
+    """Grant the coordinator MAINTAINER authorship on the resource (idempotent).
+
+    Does not flush/commit — the caller controls the transaction. A coordinator
+    that is also the CREATOR keeps their CREATOR row (no duplicate is added).
+    """
+    if not user_id:
+        return
+    existing = (
+        await db_session.execute(
+            select(ResourceAuthor).where(
+                ResourceAuthor.resource_uuid == resource_uuid,
+                ResourceAuthor.user_id == user_id,
+            )
+        )
+    ).scalars().first()
+    if existing:
+        return
+    db_session.add(
+        ResourceAuthor(
+            resource_uuid=resource_uuid,
+            user_id=user_id,
+            authorship=ResourceAuthorshipEnum.MAINTAINER,
+            authorship_status=ResourceAuthorshipStatusEnum.ACTIVE,
+            creation_date=str(datetime.now()),
+            update_date=str(datetime.now()),
+        )
     )

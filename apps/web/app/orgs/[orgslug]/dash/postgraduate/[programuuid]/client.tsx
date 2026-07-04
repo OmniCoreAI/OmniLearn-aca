@@ -18,6 +18,7 @@ import {
   AcademicCard,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { Field, SubmitRow, inputCls } from '../client'
+import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
 import {
   getProgram,
   getProgramCohorts,
@@ -113,7 +114,14 @@ function ProgramDetail({ orgslug, programuuid }: { orgslug: string; programuuid:
             href={`/dash/postgraduate/${programuuid}/cohort/${c.cohort_uuid.replace('cohort_', '')}`}
             title={c.name}
             subtitle={c.description}
-            badges={[{ label: t(`academic.status_${c.status}`), className: STATUS_BADGE[c.status] }]}
+            badges={[
+              { label: t(`academic.status_${c.status}`), className: STATUS_BADGE[c.status] },
+              ...(c.academic_year ? [{ label: c.academic_year, className: 'bg-slate-100 text-slate-600' }] : []),
+              {
+                label: `${c.enrolled_count ?? 0}${c.capacity != null ? `/${c.capacity}` : ''} ${t('academic.enrolled_short')}`,
+                className: 'bg-gray-100 text-gray-600',
+              },
+            ]}
             onEdit={() => {
               setEditing(c)
               setModalOpen(true)
@@ -156,18 +164,35 @@ function CohortForm({
   onDone: () => void
 }) {
   const { t } = useTranslation()
+  const org = useOrg() as any
+  const orgId = org?.id as number | undefined
   const [name, setName] = useState(cohort?.name || '')
   const [description, setDescription] = useState(cohort?.description || '')
   const [status, setStatus] = useState(cohort?.status || 'upcoming')
+  const [academicYear, setAcademicYear] = useState(cohort?.academic_year || '')
+  const [capacity, setCapacity] = useState<string>(cohort?.capacity != null ? String(cohort.capacity) : '')
   const [startDate, setStartDate] = useState(cohort?.start_date || '')
   const [endDate, setEndDate] = useState(cohort?.end_date || '')
+  const [coordinatorUuid, setCoordinatorUuid] = useState<string | null>(cohort?.coordinator?.user_uuid || null)
+  const [coordinatorLabel, setCoordinatorLabel] = useState<string | undefined>(
+    cohort?.coordinator ? `${cohort.coordinator.first_name || ''} ${cohort.coordinator.last_name || ''}`.trim() || cohort.coordinator.username : undefined
+  )
   const [saving, setSaving] = useState(false)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     try {
-      const payload = { name, description, status, start_date: startDate || null, end_date: endDate || null }
+      const payload = {
+        name,
+        description,
+        status,
+        academic_year: academicYear || null,
+        capacity: capacity === '' ? null : Number(capacity),
+        start_date: startDate || null,
+        end_date: endDate || null,
+        coordinator_uuid: coordinatorUuid || '',
+      }
       if (cohort) {
         await updateCohort(cohort.cohort_uuid, payload, access_token)
         toast.success(t('academic.updated'))
@@ -176,8 +201,8 @@ function CohortForm({
         toast.success(t('academic.created'))
       }
       onDone()
-    } catch {
-      toast.error(cohort ? t('academic.update_failed') : t('academic.create_failed'))
+    } catch (err: any) {
+      toast.error(err?.message || (cohort ? t('academic.update_failed') : t('academic.create_failed')))
     } finally {
       setSaving(false)
     }
@@ -188,15 +213,37 @@ function CohortForm({
       <Field label={t('academic.name')}>
         <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
-      <Field label={t('academic.status')}>
-        <select className={inputCls} value={status} onChange={(e) => setStatus(e.target.value)}>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {t(`academic.status_${s}`)}
-            </option>
-          ))}
-        </select>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t('academic.academic_year')}>
+          <input className={inputCls} value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder="2025/2026" />
+        </Field>
+        <Field label={t('academic.status')}>
+          <select className={inputCls} value={status} onChange={(e) => setStatus(e.target.value)}>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {t(`academic.status_${s}`)}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <Field label={t('academic.coordinator')}>
+        <CoordinatorPicker
+          orgId={orgId!}
+          access_token={access_token}
+          value={coordinatorUuid}
+          selectedLabel={coordinatorLabel}
+          onChange={(uuid, label) => {
+            setCoordinatorUuid(uuid)
+            setCoordinatorLabel(label)
+          }}
+        />
       </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t('academic.capacity')}>
+          <input type="number" min={0} className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder={t('academic.unlimited')} />
+        </Field>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('academic.start_date')}>
           <input type="date" className={inputCls} value={startDate} onChange={(e) => setStartDate(e.target.value)} />

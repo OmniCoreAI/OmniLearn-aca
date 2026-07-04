@@ -1,5 +1,6 @@
-from typing import List
-from fastapi import APIRouter, Depends, Request
+from typing import List, Optional
+from fastapi import APIRouter, Depends, File, Request, UploadFile
+from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.events.database import get_db_session
@@ -12,11 +13,16 @@ from src.services.academic.programs import (
     get_program,
     get_programs_by_org,
     update_program,
+    update_program_image,
     delete_program,
 )
 from src.services.academic.cohorts import create_cohort, get_cohorts_by_program
 
 router = APIRouter()
+
+
+class CoordinatorRequest(BaseModel):
+    coordinator_uuid: Optional[str] = None
 
 
 @router.post("/", response_model=ProgramRead, summary="Create a program")
@@ -81,6 +87,62 @@ async def api_delete_program(
     current_user: PublicUser = Depends(get_current_user),
 ) -> str:
     return await delete_program(request, program_uuid, current_user, db_session)
+
+
+@router.put(
+    "/{program_uuid}/coordinator",
+    response_model=ProgramRead,
+    summary="Assign or clear the program coordinator",
+)
+async def api_set_program_coordinator(
+    request: Request,
+    program_uuid: str,
+    body: CoordinatorRequest,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> ProgramRead:
+    # Empty string clears the coordinator; a uuid assigns/replaces it.
+    return await update_program(
+        request,
+        program_uuid,
+        ProgramUpdate(coordinator_uuid=body.coordinator_uuid or ""),
+        current_user,
+        db_session,
+    )
+
+
+@router.post(
+    "/{program_uuid}/thumbnail",
+    response_model=ProgramRead,
+    summary="Upload a program thumbnail image",
+)
+async def api_upload_program_thumbnail(
+    request: Request,
+    program_uuid: str,
+    thumbnail_file: UploadFile = File(...),
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> ProgramRead:
+    return await update_program_image(
+        request, program_uuid, thumbnail_file, "thumbnail", current_user, db_session
+    )
+
+
+@router.post(
+    "/{program_uuid}/banner",
+    response_model=ProgramRead,
+    summary="Upload a program banner image",
+)
+async def api_upload_program_banner(
+    request: Request,
+    program_uuid: str,
+    banner_file: UploadFile = File(...),
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> ProgramRead:
+    return await update_program_image(
+        request, program_uuid, banner_file, "banner", current_user, db_session
+    )
 
 
 @router.get(

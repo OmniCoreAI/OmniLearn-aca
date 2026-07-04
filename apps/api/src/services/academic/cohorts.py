@@ -2,20 +2,33 @@ from typing import List
 from uuid import uuid4
 from datetime import datetime
 from fastapi import HTTPException, Request
-from sqlmodel import select
+from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.db.users import PublicUser, AnonymousUser
+from src.db.users import PublicUser, AnonymousUser, User, UserReadAuthor
 from src.db.usergroups import UserGroup
 from src.db.usergroup_user import UserGroupUser
 from src.db.usergroup_resources import UserGroupResource
 from src.db.academic.programs import Program
-from src.db.academic.cohorts import Cohort, CohortCreate, CohortRead, CohortUpdate
+from src.db.academic.cohorts import (
+    Cohort,
+    CohortCreate,
+    CohortRead,
+    CohortStatus,
+    CohortUpdate,
+)
 from src.db.academic.semesters import Semester
 from src.db.academic.links import SemesterCourse
 from src.db.courses.courses import Course
 from src.security.auth import resolve_acting_user_id
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
+from src.services.academic.authors import get_user_author
+from src.services.academic.validation import (
+    assert_status_transition,
+    resolve_coordinator,
+    validate_cohort_payload,
+    COHORT_STATUS_TRANSITIONS,
+)
 
 
 async def _get_cohort_or_404(db_session: AsyncSession, cohort_uuid: str) -> Cohort:
@@ -34,6 +47,23 @@ async def _get_program_or_404(db_session: AsyncSession, program_uuid: str) -> Pr
     return program
 
 
+async def _enrolled_count(db_session: AsyncSession, cohort: Cohort) -> int:
+    if not cohort.usergroup_id:
+        return 0
+    statement = select(func.count()).select_from(UserGroupUser).where(
+        UserGroupUser.usergroup_id == cohort.usergroup_id
+    )
+    return int((await db_session.execute(statement)).scalar() or 0)
+
+
+async def _to_read(db_session: AsyncSession, cohort: Cohort) -> CohortRead:
+    coordinator = await get_user_author(db_session, cohort.coordinator_id)
+    enrolled = await _enrolled_count(db_session, cohort)
+    return CohortRead(
+        **cohort.model_dump(), coordinator=coordinator, enrolled_count=enrolled
+    )
+
+
 async def create_cohort(
     request: Request,
     program_uuid: str,
@@ -48,10 +78,16 @@ async def create_cohort(
         request, db_session, current_user, program.program_uuid, AccessAction.UPDATE
     )
 
+    validate_cohort_payload(cohort_object.model_dump())
+    coordinator_id = await resolve_coordinator(
+        db_session, program.org_id, cohort_object.coordinator_uuid
+    )
+
     cohort = Cohort.model_validate(
         cohort_object,
         update={"org_id": program.org_id, "program_id": program.id},
     )
+    cohort.coordinator_id = coordinator_id
     cohort.cohort_uuid = f"cohort_{uuid4()}"
     cohort.creation_date = str(datetime.now())
     cohort.update_date = str(datetime.now())
@@ -78,7 +114,7 @@ async def create_cohort(
         await db_session.rollback()
         raise
 
-    return CohortRead.model_validate(cohort)
+    return await _to_read(db_session, cohort)
 
 
 async def get_cohort(
@@ -96,7 +132,7 @@ async def get_cohort(
         AccessAction.READ,
         context=AccessContext.DASHBOARD,
     )
-    return CohortRead.model_validate(cohort)
+    return await _to_read(db_session, cohort)
 
 
 async def get_cohorts_by_program(
@@ -121,7 +157,7 @@ async def get_cohorts_by_program(
         .order_by(Cohort.creation_date.desc())  # type: ignore
     )
     cohorts = (await db_session.execute(statement)).scalars().all()
-    return [CohortRead.model_validate(c) for c in cohorts]
+    return [await _to_read(db_session, c) for c in cohorts]
 
 
 async def update_cohort(
@@ -137,6 +173,20 @@ async def update_cohort(
     )
 
     update_data = cohort_object.model_dump(exclude_unset=True)
+    merged = {**cohort.model_dump(), **update_data}
+    validate_cohort_payload(merged)
+
+    if "status" in update_data and update_data["status"] is not None:
+        assert_status_transition(
+            cohort.status, update_data["status"], COHORT_STATUS_TRANSITIONS
+        )
+
+    if "coordinator_uuid" in update_data:
+        coordinator_uuid = update_data.pop("coordinator_uuid")
+        cohort.coordinator_id = await resolve_coordinator(
+            db_session, cohort.org_id, coordinator_uuid
+        )
+
     for key, value in update_data.items():
         setattr(cohort, key, value)
     cohort.update_date = str(datetime.now())
@@ -144,7 +194,7 @@ async def update_cohort(
     db_session.add(cohort)
     await db_session.commit()
     await db_session.refresh(cohort)
-    return CohortRead.model_validate(cohort)
+    return await _to_read(db_session, cohort)
 
 
 async def delete_cohort(
@@ -233,6 +283,14 @@ async def enroll_user_in_cohort(
     if existing:
         return "User already enrolled"
 
+    # Hard-enforce the cohort capacity at enrollment time.
+    if cohort.capacity is not None:
+        current_count = await _enrolled_count(db_session, cohort)
+        if current_count >= cohort.capacity:
+            raise HTTPException(
+                status_code=409, detail="Cohort is at full capacity"
+            )
+
     db_session.add(
         UserGroupUser(
             usergroup_id=cohort.usergroup_id,
@@ -247,3 +305,65 @@ async def enroll_user_in_cohort(
     # Make sure the group is linked to all current cohort courses.
     await sync_cohort_course_access(db_session, cohort)
     return "User enrolled in cohort"
+
+
+async def unenroll_user_from_cohort(
+    request: Request,
+    cohort_uuid: str,
+    user_id: int,
+    current_user: PublicUser | AnonymousUser,
+    db_session: AsyncSession,
+) -> str:
+    """Remove a user from the cohort's enrollment UserGroup."""
+    cohort = await _get_cohort_or_404(db_session, cohort_uuid)
+    await check_resource_access(
+        request, db_session, current_user, cohort.cohort_uuid, AccessAction.UPDATE
+    )
+
+    if not cohort.usergroup_id:
+        raise HTTPException(status_code=409, detail="Cohort has no enrollment group")
+
+    membership = (
+        await db_session.execute(
+            select(UserGroupUser).where(
+                UserGroupUser.usergroup_id == cohort.usergroup_id,
+                UserGroupUser.user_id == user_id,
+            )
+        )
+    ).scalars().first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="User is not enrolled in this cohort")
+
+    await db_session.delete(membership)
+    await db_session.commit()
+    return "User unenrolled from cohort"
+
+
+async def get_cohort_members(
+    request: Request,
+    cohort_uuid: str,
+    current_user: PublicUser | AnonymousUser,
+    db_session: AsyncSession,
+) -> List[UserReadAuthor]:
+    """List the users enrolled in a cohort (via its enrollment UserGroup)."""
+    cohort = await _get_cohort_or_404(db_session, cohort_uuid)
+    await check_resource_access(
+        request,
+        db_session,
+        current_user,
+        cohort.cohort_uuid,
+        AccessAction.READ,
+        context=AccessContext.DASHBOARD,
+    )
+
+    if not cohort.usergroup_id:
+        return []
+
+    statement = (
+        select(User)
+        .join(UserGroupUser, UserGroupUser.user_id == User.id)  # type: ignore
+        .where(UserGroupUser.usergroup_id == cohort.usergroup_id)
+        .order_by(UserGroupUser.creation_date.asc())  # type: ignore
+    )
+    users = (await db_session.execute(statement)).scalars().all()
+    return [UserReadAuthor.model_validate(u) for u in users]

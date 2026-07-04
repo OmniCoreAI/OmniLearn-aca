@@ -22,6 +22,7 @@ from src.db.academic.links import (
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import get_resource_authors
 from src.services.academic.cohorts import sync_cohort_course_access
+from src.services.academic.course_profiles import get_profile_read_for_course
 
 
 async def _get_semester_or_404(db_session: AsyncSession, semester_uuid: str) -> Semester:
@@ -286,6 +287,7 @@ async def get_semester_courses(
     result: List[SemesterCourseRead] = []
     for course, link in rows:
         authors = await get_resource_authors(db_session, course.course_uuid)
+        profile = await get_profile_read_for_course(db_session, course)
         result.append(
             SemesterCourseRead(
                 **course.model_dump(),
@@ -293,6 +295,7 @@ async def get_semester_courses(
                 academic_order=link.order,
                 code=link.code,
                 credit_hours=link.credit_hours,
+                academic_profile=profile,
             )
         )
     return result

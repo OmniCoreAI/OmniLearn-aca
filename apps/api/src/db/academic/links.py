@@ -3,6 +3,7 @@ from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from src.db.courses.courses import CourseRead
+from src.db.academic.course_profiles import CourseAcademicProfileRead
 
 
 class SemesterCourseBase(SQLModel):
@@ -43,11 +44,17 @@ class SemesterCourseUpdate(SQLModel):
 
 
 class SemesterCourseRead(CourseRead):
-    """An existing Course enriched with the academic metadata from its link."""
+    """An existing Course enriched with the academic metadata from its link.
+
+    ``academic_profile`` carries the course-level offering attributes (instructor,
+    classroom, capacity, status, add-ons, certificate flag, schedule) that follow
+    the course everywhere it is used.
+    """
 
     academic_order: int = 0
     code: Optional[str] = None
     credit_hours: Optional[float] = None
+    academic_profile: Optional[CourseAcademicProfileRead] = None
 
 
 class TrainingProgramCourse(SQLModel, table=True):
@@ -69,3 +76,10 @@ class TrainingProgramCourse(SQLModel, table=True):
     )
     creation_date: str = ""
     update_date: str = ""
+
+
+class TrainingProgramCourseRead(CourseRead):
+    """An existing Course in a training program, enriched with its academic profile."""
+
+    academic_order: int = 0
+    academic_profile: Optional[CourseAcademicProfileRead] = None

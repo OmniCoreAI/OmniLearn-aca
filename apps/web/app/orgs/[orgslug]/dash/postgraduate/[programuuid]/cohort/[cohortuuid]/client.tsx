@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { GraduationCap, Plus } from 'lucide-react'
+import { GraduationCap, Plus, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -18,6 +18,7 @@ import {
   AcademicCard,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { Field, SubmitRow, inputCls } from '../../../client'
+import { EnrollmentPanel } from '@components/Dashboard/Pages/Academic/AcademicPeople'
 import {
   getProgram,
   getCohort,
@@ -47,6 +48,7 @@ function CohortDetail({
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const [enrollOpen, setEnrollOpen] = useState(false)
 
   const { data: program } = useQuery({
     queryKey: ['academic', 'program', program_uuid],
@@ -100,6 +102,12 @@ function CohortDetail({
         action={
           <AuthenticatedClientElement checkMethod="roles" action="update" ressourceType="programs" orgId={orgId!}>
             <button
+              onClick={() => setEnrollOpen(true)}
+              className="rounded-lg bg-white text-black border border-gray-200 text-xs font-bold px-5 py-2 flex items-center gap-2 nice-shadow hover:scale-105 transition-all"
+            >
+              <Users className="w-4 h-4" /> {t('academic.manage_enrollment')}
+            </button>
+            <button
               onClick={() => {
                 setEditing(null)
                 setModalOpen(true)
@@ -147,6 +155,21 @@ function CohortDetail({
               setModalOpen(false)
               refresh()
             }}
+          />
+        }
+      />
+
+      <Modal
+        isDialogOpen={enrollOpen}
+        onOpenChange={setEnrollOpen}
+        minWidth="sm"
+        dialogTitle={t('academic.manage_enrollment')}
+        dialogContent={
+          <EnrollmentPanel
+            cohortUuid={cohort_uuid}
+            orgId={orgId!}
+            access_token={access_token}
+            capacity={cohort?.capacity}
           />
         }
       />

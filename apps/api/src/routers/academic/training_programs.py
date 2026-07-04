@@ -5,12 +5,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.events.database import get_db_session
 from src.db.users import PublicUser
-from src.db.courses.courses import CourseRead
+from src.db.academic.links import TrainingProgramCourseRead
 from src.db.academic.training_programs import (
     TrainingProgramCreate,
     TrainingProgramRead,
     TrainingProgramUpdate,
 )
+from typing import Optional
 from src.security.auth import get_current_user
 from src.services.academic.training_programs import (
     create_training_program,
@@ -18,6 +19,7 @@ from src.services.academic.training_programs import (
     get_training_programs_by_org,
     update_training_program,
     delete_training_program,
+    set_training_program_coordinator,
     link_course_to_training_program,
     unlink_course_from_training_program,
     get_training_program_courses,
@@ -29,6 +31,11 @@ router = APIRouter()
 class LinkCourseRequest(BaseModel):
     course_uuid: str
     order: int = 0
+
+
+class CoordinatorRequest(BaseModel):
+    # Empty string clears the coordinator.
+    coordinator_uuid: Optional[str] = None
 
 
 @router.post("/", response_model=TrainingProgramRead, summary="Create a training program")
@@ -89,6 +96,23 @@ async def api_update_training_program(
     )
 
 
+@router.put(
+    "/{tp_uuid}/coordinator",
+    response_model=TrainingProgramRead,
+    summary="Set or clear a training program's coordinator",
+)
+async def api_set_training_program_coordinator(
+    request: Request,
+    tp_uuid: str,
+    body: CoordinatorRequest,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> TrainingProgramRead:
+    return await set_training_program_coordinator(
+        request, tp_uuid, body.coordinator_uuid, current_user, db_session
+    )
+
+
 @router.delete("/{tp_uuid}", summary="Delete a training program")
 async def api_delete_training_program(
     request: Request,
@@ -101,7 +125,7 @@ async def api_delete_training_program(
 
 @router.get(
     "/{tp_uuid}/courses",
-    response_model=List[CourseRead],
+    response_model=List[TrainingProgramCourseRead],
     summary="List courses linked to a training program",
 )
 async def api_list_training_program_courses(
@@ -109,7 +133,7 @@ async def api_list_training_program_courses(
     tp_uuid: str,
     db_session: AsyncSession = Depends(get_db_session),
     current_user: PublicUser = Depends(get_current_user),
-) -> List[CourseRead]:
+) -> List[TrainingProgramCourseRead]:
     return await get_training_program_courses(request, tp_uuid, current_user, db_session)
 
 

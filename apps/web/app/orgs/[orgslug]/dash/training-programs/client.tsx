@@ -17,6 +17,7 @@ import {
   AcademicEmptyState,
   AcademicCard,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
+import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
 import { Field, SubmitRow, inputCls } from '../postgraduate/client'
 import {
   getTrainingPrograms,
@@ -66,6 +67,20 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
     }
   }
 
+  const badgesFor = (p: any) => {
+    const badges: { label: string; className?: string }[] = [
+      { label: t(`academic.type_${p.training_type}`), className: 'bg-orange-100 text-orange-700' },
+      p.is_paid
+        ? { label: t('academic.paid'), className: 'bg-indigo-100 text-indigo-700' }
+        : { label: t('academic.free'), className: 'bg-teal-100 text-teal-700' },
+      p.published
+        ? { label: t('academic.published'), className: 'bg-green-100 text-green-700' }
+        : { label: t('academic.draft'), className: 'bg-gray-100 text-gray-500' },
+    ]
+    if (p.in_plan === false) badges.push({ label: t('academic.out_of_plan'), className: 'bg-orange-100 text-orange-700' })
+    return badges
+  }
+
   return (
     <AcademicPageShell>
       <Breadcrumbs
@@ -108,12 +123,7 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
             href={`/dash/training-programs/${p.trainingprogram_uuid.replace('trainingprogram_', '')}`}
             title={p.name}
             subtitle={p.description}
-            badges={[
-              { label: t(`academic.type_${p.training_type}`), className: 'bg-orange-100 text-orange-700' },
-              p.published
-                ? { label: t('academic.published'), className: 'bg-green-100 text-green-700' }
-                : { label: t('academic.draft'), className: 'bg-gray-100 text-gray-500' },
-            ]}
+            badges={badgesFor(p)}
             onEdit={() => {
               setEditing(p)
               setModalOpen(true)
@@ -126,7 +136,7 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
       <Modal
         isDialogOpen={modalOpen}
         onOpenChange={setModalOpen}
-        minWidth="sm"
+        minWidth="md"
         dialogTitle={editing ? t('academic.edit') : t('academic.create_training_program')}
         dialogContent={
           <TrainingProgramForm
@@ -158,11 +168,24 @@ function TrainingProgramForm({
   const { t } = useTranslation()
   const [name, setName] = useState(program?.name || '')
   const [description, setDescription] = useState(program?.description || '')
+  const [code, setCode] = useState(program?.code || '')
   const [type, setType] = useState(program?.training_type || 'workshop')
+  const [capacity, setCapacity] = useState<string>(program?.capacity != null ? String(program.capacity) : '')
+  const [isPaid, setIsPaid] = useState(program?.is_paid ?? false)
+  const [price, setPrice] = useState<string>(program?.price != null ? String(program.price) : '')
+  const [currency, setCurrency] = useState(program?.currency || 'USD')
+  const [inPlan, setInPlan] = useState(program?.in_plan ?? true)
   const [location, setLocation] = useState(program?.location || '')
   const [startDate, setStartDate] = useState(program?.start_date || '')
   const [endDate, setEndDate] = useState(program?.end_date || '')
   const [published, setPublished] = useState(program?.published ?? false)
+  const [coordinatorUuid, setCoordinatorUuid] = useState<string | null>(program?.coordinator?.user_uuid || null)
+  const [coordinatorLabel, setCoordinatorLabel] = useState<string | undefined>(
+    program?.coordinator
+      ? `${program.coordinator.first_name || ''} ${program.coordinator.last_name || ''}`.trim() ||
+          program.coordinator.username
+      : undefined
+  )
   const [saving, setSaving] = useState(false)
 
   const submit = async (e: React.FormEvent) => {
@@ -172,12 +195,19 @@ function TrainingProgramForm({
       const payload = {
         name,
         description,
+        code,
         training_type: type,
+        capacity: capacity === '' ? null : Number(capacity),
+        is_paid: isPaid,
+        price: isPaid && price !== '' ? Number(price) : null,
+        currency: isPaid ? currency : null,
+        in_plan: inPlan,
         location,
         start_date: startDate || null,
         end_date: endDate || null,
         published,
         public: published,
+        coordinator_uuid: coordinatorUuid || '',
       }
       if (program) {
         await updateTrainingProgram(program.trainingprogram_uuid, payload, access_token)
@@ -187,8 +217,8 @@ function TrainingProgramForm({
         toast.success(t('academic.created'))
       }
       onDone()
-    } catch {
-      toast.error(program ? t('academic.update_failed') : t('academic.create_failed'))
+    } catch (err: any) {
+      toast.error(err?.message || (program ? t('academic.update_failed') : t('academic.create_failed')))
     } finally {
       setSaving(false)
     }
@@ -196,9 +226,15 @@ function TrainingProgramForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <Field label={t('academic.name')}>
-        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t('academic.name')}>
+          <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required />
+        </Field>
+        <Field label={t('academic.code')}>
+          <input className={inputCls} value={code} onChange={(e) => setCode(e.target.value)} />
+        </Field>
+      </div>
+
       <Field label={t('academic.type')}>
         <select className={inputCls} value={type} onChange={(e) => setType(e.target.value)}>
           {TYPES.map((ty) => (
@@ -208,9 +244,43 @@ function TrainingProgramForm({
           ))}
         </select>
       </Field>
+
+      <Field label={t('academic.coordinator')}>
+        <CoordinatorPicker
+          orgId={orgId}
+          access_token={access_token}
+          value={coordinatorUuid}
+          selectedLabel={coordinatorLabel}
+          onChange={(uuid, label) => {
+            setCoordinatorUuid(uuid)
+            setCoordinatorLabel(label)
+          }}
+        />
+      </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t('academic.capacity')}>
+          <input type="number" min={0} className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder={t('academic.unlimited')} />
+        </Field>
+        <Field label={t('academic.currency')}>
+          <input className={inputCls} value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!isPaid} />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={isPaid} onChange={(e) => setIsPaid(e.target.checked)} />
+          {t('academic.paid')}
+        </label>
+        <Field label={t('academic.price')}>
+          <input type="number" min={0} step="0.01" className={inputCls} value={price} onChange={(e) => setPrice(e.target.value)} disabled={!isPaid} />
+        </Field>
+      </div>
+
       <Field label={t('academic.location')}>
         <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
       </Field>
+
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('academic.start_date')}>
           <input type="date" className={inputCls} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -219,13 +289,22 @@ function TrainingProgramForm({
           <input type="date" className={inputCls} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
         </Field>
       </div>
+
       <Field label={t('academic.description')}>
         <textarea className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
       </Field>
-      <label className="flex items-center gap-2 text-sm text-gray-700">
-        <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
-        {t('academic.published')}
-      </label>
+
+      <div className="flex flex-wrap gap-4">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={inPlan} onChange={(e) => setInPlan(e.target.checked)} />
+          {t('academic.in_plan')}
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
+          {t('academic.published')}
+        </label>
+      </div>
+
       <SubmitRow saving={saving} />
     </form>
   )

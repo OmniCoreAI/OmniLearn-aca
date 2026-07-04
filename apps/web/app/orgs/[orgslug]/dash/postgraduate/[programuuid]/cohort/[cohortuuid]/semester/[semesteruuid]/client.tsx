@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { GraduationCap, Plus, Unlink, Pencil } from 'lucide-react'
+import { GraduationCap, Plus, Unlink, Pencil, SlidersHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -9,6 +9,7 @@ import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import AuthenticatedClientElement from '@components/Security/AuthenticatedClientElement'
 import CourseThumbnail, { removeCoursePrefix } from '@components/Objects/Thumbnails/CourseThumbnail'
 import AttachCourseModal from '@components/Dashboard/Pages/Academic/AttachCourseModal'
+import { CourseProfilePanel } from '@components/Dashboard/Pages/Academic/CourseProfilePanel'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
@@ -52,6 +53,7 @@ function SemesterDetail({
 
   const [attachOpen, setAttachOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const [profileCourse, setProfileCourse] = useState<any>(null)
 
   const { data: program } = useQuery({
     queryKey: ['academic', 'program', program_uuid],
@@ -149,6 +151,13 @@ function SemesterDetail({
             )}
             <div className="absolute top-2 left-2 z-10 flex gap-1">
               <button
+                onClick={() => setProfileCourse(course)}
+                title={t('academic.academic_profile')}
+                className="p-1.5 rounded-md bg-white/90 nice-shadow text-gray-500 hover:text-black"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => setEditing(course)}
                 title={t('academic.edit')}
                 className="p-1.5 rounded-md bg-white/90 nice-shadow text-gray-500 hover:text-black"
@@ -201,6 +210,25 @@ function SemesterDetail({
                 setEditing(null)
                 refresh()
               }}
+            />
+          ) : (
+            <div />
+          )
+        }
+      />
+
+      <Modal
+        isDialogOpen={!!profileCourse}
+        onOpenChange={(open: boolean) => !open && setProfileCourse(null)}
+        minWidth="md"
+        dialogTitle={t('academic.academic_profile')}
+        dialogDescription={profileCourse?.name}
+        dialogContent={
+          profileCourse ? (
+            <CourseProfilePanel
+              courseUuid={profileCourse.course_uuid}
+              orgId={orgId!}
+              access_token={access_token}
             />
           ) : (
             <div />
