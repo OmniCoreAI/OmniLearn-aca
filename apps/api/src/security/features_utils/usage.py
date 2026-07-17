@@ -29,7 +29,6 @@ FeatureSet: TypeAlias = Literal[
     "courses",
     "members",
     "payments",
-    "podcasts",
     "usergroups",
 ]
 
@@ -38,7 +37,7 @@ PLAN_BASED_FEATURES = {"courses", "members", "admin_seats"}
 
 # Features that use Redis for usage tracking (non-billing, rate limiting)
 REDIS_TRACKED_FEATURES = {"ai", "analytics", "api", "assignments", "collaboration",
-                          "payments", "podcasts", "usergroups"}
+                          "payments", "usergroups"}
 
 
 def _is_non_saas() -> bool:

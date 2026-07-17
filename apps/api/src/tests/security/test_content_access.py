@@ -5,8 +5,6 @@ Tests cover:
 - Path traversal prevention
 - Public course content access for anonymous users
 - Private course content requires authentication
-- Public podcast content access
-- Private podcast content requires authentication
 - Org-level content always public
 - User avatars always public
 - Unknown paths require auth (safe default)
@@ -70,13 +68,11 @@ class TestCheckContentAccess:
         user.user_uuid = "user_123"
         return user
 
-    def _make_db_session(self, course=None, podcast=None):
+    def _make_db_session(self, course=None):
         session = MagicMock()
         execute_result = MagicMock()
         if course is not None:
             execute_result.scalars.return_value.first.return_value = course
-        elif podcast is not None:
-            execute_result.scalars.return_value.first.return_value = podcast
         else:
             execute_result.scalars.return_value.first.return_value = None
         session.execute = AsyncMock(return_value=execute_result)
@@ -87,12 +83,6 @@ class TestCheckContentAccess:
         course.public = public
         course.course_uuid = "course_abc"
         return course
-
-    def _make_podcast(self, public=True):
-        podcast = MagicMock()
-        podcast.public = public
-        podcast.podcast_uuid = "podcast_abc"
-        return podcast
 
     @pytest.mark.asyncio
     async def test_public_course_activity_anonymous(self):
@@ -142,30 +132,6 @@ class TestCheckContentAccess:
                 self._make_anon_user(), db
             )
         assert exc_info.value.status_code == 403
-
-    @pytest.mark.asyncio
-    async def test_public_podcast_episode_anonymous(self):
-        """Anonymous users can access episode content of public podcasts."""
-        from src.routers.local_content import _check_content_access
-        podcast = self._make_podcast(public=True)
-        db = self._make_db_session(podcast=podcast)
-        await _check_content_access(
-            "orgs/org1/podcasts/podcast_abc/episodes/ep1/audio.mp3",
-            self._make_anon_user(), db
-        )
-
-    @pytest.mark.asyncio
-    async def test_private_podcast_episode_anonymous_rejected(self):
-        """Anonymous users cannot access episode content of private podcasts."""
-        from src.routers.local_content import _check_content_access
-        podcast = self._make_podcast(public=False)
-        db = self._make_db_session(podcast=podcast)
-        with pytest.raises(HTTPException) as exc_info:
-            await _check_content_access(
-                "orgs/org1/podcasts/podcast_abc/episodes/ep1/audio.mp3",
-                self._make_anon_user(), db
-            )
-        assert exc_info.value.status_code == 401
 
     @pytest.mark.asyncio
     async def test_course_thumbnail_always_public(self):
@@ -258,13 +224,11 @@ class TestS3ContentAccess:
         user.id = 1
         return user
 
-    def _make_db_session(self, course=None, podcast=None):
+    def _make_db_session(self, course=None):
         session = MagicMock()
         execute_result = MagicMock()
         if course is not None:
             execute_result.scalars.return_value.first.return_value = course
-        elif podcast is not None:
-            execute_result.scalars.return_value.first.return_value = podcast
         else:
             execute_result.scalars.return_value.first.return_value = None
         session.execute = AsyncMock(return_value=execute_result)

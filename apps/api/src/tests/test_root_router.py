@@ -63,8 +63,6 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     install_package("src.routers.folders")
     install_package("src.routers.media")
     install_package("src.routers.courses.activities")
-    install_package("src.routers.communities")
-    install_package("src.routers.podcasts")
     install_package("src.routers.playgrounds")
     install_package("src.routers.integrations")
     install_package("src.services")
@@ -203,28 +201,6 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     ]
 
     install_router_module(
-        "src.routers.communities.communities", "src.routers.communities.communities"
-    )
-    install_router_module(
-        "src.routers.communities.discussions", "src.routers.communities.discussions"
-    )
-    sys.modules["src.routers.communities"].communities = sys.modules[
-        "src.routers.communities.communities"
-    ]
-    sys.modules["src.routers.communities"].discussions = sys.modules[
-        "src.routers.communities.discussions"
-    ]
-
-    install_router_module("src.routers.podcasts.podcasts", "src.routers.podcasts.podcasts")
-    install_router_module("src.routers.podcasts.episodes", "src.routers.podcasts.episodes")
-    sys.modules["src.routers.podcasts"].podcasts = sys.modules[
-        "src.routers.podcasts.podcasts"
-    ]
-    sys.modules["src.routers.podcasts"].episodes = sys.modules[
-        "src.routers.podcasts.episodes"
-    ]
-
-    install_router_module(
         "src.routers.playgrounds.playgrounds", "src.routers.playgrounds.playgrounds"
     )
     install_router_module(
@@ -269,7 +245,6 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
         require_plan=_plan_factory("require_plan"),
         require_plan_for_boards=_plan_factory("require_plan_for_boards"),
         require_plan_for_certifications=_plan_factory("require_plan_for_certifications"),
-        require_plan_for_community=_plan_factory("require_plan_for_community"),
         require_plan_for_usergroups=_plan_factory("require_plan_for_usergroups"),
         require_plan_for_playgrounds=_plan_factory("require_plan_for_playgrounds"),
     )

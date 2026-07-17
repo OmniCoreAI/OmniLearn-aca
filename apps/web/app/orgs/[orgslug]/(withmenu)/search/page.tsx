@@ -8,9 +8,6 @@ import {
   Folder,
   Users as UsersIcon,
   Search as SearchIcon,
-  MessagesSquare,
-  MessageCircle,
-  Mic,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -23,47 +20,12 @@ import { useOrg } from '@components/Contexts/OrgContext'
 import {
   getCourseThumbnailMediaDirectory,
   getUserAvatarMediaDirectory,
-  getCommunityThumbnailMediaDirectory,
   getPlaygroundThumbnailMediaDirectory,
-  getPodcastThumbnailMediaDirectory,
 } from '@services/media/media'
 import { getUriWithOrg } from '@services/config/config'
 import { removeCoursePrefix } from '@components/Objects/Thumbnails/CourseThumbnail'
 import UserAvatar from '@components/Objects/UserAvatar'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
-
-/**
- * Discussions store their body as a tiptap/ProseMirror JSON document
- * ({"type":"doc","content":[…]}). Old posts may also be plain strings.
- * Return a flat preview string either way.
- */
-function extractPreviewText(raw: string | undefined | null): string {
-  if (!raw) return ''
-  const trimmed = raw.trim()
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return trimmed
-
-  try {
-    const parsed = JSON.parse(trimmed)
-    const parts: string[] = []
-    const walk = (node: any): void => {
-      if (!node) return
-      if (typeof node === 'string') {
-        parts.push(node)
-        return
-      }
-      if (Array.isArray(node)) {
-        node.forEach(walk)
-        return
-      }
-      if (typeof node.text === 'string') parts.push(node.text)
-      if (node.content) walk(node.content)
-    }
-    walk(parsed)
-    return parts.join(' ').replace(/\s+/g, ' ').trim()
-  } catch {
-    return trimmed
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types mirror the backend SearchResult shape — kept flexible on purpose so
@@ -97,24 +59,6 @@ interface ApiFolder {
   folder_uuid: string
 }
 
-interface ApiCommunity {
-  name: string
-  description?: string
-  thumbnail_image?: string
-  community_uuid: string
-  public?: boolean
-}
-
-interface ApiDiscussion {
-  title: string
-  content?: string
-  discussion_uuid: string
-  community_id: number
-  community_uuid?: string
-  label?: string
-  emoji?: string
-}
-
 interface ApiPlayground {
   name: string
   description?: string
@@ -123,55 +67,33 @@ interface ApiPlayground {
   org_uuid?: string
 }
 
-interface ApiPodcast {
-  name: string
-  description?: string
-  thumbnail_image?: string
-  podcast_uuid: string
-}
-
 interface SearchResults {
   courses: ApiCourse[]
   folders: ApiFolder[]
   users: ApiUser[]
-  communities: ApiCommunity[]
-  discussions: ApiDiscussion[]
   playgrounds: ApiPlayground[]
-  podcasts: ApiPodcast[]
   total_courses: number
   total_folders: number
   total_users: number
-  total_communities: number
-  total_discussions: number
   total_playgrounds: number
-  total_podcasts: number
 }
 
 const EMPTY_RESULTS: SearchResults = {
   courses: [],
   folders: [],
   users: [],
-  communities: [],
-  discussions: [],
   playgrounds: [],
-  podcasts: [],
   total_courses: 0,
   total_folders: 0,
   total_users: 0,
-  total_communities: 0,
-  total_discussions: 0,
   total_playgrounds: 0,
-  total_podcasts: 0,
 }
 
 type ResourceKey =
   | 'courses'
   | 'folders'
   | 'users'
-  | 'communities'
-  | 'discussions'
   | 'playgrounds'
-  | 'podcasts'
 
 type TabKey = 'all' | ResourceKey
 
@@ -252,50 +174,6 @@ const sections: SectionDescriptor<any>[] = [
     ),
   },
   {
-    key: 'communities',
-    icon: MessagesSquare,
-    items: (r) => r.communities,
-    total: (r) => r.total_communities,
-    itemKey: (c: ApiCommunity) => c.community_uuid,
-    renderCard: (community: ApiCommunity, ctx) => (
-      <ResourceCard
-        href={getUriWithOrg(ctx.orgSlug, `/community/${community.community_uuid.replace('community_', '')}`)}
-        imageUrl={community.thumbnail_image
-          ? getCommunityThumbnailMediaDirectory(ctx.orgUuid, community.community_uuid, community.thumbnail_image)
-          : undefined}
-        fallbackIcon={MessagesSquare}
-        title={community.name}
-        subtitle={community.description}
-      />
-    ),
-  },
-  {
-    key: 'discussions',
-    icon: MessageCircle,
-    items: (r) => r.discussions,
-    total: (r) => r.total_discussions,
-    itemKey: (d: ApiDiscussion) => d.discussion_uuid,
-    renderCard: (discussion: ApiDiscussion, ctx) => {
-      const communityUuid = (discussion.community_uuid ?? '').replace('community_', '')
-      const discussionUuid = discussion.discussion_uuid.replace('discussion_', '')
-      const href = communityUuid
-        ? getUriWithOrg(
-            ctx.orgSlug,
-            `/community/${communityUuid}/discussion/${discussionUuid}`,
-          )
-        : getUriWithOrg(ctx.orgSlug, `/discussion/${discussionUuid}`)
-      return (
-        <InlineCard
-          href={href}
-          icon={MessageCircle}
-          emoji={discussion.emoji}
-          title={discussion.title}
-          subtitle={extractPreviewText(discussion.content)}
-        />
-      )
-    },
-  },
-  {
     key: 'playgrounds',
     icon: Cube,
     items: (r) => r.playgrounds,
@@ -314,24 +192,6 @@ const sections: SectionDescriptor<any>[] = [
         fallbackIcon={Cube}
         title={playground.name}
         subtitle={playground.description}
-      />
-    ),
-  },
-  {
-    key: 'podcasts',
-    icon: Mic,
-    items: (r) => r.podcasts,
-    total: (r) => r.total_podcasts,
-    itemKey: (p: ApiPodcast) => p.podcast_uuid,
-    renderCard: (podcast: ApiPodcast, ctx) => (
-      <ResourceCard
-        href={getUriWithOrg(ctx.orgSlug, `/podcast/${podcast.podcast_uuid.replace('podcast_', '')}`)}
-        imageUrl={podcast.thumbnail_image
-          ? getPodcastThumbnailMediaDirectory(ctx.orgUuid, podcast.podcast_uuid, podcast.thumbnail_image)
-          : undefined}
-        fallbackIcon={Mic}
-        title={podcast.name}
-        subtitle={podcast.description}
       />
     ),
   },

@@ -26,22 +26,10 @@ export function resourceHref(
   if (!resource) return null
   const dash = ctx === 'dashboard'
   switch (type) {
-    case 'communities': {
-      const id = (resource.community_uuid || '').replace('community_', '')
-      return id
-        ? getUriWithOrg(orgslug, dash ? `/dash/communities/${id}/general` : `/community/${id}`)
-        : null
-    }
     case 'boards': {
       const id = (resource.board_uuid || '').replace('board_', '')
       return id
         ? getUriWithOrg(orgslug, dash ? `/dash/boards/${id}/general` : `/board/${id}`)
-        : null
-    }
-    case 'podcasts': {
-      const id = (resource.podcast_uuid || '').replace('podcast_', '')
-      return id
-        ? getUriWithOrg(orgslug, dash ? `/dash/podcasts/podcast/${id}/general` : `/podcast/${id}`)
         : null
     }
     case 'playgrounds': {

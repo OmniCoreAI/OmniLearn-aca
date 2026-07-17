@@ -4,7 +4,7 @@ import Link from 'next/link'
 import GeneralWrapperStyled from '@components/Objects/StyledElements/Wrappers/GeneralWrapper'
 import { getUriWithOrg } from '@services/config/config'
 import { getCourseThumbnailMediaDirectory } from '@services/media/media'
-import { ShoppingBag, RefreshCcw, SquareCheck, ArrowRight, Sparkles, BookOpen, Mic, Puzzle } from 'lucide-react'
+import { ShoppingBag, RefreshCcw, SquareCheck, ArrowRight, Sparkles, BookOpen, Puzzle } from 'lucide-react'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useOmniLearnAnalytics, useTrackView, AnalyticsEvent } from '@services/analytics'
 
@@ -44,7 +44,6 @@ function getResourceUrl(orgslug: string, resource: Resource): string | null {
   const id = stripTypePrefix(resource.resource_uuid)
   switch (resource.resource_type) {
     case 'course': return getUriWithOrg(orgslug, `/course/${id}`)
-    case 'podcast': return getUriWithOrg(orgslug, `/podcast/${id}`)
     case 'playground': return getUriWithOrg(orgslug, `/playground/${id}`)
     default: return null
   }
@@ -53,7 +52,6 @@ function getResourceUrl(orgslug: string, resource: Resource): string | null {
 function resourceIcon(type: string) {
   switch (type) {
     case 'course': return <BookOpen size={12} className="text-indigo-400" />
-    case 'podcast': return <Mic size={12} className="text-pink-400" />
     default: return <Puzzle size={12} className="text-gray-300" />
   }
 }

@@ -232,16 +232,6 @@ WEBHOOK_EVENTS: dict[str, dict] = {
             "name": "string",
         },
     },
-    "podcast_episode_created": {
-        "category": "Content Management",
-        "description": "Triggered when a new podcast episode is added",
-        "data_schema": {
-            "episode_uuid": "string",
-            "podcast_uuid": "string",
-            "title": "string",
-            "episode_number": "integer",
-        },
-    },
     # ── Collaboration ────────────────────────────────────────────────
     "board_created": {
         "category": "Collaboration",
@@ -268,55 +258,6 @@ WEBHOOK_EVENTS: dict[str, dict] = {
             "playground_uuid": "string",
             "name": "string",
             "created_by": "integer",
-        },
-    },
-    # ── Community ────────────────────────────────────────────────────
-    "discussion_posted": {
-        "category": "Community",
-        "description": "Triggered when a user creates a discussion",
-        "data_schema": {
-            "user": {"user_uuid": "string", "email": "string", "username": "string"},
-            "discussion": {"discussion_uuid": "string", "title": "string"},
-            "community": {"community_uuid": "string"},
-        },
-    },
-    "comment_created": {
-        "category": "Community",
-        "description": "Triggered when a user posts a comment on a discussion",
-        "data_schema": {
-            "user": {"user_uuid": "string", "email": "string", "username": "string"},
-            "comment": {"comment_uuid": "string"},
-            "discussion": {"discussion_uuid": "string", "title": "string"},
-            "community": {"community_uuid": "string"},
-        },
-    },
-    "discussion_pinned": {
-        "category": "Community",
-        "description": "Triggered when a discussion is pinned or unpinned",
-        "data_schema": {
-            "discussion_uuid": "string",
-            "title": "string",
-            "is_pinned": "boolean",
-            "community_uuid": "string",
-        },
-    },
-    "discussion_locked": {
-        "category": "Community",
-        "description": "Triggered when a discussion is locked or unlocked",
-        "data_schema": {
-            "discussion_uuid": "string",
-            "title": "string",
-            "is_locked": "boolean",
-            "community_uuid": "string",
-        },
-    },
-    "discussion_vote_cast": {
-        "category": "Community",
-        "description": "Triggered when a user upvotes a discussion",
-        "data_schema": {
-            "discussion_uuid": "string",
-            "user_id": "integer",
-            "upvote_count": "integer",
         },
     },
     # ── Groups ───────────────────────────────────────────────────────

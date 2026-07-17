@@ -16,10 +16,8 @@ import {
   Check,
   CaretDown,
   PencilSimple,
-  ChatsCircle,
   Book,
   ChatCircleDots,
-  Headphones,
   ChartBar,
   DotsThree,
   UsersThree,
@@ -174,8 +172,6 @@ function DashLeftMenu() {
   const isEnabled = (feature: string) => rf?.[feature]?.enabled === true
 
   const showLibrary = isEnabled('folders')
-  const showCommunities = isEnabled('communities')
-  const showPodcasts = isEnabled('podcasts')
   const showBoards = isEnabled('boards')
   const showPlaygrounds = isEnabled('playgrounds')
   const showPayments = isEnabled('payments')
@@ -365,24 +361,6 @@ function DashLeftMenu() {
                 label={t('library.library')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/library')}
-              />
-            )}
-            {showCommunities && (
-              <MenuLink
-                href="/dash/communities"
-                icon={<ChatsCircle size={20} weight="fill" />}
-                label={t('communities.title')}
-                isCollapsed={isCollapsed}
-                active={isActivePath('/dash/communities')}
-              />
-            )}
-            {showPodcasts && (
-              <MenuLink
-                href="/dash/podcasts"
-                icon={<Headphones size={20} weight="fill" />}
-                label={t('podcasts.podcasts')}
-                isCollapsed={isCollapsed}
-                active={isActivePath('/dash/podcasts')}
               />
             )}
             {showBoards && (
@@ -642,7 +620,7 @@ function DashLeftMenu() {
             </HoverMenu>
 
             {/* Disabled features shown in an "Other" hover menu */}
-            {(!showCommunities || !showPodcasts || !showBoards || !showPlaygrounds || !showPayments) && (
+            {(!showBoards || !showPlaygrounds || !showPayments) && (
               <HoverMenu
                 content={
                   <HoverMenuContent className="w-64">
@@ -653,22 +631,6 @@ function DashLeftMenu() {
                       </span>
                     </HoverMenuLabel>
                     <HoverMenuSeparator />
-                    {!showCommunities && (
-                      <HoverMenuItem asChild>
-                        <Link href="/dash/communities" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-muted))]/70 hover:text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">
-                          <ChatsCircle size={16} weight="fill" />
-                          <span>{t('communities.title')}</span>
-                        </Link>
-                      </HoverMenuItem>
-                    )}
-                    {!showPodcasts && (
-                      <HoverMenuItem asChild>
-                        <Link href="/dash/podcasts" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-muted))]/70 hover:text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">
-                          <Headphones size={16} weight="fill" />
-                          <span>{t('podcasts.podcasts')}</span>
-                        </Link>
-                      </HoverMenuItem>
-                    )}
                     {!showBoards && (
                       <HoverMenuItem asChild>
                         <Link href="/dash/boards" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-muted))]/70 hover:text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">

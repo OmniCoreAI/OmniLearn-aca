@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import React, { useEffect, useState, Suspense } from 'react'
+import React, { useEffect, useState } from 'react'
 import { getUriWithOrg } from '@services/config/config'
 import { getCourseMetadata } from '@services/courses/courses'
 import { useTrail } from '@/hooks/queries/useTrail'
@@ -23,7 +23,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query/keys'
 import { getActivityWithAuthHeader } from '@services/courses/activities'
 import { useTranslation } from 'react-i18next'
-import CourseCommunitySection from '@components/Objects/Communities/CourseCommunitySection'
 import CourseShare from '@components/Objects/Courses/CourseShare/CourseShare'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
 
@@ -672,10 +671,6 @@ const CourseClient = (props: any) => {
               </div>
             </div>
 
-            {/* Community Section */}
-            <Suspense fallback={<div className="animate-pulse h-48 bg-gray-100 rounded-lg mt-4" />}>
-              <CourseCommunitySection courseUuid={course.course_uuid} orgslug={orgslug} />
-            </Suspense>
           </GeneralWrapperStyled>
 
           {/* Mobile Actions Box */}

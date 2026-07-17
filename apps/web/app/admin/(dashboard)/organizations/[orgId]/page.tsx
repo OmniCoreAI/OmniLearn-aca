@@ -1212,11 +1212,9 @@ type AdminToggles = {
   boards: FeatureToggle
   collaboration: FeatureToggle
   folders: FeatureToggle
-  communities: FeatureToggle
   members: MembersToggle
   payments: FeatureToggle
   playgrounds: FeatureToggle
-  podcasts: FeatureToggle
 }
 
 const DEFAULT_ADMIN_TOGGLES: AdminToggles = {
@@ -1226,11 +1224,9 @@ const DEFAULT_ADMIN_TOGGLES: AdminToggles = {
   boards: { disabled: false },
   collaboration: { disabled: false },
   folders: { disabled: false },
-  communities: { disabled: false },
   members: { disabled: false, signup_mode: 'open' },
   payments: { disabled: false },
   playgrounds: { disabled: false },
-  podcasts: { disabled: false },
 }
 
 const FEATURE_ORDER: { key: keyof AdminToggles; label: string; description: string }[] = [
@@ -1240,11 +1236,9 @@ const FEATURE_ORDER: { key: keyof AdminToggles; label: string; description: stri
   { key: 'boards', label: 'Boards', description: 'Kanban-style learning boards' },
   { key: 'collaboration', label: 'Collaboration', description: 'Real-time co-editing' },
   { key: 'folders', label: 'Folders', description: 'Organize courses and media into folders' },
-  { key: 'communities', label: 'Communities', description: 'Public/private community spaces' },
   { key: 'members', label: 'Members', description: 'Member directory and roles' },
   { key: 'payments', label: 'Payments', description: 'Paid courses and checkout' },
   { key: 'playgrounds', label: 'Playgrounds', description: 'Interactive code/exec environments' },
-  { key: 'podcasts', label: 'Podcasts', description: 'Audio episodes inside courses' },
 ]
 
 function ToggleSwitch({

@@ -54,13 +54,12 @@ class TestRBACUtilsRuntime:
     @pytest.mark.parametrize(
         "element_uuid,expected",
         [
-            ("community_123", "communities"),
-            ("discussion_123", "discussions"),
-            ("vote_123", "votes"),
-            ("podcast_123", "podcasts"),
-            ("episode_123", "episodes"),
             ("board_123", "boards"),
             ("playground_123", "playgrounds"),
+            ("folder_123", "folders"),
+            ("media_123", "media"),
+            ("program_123", "programs"),
+            ("trainingprogram_123", "training_programs"),
         ],
     )
     async def test_check_element_type_handles_remaining_prefixes(self, element_uuid, expected):

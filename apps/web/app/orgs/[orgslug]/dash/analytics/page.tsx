@@ -25,7 +25,6 @@ const PeakUsageHeatmap = dynamic(() => import('@components/Dashboard/Analytics/P
 const ContentTypeEffectiveness = dynamic(() => import('@components/Dashboard/Analytics/ContentTypeEffectiveness'))
 const NewVsReturning = dynamic(() => import('@components/Dashboard/Analytics/NewVsReturning'))
 const CompletionVelocity = dynamic(() => import('@components/Dashboard/Analytics/CompletionVelocity'))
-const CommunityCorrelation = dynamic(() => import('@components/Dashboard/Analytics/CommunityCorrelation'))
 const UserProgressSnapshot = dynamic(() => import('@components/Dashboard/Analytics/UserProgressSnapshot'))
 const GradeDistribution = dynamic(() => import('@components/Dashboard/Analytics/GradeDistribution'))
 const SearchEffectiveness = dynamic(() => import('@components/Dashboard/Analytics/SearchEffectiveness'))
@@ -44,7 +43,7 @@ const ADVANCED_QUERY_NAMES = [
   'org_growth_trend', 'new_vs_returning', 'cohort_retention', 'peak_usage_hours',
   'course_dropoff', 'time_to_completion', 'completion_velocity',
   'content_type_effectiveness', 'course_rating_by_completion',
-  'community_correlation', 'learner_engagement_score', 'user_progress_snapshot',
+  'learner_engagement_score', 'user_progress_snapshot',
   'search_effectiveness', 'certification_rate',
 ]
 
@@ -206,23 +205,20 @@ export default function AnalyticsDashboard() {
                 <CourseEffectivenessMatrix days={days} />
               </AdvancedGate>
               <AdvancedGate isAdvanced={isAdvanced} currentPlan={plan}>
-                <CommunityCorrelation days={days} />
+                <LearnerEngagementScore days={days} />
               </AdvancedGate>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AdvancedGate isAdvanced={isAdvanced} currentPlan={plan}>
-                <LearnerEngagementScore days={days} />
-              </AdvancedGate>
               <AdvancedGate isAdvanced={isAdvanced} currentPlan={plan}>
                 <UserProgressSnapshot days={days} />
               </AdvancedGate>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <AdvancedGate isAdvanced={isAdvanced} currentPlan={plan}>
                 <GradeDistribution />
               </AdvancedGate>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <AdvancedGate isAdvanced={isAdvanced} currentPlan={plan}>
                 <CertificationRate days={days} />
               </AdvancedGate>

@@ -8,8 +8,6 @@ import {
   Users,
   ShieldCheck,
   Chalkboard,
-  ChatCircle,
-  Microphone,
   ArrowRight,
   Lightning,
 } from '@phosphor-icons/react'
@@ -101,20 +99,6 @@ export default function UsageOverview() {
       icon: BookOpen,
       enabled: orgFeatures?.courses?.enabled !== false,
       href: '/dash/courses',
-    },
-    {
-      key: 'communities',
-      label: t('dashboard.home.communities'),
-      icon: ChatCircle,
-      enabled: orgFeatures?.communities?.enabled !== false,
-      href: '/dash/communities',
-    },
-    {
-      key: 'podcasts',
-      label: t('dashboard.home.podcasts'),
-      icon: Microphone,
-      enabled: orgFeatures?.podcasts?.enabled === true,
-      href: '/dash/podcasts',
     },
     {
       key: 'boards',

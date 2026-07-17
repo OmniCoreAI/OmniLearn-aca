@@ -49,12 +49,8 @@ import {
   Trophy,
   CheckCircle,
   GameController,
-  ChatCircle,
-  ChatDots,
-  ThumbsUp,
   Kanban,
   ChalkboardSimple,
-  Microphone,
   MagnifyingGlass,
   Certificate,
   Briefcase,
@@ -120,15 +116,8 @@ const iconMap = {
   // Platform > Playgrounds
   '/platform/playgrounds': GameController,
 
-  // Platform > Discussions
-  '/platform/discussions': ChatCircle,
-  '/platform/discussions/comments': ChatDots,
-
   // Platform > Boards
   '/platform/boards': ChalkboardSimple,
-
-  // Platform > Podcasts
-  '/platform/podcasts': Microphone,
 
   // Platform > Certifications
   '/platform/certifications': Certificate,

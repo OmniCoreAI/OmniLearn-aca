@@ -111,52 +111,6 @@ class TestResourceAccessRuntime:
         assert decision.via_public is True
 
     @pytest.mark.asyncio
-    async def test_check_access_community_public_read_for_anonymous_user(self, mock_request, session, anonymous_user):
-        checker = self._checker(mock_request, session, anonymous_user)
-        community = SimpleNamespace(community_uuid="community_1", public=True, org_id=1)
-        session.execute.return_value.scalars.return_value.first.return_value = community
-
-        decision = await checker.check_access("community_1", AccessAction.READ)
-
-        assert decision.allowed is True
-        assert decision.via_public is True
-
-    @pytest.mark.asyncio
-    async def test_check_access_authenticated_user_community_public_view(self, mock_request, session, public_user):
-        checker = self._checker(mock_request, session, public_user)
-        community = SimpleNamespace(community_uuid="community_3", public=True, org_id=1)
-        session.execute.return_value.scalars.return_value.first.return_value = community
-
-        decision = await checker.check_access(
-            "community_3", AccessAction.READ, AccessContext.PUBLIC_VIEW
-        )
-
-        assert decision.allowed is True
-        assert decision.via_public is True
-
-    @pytest.mark.asyncio
-    async def test_check_access_anonymous_community_private_denied(self, mock_request, session, anonymous_user):
-        checker = self._checker(mock_request, session, anonymous_user)
-        community = SimpleNamespace(community_uuid="community_4", public=False, org_id=1)
-        session.execute.return_value.scalars.return_value.first.return_value = community
-
-        decision = await checker.check_access("community_4", AccessAction.READ)
-
-        assert decision.allowed is False
-        assert "not public" in decision.reason.lower()
-
-    @pytest.mark.asyncio
-    async def test_check_access_community_private_read_for_anonymous_user(self, mock_request, session, anonymous_user):
-        checker = self._checker(mock_request, session, anonymous_user)
-        community = SimpleNamespace(community_uuid="community_2", public=False, org_id=1)
-        session.execute.return_value.scalars.return_value.first.return_value = community
-
-        decision = await checker.check_access("community_2", AccessAction.READ)
-
-        assert decision.allowed is False
-        assert "not public" in decision.reason.lower()
-
-    @pytest.mark.asyncio
     async def test_public_view_authorship_admin_role_and_usergroup_paths(self, mock_request, session, public_user):
         checker = self._checker(mock_request, session, public_user)
         course_cfg = ResourceConfig(
@@ -216,13 +170,13 @@ class TestResourceAccessRuntime:
             return_value=False,
         ):
             usergroup_decision = await checker._check_public_view_read_access(
-                "community_6",
+                "folder_6",
                 ResourceConfig(
-                    resource_type="communities",
-                    uuid_prefix="community_",
+                    resource_type="folders",
+                    uuid_prefix="folder_",
                     has_published_field=False,
                     supports_usergroups=True,
-                    supports_authorship=False,
+                    supports_authorship=True,
                 ),
             )
         assert usergroup_decision.allowed is True
@@ -641,13 +595,11 @@ class TestResourceAccessRuntime:
         ("resource_type", "uuid_field", "uuid_value"),
         [
             ("courses", "course_uuid", "course_1"),
-            ("podcasts", "podcast_uuid", "podcast_1"),
-            ("communities", "community_uuid", "community_1"),
             ("folders", "folder_uuid", "folder_1"),
             ("coursechapters", "chapter_uuid", "chapter_1"),
             ("activities", "activity_uuid", "activity_1"),
-            ("episodes", "episode_uuid", "episode_1"),
-            ("discussions", "discussion_uuid", "discussion_1"),
+            ("boards", "board_uuid", "board_1"),
+            ("playgrounds", "playground_uuid", "playground_1"),
         ],
     )
     async def test_get_resource_branches(self, mock_request, session, public_user, resource_type, uuid_field, uuid_value):
@@ -671,9 +623,9 @@ class TestResourceAccessRuntime:
         ("resource_type", "expected_attr"),
         [
             ("courses", "course_uuid"),
-            ("podcasts", "podcast_uuid"),
-            ("communities", "community_uuid"),
             ("coursechapters", "chapter_uuid"),
+            ("programs", "program_uuid"),
+            ("cohorts", "cohort_uuid"),
         ],
     )
     async def test_get_parent_uuid_by_id_branches(self, mock_request, session, public_user, resource_type, expected_attr):

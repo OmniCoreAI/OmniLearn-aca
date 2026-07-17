@@ -395,48 +395,6 @@ GROUP BY org_id, course_uuid
 ORDER BY avg_hours_between ASC
 """
 
-COMMUNITY_CORRELATION = """
-WITH discussors AS (
-    SELECT DISTINCT org_id, user_id
-    FROM events
-    WHERE ({org_id} = 0 OR org_id = {org_id}) AND event_name = 'discussion_posted'
-        AND timestamp >= now() - INTERVAL {days} DAY
-),
-enrolled AS (
-    SELECT DISTINCT org_id, user_id
-    FROM events
-    WHERE ({org_id} = 0 OR org_id = {org_id}) AND event_name = 'course_enrolled'
-        AND timestamp >= now() - INTERVAL {days} DAY
-),
-completed AS (
-    SELECT DISTINCT org_id, user_id
-    FROM events
-    WHERE ({org_id} = 0 OR org_id = {org_id}) AND event_name = 'course_completed'
-        AND timestamp >= now() - INTERVAL {days} DAY
-)
-SELECT
-    e.org_id,
-    'discussors' AS group_name,
-    count(DISTINCT e.user_id) AS enrolled_count,
-    count(DISTINCT c.user_id) AS completed_count,
-    if(enrolled_count > 0, round(completed_count / enrolled_count * 100, 1), 0) AS completion_rate
-FROM enrolled e
-INNER JOIN discussors d ON e.user_id = d.user_id AND e.org_id = d.org_id
-LEFT JOIN completed c ON e.user_id = c.user_id AND e.org_id = c.org_id
-GROUP BY e.org_id
-UNION ALL
-SELECT
-    e.org_id,
-    'non_discussors' AS group_name,
-    count(DISTINCT e.user_id) AS enrolled_count,
-    count(DISTINCT c.user_id) AS completed_count,
-    if(enrolled_count > 0, round(completed_count / enrolled_count * 100, 1), 0) AS completion_rate
-FROM enrolled e
-LEFT ANTI JOIN discussors d ON e.user_id = d.user_id AND e.org_id = d.org_id
-LEFT JOIN completed c ON e.user_id = c.user_id AND e.org_id = c.org_id
-GROUP BY e.org_id
-"""
-
 USER_PROGRESS_SNAPSHOT = """
 WITH total_activities AS (
     SELECT
@@ -699,7 +657,6 @@ ADVANCED_QUERIES: dict[str, tuple[str, int]] = {
     "content_type_effectiveness": (CONTENT_TYPE_EFFECTIVENESS, 30),
     "new_vs_returning": (NEW_VS_RETURNING, 30),
     "completion_velocity": (COMPLETION_VELOCITY, 90),
-    "community_correlation": (COMMUNITY_CORRELATION, 90),
     "user_progress_snapshot": (USER_PROGRESS_SNAPSHOT, 90),
     "search_effectiveness": (SEARCH_EFFECTIVENESS, 30),
     "certification_rate": (CERTIFICATION_RATE, 90),

@@ -44,11 +44,9 @@ from src.services.orgs.orgs import (
     update_org_preview,
     update_org_signup_mechanism,
     update_org_ai_config,
-    update_org_communities_config,
     update_org_payments_config,
     update_org_folders_config,
     update_org_courses_config,
-    update_org_podcasts_config,
     update_org_boards_config,
     update_org_playgrounds_config,
     update_org_color_config,
@@ -493,32 +491,6 @@ async def api_update_org_ai_config(
 
 
 @feature_config_router.put(
-    "/{org_id}/config/communities",
-    summary="Update organization communities config",
-    description="Enable or disable the communities feature for the organization. Admin only.",
-    responses={
-        200: {"description": "Communities configuration updated."},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Caller is not an organization administrator"},
-        404: {"description": "Organization not found"},
-    },
-)
-async def api_update_org_communities_config(
-    request: Request,
-    org_id: int,
-    communities_enabled: bool,
-    current_user: PublicUser = Depends(get_current_user),
-    db_session: AsyncSession = Depends(get_db_session),
-):
-    """
-    Update organization communities configuration (admin-only)
-    """
-    return await update_org_communities_config(
-        request, communities_enabled, org_id, current_user, db_session
-    )
-
-
-@feature_config_router.put(
     "/{org_id}/config/payments",
     summary="Update organization payments config",
     description="Enable or disable the payments feature for the organization. Admin only.",
@@ -593,32 +565,6 @@ async def api_update_org_folders_config(
     """
     return await update_org_folders_config(
         request, folders_enabled, org_id, current_user, db_session
-    )
-
-
-@feature_config_router.put(
-    "/{org_id}/config/podcasts",
-    summary="Update organization podcasts config",
-    description="Enable or disable the podcasts feature for the organization. Admin only.",
-    responses={
-        200: {"description": "Podcasts configuration updated."},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Caller is not an organization administrator"},
-        404: {"description": "Organization not found"},
-    },
-)
-async def api_update_org_podcasts_config(
-    request: Request,
-    org_id: int,
-    podcasts_enabled: bool,
-    current_user: PublicUser = Depends(get_current_user),
-    db_session: AsyncSession = Depends(get_db_session),
-):
-    """
-    Update organization podcasts configuration (admin-only)
-    """
-    return await update_org_podcasts_config(
-        request, podcasts_enabled, org_id, current_user, db_session
     )
 
 

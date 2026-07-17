@@ -8,10 +8,7 @@ import { searchOrgContent } from '@services/search/search'
 export type ContentResultType =
   | 'course'
   | 'user'
-  | 'community'
-  | 'discussion'
   | 'playground'
-  | 'podcast'
 
 export interface ContentResult {
   id: string
@@ -47,25 +44,6 @@ function normalize(data: any): ContentResult[] {
       href: '/dash/users/settings/users',
     })
   }
-  for (const com of data.communities ?? []) {
-    out.push({
-      id: com.community_uuid,
-      type: 'community',
-      title: com.name,
-      subtitle: com.description ?? undefined,
-      href: `/dash/communities/${stripPrefix(com.community_uuid, 'community_')}/general`,
-    })
-  }
-  for (const d of data.discussions ?? []) {
-    const community = stripPrefix(d.community_uuid ?? '', 'community_')
-    out.push({
-      id: d.discussion_uuid ?? `${d.id}`,
-      type: 'discussion',
-      title: d.title ?? d.content?.slice(0, 80) ?? '',
-      subtitle: d.content ? d.content.slice(0, 100) : undefined,
-      href: community ? `/dash/communities/${community}/discussions` : '/dash/communities',
-    })
-  }
   for (const p of data.playgrounds ?? []) {
     out.push({
       id: p.playground_uuid,
@@ -73,15 +51,6 @@ function normalize(data: any): ContentResult[] {
       title: p.name,
       subtitle: p.description ?? undefined,
       href: '/dash/playgrounds',
-    })
-  }
-  for (const p of data.podcasts ?? []) {
-    out.push({
-      id: p.podcast_uuid,
-      type: 'podcast',
-      title: p.name,
-      subtitle: p.description ?? undefined,
-      href: `/dash/podcasts/podcast/${stripPrefix(p.podcast_uuid, 'podcast_')}/general`,
     })
   }
   return out

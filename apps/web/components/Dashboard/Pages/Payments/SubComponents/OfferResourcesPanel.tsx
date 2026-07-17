@@ -5,7 +5,7 @@ import { useLHSession } from '@components/Contexts/LHSessionContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query/keys';
 import toast from 'react-hot-toast';
-import { BookOpen, Mic, Puzzle, X, Plus, Loader2 } from 'lucide-react';
+import { BookOpen, Puzzle, X, Plus, Loader2 } from 'lucide-react';
 import { getOrgCourses } from '@services/courses/courses';
 import { getOfferResources, addOfferResource, removeOfferResource } from '@services/payments/groups';
 
@@ -16,7 +16,6 @@ interface OfferResourcesPanelProps {
 
 function resourceIcon(uuid: string) {
   if (uuid.startsWith('course_')) return <BookOpen size={14} className="text-indigo-500" />;
-  if (uuid.startsWith('podcast_')) return <Mic size={14} className="text-pink-400" />;
   return <Puzzle size={14} className="text-gray-400" />;
 }
 

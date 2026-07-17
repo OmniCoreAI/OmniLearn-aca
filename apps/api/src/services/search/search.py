@@ -9,10 +9,7 @@ from src.db.courses.courses import CourseRead
 from src.db.folders.folders import Folder, FolderRead
 from src.db.organizations import Organization
 from src.db.user_organizations import UserOrganization
-from src.db.communities.communities import Community, CommunityRead
-from src.db.communities.discussions import Discussion, DiscussionRead
 from src.db.playgrounds import Playground, PlaygroundRead, PlaygroundAccessType
-from src.db.podcasts.podcasts import Podcast, PodcastRead
 from src.services.courses.courses import search_courses
 from src.services.search.normalization import (
     LIKE_ESCAPE_CHAR,
@@ -21,13 +18,6 @@ from src.services.search.normalization import (
 )
 from src.security.auth import resolve_acting_user_id
 from src.security.org_auth import is_org_member
-
-
-class SearchDiscussionRead(DiscussionRead):
-    """DiscussionRead plus the parent community UUID so the UI can deep-link
-    to `/community/{uuid}/discussion/{uuid}` without another round trip."""
-
-    community_uuid: str = ""
 
 
 class SearchResult(BaseModel):
@@ -42,18 +32,12 @@ class SearchResult(BaseModel):
     courses: List[CourseRead]
     folders: List[FolderRead]
     users: List[UserRead]
-    communities: List[CommunityRead]
-    discussions: List[SearchDiscussionRead]
     playgrounds: List[PlaygroundRead]
-    podcasts: List[PodcastRead]
 
     total_courses: int = 0
     total_folders: int = 0
     total_users: int = 0
-    total_communities: int = 0
-    total_discussions: int = 0
     total_playgrounds: int = 0
-    total_podcasts: int = 0
 
 
 def _empty_result() -> SearchResult:
@@ -61,10 +45,7 @@ def _empty_result() -> SearchResult:
         courses=[],
         folders=[],
         users=[],
-        communities=[],
-        discussions=[],
         playgrounds=[],
-        podcasts=[],
     )
 
 
@@ -96,25 +77,6 @@ async def _paginate_and_count(
     """
     offset = (page - 1) * limit
     rows = (await db_session.execute(query.offset(offset).limit(limit))).scalars().all()
-    total = (await db_session.execute(
-        select(func.count()).select_from(query.order_by(None).subquery())
-    )).scalar_one()
-    return list(rows), int(total)
-
-
-async def _paginate_and_count_rows(
-    db_session: AsyncSession,
-    query,
-    page: int,
-    limit: int,
-) -> tuple[list, int]:
-    """Like ``_paginate_and_count`` but preserves multi-column ``Row`` tuples.
-
-    Use this for selects that return more than one column, e.g.
-    ``select(Discussion, Community.community_uuid)``.
-    """
-    offset = (page - 1) * limit
-    rows = (await db_session.execute(query.offset(offset).limit(limit))).all()
     total = (await db_session.execute(
         select(func.count()).select_from(query.order_by(None).subquery())
     )).scalar_one()
@@ -220,31 +182,6 @@ async def search_across_org(
         )
         users, total_users = await _paginate_and_count(db_session, users_q, page, limit)
 
-    # ── Communities ──────────────────────────────────────────────────────────
-    communities_q = (
-        select(Community)
-        .where(Community.org_id == org.id)
-        .where(_ilike_any([Community.name, Community.description], pattern))
-    )
-    if only_public:
-        communities_q = communities_q.where(Community.public == sa_true())
-    communities, total_communities = await _paginate_and_count(
-        db_session, communities_q, page, limit
-    )
-
-    # ── Discussions (inherit access from their community) ────────────────────
-    discussions_q = (
-        select(Discussion, Community.community_uuid)
-        .join(Community, Community.id == Discussion.community_id)
-        .where(Discussion.org_id == org.id)
-        .where(_ilike_any([Discussion.title, Discussion.content], pattern))
-    )
-    if only_public:
-        discussions_q = discussions_q.where(Community.public == sa_true())
-    discussions, total_discussions = await _paginate_and_count_rows(
-        db_session, discussions_q, page, limit
-    )
-
     # ── Playgrounds (published only; restricted are usergroup-gated elsewhere) ─
     playgrounds_q = (
         select(Playground)
@@ -267,30 +204,9 @@ async def search_across_org(
         db_session, playgrounds_q, page, limit
     )
 
-    # ── Podcasts ─────────────────────────────────────────────────────────────
-    podcasts_q = (
-        select(Podcast)
-        .where(Podcast.org_id == org.id)
-        .where(Podcast.published == sa_true())
-        .where(_ilike_any([Podcast.name, Podcast.description, Podcast.tags], pattern))
-    )
-    if only_public:
-        podcasts_q = podcasts_q.where(Podcast.public == sa_true())
-    podcasts, total_podcasts = await _paginate_and_count(
-        db_session, podcasts_q, page, limit
-    )
-
     folder_reads = [FolderRead.model_validate(f) for f in folders]
 
     user_reads = [UserRead.model_validate(u) for u in users]
-    community_reads = [CommunityRead.model_validate(c) for c in communities]
-    discussion_reads = [
-        SearchDiscussionRead(
-            **discussion.model_dump(),
-            community_uuid=community_uuid or "",
-        )
-        for discussion, community_uuid in discussions
-    ]
 
     playground_reads: list[PlaygroundRead] = []
     for pg in playgrounds:
@@ -299,21 +215,13 @@ async def search_across_org(
         read.org_slug = org.slug
         playground_reads.append(read)
 
-    podcast_reads = [PodcastRead(**p.model_dump(), authors=[]) for p in podcasts]
-
     return SearchResult(
         courses=courses,
         folders=folder_reads,
         users=user_reads,
-        communities=community_reads,
-        discussions=discussion_reads,
         playgrounds=playground_reads,
-        podcasts=podcast_reads,
         total_courses=total_courses,
         total_folders=total_folders,
         total_users=total_users,
-        total_communities=total_communities,
-        total_discussions=total_discussions,
         total_playgrounds=total_playgrounds,
-        total_podcasts=total_podcasts,
     )

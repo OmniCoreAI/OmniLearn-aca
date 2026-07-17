@@ -28,16 +28,6 @@ async def check_element_type(element_uuid):
         return "activities"
     elif element_uuid.startswith("role_"):
         return "roles"
-    elif element_uuid.startswith("community_"):
-        return "communities"
-    elif element_uuid.startswith("discussion_"):
-        return "discussions"
-    elif element_uuid.startswith("vote_"):
-        return "votes"
-    elif element_uuid.startswith("podcast_"):
-        return "podcasts"
-    elif element_uuid.startswith("episode_"):
-        return "episodes"
     elif element_uuid.startswith("board_"):
         return "boards"
     elif element_uuid.startswith("playground_"):
@@ -178,36 +168,6 @@ async def get_element_organization_id(
 
     elif element_type == "houses":
         return None
-
-    elif element_type == "communities":
-        from src.db.communities.communities import Community
-        return (await db_session.execute(select(Community.org_id).where(Community.community_uuid == element_uuid))).scalars().first()
-
-    elif element_type == "discussions":
-        from src.db.communities.discussions import Discussion
-        return (await db_session.execute(select(Discussion.org_id).where(Discussion.discussion_uuid == element_uuid))).scalars().first()
-
-    elif element_type == "votes":
-        from src.db.communities.discussion_votes import DiscussionVote
-        from src.db.communities.discussions import Discussion
-        return (await db_session.execute(
-            select(Discussion.org_id)
-            .join(DiscussionVote, Discussion.id == DiscussionVote.discussion_id)
-            .where(DiscussionVote.vote_uuid == element_uuid)
-        )).scalars().first()
-
-    elif element_type == "podcasts":
-        from src.db.podcasts.podcasts import Podcast
-        return (await db_session.execute(select(Podcast.org_id).where(Podcast.podcast_uuid == element_uuid))).scalars().first()
-
-    elif element_type == "episodes":
-        from src.db.podcasts.episodes import PodcastEpisode
-        from src.db.podcasts.podcasts import Podcast
-        return (await db_session.execute(
-            select(Podcast.org_id)
-            .join(PodcastEpisode, Podcast.id == PodcastEpisode.podcast_id)
-            .where(PodcastEpisode.episode_uuid == element_uuid)
-        )).scalars().first()
 
     elif element_type == "boards":
         from src.db.boards import Board

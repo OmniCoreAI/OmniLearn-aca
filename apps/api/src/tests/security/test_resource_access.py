@@ -36,21 +36,6 @@ class TestResourceConfig:
         assert config.supports_usergroups is True
         assert config.supports_authorship is True
 
-    def test_get_resource_config_for_podcast(self):
-        """Test getting config for podcast UUID."""
-        config = get_resource_config("podcast_abc123")
-        assert config is not None
-        assert config.resource_type == "podcasts"
-        assert config.has_published_field is True
-
-    def test_get_resource_config_for_community(self):
-        """Test getting config for community UUID."""
-        config = get_resource_config("community_abc123")
-        assert config is not None
-        assert config.resource_type == "communities"
-        assert config.has_published_field is False  # Communities don't have published field
-        assert config.supports_authorship is False  # Communities don't have authors
-
     def test_get_resource_config_for_chapter(self):
         """Test getting config for chapter UUID (child resource)."""
         config = get_resource_config("chapter_abc123")
@@ -67,20 +52,6 @@ class TestResourceConfig:
         assert config.parent_resource_type == "coursechapters"
         assert config.parent_id_field == "chapter_id"
 
-    def test_get_resource_config_for_episode(self):
-        """Test getting config for episode UUID."""
-        config = get_resource_config("episode_abc123")
-        assert config is not None
-        assert config.resource_type == "episodes"
-        assert config.parent_resource_type == "podcasts"
-
-    def test_get_resource_config_for_discussion(self):
-        """Test getting config for discussion UUID."""
-        config = get_resource_config("discussion_abc123")
-        assert config is not None
-        assert config.resource_type == "discussions"
-        assert config.parent_resource_type == "communities"
-
     def test_get_resource_config_for_unknown(self):
         """Test getting config for unknown UUID prefix."""
         config = get_resource_config("unknown_abc123")
@@ -94,8 +65,8 @@ class TestResourceConfig:
     def test_get_resource_type(self):
         """Test getting resource type from UUID."""
         assert get_resource_type("course_123") == "courses"
-        assert get_resource_type("podcast_123") == "podcasts"
-        assert get_resource_type("community_123") == "communities"
+        assert get_resource_type("folder_123") == "folders"
+        assert get_resource_type("board_123") == "boards"
         assert get_resource_type("unknown_123") is None
 
     def test_all_resource_configs_have_required_fields(self):
@@ -284,21 +255,19 @@ class TestResourceAccessChecker:
         assert "logged in" in decision.reason.lower()
 
     @pytest.mark.asyncio
-    async def test_check_access_community_no_published_field(
+    async def test_check_access_folder_no_published_field(
         self, mock_request, mock_db_session, mock_anonymous_user
     ):
-        """Test community access without published field."""
+        """Test folder access without published field (public flag only)."""
         checker = ResourceAccessChecker(mock_request, mock_db_session, mock_anonymous_user)
 
-        # Mock the community lookup - public community (no published field)
-        mock_community = Mock()
-        mock_community.public = True
-        mock_community.org_id = 1
-        # Community doesn't have published field
-        del mock_community.published
-        mock_db_session.execute.return_value.scalars.return_value.first.return_value = mock_community
+        mock_folder = Mock()
+        mock_folder.public = True
+        mock_folder.org_id = 1
+        del mock_folder.published
+        mock_db_session.execute.return_value.scalars.return_value.first.return_value = mock_folder
 
-        decision = await checker.check_access("community_123", AccessAction.READ)
+        decision = await checker.check_access("folder_123", AccessAction.READ)
 
         assert decision.allowed is True
         assert decision.via_public is True
@@ -375,24 +344,13 @@ class TestParentResourceResolution:
         assert config.parent_resource_type == "coursechapters"
         assert config.parent_id_field == "chapter_id"
 
-    def test_episode_has_podcast_parent(self):
-        """Test that episode config points to podcast as parent."""
-        config = get_resource_config("episode_123")
-        assert config.parent_resource_type == "podcasts"
-        assert config.parent_id_field == "podcast_id"
-
-    def test_discussion_has_community_parent(self):
-        """Test that discussion config points to community as parent."""
-        config = get_resource_config("discussion_123")
-        assert config.parent_resource_type == "communities"
-        assert config.parent_id_field == "community_id"
-
     def test_primary_resources_have_no_parent(self):
         """Test that primary resources don't have parent configuration."""
-        primary_resources = ["course_123", "podcast_123", "community_123", "folder_123"]
+        primary_resources = ["course_123", "folder_123", "board_123", "media_123"]
 
         for resource_uuid in primary_resources:
             config = get_resource_config(resource_uuid)
+            assert config is not None
             assert config.parent_resource_type is None
             assert config.parent_id_field is None
 

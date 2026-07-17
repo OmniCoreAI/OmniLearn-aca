@@ -10,8 +10,6 @@ import { shareMediaLink } from '@components/Dashboard/Library/shareFolder'
 import { getMediaFileDirectory } from '@services/media/media-resource'
 import Link from 'next/link'
 import {
-  MicrophoneStage,
-  ChatsCircle,
   SquaresFour,
   Cube,
   LinkSimple,
@@ -38,8 +36,6 @@ import { useTranslation } from 'react-i18next'
 // Soft tone for the preview header (bg + icon color).
 const TYPE_TONE: Record<string, string> = {
   media: 'bg-amber-50 text-amber-500',
-  podcasts: 'bg-rose-50 text-rose-500',
-  communities: 'bg-emerald-50 text-emerald-500',
   boards: 'bg-indigo-50 text-indigo-500',
   playgrounds: 'bg-fuchsia-50 text-fuchsia-500',
 }
@@ -57,8 +53,6 @@ function mediaIcon(resource: any) {
 function typeIcon(type: string, resource: any) {
   switch (type) {
     case 'media': return mediaIcon(resource)
-    case 'podcasts': return MicrophoneStage
-    case 'communities': return ChatsCircle
     case 'boards': return SquaresFour
     case 'playgrounds': return Cube
     default: return FileIcon

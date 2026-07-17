@@ -113,7 +113,7 @@ export default function LibraryHeader({
 }
 
 // Shared client-side filtering used by both root and folder views.
-const _RESOURCE_TYPES = ['podcasts', 'communities', 'boards', 'playgrounds']
+const _RESOURCE_TYPES = ['boards', 'playgrounds']
 export function filterLibrary(folders: any[], items: any[], query: string, filter: FilterKey) {
   const q = query.trim().toLowerCase()
   const showFolders = filter === 'all' || filter === 'folders'

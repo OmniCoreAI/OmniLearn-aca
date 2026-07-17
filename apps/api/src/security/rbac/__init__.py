@@ -1,7 +1,7 @@
 """
 RBAC (Role-Based Access Control) Module
 
-This module provides a unified access control system for courses, podcasts, and communities.
+This module provides a unified access control system for courses and related resources.
 
 Usage:
     from src.security.rbac import (
@@ -61,8 +61,6 @@ from src.security.rbac.dependencies import (
     require_create_access,
     require_dashboard_access,
     CourseAccess,
-    PodcastAccess,
-    CommunityAccess,
 )
 
 # Low-level RBAC functions (used internally, can be used directly if needed)
@@ -114,8 +112,6 @@ __all__ = [
     "require_create_access",
     "require_dashboard_access",
     "CourseAccess",
-    "PodcastAccess",
-    "CommunityAccess",
     # Low-level functions
     "check_usergroup_access",
     "authorization_verify_if_element_is_public",

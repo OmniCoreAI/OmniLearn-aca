@@ -44,10 +44,8 @@ const FULL_TOGGLES_SAMPLE = {
     boards: { disabled: false },
     collaboration: { disabled: false },
     folders: { disabled: false },
-    communities: { disabled: false },
     payments: { disabled: false },
     playgrounds: { disabled: false },
-    podcasts: { disabled: false },
   },
 }
 
@@ -147,7 +145,7 @@ export const ENDPOINTS: EndpointDoc[] = [
         type: 'object',
         required: true,
         description:
-          'Full slice: ai, members, analytics, api, boards, collaboration, folders, communities, payments, playgrounds, podcasts',
+          'Full slice: ai, members, analytics, api, boards, collaboration, folders, payments, playgrounds',
       },
     ],
     sampleBody: FULL_TOGGLES_SAMPLE,
@@ -215,10 +213,8 @@ export const ENDPOINTS: EndpointDoc[] = [
           boards: { disabled: false },
           collaboration: { disabled: false },
           folders: { disabled: false },
-          communities: { disabled: false },
           payments: { disabled: false },
           playgrounds: { disabled: false },
-          podcasts: { disabled: false },
         },
       },
     },

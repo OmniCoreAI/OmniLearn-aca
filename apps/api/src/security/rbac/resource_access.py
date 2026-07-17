@@ -687,18 +687,6 @@ class ResourceAccessChecker:
             parent = (await self.db_session.execute(statement)).scalars().first()
             return parent.course_uuid if parent else None
 
-        elif parent_config.resource_type == "podcasts":
-            from src.db.podcasts.podcasts import Podcast
-            statement = select(Podcast).where(Podcast.id == parent_id)
-            parent = (await self.db_session.execute(statement)).scalars().first()
-            return parent.podcast_uuid if parent else None
-
-        elif parent_config.resource_type == "communities":
-            from src.db.communities.communities import Community
-            statement = select(Community).where(Community.id == parent_id)
-            parent = (await self.db_session.execute(statement)).scalars().first()
-            return parent.community_uuid if parent else None
-
         elif parent_config.resource_type == "coursechapters":
             from src.db.courses.chapters import Chapter
             statement = select(Chapter).where(Chapter.id == parent_id)
@@ -856,16 +844,6 @@ class ResourceAccessChecker:
             statement = select(Course).where(Course.course_uuid == resource_uuid)
             resource = (await self.db_session.execute(statement)).scalars().first()
 
-        elif config.resource_type == "podcasts":
-            from src.db.podcasts.podcasts import Podcast
-            statement = select(Podcast).where(Podcast.podcast_uuid == resource_uuid)
-            resource = (await self.db_session.execute(statement)).scalars().first()
-
-        elif config.resource_type == "communities":
-            from src.db.communities.communities import Community
-            statement = select(Community).where(Community.community_uuid == resource_uuid)
-            resource = (await self.db_session.execute(statement)).scalars().first()
-
         elif config.resource_type == "folders":
             from src.db.folders.folders import Folder
             statement = select(Folder).where(Folder.folder_uuid == resource_uuid)
@@ -895,16 +873,6 @@ class ResourceAccessChecker:
         elif config.resource_type == "activities":
             from src.db.courses.activities import Activity
             statement = select(Activity).where(Activity.activity_uuid == resource_uuid)
-            resource = (await self.db_session.execute(statement)).scalars().first()
-
-        elif config.resource_type == "episodes":
-            from src.db.podcasts.episodes import PodcastEpisode
-            statement = select(PodcastEpisode).where(PodcastEpisode.episode_uuid == resource_uuid)
-            resource = (await self.db_session.execute(statement)).scalars().first()
-
-        elif config.resource_type == "discussions":
-            from src.db.communities.discussions import Discussion
-            statement = select(Discussion).where(Discussion.discussion_uuid == resource_uuid)
             resource = (await self.db_session.execute(statement)).scalars().first()
 
         # Academic Management resources

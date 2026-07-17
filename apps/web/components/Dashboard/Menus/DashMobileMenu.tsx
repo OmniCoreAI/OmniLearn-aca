@@ -12,8 +12,6 @@ import {
   Globe,
   Gear,
   SignOut,
-  ChatsCircle,
-  Headphones,
   ChartBar,
   ChalkboardSimple,
   Cube,
@@ -112,12 +110,6 @@ function DashMobileMenu() {
           <PillLink href="/dash/training-programs" icon={<Certificate size={18} weight="fill" />} active={isActive('/dash/training-programs')} className="hidden min-[360px]:flex" />
           <PillLink href="/dash/assignments" icon={<Files size={18} weight="fill" />} active={isActive('/dash/assignments')} className="hidden min-[390px]:flex" />
           <PillLink href="/dash/users/settings/users" icon={<Users size={18} weight="fill" />} active={isActive('/dash/users')} className="hidden min-[430px]:flex" />
-          {isEnabled('communities') && (
-            <PillLink href="/dash/communities" icon={<ChatsCircle size={18} weight="fill" />} active={isActive('/dash/communities')} className="hidden min-[470px]:flex" />
-          )}
-          {isEnabled('podcasts') && (
-            <PillLink href="/dash/podcasts" icon={<Headphones size={18} weight="fill" />} active={isActive('/dash/podcasts')} className="hidden min-[510px]:flex" />
-          )}
           {isEnabled('boards') && (
             <PillLink href="/dash/boards" icon={<ChalkboardSimple size={18} weight="fill" />} active={isActive('/dash/boards')} className="hidden min-[550px]:flex" />
           )}
@@ -226,8 +218,6 @@ function DashMobileMenu() {
                 {isEnabled('folders') && <PanelItem href="/dash/library" icon={<FolderSimple size={15} weight="fill" />} label={t('library.library')} active={isActive('/dash/library')} onClick={close} />}
                 <PanelItem href="/dash/assignments" icon={<Files size={15} weight="fill" />} label={t('common.assignments')} active={isActive('/dash/assignments')} onClick={close} />
                 <PanelItem href="/dash/users/settings/users" icon={<Users size={15} weight="fill" />} label={t('common.users')} active={isActive('/dash/users')} onClick={close} />
-                {isEnabled('communities') && <PanelItem href="/dash/communities" icon={<ChatsCircle size={15} weight="fill" />} label={t('communities.title')} active={isActive('/dash/communities')} onClick={close} />}
-                {isEnabled('podcasts') && <PanelItem href="/dash/podcasts" icon={<Headphones size={15} weight="fill" />} label={t('podcasts.podcasts')} active={isActive('/dash/podcasts')} onClick={close} />}
                 {isEnabled('boards') && <PanelItem href="/dash/boards" icon={<ChalkboardSimple size={15} weight="fill" />} label="Boards" active={isActive('/dash/boards')} onClick={close} />}
                 {isEnabled('playgrounds') && <PanelItem href="/dash/playgrounds" icon={<Cube size={15} weight="fill" />} label="Playgrounds" active={isActive('/dash/playgrounds')} onClick={close} />}
                 {isEnabled('payments') && <PanelItem href="/dash/payments/overview" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.payments')} active={isActive('/dash/payments')} onClick={close} />}

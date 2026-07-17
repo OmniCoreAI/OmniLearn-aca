@@ -6,8 +6,6 @@ import { apiFetch } from '@services/utils/ts/requests'
 import { addFolderContent, addOrgRootContent } from '@services/folders/folders'
 import {
   BookCopy,
-  Podcast,
-  Users,
   LayoutGrid,
   Gamepad2,
   Search,
@@ -28,12 +26,10 @@ type Props = {
   onChanged?: () => void
 }
 
-type TabKey = 'courses' | 'podcasts' | 'communities' | 'boards' | 'playgrounds'
+type TabKey = 'courses' | 'boards' | 'playgrounds'
 
 const TAB_META: Record<TabKey, { feature: string; icon: any; uuidKey: string }> = {
   courses: { feature: 'courses', icon: BookCopy, uuidKey: 'course_uuid' },
-  podcasts: { feature: 'podcasts', icon: Podcast, uuidKey: 'podcast_uuid' },
-  communities: { feature: 'communities', icon: Users, uuidKey: 'community_uuid' },
   boards: { feature: 'boards', icon: LayoutGrid, uuidKey: 'board_uuid' },
   playgrounds: { feature: 'playgrounds', icon: Gamepad2, uuidKey: 'playground_uuid' },
 }
@@ -42,10 +38,6 @@ function endpointFor(tab: TabKey, orgslug: string, org_id: any): string {
   switch (tab) {
     case 'courses':
       return `${getAPIUrl()}courses/org_slug/${orgslug}/page/1/limit/100`
-    case 'podcasts':
-      return `${getAPIUrl()}podcasts/org_slug/${orgslug}/page/1/limit/100`
-    case 'communities':
-      return `${getAPIUrl()}communities/org/${org_id}/page/1/limit/100`
     case 'boards':
       return `${getAPIUrl()}boards/org/${org_id}`
     case 'playgrounds':

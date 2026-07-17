@@ -124,30 +124,6 @@ export function ActivitySkeleton() {
 }
 
 // ---------------------------------------------------------------------------
-// CommunityListSkeleton
-// List of community card rows.
-// ---------------------------------------------------------------------------
-export function CommunityListSkeleton() {
-  return (
-    <div className="flex flex-col gap-3 w-full">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white border border-gray-100">
-          {/* Icon / avatar */}
-          <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse flex-shrink-0" />
-          {/* Text block */}
-          <div className="flex flex-col gap-1.5 flex-1">
-            <div className="h-4 w-1/3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-            <div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          </div>
-          {/* CTA pill */}
-          <div className="h-7 w-16 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse flex-shrink-0" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // DashboardSkeleton
 // Generic dashboard layout: stat cards + a chart area.
 // ---------------------------------------------------------------------------

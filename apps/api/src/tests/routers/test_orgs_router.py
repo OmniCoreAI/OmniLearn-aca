@@ -351,11 +351,9 @@ class TestOrgConfigEndpoints:
         ("path", "target", "params"),
         [
             ("/api/v1/orgs/1/config/ai", "update_org_ai_config", {"ai_enabled": "true", "copilot_enabled": "false"}),
-            ("/api/v1/orgs/1/config/communities", "update_org_communities_config", {"communities_enabled": "true"}),
             ("/api/v1/orgs/1/config/payments", "update_org_payments_config", {"payments_enabled": "true"}),
             ("/api/v1/orgs/1/config/courses", "update_org_courses_config", {"courses_enabled": "true"}),
             ("/api/v1/orgs/1/config/folders", "update_org_folders_config", {"folders_enabled": "true"}),
-            ("/api/v1/orgs/1/config/podcasts", "update_org_podcasts_config", {"podcasts_enabled": "true"}),
             ("/api/v1/orgs/1/config/boards", "update_org_boards_config", {"boards_enabled": "true"}),
             ("/api/v1/orgs/1/config/playgrounds", "update_org_playgrounds_config", {"playgrounds_enabled": "true"}),
             ("/api/v1/orgs/1/config/color", "update_org_color_config", {"color": "#fff"}),

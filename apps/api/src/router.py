@@ -34,11 +34,7 @@ from src.routers.instructors import (
 from src.routers.folders import folders as folders_router_module
 from src.routers.media import media as media_router_module
 from src.routers.courses import migration as migration_router_module
-from src.routers.communities import communities as communities_router_module
-from src.routers.communities import discussions as discussions_router_module
 from src.routers.courses.activities import activities, blocks
-from src.routers.podcasts import podcasts as podcasts_router_module
-from src.routers.podcasts import episodes as episodes_router_module
 from src.routers.boards import boards as boards_router_module
 from src.routers.playgrounds import playgrounds as playgrounds_router_module
 from src.routers.playgrounds import playgrounds_generator as playgrounds_generator_router
@@ -51,7 +47,7 @@ from src.security.api_token_utils import (
     require_authenticated_user_or_api_token,
     require_non_api_token_user,
 )
-from src.security.features_utils.plan_check import require_plan, require_plan_for_boards, require_plan_for_certifications, require_plan_for_community, require_plan_for_usergroups, require_plan_for_playgrounds
+from src.security.features_utils.plan_check import require_plan, require_plan_for_boards, require_plan_for_certifications, require_plan_for_usergroups, require_plan_for_playgrounds
 
 
 v1_router = APIRouter(prefix="/api/v1")
@@ -244,27 +240,6 @@ v1_router.include_router(
 )
 v1_router.include_router(
     media_router_module.router, prefix="/media", tags=["media"]
-)
-v1_router.include_router(
-    communities_router_module.router,
-    prefix="/communities",
-    tags=["communities"],
-    dependencies=[Depends(require_plan_for_community("standard", "Communities"))]
-)
-v1_router.include_router(
-    discussions_router_module.router,
-    tags=["discussions"],
-    dependencies=[Depends(require_plan_for_community("standard", "Communities"))]
-)
-v1_router.include_router(
-    podcasts_router_module.router,
-    prefix="/podcasts",
-    tags=["podcasts"]
-)
-v1_router.include_router(
-    episodes_router_module.router,
-    prefix="/podcasts",
-    tags=["podcasts", "episodes"]
 )
 v1_router.include_router(
     certifications.router,

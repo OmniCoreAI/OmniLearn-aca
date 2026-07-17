@@ -4,7 +4,6 @@ import {
   Users,
   CurrencyCircleDollar,
   Buildings,
-  ChatsCircle,
   ChalkboardSimple,
   Cube,
   GraduationCap,
@@ -53,13 +52,6 @@ export const DASHBOARD_MENU_ITEMS: DashboardMenuItem[] = [
     href: '/dash/assignments',
     icon: Files,
     labelKey: 'common.assignments',
-  },
-  {
-    id: 'communities',
-    href: '/dash/communities',
-    icon: ChatsCircle,
-    labelKey: 'communities.title',
-    featureKey: 'communities',
   },
   {
     id: 'boards',

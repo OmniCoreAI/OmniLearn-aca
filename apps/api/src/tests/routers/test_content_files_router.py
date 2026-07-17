@@ -9,7 +9,6 @@ from httpx import ASGITransport, AsyncClient
 
 from src.core.events.database import get_db_session
 from src.db.courses.courses import Course
-from src.db.podcasts.podcasts import Podcast
 from src.db.users import APITokenUser, AnonymousUser, PublicUser
 from src.routers import content_files
 from src.routers.content_files import router as content_files_router
@@ -114,7 +113,7 @@ class TestContentFilesRouter:
             mp.setattr(urllib.parse, "unquote", fake_unquote)
             assert content_files._validate_content_path("safe.txt") is None
 
-    async def test_check_content_access_course_and_podcast_branches(
+    async def test_check_content_access_course_branches(
         self, db, org, admin_user
     ):
         private_course = Course(
@@ -141,32 +140,8 @@ class TestContentFilesRouter:
             creation_date="2024-01-01",
             update_date="2024-01-01",
         )
-        private_podcast = Podcast(
-            id=41,
-            name="Private Podcast",
-            description="Desc",
-            public=False,
-            published=True,
-            org_id=org.id,
-            podcast_uuid="podcast_private_access",
-            creation_date="2024-01-01",
-            update_date="2024-01-01",
-        )
-        public_podcast = Podcast(
-            id=42,
-            name="Public Podcast",
-            description="Desc",
-            public=True,
-            published=True,
-            org_id=org.id,
-            podcast_uuid="podcast_public_access",
-            creation_date="2024-01-01",
-            update_date="2024-01-01",
-        )
         db.add(private_course)
         db.add(public_course)
-        db.add(private_podcast)
-        db.add(public_podcast)
         await db.commit()
 
         outsider = PublicUser(
@@ -237,56 +212,6 @@ class TestContentFilesRouter:
         await content_files._check_content_access(
             "users/user_outsider/avatar.png",
             AnonymousUser(),
-            db,
-        )
-
-        with pytest.raises(Exception) as not_found_podcast:
-            await content_files._check_content_access(
-                f"orgs/{org.org_uuid}/podcasts/missing/episodes/a/audio.mp3",
-                admin_user,
-                db,
-            )
-        assert not_found_podcast.value.status_code == 403
-
-        await content_files._check_content_access(
-            f"orgs/{org.org_uuid}/podcasts/{public_podcast.podcast_uuid}/episodes/a/audio.mp3",
-            AnonymousUser(),
-            db,
-        )
-
-        with pytest.raises(Exception) as anon_private_podcast:
-            await content_files._check_content_access(
-                f"orgs/{org.org_uuid}/podcasts/{private_podcast.podcast_uuid}/episodes/a/audio.mp3",
-                AnonymousUser(),
-                db,
-            )
-        assert anon_private_podcast.value.status_code == 401
-
-        with pytest.raises(Exception) as wrong_org_podcast_token:
-            await content_files._check_content_access(
-                f"orgs/{org.org_uuid}/podcasts/{private_podcast.podcast_uuid}/episodes/a/audio.mp3",
-                APITokenUser(org_id=org.id + 1),
-                db,
-            )
-        assert wrong_org_podcast_token.value.status_code == 403
-
-        await content_files._check_content_access(
-            f"orgs/{org.org_uuid}/podcasts/{private_podcast.podcast_uuid}/episodes/a/audio.mp3",
-            APITokenUser(org_id=org.id),
-            db,
-        )
-
-        with pytest.raises(Exception) as no_membership_podcast:
-            await content_files._check_content_access(
-                f"orgs/{org.org_uuid}/podcasts/{private_podcast.podcast_uuid}/episodes/a/audio.mp3",
-                outsider,
-                db,
-            )
-        assert no_membership_podcast.value.status_code == 403
-
-        await content_files._check_content_access(
-            f"orgs/{org.org_uuid}/podcasts/{private_podcast.podcast_uuid}/episodes/a/audio.mp3",
-            admin_user,
             db,
         )
 

@@ -33,16 +33,12 @@ from src.services.webhooks.dispatch import dispatch_webhooks
 def _resource_registry():
     """prefix -> (resource_type label, model, uuid_field). Lazy to avoid cycles."""
     from src.db.courses.courses import Course
-    from src.db.podcasts.podcasts import Podcast
-    from src.db.communities.communities import Community
     from src.db.boards import Board
     from src.db.playgrounds import Playground
     from src.db.media.media import Media
 
     return {
         "course_": ("courses", Course, "course_uuid"),
-        "podcast_": ("podcasts", Podcast, "podcast_uuid"),
-        "community_": ("communities", Community, "community_uuid"),
         "board_": ("boards", Board, "board_uuid"),
         "playground_": ("playgrounds", Playground, "playground_uuid"),
         "media_": ("media", Media, "media_uuid"),

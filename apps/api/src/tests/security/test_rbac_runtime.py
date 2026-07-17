@@ -229,7 +229,7 @@ class TestRBACRuntime:
         }
 
     @pytest.mark.asyncio
-    async def test_authorization_verify_if_element_is_public_covers_podcast_and_folder_failures(self):
+    async def test_authorization_verify_if_element_is_public_covers_media_and_folder_failures(self):
         with patch("src.security.rbac.rbac.check_element_type", new_callable=AsyncMock) as mock_check_type:
             mock_check_type.return_value = "folders"
             session = _session_with_results(_result(first=None))
@@ -245,13 +245,13 @@ class TestRBACRuntime:
             assert exc_info.value.status_code == 403
 
         with patch("src.security.rbac.rbac.check_element_type", new_callable=AsyncMock) as mock_check_type:
-            mock_check_type.return_value = "podcasts"
+            mock_check_type.return_value = "media"
             session = _session_with_results(_result(first=SimpleNamespace(id=1)))
 
             assert (
                 await authorization_verify_if_element_is_public(
                     request=_request(),
-                    element_uuid="podcast_1",
+                    element_uuid="media_1",
                     action="read",
                     db_session=session,
                 )
@@ -259,13 +259,13 @@ class TestRBACRuntime:
             )
 
         with patch("src.security.rbac.rbac.check_element_type", new_callable=AsyncMock) as mock_check_type:
-            mock_check_type.return_value = "podcasts"
+            mock_check_type.return_value = "media"
             session = _session_with_results(_result(first=None))
 
             with pytest.raises(HTTPException) as exc_info:
                 await authorization_verify_if_element_is_public(
                     request=_request(),
-                    element_uuid="podcast_1",
+                    element_uuid="media_1",
                     action="read",
                     db_session=session,
                 )

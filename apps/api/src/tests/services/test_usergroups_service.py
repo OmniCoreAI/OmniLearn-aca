@@ -145,10 +145,9 @@ class TestUsergroupsService:
             )
 
         for resource_type, resource_uuid in (
-            ("podcasts", "podcast_x"),
-            ("communities", "community_x"),
             ("folders", "folder_x"),
             ("boards", "board_x"),
+            ("media", "media_x"),
         ):
             with patch(
                 "src.services.users.usergroups.get_resource_config",

@@ -15,7 +15,6 @@ import { Input } from '@components/ui/input'
 import { Textarea } from '@components/ui/textarea'
 import { Button } from '@components/ui/button'
 import { Label } from '@components/ui/label'
-import { Switch } from '@components/ui/switch'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query/keys'
 import { getOrgOgImageMediaDirectory } from '@services/media/media'
@@ -40,7 +39,6 @@ const OrgEditSEO: React.FC = () => {
     default_og_image: seoConfig.default_og_image || '',
     google_site_verification: seoConfig.google_site_verification || '',
     twitter_handle: seoConfig.twitter_handle || '',
-    noindex_communities: seoConfig.noindex_communities || false,
   }
 
   const sitemapUrl = getCanonicalUrl(org?.slug, '/sitemap.xml')
@@ -315,30 +313,6 @@ const OrgEditSEO: React.FC = () => {
                   <p className="text-gray-500 text-sm mt-1">
                     {t('dashboard.organization.seo.org_seo.google_search_console_hint')}
                   </p>
-                </div>
-              </div>
-
-              {/* Indexing Controls */}
-              <div className="flex flex-col bg-gray-50 -space-y-1 px-5 py-3 mx-3 mt-4 rounded-md">
-                <h1 className="font-bold text-xl text-gray-800">{t('dashboard.organization.seo.org_seo.indexing_controls')}</h1>
-                <h2 className="text-gray-500 text-md">
-                  {t('dashboard.organization.seo.org_seo.indexing_controls_hint')}
-                </h2>
-              </div>
-              <div className="mx-5 my-5 space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">{t('dashboard.organization.seo.org_seo.hide_communities')}</Label>
-                    <p className="text-sm text-gray-500">
-                      {t('dashboard.organization.seo.org_seo.hide_communities_hint')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={values.noindex_communities}
-                    onCheckedChange={(checked) =>
-                      setFieldValue('noindex_communities', checked)
-                    }
-                  />
                 </div>
               </div>
 

@@ -8,7 +8,6 @@ SECURITY:
 - Activity content (videos, PDFs, blocks) for non-public courses requires auth
 - Course-level metadata (thumbnails) is always public (shown in listings)
 - Org-level content (logos, branding) is always public
-- Podcast episode content for non-public podcasts requires auth
 """
 
 import os
@@ -22,7 +21,6 @@ from botocore.exceptions import ClientError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.events.database import get_db_session
 from src.db.courses.courses import Course
-from src.db.podcasts.podcasts import Podcast
 from src.db.users import AnonymousUser, PublicUser, APITokenUser
 from src.db.user_organizations import UserOrganization
 from src.security.auth import get_current_user
@@ -109,7 +107,6 @@ async def _check_content_access(
     Path patterns:
     - orgs/{uuid}/courses/{uuid}/activities/{uuid}/... → check course access
     - orgs/{uuid}/courses/{uuid}/...                   → course metadata (public)
-    - orgs/{uuid}/podcasts/{uuid}/episodes/{uuid}/...  → check podcast access
     - orgs/{uuid}/...                                  → org-level (public)
     """
     parts = file_path.split('/')
@@ -147,39 +144,6 @@ async def _check_content_access(
             raise HTTPException(status_code=403, detail="Access denied")
         return
 
-    # Podcast episode content: requires podcast to be public or user to be org member
-    if (
-        len(parts) >= 6
-        and parts[0] == 'orgs'
-        and parts[2] == 'podcasts'
-        and parts[4] == 'episodes'
-    ):
-        podcast_uuid = parts[3]
-        podcast = (await db_session.execute(
-            select(Podcast).where(Podcast.podcast_uuid == podcast_uuid)
-        )).scalars().first()
-        if not podcast:
-            raise HTTPException(status_code=403, detail="Access denied")
-        if podcast.public:
-            return  # Public podcast — allow anonymous
-        if isinstance(current_user, AnonymousUser):
-            raise HTTPException(status_code=401, detail="Authentication required")
-        # Verify API token is scoped to the correct org
-        if isinstance(current_user, APITokenUser):
-            if current_user.org_id != podcast.org_id:
-                raise HTTPException(status_code=403, detail="Access denied")
-            return
-        # Verify user belongs to the org that owns this podcast
-        membership = (await db_session.execute(
-            select(UserOrganization).where(
-                UserOrganization.user_id == current_user.id,
-                UserOrganization.org_id == podcast.org_id,
-            )
-        )).scalars().first()
-        if not membership:
-            raise HTTPException(status_code=403, detail="Access denied")
-        return
-
     # Library media content: enforce the media's (folder-aware) access. Closes
     # the legacy hole where orgs/{}/media/... fell through to the public branch.
     if len(parts) >= 4 and parts[0] == 'orgs' and parts[2] == 'media':
@@ -210,7 +174,7 @@ async def _check_content_access(
 @router.get(
     "/content/{file_path:path}",
     summary="Serve a content file",
-    description="Streams a content file (videos, PDFs, images, etc.) from S3 storage. Supports HTTP Range requests for video/audio seeking. Access is enforced based on the path prefix: activity and podcast episode content require authentication and org membership for non-public resources, while course metadata and org branding are public.",
+    description="Streams a content file (videos, PDFs, images, etc.) from S3 storage. Supports HTTP Range requests for video/audio seeking. Access is enforced based on the path prefix: activity content requires authentication and org membership for non-public resources, while course metadata and org branding are public.",
     responses={
         200: {"description": "File streamed successfully"},
         206: {"description": "Partial content returned for a Range request"},

@@ -9,7 +9,6 @@ from fastapi import HTTPException
 from starlette.requests import Request
 
 from src.db.boards import Board
-from src.db.communities.communities import Community
 from src.db.courses.certifications import CertificateUser, Certifications
 from src.db.organization_config import OrganizationConfig
 from src.db.playgrounds import Playground
@@ -20,7 +19,6 @@ from src.security.features_utils.plan_check import (
     require_plan,
     require_plan_for_boards,
     require_plan_for_certifications,
-    require_plan_for_community,
     require_plan_for_playgrounds,
     require_plan_for_usergroups,
 )
@@ -31,7 +29,6 @@ PLAN_DEPENDENCIES = [
     ("Certificates", require_plan_for_certifications("pro", "Certificates")),
     ("Boards", require_plan_for_boards("personal", "Boards")),
     ("Playgrounds", require_plan_for_playgrounds("personal", "Playgrounds")),
-    ("Communities", require_plan_for_community("standard", "Communities")),
 ]
 
 
@@ -181,8 +178,6 @@ class TestPlanCheck:
             ("Boards", require_plan_for_boards("personal", "Boards"), {"query_params": {"org_id": "abc"}}, 200),
             ("Playgrounds", require_plan_for_playgrounds("personal", "Playgrounds"), {"path_params": {"org_id": "abc"}}, 200),
             ("Playgrounds", require_plan_for_playgrounds("personal", "Playgrounds"), {"query_params": {"org_id": "abc"}}, 200),
-            ("Communities", require_plan_for_community("standard", "Communities"), {"path_params": {"org_id": "abc"}}, 200),
-            ("Communities", require_plan_for_community("standard", "Communities"), {"query_params": {"org_id": "abc"}}, 200),
         ],
     )
     async def test_require_plan_invalid_ids(self, db, feature_name, dependency, request_kwargs, expected_status):
@@ -299,7 +294,7 @@ class TestPlanCheck:
         assert exc.value.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_require_plan_for_board_playground_and_community(self, db, org):
+    async def test_require_plan_for_board_and_playground(self, db, org):
         await _make_org_config(db, org, {"config_version": "2.0", "plan": "standard"})
         board = Board(
             org_id=org.id,
@@ -322,24 +317,12 @@ class TestPlanCheck:
             creation_date=str(datetime.now()),
             update_date=str(datetime.now()),
         )
-        community = Community(
-            org_id=org.id,
-            name="Community",
-            description="Desc",
-            public=True,
-            community_uuid="community_plan",
-            moderation_words=[],
-            creation_date=str(datetime.now()),
-            update_date=str(datetime.now()),
-        )
         db.add(board)
         db.add(playground)
-        db.add(community)
         await db.commit()
 
         board_dependency = require_plan_for_boards("personal", "Boards")
         playground_dependency = require_plan_for_playgrounds("personal", "Playgrounds")
-        community_dependency = require_plan_for_community("free", "Communities")
 
         with patch(
             "src.security.features_utils.plan_check.get_deployment_mode",
@@ -351,7 +334,6 @@ class TestPlanCheck:
             # No discriminator → fall through (handler RBAC still runs).
             assert await board_dependency(_request(), db) is True
             assert await playground_dependency(_request(), db) is True
-            assert await community_dependency(_request(), db) is True
 
             assert (
                 await board_dependency(_request(path_params={"board_uuid": board.board_uuid}), db)
@@ -360,13 +342,6 @@ class TestPlanCheck:
             assert (
                 await playground_dependency(
                     _request(path_params={"playground_uuid": playground.playground_uuid}),
-                    db,
-                )
-                is True
-            )
-            assert (
-                await community_dependency(
-                    _request(path_params={"community_uuid": community.community_uuid}),
                     db,
                 )
                 is True
@@ -386,12 +361,6 @@ class TestPlanCheck:
                     _request(path_params={"playground_uuid": playground.playground_uuid}),
                     db,
                 )
-            with pytest.raises(HTTPException) as community_exc:
-                await community_dependency(
-                    _request(path_params={"community_uuid": community.community_uuid}),
-                    db,
-                )
 
         assert board_exc.value.status_code == 403
         assert playground_exc.value.status_code == 403
-        assert community_exc.value.status_code == 403
