@@ -208,7 +208,7 @@ function DisabledCard({
 
 function GateShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-center min-h-[60vh] w-full p-6 bg-[#f8f8f8]">
+    <div className="flex items-center justify-center min-h-[60vh] w-full p-6 bg-[hsl(var(--dash-canvas))]">
       <div className="w-full max-w-lg">{children}</div>
     </div>
   )

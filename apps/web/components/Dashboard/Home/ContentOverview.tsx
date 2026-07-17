@@ -93,8 +93,8 @@ export default function ContentOverview() {
       value: courses.length,
       sub: `${publishedCourses} ${t('dashboard.home.published')} · ${draftCourses} ${t('dashboard.home.draft')}`,
       icon: BookOpen,
-      iconColor: 'text-blue-500',
-      iconBg: 'bg-blue-50',
+      iconColor: 'text-[hsl(var(--dash-accent))]',
+      iconBg: 'bg-[hsl(var(--dash-accent-soft))]',
       href: '/dash/courses',
       show: true,
     },
@@ -103,8 +103,8 @@ export default function ContentOverview() {
       value: totalMembers,
       sub: t('dashboard.home.total_users'),
       icon: Users,
-      iconColor: 'text-indigo-500',
-      iconBg: 'bg-indigo-50',
+      iconColor: 'text-[hsl(var(--dash-accent))]',
+      iconBg: 'bg-[hsl(var(--dash-accent-soft))]',
       href: '/dash/users/settings/users',
       show: true,
     },
@@ -113,8 +113,8 @@ export default function ContentOverview() {
       value: communities.length,
       sub: `${communities.filter((c: any) => c.public).length} ${t('dashboard.home.public')}`,
       icon: ChatCircle,
-      iconColor: 'text-violet-500',
-      iconBg: 'bg-violet-50',
+      iconColor: 'text-[hsl(var(--dash-accent))]',
+      iconBg: 'bg-[hsl(var(--dash-accent-soft))]',
       href: '/dash/communities',
       show: communitiesEnabled,
     },
@@ -123,8 +123,8 @@ export default function ContentOverview() {
       value: podcasts.length,
       sub: `${podcasts.reduce((sum: number, p: any) => sum + (p.episode_count || 0), 0)} ${t('dashboard.home.episodes')}`,
       icon: Microphone,
-      iconColor: 'text-amber-500',
-      iconBg: 'bg-amber-50',
+      iconColor: 'text-[hsl(var(--dash-accent))]',
+      iconBg: 'bg-[hsl(var(--dash-accent-soft))]',
       href: '/dash/podcasts',
       show: podcastsEnabled,
     },
@@ -133,8 +133,8 @@ export default function ContentOverview() {
       value: boards.length,
       sub: `${boards.reduce((sum: number, b: any) => sum + (b.member_count || 0), 0)} ${t('dashboard.home.participants')}`,
       icon: Chalkboard,
-      iconColor: 'text-rose-500',
-      iconBg: 'bg-rose-50',
+      iconColor: 'text-[hsl(var(--dash-accent))]',
+      iconBg: 'bg-[hsl(var(--dash-accent-soft))]',
       href: '/dash/boards',
       show: boardsEnabled,
     },
@@ -175,22 +175,22 @@ export default function ContentOverview() {
         <Link
           key={card.label}
           href={card.href}
-          className="bg-white rounded-xl nice-shadow px-5 py-4 hover:bg-gray-50 transition-colors group"
+          className="group rounded-xl border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-5 py-4 transition-colors hover:border-[hsl(var(--dash-accent))]/20 hover:bg-[hsl(var(--dash-accent-soft))]/40"
         >
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`p-1.5 rounded-lg ${card.iconBg}`}>
+          <div className="mb-2 flex items-center gap-2">
+            <div className={`rounded-lg p-1.5 ${card.iconBg}`}>
               <card.icon
                 size={14}
                 weight="duotone"
                 className={card.iconColor}
               />
             </div>
-            <span className="text-xs font-medium text-gray-400">
+            <span className="text-xs font-medium text-[hsl(var(--dash-muted))]">
               {card.label}
             </span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{card.value}</div>
-          <p className="text-[11px] text-gray-300 mt-0.5">{card.sub}</p>
+          <div className="text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))]">{card.value}</div>
+          <p className="mt-0.5 text-[11px] text-[hsl(var(--dash-muted))]/80">{card.sub}</p>
         </Link>
       ))}
     </div>

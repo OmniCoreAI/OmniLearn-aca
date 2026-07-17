@@ -77,8 +77,8 @@ function BoardSettingsPage(props: { params: Promise<BoardSettingsParams> }) {
 
   if (isLoading || !board) {
     return (
-      <div className="h-screen w-full bg-[#f8f8f8] grid grid-rows-[auto_1fr]">
-        <div className="pl-10 pr-10 bg-[#fcfbfc] nice-shadow animate-pulse">
+      <div className="h-screen w-full bg-[hsl(var(--dash-canvas))] grid grid-rows-[auto_1fr]">
+        <div className="pl-10 pr-10 bg-[hsl(var(--dash-surface))] nice-shadow animate-pulse">
           <div className="pt-6 pb-4">
             <div className="h-4 w-40 bg-gray-200 rounded" />
           </div>
@@ -111,8 +111,8 @@ function BoardSettingsPage(props: { params: Promise<BoardSettingsParams> }) {
     : '/empty_thumbnail.png'
 
   return (
-    <div className="h-screen w-full bg-[#f8f8f8] grid grid-rows-[auto_1fr] grid-cols-1">
-      <div className="pl-4 pr-4 sm:pl-10 sm:pr-10 text-sm tracking-tight bg-[#fcfbfc] z-10 nice-shadow relative min-w-0 overflow-hidden">
+    <div className="h-screen w-full bg-[hsl(var(--dash-canvas))] grid grid-rows-[auto_1fr] grid-cols-1">
+      <div className="pl-4 pr-4 sm:pl-10 sm:pr-10 text-sm tracking-tight bg-[hsl(var(--dash-surface))] z-10 nice-shadow relative min-w-0 overflow-hidden">
         <div className="pt-6 pb-4">
           <Breadcrumbs items={[
             { label: 'Boards', href: '/dash/boards', icon: <ChalkboardSimple size={14} /> },

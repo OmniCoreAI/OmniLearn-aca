@@ -343,7 +343,7 @@ const OrgEditDomains: React.FC = () => {
                 </p>
                 <Button
                   onClick={() => setIsAddDialogOpen(true)}
-                  className="bg-black text-white hover:bg-black/90"
+                  className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
                 >
                   <Plus size={16} className="mr-2" />
                   {t('dashboard.organization.domains.add_domain')}

@@ -110,7 +110,7 @@ function IconPicker({
         onClick={toggle}
         aria-label="Change icon"
         title="Change icon"
-        className={`relative p-2 bg-white rounded-lg nice-shadow hover:bg-gray-50 transition-colors disabled:opacity-50 ${open ? 'ring-2 ring-black/10' : ''}`}
+        className={`relative p-2 bg-white rounded-lg nice-shadow hover:bg-gray-50 transition-colors disabled:opacity-50 ${open ? 'ring-2 ring-[hsl(var(--dash-accent))]/10' : ''}`}
       >
         {/* eslint-disable-next-line react-hooks/static-components */}
         <Current size={18} weight="fill" className="text-gray-600" />
@@ -123,7 +123,7 @@ function IconPicker({
           <div
             ref={popRef}
             style={{ position: 'fixed', left: coords.left, top: coords.top, width: ICON_POPOVER_W }}
-            className="z-[100] p-2 bg-white rounded-xl shadow-2xl ring-1 ring-black/5 border border-gray-100 grid grid-cols-6 gap-1"
+            className="z-[100] p-2 bg-white rounded-xl shadow-2xl ring-1 ring-[hsl(var(--dash-accent))]/5 border border-gray-100 grid grid-cols-6 gap-1"
           >
             {MENU_ICON_NAMES.map((name) => {
               const IconOpt = MENU_ICONS[name]
@@ -137,7 +137,7 @@ function IconPicker({
                     setOpen(false)
                   }}
                   title={name}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${selected ? 'bg-black text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${selected ? 'bg-[hsl(var(--dash-accent))] text-white' : 'text-gray-500 hover:bg-gray-100'}`}
                 >
                   <IconOpt size={16} weight="fill" />
                 </button>
@@ -284,14 +284,14 @@ const OrgEditMenu: React.FC = () => {
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder={t('dashboard.organization.menu.label_placeholder')}
-              className="flex-1 px-3 py-2 text-sm bg-white nice-shadow rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5"
+              className="flex-1 px-3 py-2 text-sm bg-white nice-shadow rounded-lg focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/5"
             />
             <input
               type="text"
               value={newUrl}
               onChange={(e) => setNewUrl(e.target.value)}
               placeholder="https://example.com"
-              className="flex-1 px-3 py-2 text-sm bg-white nice-shadow rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5"
+              className="flex-1 px-3 py-2 text-sm bg-white nice-shadow rounded-lg focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/5"
             />
             <button onClick={addCustom} disabled={!canEdit} className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 nice-shadow hover:bg-gray-50 transition-colors disabled:opacity-40">
               <Plus size={16} /> {t('dashboard.organization.menu.add')}

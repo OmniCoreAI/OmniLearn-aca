@@ -212,7 +212,7 @@ const OrgEditOther: React.FC = () => {
                   setCurrentScript(null)
                   setSelectedView('edit')
                 }}
-                className="bg-black text-white hover:bg-black/90"
+                className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 {t('dashboard.organization.scripts.add_script')}
@@ -330,7 +330,7 @@ const OrgEditOther: React.FC = () => {
                     <Button 
                       type="submit"
                       disabled={isSubmitting}
-                      className="bg-black text-white hover:bg-black/90"
+                      className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
                     >
                       {isSubmitting ? t('dashboard.organization.settings.saving') : t('dashboard.organization.scripts.save_script')}
                     </Button>

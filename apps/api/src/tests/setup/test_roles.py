@@ -57,6 +57,7 @@ class TestRightsModel:
             "playgrounds": self.get_valid_permission_with_own(),
             "programs": self.get_valid_permission_with_own(),
             "training_programs": self.get_valid_permission_with_own(),
+            "instructors": self.get_valid_permission(),
         }
 
     def test_rights_model_with_all_fields(self):
@@ -197,7 +198,8 @@ class TestRightsModel:
         assert "assignments" in dumped
         assert "programs" in dumped
         assert "training_programs" in dumped
-        assert len(dumped) == 18  # All 18 fields
+        assert "instructors" in dumped
+        assert len(dumped) == 19  # All 19 fields
 
 
 class TestPermissionModels:
@@ -267,6 +269,7 @@ class TestDefaultRolesValidation:
         "playgrounds",
         "programs",
         "training_programs",
+        "instructors",
     ]
 
     def test_rights_model_has_expected_fields(self):
@@ -597,6 +600,7 @@ class TestRightsFieldConsistency:
             "playgrounds",
             "programs",
             "training_programs",
+            "instructors",
         }
 
         actual_fields = set(fields.keys())

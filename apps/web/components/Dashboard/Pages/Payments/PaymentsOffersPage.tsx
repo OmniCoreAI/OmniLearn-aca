@@ -70,7 +70,7 @@ function PaymentsOffersPage() {
 
   if (error) return <div className="p-8 text-sm text-red-500">Failed to load offers</div>;
   if (!offers) return (
-    <div className="h-full w-full bg-[#f8f8f8]">
+    <div className="h-full w-full bg-[hsl(var(--dash-canvas))]">
       <div className="pl-10 pr-10 mx-auto animate-pulse">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
@@ -88,7 +88,7 @@ function PaymentsOffersPage() {
   );
 
   return (
-    <div className="h-full w-full bg-[#f8f8f8]">
+    <div className="h-full w-full bg-[hsl(var(--dash-canvas))]">
       <div className="pl-10 pr-10 mx-auto">
         <Modal
           isDialogOpen={isCreateModalOpen}

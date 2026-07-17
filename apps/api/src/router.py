@@ -26,6 +26,11 @@ from src.routers.academic import (
     training_programs as training_programs_router_module,
     course_profiles as course_profiles_router_module,
 )
+from src.routers.instructors import (
+    instructors as instructors_router_module,
+    categories as instructor_categories_router_module,
+    finance as instructor_finance_router_module,
+)
 from src.routers.folders import folders as folders_router_module
 from src.routers.media import media as media_router_module
 from src.routers.courses import migration as migration_router_module
@@ -200,6 +205,25 @@ v1_router.include_router(
     course_profiles_router_module.router,
     prefix="/courses",
     tags=["academic", "course-profiles"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+# Instructor Management + Finance (org-level management data).
+v1_router.include_router(
+    instructor_categories_router_module.router,
+    prefix="/instructor-categories",
+    tags=["instructors", "categories"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    instructors_router_module.router,
+    prefix="/instructors",
+    tags=["instructors"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    instructor_finance_router_module.router,
+    prefix="/instructor-finance",
+    tags=["instructors", "finance"],
     dependencies=[Depends(require_authenticated_user)],
 )
 v1_router.include_router(search.router, prefix="/search", tags=["search"])

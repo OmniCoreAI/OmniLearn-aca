@@ -514,11 +514,19 @@ async def update_user_password(
     # Update user
     user.password = security_hash_password(form.new_password)
     user.update_date = str(datetime.now())
+    # Clear the forced-change flag: the temporary password (if any) is now
+    # replaced with one the user chose themselves.
+    user.must_change_password = False
 
     # Update user in database
     db_session.add(user)
     await db_session.commit()
     await db_session.refresh(user)
+
+    # Invalidate cached session so the refreshed must_change_password flag is
+    # reflected on the next session fetch (avoids a stale forced-change gate).
+    from src.routers.users import _invalidate_session_cache
+    _invalidate_session_cache(user.id)
 
     user = UserRead.model_validate(user)
 

@@ -296,7 +296,7 @@ function EditPodcastGeneral({ orgslug }: EditPodcastGeneralProps) {
                       name="public"
                       checked={formik.values.public}
                       onChange={formik.handleChange}
-                      className="w-4 h-4 text-black rounded border-gray-300 focus:ring-black/20"
+                      className="w-4 h-4 text-black rounded border-gray-300 focus:ring-[hsl(var(--dash-accent))]/20"
                     />
                     <div>
                       <span className="text-sm font-medium text-gray-700">
@@ -314,7 +314,7 @@ function EditPodcastGeneral({ orgslug }: EditPodcastGeneralProps) {
                       name="published"
                       checked={formik.values.published}
                       onChange={formik.handleChange}
-                      className="w-4 h-4 text-black rounded border-gray-300 focus:ring-black/20"
+                      className="w-4 h-4 text-black rounded border-gray-300 focus:ring-[hsl(var(--dash-accent))]/20"
                     />
                     <div>
                       <span className="text-sm font-medium text-gray-700">

@@ -59,7 +59,7 @@ function AssignmentEdit() {
     if (isMobile) {
         // TODO: Work on a better mobile experience
         return (
-          <div className="h-screen w-full bg-[#f8f8f8] flex items-center justify-center p-4">
+          <div className="h-screen w-full bg-[hsl(var(--dash-canvas))] flex items-center justify-center p-4">
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
               <h2 className="text-xl font-bold mb-4">{t('dashboard.assignments.detail.mobile.title')}</h2>
               <Monitor className='mx-auto my-5' size={60} />    
@@ -91,7 +91,7 @@ function AssignmentEdit() {
                     <div className='flex space-x-2 pt-2 text-sm tracking-tight font-semibold pl-10 mr-10'>
                         <div
                             onClick={() => setSelectedSubPage('editor')}
-                            className={`flex space-x-4 py-2 w-fit text-center border-black transition-all ease-linear ${selectedSubPage === 'editor'
+                            className={`flex space-x-4 py-2 w-fit text-center border-[hsl(var(--dash-ink))] transition-all ease-linear ${selectedSubPage === 'editor'
                                 ? 'border-b-4'
                                 : 'opacity-50'
                                 } cursor-pointer`}
@@ -103,7 +103,7 @@ function AssignmentEdit() {
                         </div>
                         <div
                             onClick={() => setSelectedSubPage('submissions')}
-                            className={`flex space-x-4 py-2 w-fit text-center border-black transition-all ease-linear ${selectedSubPage === 'submissions'
+                            className={`flex space-x-4 py-2 w-fit text-center border-[hsl(var(--dash-ink))] transition-all ease-linear ${selectedSubPage === 'submissions'
                                 ? 'border-b-4'
                                 : 'opacity-50'
                                 } cursor-pointer`}
@@ -115,7 +115,7 @@ function AssignmentEdit() {
                         </div>
                         <div
                             onClick={() => setSelectedSubPage('analytics')}
-                            className={`flex space-x-4 py-2 w-fit text-center border-black transition-all ease-linear ${selectedSubPage === 'analytics'
+                            className={`flex space-x-4 py-2 w-fit text-center border-[hsl(var(--dash-ink))] transition-all ease-linear ${selectedSubPage === 'analytics'
                                 ? 'border-b-4'
                                 : 'opacity-50'
                                 } cursor-pointer`}

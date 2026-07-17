@@ -72,7 +72,7 @@ function AssignmentTaskEditor({ page }: any) {
                         <div className='flex space-x-2 '>
                             <div
                                 onClick={() => setSelectedSubPage('general')}
-                                className={`flex space-x-4 py-2 w-fit text-center border-black transition-all ease-linear ${selectedSubPage === 'general'
+                                className={`flex space-x-4 py-2 w-fit text-center border-[hsl(var(--dash-ink))] transition-all ease-linear ${selectedSubPage === 'general'
                                     ? 'border-b-4'
                                     : 'opacity-50'
                                     } cursor-pointer`}
@@ -84,7 +84,7 @@ function AssignmentTaskEditor({ page }: any) {
                             </div>
                             <div
                                 onClick={() => setSelectedSubPage('content')}
-                                className={`flex space-x-4 py-2 w-fit text-center border-black transition-all ease-linear ${selectedSubPage === 'content'
+                                className={`flex space-x-4 py-2 w-fit text-center border-[hsl(var(--dash-ink))] transition-all ease-linear ${selectedSubPage === 'content'
                                     ? 'border-b-4'
                                     : 'opacity-50'
                                     } cursor-pointer`}

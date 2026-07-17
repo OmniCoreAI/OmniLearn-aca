@@ -107,6 +107,16 @@ class Rights(BaseModel):
         action_delete=False,
         action_delete_own=False,
     )  # Default: read-only for backward compat with existing roles
+    # Instructor Management + Finance (instructors, categories, work logs).
+    # Managed by superadmins/org admins by default. This bucket lets custom
+    # roles opt-in to management access. Default: NO access — finance data
+    # (rates, amounts) must not be readable by every org member.
+    instructors: Permission = Permission(
+        action_create=False,
+        action_read=False,
+        action_update=False,
+        action_delete=False,
+    )
 
     def __getitem__(self, item):
         return getattr(self, item)

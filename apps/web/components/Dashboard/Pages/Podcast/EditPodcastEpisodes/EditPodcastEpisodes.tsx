@@ -450,7 +450,7 @@ function CreateEpisodeModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('podcasts.dashboard.episodes.title_placeholder')}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/20 focus:border-transparent outline-none transition-all"
               required
             />
           </div>
@@ -464,7 +464,7 @@ function CreateEpisodeModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t('podcasts.dashboard.episodes.description_placeholder')}
               rows={3}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-transparent outline-none transition-all resize-none"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/20 focus:border-transparent outline-none transition-all resize-none"
             />
           </div>
 
@@ -596,7 +596,7 @@ function EditEpisodeModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('podcasts.dashboard.episodes.title_placeholder')}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/20 focus:border-transparent outline-none transition-all"
               required
             />
           </div>
@@ -610,7 +610,7 @@ function EditEpisodeModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t('podcasts.dashboard.episodes.description_placeholder')}
               rows={3}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-transparent outline-none transition-all resize-none"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/20 focus:border-transparent outline-none transition-all resize-none"
             />
           </div>
 

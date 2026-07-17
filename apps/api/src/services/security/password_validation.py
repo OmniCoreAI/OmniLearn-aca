@@ -9,6 +9,7 @@ Requirements:
 - At least 1 special character
 """
 import re
+import secrets
 from typing import List
 from pydantic import BaseModel
 
@@ -85,6 +86,44 @@ def validate_password_complexity(password: str) -> PasswordValidationResult:
         errors=errors,
         requirements=requirements
     )
+
+
+def generate_temporary_password(length: int = 16) -> str:
+    """Generate a cryptographically secure password that satisfies
+    ``validate_password_complexity`` (upper, lower, digit, special, >= 8 chars).
+
+    Used for admin-provisioned accounts where the server issues a one-time
+    temporary password the user must change on first login.
+    """
+    length = max(length, 12)
+
+    uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O to avoid ambiguity
+    lowercase = "abcdefghijkmnpqrstuvwxyz"  # no l/o
+    digits = "23456789"  # no 0/1
+    specials = "!@#$%^&*-_=+"
+
+    # Guarantee at least one of each required class.
+    required = [
+        secrets.choice(uppercase),
+        secrets.choice(lowercase),
+        secrets.choice(digits),
+        secrets.choice(specials),
+    ]
+
+    all_chars = uppercase + lowercase + digits + specials
+    remaining = [secrets.choice(all_chars) for _ in range(length - len(required))]
+
+    password_chars = required + remaining
+    # Shuffle so the guaranteed characters are not in a predictable position.
+    secrets.SystemRandom().shuffle(password_chars)
+
+    password = "".join(password_chars)
+
+    # Defensive: ensure the generated value actually passes validation.
+    if not validate_password_complexity(password).is_valid:  # pragma: no cover
+        return generate_temporary_password(length)
+
+    return password
 
 
 def get_password_requirements() -> List[dict]:

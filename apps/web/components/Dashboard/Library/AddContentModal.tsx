@@ -116,7 +116,7 @@ function ResourceList({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('library.search')}
-          className="w-full pl-10 pr-3 py-2 bg-white nice-shadow rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10 border-0"
+          className="w-full pl-10 pr-3 py-2 bg-white nice-shadow rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/10 border-0"
         />
       </div>
 
@@ -187,7 +187,7 @@ function AddContentModal({ folderUuid, orgslug, onChanged }: Props) {
               onClick={() => setActiveTab(tab)}
               className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
                 active
-                  ? 'border-black text-gray-900'
+                  ? 'border-[hsl(var(--dash-ink))] text-gray-900'
                   : 'border-transparent text-gray-400 hover:text-gray-600'
               }`}
             >

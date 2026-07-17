@@ -9,6 +9,7 @@ from src.services.orgs.invites import (
 )
 from src.services.orgs.join import JoinOrg, join_org
 from src.services.orgs.users import (
+    admin_create_user,
     export_organization_users_csv,
     get_list_of_invited_users,
     get_organization_users,
@@ -20,7 +21,7 @@ from src.services.orgs.users import (
     update_user_role,
 )
 from src.db.organization_config import OrganizationConfigBase
-from src.db.users import AnonymousUser, PublicUser
+from src.db.users import AdminUserCreate, AdminUserCreateResult, AnonymousUser, PublicUser
 from src.db.organizations import (
     OrganizationCreate,
     OrganizationRead,
@@ -232,6 +233,36 @@ async def api_get_org_users(
         request, org_id, db_session, current_user, page, limit, search,
         usergroup_id, usergroup_filter, sort_order or "desc", role_id, status,
     )
+
+
+@router.post(
+    "/{org_id}/users",
+    response_model=AdminUserCreateResult,
+    summary="Admin-create a user in the organization",
+    description=(
+        "Provision a user account directly (admin/maintainer only). The server "
+        "generates a one-time temporary password and returns it exactly once; "
+        "the user is forced to change it on first login."
+    ),
+    responses={
+        200: {"description": "User created; temporary password returned once.", "model": AdminUserCreateResult},
+        400: {"description": "Email or username already in use / invalid input"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Caller is not an organization administrator"},
+        404: {"description": "Organization or role not found"},
+    },
+)
+async def api_admin_create_user(
+    request: Request,
+    org_id: int,
+    payload: AdminUserCreate,
+    current_user: PublicUser = Depends(get_authenticated_user),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> AdminUserCreateResult:
+    """
+    Admin-create a user account with an auto-generated temporary password.
+    """
+    return await admin_create_user(request, org_id, payload, db_session, current_user)
 
 
 @router.post(

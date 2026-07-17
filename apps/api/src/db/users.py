@@ -55,6 +55,35 @@ class UserRead(UserBase):
     last_login_at: Optional[str] = None
     signup_method: Optional[str] = None
     is_superadmin: bool = False
+    # True when an admin provisioned this account with a temporary password;
+    # the frontend forces a password change before the user can proceed.
+    must_change_password: bool = False
+
+
+class AdminUserCreate(SQLModel):
+    """Payload for an admin/maintainer to provision a user account directly.
+
+    Unlike self-service signup, the password is NOT supplied by the caller —
+    the server generates a one-time temporary password and returns it once.
+    """
+    username: str
+    email: EmailStr
+    first_name: str = ""
+    last_name: str = ""
+    # Role to assign in the org. When omitted the user gets the default
+    # read-only learner role (role_global_user). Identified by role_uuid so the
+    # frontend can reuse GET /roles/org/{org_id}.
+    role_uuid: Optional[str] = None
+
+
+class AdminUserCreateResult(SQLModel):
+    """Result of admin-provisioned account creation.
+
+    ``temporary_password`` is returned exactly once (never stored in plaintext)
+    so the admin can hand it to the new user.
+    """
+    user: UserRead
+    temporary_password: str
 
 
 class UserReadPublic(SQLModel):
@@ -169,6 +198,8 @@ class User(UserBase, table=True):
     signup_method: Optional[str] = None
     is_superadmin: bool = Field(default=False)
     password_changed_at: Optional[datetime] = Field(default=None)
+    # Forces a password change on next login (admin-provisioned accounts).
+    must_change_password: bool = Field(default=False)
     creation_date: str = ""
     update_date: str = ""
 

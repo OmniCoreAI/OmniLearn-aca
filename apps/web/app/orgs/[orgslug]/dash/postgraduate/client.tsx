@@ -25,6 +25,7 @@ import {
   deleteProgram,
   uploadProgramImage,
 } from '@services/academic/academic'
+import { getProgramThumbnailMediaDirectory } from '@services/media/media'
 
 const LEVELS = [
   { value: 'phd', labelKey: 'academic.level_phd' },
@@ -117,7 +118,7 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
           <AuthenticatedClientElement checkMethod="roles" action="create" ressourceType="programs" orgId={orgId!}>
             <button
               onClick={openCreate}
-              className="rounded-lg bg-black text-white text-xs font-bold px-5 py-2 flex items-center gap-2 nice-shadow hover:scale-105 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
             >
               <Plus className="w-4 h-4" /> {t('academic.new_program')}
             </button>
@@ -137,6 +138,16 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
             title={p.name}
             subtitle={p.description}
             badges={badgesFor(p)}
+            thumbnailUrl={
+              p.thumbnail_image && org?.org_uuid
+                ? getProgramThumbnailMediaDirectory(
+                    org.org_uuid,
+                    p.program_uuid,
+                    p.thumbnail_image
+                  )
+                : null
+            }
+            footerLabel={t(`academic.level_${p.program_level}`, p.program_level)}
             onEdit={() => openEdit(p)}
             onDelete={() => handleDelete(p)}
           />
@@ -194,6 +205,8 @@ function ProgramForm({
     program?.coordinator ? `${program.coordinator.first_name || ''} ${program.coordinator.last_name || ''}`.trim() || program.coordinator.username : undefined
   )
   const [saving, setSaving] = useState(false)
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -218,9 +231,16 @@ function ProgramForm({
       }
       if (program) {
         await updateProgram(program.program_uuid, payload, access_token)
+        if (thumbnailFile) {
+          await uploadProgramImage(program.program_uuid, 'thumbnail', thumbnailFile, access_token)
+        }
         toast.success(t('academic.updated'))
       } else {
-        await createProgram(orgId, payload, access_token)
+        const created = await createProgram(orgId, payload, access_token)
+        const uuid = created?.program_uuid
+        if (uuid && thumbnailFile) {
+          await uploadProgramImage(uuid, 'thumbnail', thumbnailFile, access_token)
+        }
         toast.success(t('academic.created'))
       }
       onDone()
@@ -232,7 +252,13 @@ function ProgramForm({
   }
 
   const handleImage = async (kind: 'thumbnail' | 'banner', file?: File) => {
-    if (!file || !program) return
+    if (!file) return
+    if (kind === 'thumbnail') {
+      setThumbnailFile(file)
+      setThumbnailPreview(URL.createObjectURL(file))
+      return
+    }
+    if (!program) return
     try {
       await uploadProgramImage(program.program_uuid, kind, file, access_token)
       toast.success(t('academic.image_uploaded'))
@@ -329,14 +355,27 @@ function ProgramForm({
         </label>
       </div>
 
-      {program ? (
-        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+      <div className="grid grid-cols-1 gap-3 border-t border-gray-100 pt-3 sm:grid-cols-2">
+        <div className="space-y-2">
           <ImageField label={t('academic.thumbnail')} onFile={(f) => handleImage('thumbnail', f)} />
-          <ImageField label={t('academic.banner')} onFile={(f) => handleImage('banner', f)} />
+          {thumbnailPreview ? (
+            <div
+              className="aspect-video rounded-lg border border-[hsl(var(--dash-border))] bg-cover bg-center"
+              style={{ backgroundImage: `url(${thumbnailPreview})` }}
+            />
+          ) : (
+            <p className="text-xs text-[hsl(var(--dash-muted))]">
+              {t(
+                'academic.thumbnail_on_create',
+                'Add a cover image — your program will show as a card like courses.'
+              )}
+            </p>
+          )}
         </div>
-      ) : (
-        <p className="text-xs text-gray-400">{t('academic.images_after_create')}</p>
-      )}
+        {program ? (
+          <ImageField label={t('academic.banner')} onFile={(f) => handleImage('banner', f)} />
+        ) : null}
+      </div>
 
       <SubmitRow saving={saving} />
     </form>
@@ -362,7 +401,7 @@ function ImageField({ label, onFile }: { label: string; onFile: (f?: File) => vo
 }
 
 export const inputCls =
-  'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black'
+  'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]'
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -380,7 +419,7 @@ export function SubmitRow({ saving }: { saving: boolean }) {
       <button
         type="submit"
         disabled={saving}
-        className="px-4 py-2 bg-black text-white text-sm font-bold rounded-lg disabled:opacity-50"
+        className="px-4 py-2 bg-[hsl(var(--dash-accent))] text-white text-sm font-bold rounded-lg disabled:opacity-50"
       >
         {saving ? '…' : t('academic.save')}
       </button>

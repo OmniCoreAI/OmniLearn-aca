@@ -85,3 +85,29 @@ export async function removeInvitedUser(
   const res = await getResponseMetadata(result)
   return res
 }
+
+/*
+  Admin-create a user directly (no email invite). The backend generates a
+  one-time temporary password and returns it once; the user is forced to change
+  it on first login.
+*/
+export type AdminCreateUserBody = {
+  username: string
+  email: string
+  first_name?: string
+  last_name?: string
+  role_uuid?: string | null
+}
+
+export async function adminCreateUser(
+  org_id: any,
+  body: AdminCreateUserBody,
+  access_token: any
+) {
+  const result = await fetch(
+    `${getAPIUrl()}orgs/${org_id}/users`,
+    RequestBodyWithAuthHeader('POST', body, null, access_token)
+  )
+  const res = await getResponseMetadata(result)
+  return res
+}

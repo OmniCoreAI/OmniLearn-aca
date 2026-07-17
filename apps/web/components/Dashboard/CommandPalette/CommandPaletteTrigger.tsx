@@ -25,7 +25,7 @@ export default function CommandPaletteTrigger({ isCollapsed = false }: Props) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t('dashboard.search.trigger')}
-        className="flex h-9 w-full items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white"
+        className="flex h-9 w-full items-center justify-center rounded-lg text-[hsl(var(--dash-muted))] transition-colors hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))]"
       >
         <MagnifyingGlass size={16} />
       </button>
@@ -37,13 +37,13 @@ export default function CommandPaletteTrigger({ isCollapsed = false }: Props) {
       type="button"
       onClick={() => setOpen(true)}
       aria-label={t('dashboard.search.trigger')}
-      className="group flex h-9 w-full items-center gap-2.5 rounded-lg bg-white/[0.04] px-2.5 text-left transition-colors hover:bg-white/[0.07]"
+      className="group flex h-9 w-full items-center gap-2.5 rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-canvas))] px-3 text-left transition-colors hover:border-[hsl(var(--dash-accent))]/25 hover:bg-[hsl(var(--dash-accent-soft))]"
     >
-      <MagnifyingGlass size={14} className="shrink-0 text-white/35 group-hover:text-white/60" />
-      <span className="flex-1 text-[12.5px] font-normal text-white/40 group-hover:text-white/60">
+      <MagnifyingGlass size={14} className="shrink-0 text-[hsl(var(--dash-muted))] group-hover:text-[hsl(var(--dash-accent))]" />
+      <span className="flex-1 text-[12.5px] font-normal text-[hsl(var(--dash-muted))] group-hover:text-[hsl(var(--dash-ink))]">
         {t('dashboard.search.trigger')}
       </span>
-      <kbd className="hidden sm:inline-flex shrink-0 h-[18px] items-center rounded bg-white/[0.08] px-1.5 font-sans text-[10.5px] font-medium leading-none tracking-wide text-white/50 group-hover:bg-white/10 group-hover:text-white/75">
+      <kbd className="hidden sm:inline-flex h-[18px] shrink-0 items-center rounded bg-[hsl(var(--dash-canvas))] px-1.5 font-sans text-[10.5px] font-medium leading-none tracking-wide text-[hsl(var(--dash-muted))]">
         {isMac ? '⌘K' : 'Ctrl K'}
       </kbd>
     </button>

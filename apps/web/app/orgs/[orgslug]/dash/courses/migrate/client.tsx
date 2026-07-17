@@ -203,7 +203,7 @@ export default function MigrationClient({ orgslug }: MigrationClientProps) {
       : steps.findIndex((s) => s.key === step)
 
   return (
-    <div className="h-full w-full bg-[#f8f8f8] pl-10 pr-10">
+    <div className="h-full w-full bg-[hsl(var(--dash-canvas))] pl-10 pr-10">
       <div className="mb-6 pt-6">
         <Breadcrumbs
           items={[
@@ -256,7 +256,7 @@ export default function MigrationClient({ orgslug }: MigrationClientProps) {
                     index < currentStepIndex
                       ? 'bg-green-500 text-white'
                       : index === currentStepIndex
-                        ? 'bg-black text-white'
+                        ? 'bg-[hsl(var(--dash-accent))] text-white'
                         : 'bg-gray-200 text-gray-500'
                   }`}
                 >

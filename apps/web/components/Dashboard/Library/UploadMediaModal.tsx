@@ -135,7 +135,7 @@ function UploadMediaModal({ folderUuid, closeModal, onChanged }: Props) {
           {file ? (
             <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-3">
               {file.type.startsWith('image/') ? (
-                <div className="w-14 h-14 rounded-lg bg-cover bg-center flex-shrink-0 ring-1 ring-inset ring-black/5" style={{ backgroundImage: `url(${URL.createObjectURL(file)})` }} />
+                <div className="w-14 h-14 rounded-lg bg-cover bg-center flex-shrink-0 ring-1 ring-inset ring-[hsl(var(--dash-accent))]/5" style={{ backgroundImage: `url(${URL.createObjectURL(file)})` }} />
               ) : (
                 <div className="w-14 h-14 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center flex-shrink-0">
                   <FileUp className="w-6 h-6" />

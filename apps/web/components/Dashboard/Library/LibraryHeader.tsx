@@ -93,7 +93,7 @@ export default function LibraryHeader({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('library.search')}
-            className="w-full pl-9 pr-8 py-2 text-sm bg-white nice-shadow rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 placeholder:text-gray-400"
+            className="w-full pl-9 pr-8 py-2 text-sm bg-white nice-shadow rounded-lg focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/5 placeholder:text-gray-400"
           />
           {query && (
             <button onClick={() => setQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" aria-label="Clear search">

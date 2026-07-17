@@ -512,7 +512,7 @@ function EditCourseSEO(props: EditCourseSEOProps) {
                     name="robots_noindex"
                     checked={formik.values.robots_noindex}
                     onChange={formik.handleChange}
-                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-[hsl(var(--dash-accent))]"
                     disabled={isSaving}
                   />
                   <label htmlFor="robots_noindex" className="text-sm font-medium text-gray-700">
@@ -530,7 +530,7 @@ function EditCourseSEO(props: EditCourseSEOProps) {
                     name="robots_nofollow"
                     checked={formik.values.robots_nofollow}
                     onChange={formik.handleChange}
-                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-[hsl(var(--dash-accent))]"
                     disabled={isSaving}
                   />
                   <label htmlFor="robots_nofollow" className="text-sm font-medium text-gray-700">
@@ -549,7 +549,7 @@ function EditCourseSEO(props: EditCourseSEOProps) {
                       name="enable_jsonld"
                       checked={formik.values.enable_jsonld}
                       onChange={formik.handleChange}
-                      className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                      className="h-4 w-4 rounded border-gray-300 text-black focus:ring-[hsl(var(--dash-accent))]"
                       disabled={isSaving}
                     />
                     <label htmlFor="enable_jsonld" className="text-sm font-medium text-gray-700">

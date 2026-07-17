@@ -105,24 +105,26 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
   ]
 
   return (
-    <div className="h-screen w-full bg-[#f8f8f8] grid grid-rows-[auto_1fr] grid-cols-1 overflow-hidden">
-      <div className="pl-4 pr-4 sm:pl-10 sm:pr-10 tracking-tight bg-[#fcfbfc] z-10 nice-shadow flex-shrink-0 relative">
-        <div className="pt-6 pb-4">
+    <div className="grid h-screen w-full grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]">
+      <div className="relative z-10 flex-shrink-0 border-b border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-4 tracking-tight sm:px-10">
+        <div className="pb-4 pt-6">
           <Breadcrumbs items={[
             { label: t('common.users'), href: '/dash/users/settings/users', icon: <Users size={14} /> }
           ]} />
         </div>
         <div className="my-2 py-3">
-          <div className="w-full flex flex-col space-y-1 min-w-0">
-            <div className="pt-3 flex font-bold text-3xl sm:text-4xl tracking-tighter truncate">
+          <div className="flex w-full min-w-0 flex-col space-y-1">
+            <div className="flex truncate pt-1 text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
               {H1Label}
             </div>
-            <div className="flex font-medium text-gray-400 text-md truncate">
+            <div className="flex truncate text-sm font-medium text-[hsl(var(--dash-muted))]">
               {H2Label}
             </div>
           </div>
         </div>
-        <DashTabBar tabs={tabs} />
+        <div className="pb-3">
+          <DashTabBar tabs={tabs} />
+        </div>
       </div>
       <motion.div
         initial={{ opacity: 0 }}

@@ -120,8 +120,8 @@ function OrgPage(props: { params: Promise<OrgParams> }) {
   }))
 
   return (
-    <div className="h-full w-full bg-[#f8f8f8] flex flex-col">
-      <div className="pl-4 pr-4 sm:pl-10 sm:pr-10 tracking-tight bg-[#fcfbfc] z-10 nice-shadow flex-shrink-0 relative">
+    <div className="flex h-full w-full flex-col bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]">
+      <div className="relative z-10 flex-shrink-0 border-b border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-4 tracking-tight sm:px-10">
         <div className="pt-6 pb-4">
           <Breadcrumbs items={[
             { label: t('common.organization'), href: '/dash/org/settings/general', icon: <School size={14} /> }

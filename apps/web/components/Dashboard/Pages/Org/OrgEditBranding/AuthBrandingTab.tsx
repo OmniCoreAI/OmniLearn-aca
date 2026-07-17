@@ -276,7 +276,7 @@ export default function AuthBrandingTab() {
           <Button
             onClick={handleSave}
             disabled={isSaving || isUploading}
-            className="bg-black text-white hover:bg-black/90"
+            className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
           >
             {isSaving ? t('dashboard.organization.settings.saving') : t('dashboard.organization.settings.save_changes')}
           </Button>

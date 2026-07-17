@@ -22,7 +22,7 @@ import {
 import { CoordinatorPicker } from './AcademicPeople'
 
 const inputCls =
-  'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black'
+  'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]'
 const labelCls = 'block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1'
 
 const OFFERING_STATUSES = ['draft', 'open', 'in_progress', 'closed', 'archived']
@@ -194,7 +194,7 @@ export function CourseProfilePanel({
                 type="number"
                 step="0.01"
                 min="0"
-                className="w-28 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-28 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]"
                 placeholder={t('academic.price')}
                 value={a.price ?? ''}
                 onChange={(e) => {
@@ -251,7 +251,7 @@ export function CourseProfilePanel({
       <button
         onClick={save}
         disabled={saving}
-        className="w-full py-2 bg-black text-white rounded-lg text-sm font-bold disabled:opacity-40"
+        className="w-full py-2 bg-[hsl(var(--dash-accent))] text-white rounded-lg text-sm font-bold disabled:opacity-40"
       >
         {saving ? t('academic.saving') : t('academic.save_profile')}
       </button>

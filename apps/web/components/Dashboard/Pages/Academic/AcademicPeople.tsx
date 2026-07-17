@@ -12,7 +12,7 @@ import {
 } from '@services/academic/academic'
 
 const inputCls =
-  'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black'
+  'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]'
 
 function displayName(u: any): string {
   const full = `${u?.first_name || ''} ${u?.last_name || ''}`.trim()

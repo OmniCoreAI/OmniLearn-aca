@@ -25,6 +25,7 @@ import {
   updateTrainingProgram,
   deleteTrainingProgram,
 } from '@services/academic/academic'
+import { getTrainingProgramThumbnailMediaDirectory } from '@services/media/media'
 
 const TYPES = [
   'training_course',
@@ -101,7 +102,7 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
                 setEditing(null)
                 setModalOpen(true)
               }}
-              className="rounded-lg bg-black text-white text-xs font-bold px-5 py-2 flex items-center gap-2 nice-shadow hover:scale-105 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
             >
               <Plus className="w-4 h-4" /> {t('academic.new_training_program')}
             </button>
@@ -124,6 +125,16 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
             title={p.name}
             subtitle={p.description}
             badges={badgesFor(p)}
+            thumbnailUrl={
+              p.thumbnail_image && org?.org_uuid
+                ? getTrainingProgramThumbnailMediaDirectory(
+                    org.org_uuid,
+                    p.trainingprogram_uuid,
+                    p.thumbnail_image
+                  )
+                : null
+            }
+            footerLabel={t(`academic.type_${p.training_type}`, p.training_type)}
             onEdit={() => {
               setEditing(p)
               setModalOpen(true)

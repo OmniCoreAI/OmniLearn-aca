@@ -9,6 +9,7 @@ import {
   Cube,
   GraduationCap,
   Certificate,
+  ChalkboardTeacher,
 } from '@phosphor-icons/react'
 
 export interface DashboardMenuItem {
@@ -40,6 +41,12 @@ export const DASHBOARD_MENU_ITEMS: DashboardMenuItem[] = [
     href: '/dash/training-programs',
     icon: Certificate,
     labelKey: 'academic.training_programs',
+  },
+  {
+    id: 'instructors',
+    href: '/dash/instructors',
+    icon: ChalkboardTeacher,
+    labelKey: 'instructors.title',
   },
   {
     id: 'assignments',

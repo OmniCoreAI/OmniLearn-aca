@@ -248,7 +248,7 @@ function EvaluateAssignment({ user_id }: any) {
                     onChange={(e) => setFeedback(e.target.value)}
                     placeholder={t('dashboard.assignments.submissions.feedback.placeholder')}
                     rows={3}
-                    className='w-full px-3 py-2 text-sm bg-white nice-shadow rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 placeholder:text-gray-400 resize-none'
+                    className='w-full px-3 py-2 text-sm bg-white nice-shadow rounded-lg focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/5 placeholder:text-gray-400 resize-none'
                 />
                 <p className='text-[10px] text-gray-400 leading-tight'>
                     {t('dashboard.assignments.submissions.feedback.hint')}
@@ -298,7 +298,7 @@ function EvaluateAssignment({ user_id }: any) {
                     <div className='flex items-center space-x-1.5'>
                         <button
                             onClick={finalizeAndComplete}
-                            className='flex items-center space-x-1.5 px-3.5 py-2 text-xs font-bold bg-black text-white rounded-lg nice-shadow hover:bg-gray-800 transition-colors cursor-pointer'
+                            className='flex items-center space-x-1.5 px-3.5 py-2 text-xs font-bold bg-[hsl(var(--dash-accent))] text-white rounded-lg nice-shadow hover:bg-gray-800 transition-colors cursor-pointer'
                         >
                             <Check size={14} />
                             <span>{t('dashboard.assignments.submissions.actions.finalize')}</span>

@@ -21,6 +21,7 @@ interface AuthenticatedClientElementProps {
   | 'playgrounds'
   | 'programs'
   | 'training_programs'
+  | 'instructors'
   action?: 'create' | 'update' | 'delete' | 'read'
 }
 

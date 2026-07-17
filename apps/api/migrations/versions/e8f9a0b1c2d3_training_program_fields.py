@@ -1,6 +1,6 @@
 """Training program metadata (code, coordinator, capacity, fees, in_plan)
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: e8f9a0b1c2d3
 Revises: e7f8a9b0c1d2
 Create Date: 2026-07-04 19:00:00.000000
 
@@ -22,7 +22,7 @@ import sqlalchemy as sa
 import sqlmodel  # noqa: F401
 
 # revision identifiers, used by Alembic.
-revision: str = 'a1b2c3d4e5f6'
+revision: str = 'e8f9a0b1c2d3'
 down_revision: Union[str, None] = 'e7f8a9b0c1d2'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

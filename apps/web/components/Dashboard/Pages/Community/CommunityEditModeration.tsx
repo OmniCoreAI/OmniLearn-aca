@@ -424,7 +424,7 @@ const CommunityEditModeration: React.FC = () => {
             <Button
               onClick={handleSave}
               disabled={isSubmitting || !hasChanges}
-              className="bg-black text-white hover:bg-black/90"
+              className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
             >
               {isSubmitting ? (
                 <>

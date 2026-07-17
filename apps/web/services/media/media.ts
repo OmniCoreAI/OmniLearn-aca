@@ -63,6 +63,22 @@ export function getCourseThumbnailMediaDirectory(
   return uri
 }
 
+export function getProgramThumbnailMediaDirectory(
+  orgUUID: string,
+  programUUID: string,
+  fileId: string
+) {
+  return `${getMediaUrl()}content/orgs/${orgUUID}/programs/${programUUID}/thumbnails/${fileId}`
+}
+
+export function getTrainingProgramThumbnailMediaDirectory(
+  orgUUID: string,
+  trainingProgramUUID: string,
+  fileId: string
+) {
+  return `${getMediaUrl()}content/orgs/${orgUUID}/trainingprograms/${trainingProgramUUID}/thumbnails/${fileId}`
+}
+
 export function getFolderThumbnailMediaDirectory(
   orgUUID: string,
   folderUUID: string,

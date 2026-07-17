@@ -198,7 +198,7 @@ const CommunityEditCourse: React.FC = () => {
                         onClick={() => setSelectedCourse(course.course_uuid)}
                         className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
                           selectedCourse === course.course_uuid
-                            ? 'bg-gray-100 border-l-4 border-black'
+                            ? 'bg-gray-100 border-l-4 border-[hsl(var(--dash-ink))]'
                             : ''
                         }`}
                       >
@@ -219,7 +219,7 @@ const CommunityEditCourse: React.FC = () => {
                 <Button
                   onClick={handleLink}
                   disabled={isSubmitting || !selectedCourse}
-                  className="bg-black text-white hover:bg-black/90"
+                  className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
                 >
                   {isSubmitting ? (
                     <Loader2 size={16} className="animate-spin mr-2" />

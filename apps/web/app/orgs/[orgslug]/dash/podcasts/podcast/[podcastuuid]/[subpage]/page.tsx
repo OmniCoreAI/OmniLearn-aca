@@ -50,7 +50,7 @@ function PodcastOverviewPage(props: { params: Promise<PodcastOverviewParams> }) 
   ]
 
   return (
-    <div className="h-screen w-full bg-[#f8f8f8] grid grid-rows-[auto_1fr] grid-cols-1">
+    <div className="h-screen w-full bg-[hsl(var(--dash-canvas))] grid grid-rows-[auto_1fr] grid-cols-1">
       <PodcastProvider podcastuuid={podcastuuid}>
         <PodcastOverviewHeader params={params} tabs={tabs} />
         <motion.div
@@ -89,7 +89,7 @@ function PodcastOverviewHeader({
 
   if (isLoading) {
     return (
-      <div className="pl-10 pr-10 text-sm tracking-tight bg-[#fcfbfc] z-10 nice-shadow relative animate-pulse">
+      <div className="pl-10 pr-10 text-sm tracking-tight bg-[hsl(var(--dash-surface))] z-10 nice-shadow relative animate-pulse">
         <div className="pt-6 pb-4">
           <div className="h-4 w-40 bg-gray-200 rounded mb-4" />
           <div className="flex items-center justify-between mt-4">
@@ -111,7 +111,7 @@ function PodcastOverviewHeader({
   }
 
   return (
-    <div className="pl-4 pr-4 sm:pl-10 sm:pr-10 text-sm tracking-tight bg-[#fcfbfc] z-10 nice-shadow relative">
+    <div className="pl-4 pr-4 sm:pl-10 sm:pr-10 text-sm tracking-tight bg-[hsl(var(--dash-surface))] z-10 nice-shadow relative">
       <div className="pt-6 pb-4">
         <Breadcrumbs
           items={[

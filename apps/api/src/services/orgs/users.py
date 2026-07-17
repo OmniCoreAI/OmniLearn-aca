@@ -2,8 +2,9 @@ import csv
 import io
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import uuid4
 
 import redis
 from fastapi import HTTPException, Request
@@ -15,20 +16,40 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from config.config import get_omnilearn_config
 from src.db.organization_config import OrganizationConfig
 from src.db.organizations import Organization, OrganizationRead, OrganizationUser
-from src.db.roles import Role, RoleRead
+from src.db.roles import Role, RoleRead, RoleTypeEnum
 from src.db.user_organizations import UserOrganization
 from src.db.usergroup_user import UserGroupUser
 from src.db.usergroups import UserGroup, UserGroupRead
-from src.db.users import AnonymousUser, APITokenUser, PublicUser, User, UserRead
+from src.db.users import (
+    AdminUserCreate,
+    AdminUserCreateResult,
+    AnonymousUser,
+    APITokenUser,
+    PublicUser,
+    User,
+    UserRead,
+)
 from src.security.auth import resolve_acting_user_id
-from src.security.features_utils.usage import decrease_feature_usage
+from src.security.features_utils.usage import (
+    check_limits_with_usage,
+    decrease_feature_usage,
+    increase_feature_usage,
+)
 from src.security.org_auth import is_org_member
 from src.security.rbac.constants import ADMIN_ROLE_ID
+from src.security.security import security_hash_password
+from src.services.analytics import events as analytics_events
+from src.services.analytics.analytics import track
 from src.services.orgs.invites import send_invite_email
 from src.services.orgs.orgs import get_org_default_language, rbac_check
 from src.services.search.normalization import LIKE_ESCAPE_CHAR, build_like_pattern
+from src.services.security.password_validation import generate_temporary_password
 from src.services.users.emails import send_role_changed_email
 from src.services.webhooks.dispatch import dispatch_webhooks
+
+# Default role assigned to admin-provisioned users when no role is chosen:
+# role_global_user ("Read-Only Learner"), seeded with id=4.
+DEFAULT_MEMBER_ROLE_ID = 4
 
 logger = logging.getLogger(__name__)
 
@@ -588,6 +609,145 @@ async def remove_all_users_from_org(
         await decrease_feature_usage("members", org_id, db_session)
 
     return {"detail": f"{len(removed_user_ids)} user(s) removed from org"}
+
+
+async def _resolve_role_for_org(
+    db_session: AsyncSession,
+    org_id: int,
+    role_uuid: Optional[str],
+) -> int:
+    """Resolve a role_uuid to a role id valid for this org.
+
+    Accepts global roles (org_id is None) and roles owned by this org. Rejects
+    API-token roles and roles belonging to a different org. Falls back to the
+    default learner role when no role_uuid is supplied.
+    """
+    if not role_uuid:
+        return DEFAULT_MEMBER_ROLE_ID
+
+    role = (await db_session.execute(
+        select(Role).where(Role.role_uuid == role_uuid)
+    )).scalars().first()
+
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+
+    if role.role_type == RoleTypeEnum.TYPE_ORGANIZATION_API_TOKEN:
+        raise HTTPException(status_code=400, detail="This role cannot be assigned to a user")
+
+    # Org-scoped roles must belong to this organization.
+    if role.org_id is not None and role.org_id != org_id:
+        raise HTTPException(status_code=403, detail="Role does not belong to this organization")
+
+    if role.id is None:
+        raise HTTPException(status_code=400, detail="Invalid role")
+
+    return role.id
+
+
+async def admin_create_user(
+    request: Request,
+    org_id: int,
+    payload: AdminUserCreate,
+    db_session: AsyncSession,
+    current_user: PublicUser | AnonymousUser | APITokenUser,
+) -> AdminUserCreateResult:
+    """Admin/maintainer-initiated direct account creation.
+
+    Generates a one-time temporary password, auto-verifies the account, assigns
+    the chosen role, and flags the user to change their password on first login.
+    The plaintext temporary password is returned exactly once.
+    """
+    org = (await db_session.execute(
+        select(Organization).where(Organization.id == org_id)
+    )).scalars().first()
+
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    # RBAC: only org admins/maintainers (or superadmins) may provision accounts.
+    await rbac_check(request, org.org_uuid, current_user, "create", db_session)
+
+    # Resolve the role BEFORE creating anything so we fail fast on a bad role.
+    role_id = await _resolve_role_for_org(db_session, org_id, payload.role_uuid)
+
+    # Basic input normalization / validation.
+    username = (payload.username or "").strip()
+    email = (payload.email or "").strip().lower()
+    if len(username) < 2:
+        raise HTTPException(status_code=400, detail="Username must be at least 2 characters")
+
+    # Plan / usage limit for members.
+    await check_limits_with_usage("members", org_id, db_session)
+
+    # SECURITY: single generic error for both email and username conflicts to
+    # avoid account enumeration (mirrors self-service signup).
+    conflict = (await db_session.execute(
+        select(User).where((User.username == username) | (User.email == email))
+    )).scalars().first()
+    if conflict:
+        raise HTTPException(status_code=400, detail="Email or username is already in use")
+
+    temporary_password = generate_temporary_password()
+
+    now_iso = str(datetime.now())
+    user = User(
+        username=username,
+        email=email,
+        first_name=payload.first_name or "",
+        last_name=payload.last_name or "",
+        user_uuid=f"user_{uuid4()}",
+        password=security_hash_password(temporary_password),
+        email_verified=True,
+        email_verified_at=datetime.now(timezone.utc).isoformat(),
+        signup_method="admin_created",
+        must_change_password=True,
+        creation_date=now_iso,
+        update_date=now_iso,
+    )
+
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    user_organization = UserOrganization(
+        user_id=user.id if user.id else 0,
+        org_id=org_id,
+        role_id=role_id,
+        creation_date=now_iso,
+        update_date=now_iso,
+    )
+    db_session.add(user_organization)
+    await db_session.commit()
+    await db_session.refresh(user_organization)
+
+    await increase_feature_usage("members", org_id, db_session)
+
+    await track(
+        event_name=analytics_events.USER_SIGNED_UP,
+        org_id=org_id,
+        user_id=user.id if user.id else 0,
+        properties={"signup_method": "admin_created"},
+    )
+    await dispatch_webhooks(
+        event_name=analytics_events.USER_SIGNED_UP,
+        org_id=org_id,
+        data={
+            "user": {
+                "user_uuid": user.user_uuid,
+                "email": user.email,
+                "username": user.username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+            },
+            "signup_method": "admin_created",
+        },
+    )
+
+    return AdminUserCreateResult(
+        user=UserRead.model_validate(user),
+        temporary_password=temporary_password,
+    )
 
 
 async def update_user_role(

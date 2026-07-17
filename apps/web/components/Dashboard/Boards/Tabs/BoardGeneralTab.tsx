@@ -64,7 +64,7 @@ function BoardGeneralTab({ board, boardUuid, boardKey }: BoardGeneralTabProps) {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1"
+              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))] focus:ring-offset-1"
             />
           </div>
           <div>
@@ -72,7 +72,7 @@ function BoardGeneralTab({ board, boardUuid, boardKey }: BoardGeneralTabProps) {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1"
+              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))] focus:ring-offset-1"
               rows={3}
             />
           </div>

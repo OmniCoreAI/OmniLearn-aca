@@ -430,7 +430,7 @@ function CoursesHome(params: CourseProps) {
 
   if (isCoursesLoading) {
     return (
-      <div className="h-full w-full bg-[#f8f8f8] pl-4 pr-4 sm:pl-10 sm:pr-10">
+      <div className="h-full w-full bg-[hsl(var(--dash-canvas))] pl-4 pr-4 sm:pl-10 sm:pr-10">
         <div className="mb-6 pt-6 animate-pulse">
           <div className="h-4 bg-gray-200 rounded w-32 mb-6" />
           <div className="h-8 bg-gray-200 rounded w-48 mb-8" />
@@ -452,7 +452,7 @@ function CoursesHome(params: CourseProps) {
 
   return (
     <FeatureGate feature="courses" orgslug={orgslug} context="dashboard">
-    <div className="h-full w-full bg-[#f8f8f8] pl-4 pr-4 sm:pl-10 sm:pr-10">
+    <div className="h-full w-full bg-[hsl(var(--dash-canvas))] pl-4 pr-4 sm:pl-10 sm:pr-10">
       <div className="mb-6 pt-6">
         <Breadcrumbs items={[
           { label: t('courses.courses'), href: '/dash/courses', icon: <BookCopy size={14} /> }
@@ -538,7 +538,7 @@ function CoursesHome(params: CourseProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('courses.search_courses')}
-                className="w-full pl-10 pr-10 py-2.5 bg-white nice-shadow rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 border-0"
+                className="w-full pl-10 pr-10 py-2.5 bg-white nice-shadow rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))] focus:ring-offset-2 border-0"
               />
               {searchQuery && (
                 <button
@@ -558,7 +558,7 @@ function CoursesHome(params: CourseProps) {
                   <select
                     value={selectedUsergroupId}
                     onChange={(e) => handleUsergroupChange(e.target.value)}
-                    className="pl-8 pr-8 py-2.5 bg-white nice-shadow rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 border-0 appearance-none cursor-pointer min-w-[160px]"
+                    className="pl-8 pr-8 py-2.5 bg-white nice-shadow rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))] focus:ring-offset-2 border-0 appearance-none cursor-pointer min-w-[160px]"
                   >
                     <option value="">{t('courses.usergroup_filter.all_courses')}</option>
                     {usergroups.map((ug: any) => (
@@ -746,7 +746,7 @@ function CoursesHome(params: CourseProps) {
                     onClick={() => goToPage(page as number)}
                     className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                       currentPage === page
-                        ? 'bg-black text-white'
+                        ? 'bg-[hsl(var(--dash-accent))] text-white'
                         : 'bg-white text-gray-600 nice-shadow hover:bg-gray-50'
                     }`}
                   >

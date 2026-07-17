@@ -196,7 +196,7 @@ function AssignmentsHome() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('dashboard.assignments.home.search_placeholder')}
-              className='w-full pl-9 pr-8 py-2 text-sm bg-white nice-shadow rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 placeholder:text-gray-400'
+              className='w-full pl-9 pr-8 py-2 text-sm bg-white nice-shadow rounded-lg focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/5 placeholder:text-gray-400'
             />
             {searchQuery && (
               <button
@@ -575,7 +575,7 @@ const MiniThumbnail = (props: { course: any }) => {
     >
       {props.course.thumbnail_image ? (
         <div
-          className="inset-0 ring-1 ring-inset ring-black/10 rounded-lg shadow-xl w-[70px] h-[40px] bg-cover flex-none"
+          className="inset-0 ring-1 ring-inset ring-[hsl(var(--dash-accent))]/10 rounded-lg shadow-xl w-[70px] h-[40px] bg-cover flex-none"
           style={{
             backgroundImage: `url(${getCourseThumbnailMediaDirectory(
               org?.org_uuid,
@@ -586,7 +586,7 @@ const MiniThumbnail = (props: { course: any }) => {
         />
       ) : (
         <div
-          className="inset-0 ring-1 ring-inset ring-black/10 rounded-lg shadow-xl w-[70px] h-[40px] bg-cover flex-none"
+          className="inset-0 ring-1 ring-inset ring-[hsl(var(--dash-accent))]/10 rounded-lg shadow-xl w-[70px] h-[40px] bg-cover flex-none"
           style={{
             backgroundImage: `url('/empty_thumbnail.png')`,
             backgroundSize: 'contain',

@@ -1006,7 +1006,7 @@ export default function OrgEditBranding() {
             <Button
               onClick={handleThemeSave}
               disabled={isThemeSaving}
-              className="bg-black text-white hover:bg-black/90"
+              className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
             >
               {isThemeSaving ? t('dashboard.organization.settings.saving') : t('dashboard.organization.settings.save_changes')}
             </Button>
@@ -1170,7 +1170,7 @@ export default function OrgEditBranding() {
                     <Button
                       type="submit"
                       disabled={isSubmitting}
-                      className="bg-black text-white hover:bg-black/90"
+                      className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
                     >
                       {isSubmitting ? t('dashboard.organization.settings.saving') : t('dashboard.organization.settings.save_changes')}
                     </Button>

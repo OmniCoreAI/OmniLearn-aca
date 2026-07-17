@@ -25,9 +25,9 @@ function ClientAdminLayout({
             <AdminAuthorization authorizationMode="page">
                 <CommandPaletteProvider>
                     {isMobile && <DashMobileMenu />}
-                    <div className="flex flex-col lg:flex-row">
+                    <div className="dash-soft flex min-h-screen flex-col bg-[hsl(var(--dash-canvas))] lg:flex-row">
                         {!isMobile && <DashLeftMenu />}
-                        <div className="flex flex-col w-full relative isolate pb-24 lg:pb-0">
+                        <div className="relative isolate flex w-full flex-col pb-24 lg:pb-0">
                             <FreePlanUpgradeBanner />
                             {children}
                             <OnboardingBar />

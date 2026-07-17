@@ -20,6 +20,7 @@ import {
   FolderSimple,
   GraduationCap,
   Certificate,
+  ChalkboardTeacher,
   List,
   X,
   Check,
@@ -90,8 +91,8 @@ function DashMobileMenu() {
         style={{ bottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
       >
         <div
-          className="flex items-center gap-0.5 px-1.5 py-1.5 bg-[#111113]/90 backdrop-blur-xl rounded-full"
-          style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}
+          className="flex items-center gap-0.5 px-1.5 py-1.5 rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))]/95 backdrop-blur-xl"
+          style={{ boxShadow: '0 8px 28px hsl(160 12% 12% / 0.10)' }}
         >
           {/* OmniLearn logo — links to home */}
           <Link
@@ -103,7 +104,7 @@ function DashMobileMenu() {
               src="/lrn-dash.svg"
               alt="OmniLearn"
               className="h-[18px] w-[18px] opacity-60 hover:opacity-90 transition-opacity"
-              style={{ filter: 'brightness(0) invert(1)' }}
+              style={{ filter: 'none' }}
             />
           </Link>
           {/* Progressive reveal — more icons as viewport widens */}
@@ -129,13 +130,13 @@ function DashMobileMenu() {
             <PillLink href="/dash/payments/overview" icon={<CurrencyCircleDollar size={18} weight="fill" />} active={isActive('/dash/payments')} className="hidden min-[710px]:flex" />
           )}
 
-          <span className="w-px h-4 bg-white/[0.15] mx-1 shrink-0" />
+          <span className="mx-1 h-4 w-px shrink-0 bg-[hsl(var(--dash-border))]" />
 
           {/* Search */}
           <button
             onClick={openSearch}
             aria-label="Search"
-            className="p-2.5 rounded-full transition-all duration-200 text-white/60 hover:text-white hover:bg-white/[0.1]"
+            className="p-2.5 rounded-full transition-all duration-200 text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]"
           >
             <MagnifyingGlass size={18} weight="bold" />
           </button>
@@ -147,7 +148,7 @@ function DashMobileMenu() {
             aria-expanded={menuOpen}
             className={cn(
               'p-2.5 rounded-full transition-all duration-200 overflow-hidden',
-              menuOpen ? 'bg-white text-[#111113]' : 'text-white/60 hover:text-white hover:bg-white/[0.1]'
+              menuOpen ? 'bg-[hsl(var(--dash-accent))] text-white' : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]'
             )}
           >
             <AnimatePresence mode="wait" initial={false}>
@@ -171,7 +172,7 @@ function DashMobileMenu() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-[9997] bg-black/50 backdrop-blur-[3px]"
+              className="fixed inset-0 z-[9997] bg-[hsl(var(--dash-ink))]/30 backdrop-blur-[3px]"
               onClick={close}
             />
 
@@ -181,10 +182,10 @@ function DashMobileMenu() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.97 }}
               transition={{ type: 'spring', damping: 30, stiffness: 360 }}
-              className="fixed left-4 right-4 z-[9998] max-w-sm mx-auto bg-[#0e0e10]/95 backdrop-blur-xl rounded-2xl overflow-hidden"
+              className="fixed left-4 right-4 z-[9998] mx-auto max-w-sm overflow-hidden rounded-2xl border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))]/98 backdrop-blur-xl"
               style={{
                 bottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                boxShadow: '0 12px 40px hsl(160 12% 12% / 0.12)',
               }}
             >
               {/* Org header */}
@@ -196,12 +197,12 @@ function DashMobileMenu() {
                     className="h-7 w-7 object-contain rounded-lg"
                   />
                 ) : (
-                  <div className="h-7 w-7 flex items-center justify-center bg-white/[0.06] rounded-lg">
-                    <img src="/lrn-dash.svg" alt="OmniLearn" className="h-4 w-4" style={{ filter: 'brightness(0) invert(1)' }} />
+                  <div className="h-7 w-7 flex items-center justify-center bg-[hsl(var(--dash-accent-soft))] rounded-lg">
+                    <img src="/lrn-dash.svg" alt="OmniLearn" className="h-4 w-4" style={{ filter: 'none' }} />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate leading-none mb-0.5">{org?.name}</p>
+                  <p className="text-sm font-semibold text-[hsl(var(--dash-ink))] truncate leading-none mb-0.5">{org?.name}</p>
                   <p className={cn(
                     'text-[10px] font-medium',
                     mode === 'ee' ? 'text-amber-400' :
@@ -209,18 +210,19 @@ function DashMobileMenu() {
                     plan === 'enterprise' ? 'text-amber-400' :
                     plan === 'pro' ? 'text-purple-400' :
                     plan === 'standard' ? 'text-blue-400' :
-                    'text-white/30'
+                    'text-[hsl(var(--dash-muted))]'
                   )}>{planLabel}</p>
                 </div>
               </div>
 
-              <div className="h-px bg-white/[0.05] mx-4" />
+              <div className="h-px bg-[hsl(var(--dash-canvas))] mx-4" />
 
               {/* Nav items */}
               <div className="py-2 px-2 max-h-[52vh] overflow-y-auto overscroll-contain space-y-px">
                 <PanelItem href="/dash" icon={<House size={15} weight="fill" />} label={t('common.home')} active={isActive('/dash')} onClick={close} />
                 <PanelItem href="/dash/postgraduate" icon={<GraduationCap size={15} weight="fill" />} label={t('academic.postgraduate_studies', 'Postgraduate Studies')} active={isActive('/dash/postgraduate')} onClick={close} />
                 <PanelItem href="/dash/training-programs" icon={<Certificate size={15} weight="fill" />} label={t('academic.training_programs', 'Training Programs')} active={isActive('/dash/training-programs')} onClick={close} />
+                <PanelItem href="/dash/instructors" icon={<ChalkboardTeacher size={15} weight="fill" />} label={t('instructors.title', 'Instructors')} active={isActive('/dash/instructors')} onClick={close} />
                 {isEnabled('folders') && <PanelItem href="/dash/library" icon={<FolderSimple size={15} weight="fill" />} label={t('library.library')} active={isActive('/dash/library')} onClick={close} />}
                 <PanelItem href="/dash/assignments" icon={<Files size={15} weight="fill" />} label={t('common.assignments')} active={isActive('/dash/assignments')} onClick={close} />
                 <PanelItem href="/dash/users/settings/users" icon={<Users size={15} weight="fill" />} label={t('common.users')} active={isActive('/dash/users')} onClick={close} />
@@ -232,14 +234,14 @@ function DashMobileMenu() {
                 <PanelItem href="/dash/analytics" icon={<ChartBar size={15} weight="fill" />} label="Analytics" active={isActive('/dash/analytics')} onClick={close} />
                 <PanelItem href="/dash/org/settings/general" icon={<Buildings size={15} weight="fill" />} label={t('common.organization')} active={isActive('/dash/org')} onClick={close} />
 
-                <div className="h-px bg-white/[0.05] mx-2 my-1.5" />
+                <div className="h-px bg-[hsl(var(--dash-canvas))] mx-2 my-1.5" />
 
                 <PanelItem href="/account/general" icon={<Gear size={15} weight="fill" />} label={t('common.settings')} active={isActive('/account')} onClick={close} />
 
                 {/* Language picker */}
                 <button
                   onClick={() => setLangExpanded(v => !v)}
-                  className="flex items-center w-full rounded-lg px-2.5 py-2 gap-2.5 text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+                  className="flex items-center w-full rounded-lg px-2.5 py-2 gap-2.5 text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-canvas))] transition-all"
                 >
                   <Globe size={15} weight="fill" />
                   <span className="text-sm font-medium flex-1 text-left">{t('common.language')}</span>
@@ -251,7 +253,7 @@ function DashMobileMenu() {
                       <button
                         key={lang.code}
                         onClick={() => { changeLanguage(lang.code); setLangExpanded(false) }}
-                        className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg text-sm text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+                        className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg text-sm text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-canvas))] transition-all"
                       >
                         <span className="font-medium">{lang.nativeName}</span>
                         {i18n.language.split('-')[0] === lang.code && <Check size={11} weight="bold" className="text-green-500" />}
@@ -261,20 +263,20 @@ function DashMobileMenu() {
                 )}
 
                 <a href="https://docs.omnilearn.app" target="_blank" rel="noopener noreferrer"
-                  className="flex items-center w-full rounded-lg px-2.5 py-2 gap-2.5 text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+                  className="flex items-center w-full rounded-lg px-2.5 py-2 gap-2.5 text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-canvas))] transition-all"
                 >
                   <Book size={15} weight="fill" />
                   <span className="text-sm font-medium">{t('common.help_menu.documentation')}</span>
                 </a>
                 <a href="https://discord.gg/omnilearn" target="_blank" rel="noopener noreferrer"
-                  className="flex items-center w-full rounded-lg px-2.5 py-2 gap-2.5 text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+                  className="flex items-center w-full rounded-lg px-2.5 py-2 gap-2.5 text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-canvas))] transition-all"
                 >
                   <DiscordIcon size={15} />
                   <span className="text-sm font-medium">{t('common.help_menu.discord')}</span>
                 </a>
                 <button
                   onClick={() => { setFeedbackModalOpen(true); close() }}
-                  className="flex items-center w-full rounded-lg px-2.5 py-2 gap-2.5 text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+                  className="flex items-center w-full rounded-lg px-2.5 py-2 gap-2.5 text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-canvas))] transition-all"
                 >
                   <ChatCircleDots size={15} weight="fill" />
                   <span className="text-sm font-medium">{t('common.help_menu.report_feedback')}</span>
@@ -282,18 +284,18 @@ function DashMobileMenu() {
               </div>
 
               {/* User footer */}
-              <div className="h-px bg-white/[0.05] mx-4" />
+              <div className="h-px bg-[hsl(var(--dash-canvas))] mx-4" />
               <div className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <UserAvatar width={28} rounded="rounded-full" shadow="shadow-none" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white/90 truncate leading-none mb-0.5">{session?.data?.user?.username}</p>
-                    <p className="text-[10px] text-white/30 truncate">{session?.data?.user?.email}</p>
+                    <p className="text-sm font-semibold text-[hsl(var(--dash-ink))] truncate leading-none mb-0.5">{session?.data?.user?.username}</p>
+                    <p className="text-[10px] text-[hsl(var(--dash-muted))] truncate">{session?.data?.user?.email}</p>
                   </div>
                   <button
                     onClick={logOutUI}
                     aria-label={t('user.sign_out')}
-                    className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-white/[0.05] transition-all"
+                    className="p-1.5 rounded-lg text-[hsl(var(--dash-muted))] hover:text-red-400 hover:bg-[hsl(var(--dash-canvas))] transition-all"
                   >
                     <SignOut size={14} weight="fill" />
                   </button>
@@ -331,7 +333,7 @@ const PillLink = ({
     href={href}
     className={cn(
       'flex items-center justify-center p-2.5 rounded-full transition-all duration-200',
-      active ? 'bg-white/[0.15] text-white' : 'text-white/50 hover:text-white hover:bg-white/[0.08]',
+      active ? 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]' : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]',
       className
     )}
   >
@@ -358,7 +360,7 @@ const PanelItem = ({
     aria-current={active ? 'page' : undefined}
     className={cn(
       'relative flex items-center w-full rounded-lg px-2.5 py-2 gap-2 transition-all',
-      active ? 'text-white bg-white/[0.08]' : 'text-white/50 hover:text-white hover:bg-white/[0.06]'
+      active ? 'text-[hsl(var(--dash-accent))] bg-[hsl(var(--dash-accent-soft))]' : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]'
     )}
   >
     {active && (

@@ -483,7 +483,7 @@ const OrgEditSSO: React.FC = () => {
             <Button
               onClick={handleSave}
               disabled={isSaving || !selectedProviderInfo?.available}
-              className="bg-black text-white hover:bg-black/90"
+              className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
             >
               {isSaving
                 ? t('dashboard.organization.sso.saving')

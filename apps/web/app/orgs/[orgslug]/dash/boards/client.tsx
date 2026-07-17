@@ -65,7 +65,7 @@ function CreateBoardForm({ onCreated, orgId, accessToken }: {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1"
+          className="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))] focus:ring-offset-1"
           placeholder={t('boards.name_placeholder')}
           required
         />
@@ -75,7 +75,7 @@ function CreateBoardForm({ onCreated, orgId, accessToken }: {
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1"
+          className="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))] focus:ring-offset-1"
           placeholder={t('boards.description_placeholder')}
           rows={3}
         />
@@ -243,7 +243,7 @@ export default function BoardListClient({ org_id, orgslug }: BoardListClientProp
 
   return (
     <FeatureGate feature="boards" orgslug={orgslug} context="dashboard">
-      <div className="h-full w-full bg-[#f8f8f8] pl-4 pr-4 sm:pl-10 sm:pr-10">
+      <div className="h-full w-full bg-[hsl(var(--dash-canvas))] pl-4 pr-4 sm:pl-10 sm:pr-10">
         <div className="mb-6 pt-6">
           <Breadcrumbs items={[
             { label: t('boards.boards'), href: '/dash/boards', icon: <ChalkboardSimple size={14} /> }
@@ -271,7 +271,7 @@ export default function BoardListClient({ org_id, orgslug }: BoardListClientProp
                   />
                 }
                 dialogTrigger={
-                  <button className="rounded-lg bg-black transition-all duration-100 ease-linear antialiased p-2 px-5 my-auto font text-xs font-bold text-white nice-shadow flex space-x-2 items-center hover:scale-105">
+                  <button className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all">
                     <div>{t('boards.new_board')}</div>
                     <div className="text-md bg-neutral-800 px-1 rounded-full">+</div>
                   </button>
@@ -291,7 +291,7 @@ export default function BoardListClient({ org_id, orgslug }: BoardListClientProp
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('boards.search_placeholder')}
-                className="w-full pl-10 pr-10 py-2.5 bg-white nice-shadow rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 border-0"
+                className="w-full pl-10 pr-10 py-2.5 bg-white nice-shadow rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))] focus:ring-offset-2 border-0"
               />
               {searchQuery && (
                 <button
@@ -435,7 +435,7 @@ export default function BoardListClient({ org_id, orgslug }: BoardListClientProp
                       onClick={() => goToPage(page as number)}
                       className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                         currentPage === page
-                          ? 'bg-black text-white'
+                          ? 'bg-[hsl(var(--dash-accent))] text-white'
                           : 'bg-white text-gray-600 nice-shadow hover:bg-gray-50'
                       }`}
                     >
@@ -491,7 +491,7 @@ function BoardCard({ board, orgslug, orgUuid, orgId, isSelected, onToggleSelect,
   }
 
   return (
-    <div className={`group relative flex flex-col bg-white rounded-xl nice-shadow overflow-hidden w-full transition-all duration-300 hover:scale-[1.01] ${isSelected ? 'ring-2 ring-black ring-offset-2' : ''}`}>
+    <div className={`group relative flex flex-col bg-white rounded-xl nice-shadow overflow-hidden w-full transition-all duration-300 hover:scale-[1.01] ${isSelected ? 'ring-2 ring-[hsl(var(--dash-accent))] ring-offset-2' : ''}`}>
       {/* Selection checkbox */}
       <button
         onClick={handleSelectClick}
