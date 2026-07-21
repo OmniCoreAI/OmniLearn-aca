@@ -1,11 +1,13 @@
 name: omnilearn
 
+# Full stack: Postgres + Redis + app (nginx → frontend + API + collab)
+#   docker compose up --build
+# App UI: http://localhost:8080
+
 services:
-  # Local Postgres — start with: docker compose --profile local-db up --build -d
   db:
     image: pgvector/pgvector:pg16
     container_name: omnilearn-db
-    profiles: ["local-db"]
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-omnilearn}
@@ -46,15 +48,15 @@ services:
     env_file:
       - docker/.env
     environment:
-      # SQL URL must come from docker/.env only (use @db for local Postgres).
-      # Do not interpolate from the root .env — that file uses 127.0.0.1:5433 for npm run dev.
+      # SQL URL comes from docker/.env (@db). Do not interpolate root .env (npm uses :5433).
       OMNILEARN_REDIS_CONNECTION_STRING: redis://redis:6379/omnilearn
-      # Collab reads OMNILEARN_REDIS_URL (different name from the API).
       OMNILEARN_REDIS_URL: redis://redis:6379
+      # In-container services talk to each other on localhost.
       OMNILEARN_API_URL: http://127.0.0.1:9000
       OMNILEARN_FRONTEND_DOMAIN: ${OMNILEARN_FRONTEND_DOMAIN:-localhost:${HTTP_PORT:-8080}}
       NEXT_PUBLIC_OMNILEARN_DOMAIN: ${OMNILEARN_FRONTEND_DOMAIN:-localhost:${HTTP_PORT:-8080}}
-      NEXT_PUBLIC_OMNILEARN_BACKEND_URL: http://localhost:${OMNILEARN_PORT:-9000}
+      # Next.js server routes call the API inside the same container.
+      NEXT_PUBLIC_OMNILEARN_BACKEND_URL: http://127.0.0.1:9000
       OMNILEARN_INITIAL_ORG_NAME: ${OMNILEARN_INITIAL_ORG_NAME:-aca}
       OMNILEARN_INITIAL_ORG_SLUG: ${OMNILEARN_INITIAL_ORG_SLUG:-aca}
       OMNILEARN_INITIAL_ADMIN_EMAIL: ${OMNILEARN_INITIAL_ADMIN_EMAIL:-admin@omnicoreai.com}
@@ -65,11 +67,10 @@ services:
     volumes:
       - omnilearn_content:/app/api/content
     depends_on:
-      redis:
-        condition: service_healthy
       db:
         condition: service_healthy
-        required: false
+      redis:
+        condition: service_healthy
     networks:
       - omnilearn-network
     healthcheck:
