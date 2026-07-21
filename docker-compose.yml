@@ -62,7 +62,9 @@ services:
       NEXT_PUBLIC_OMNILEARN_BACKEND_URL: http://127.0.0.1:9000
       COLLAB_PORT: ${COLLAB_PORT:-4040}
     ports:
-      - "${HTTP_PORT:-8080}:80"
+      # APP_BIND=127.0.0.1 keeps the port private (host nginx proxies to it);
+      # default 0.0.0.0 exposes it directly (local dev / --no-nginx deploys).
+      - "${APP_BIND:-0.0.0.0}:${HTTP_PORT:-8080}:80"
     volumes:
       - omnilearn_content:/app/api/content
     depends_on:
