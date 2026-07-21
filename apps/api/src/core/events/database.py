@@ -7,6 +7,7 @@ from sqlmodel import SQLModel, Session
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
+from src.core.db_url import prepare_asyncpg_connection
 
 
 def import_all_models():
@@ -58,15 +59,7 @@ if is_testing:
         echo=False,
     )
 else:
-    sql_url = str(omnilearn_config.database_config.sql_connection_string)  # type: ignore
-
-    # Ensure we use the asyncpg driver for PostgreSQL
-    if sql_url.startswith("postgresql+psycopg2://"):
-        sql_url = sql_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
-    elif sql_url.startswith("postgresql://"):
-        sql_url = sql_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    elif sql_url.startswith("postgres://"):
-        sql_url = sql_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    raw_sql_url = str(omnilearn_config.database_config.sql_connection_string)  # type: ignore
 
     # PgBouncer/Supavisor in transaction pool mode recycles backend connections
     # between client requests, which breaks asyncpg's named prepared statements:
@@ -84,11 +77,17 @@ else:
     #   statement_cache_size=0           → disable asyncpg's own per-connection LRU
     #   prepared_statement_name_func=""  → force unnamed prepared statements
     #   prepared_statement_cache_size=0  → disable SQLAlchemy's adapter-level LRU
-    _connect_args = {
+    #
+    # prepare_asyncpg_connection also rewrites the driver prefix and maps libpq
+    # sslmode=… (DigitalOcean / managed Postgres URLs) onto asyncpg's ssl= arg.
+    _base_connect_args = {
         "statement_cache_size": 0,
         "prepared_statement_name_func": lambda: "",
         "prepared_statement_cache_size": 0,
     }
+    sql_url, _connect_args = prepare_asyncpg_connection(
+        raw_sql_url, base_connect_args=_base_connect_args
+    )
 
     # Detect connection poolers (Supavisor, PgBouncer) to use a smaller
     # client-side pool so we don't overwhelm the pooler's upstream limit.

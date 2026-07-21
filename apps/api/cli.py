@@ -19,6 +19,7 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 import typer
 from config.config import get_omnilearn_config
+from src.core.db_url import prepare_asyncpg_connection
 from src.db.organizations import OrganizationCreate
 from src.db.users import UserCreate
 from src.services.setup.setup import (
@@ -28,14 +29,6 @@ from src.services.setup.setup import (
 )
 
 cli = typer.Typer()
-
-
-def _to_async_url(url: str) -> str:
-    if "+asyncpg" in url:
-        return url
-    if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    return url
 
 
 def _to_sync_url(url: str) -> str:
@@ -69,8 +62,9 @@ async def _install_async(short: bool) -> None:
     # each commit — without it, `UserRead.model_validate(user)` inside
     # `install_create_organization_user` triggers async refresh outside the
     # session's greenlet context and raises MissingGreenlet.
+    async_url, async_connect_args = prepare_asyncpg_connection(sql_url)
     async_engine = create_async_engine(
-        _to_async_url(sql_url), echo=False, pool_pre_ping=True
+        async_url, echo=False, pool_pre_ping=True, connect_args=async_connect_args
     )
 
     try:

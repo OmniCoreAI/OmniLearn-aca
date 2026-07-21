@@ -4,6 +4,16 @@ import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Check, Download, Lock, X } from 'lucide-react'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { Button } from '@components/ui/button'
 import {
   Table,
@@ -43,6 +53,28 @@ function fmt(amount: number, currency = 'EGP') {
 
 type Bounds = { date_from?: string; date_to?: string }
 
+function ChartCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string
+  subtitle: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="min-w-0 overflow-hidden rounded-xl border bg-white p-5">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <p className="mb-4 mt-0.5 text-xs text-gray-500">{subtitle}</p>
+      {children}
+    </div>
+  )
+}
+
+function shortLabel(value: string, max = 28) {
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value
+}
+
 export function ProfitLossPanel({
   orgId,
   accessToken,
@@ -71,6 +103,24 @@ export function ProfitLossPanel({
     )
   }
 
+  const categoryMap = new Map<
+    string,
+    { category: string; revenue: number; expense: number }
+  >()
+  data.by_category.forEach((row) => {
+    const current = categoryMap.get(row.category) || {
+      category: row.category,
+      revenue: 0,
+      expense: 0,
+    }
+    if (row.entry_type === 'revenue') current.revenue += row.total
+    else current.expense += row.total
+    categoryMap.set(row.category, current)
+  })
+  const categoryChart = [...categoryMap.values()].sort(
+    (a, b) => b.revenue + b.expense - (a.revenue + a.expense)
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -91,6 +141,26 @@ export function ProfitLossPanel({
           </div>
         ))}
       </div>
+      <ChartCard
+        title="Accounting category mix"
+        subtitle="Finance categories classify cash flow; academic relationships are shown under Programs and Courses."
+      >
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={categoryChart}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="category" tickFormatter={(value) => shortLabel(String(value), 14)} />
+              <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`} />
+              <Tooltip
+                formatter={(value) => fmt(Number(value || 0), data.currency)}
+              />
+              <Legend />
+              <Bar dataKey="revenue" name="Revenue" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="expense" name="Expenses" fill="var(--muted-foreground)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </ChartCard>
       <div className="bg-white border rounded-xl overflow-hidden">
         <Table>
           <TableHeader>
@@ -211,6 +281,37 @@ export function CoursesProfitPanel({
     )
   }
 
+  const courseChart = [...data]
+    .sort((a, b) => b.net_revenue - a.net_revenue)
+    .slice(0, 8)
+    .map((course) => ({
+      name: shortLabel(course.course_name || course.course_uuid),
+      revenue: course.net_revenue,
+      cost: course.total_cost,
+      profit: course.net_profit,
+    }))
+
+  const programMap = new Map<
+    string,
+    { name: string; revenue: number; cost: number; profit: number }
+  >()
+  data.forEach((course) => {
+    const key = course.program_uuid || `unassigned:${course.course_uuid}`
+    const current = programMap.get(key) || {
+      name: course.program_name || 'Unassigned course',
+      revenue: 0,
+      cost: 0,
+      profit: 0,
+    }
+    current.revenue += course.net_revenue
+    current.cost += course.total_cost
+    current.profit += course.net_profit
+    programMap.set(key, current)
+  })
+  const programChart = [...programMap.values()].sort(
+    (a, b) => b.revenue - a.revenue
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -218,10 +319,62 @@ export function CoursesProfitPanel({
           <Download size={14} className="mr-1.5" /> Export courses CSV
         </Button>
       </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ChartCard
+          title="Program performance"
+          subtitle="Course results rolled up through actual training and postgraduate relationships."
+        >
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={programChart} layout="vertical" margin={{ left: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
+                />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  width={145}
+                  tickFormatter={(value) => shortLabel(String(value), 22)}
+                />
+                <Tooltip formatter={(value) => fmt(Number(value || 0), data[0]?.currency)} />
+                <Legend />
+                <Bar dataKey="revenue" name="Net revenue" fill="var(--primary)" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="cost" name="Total cost" fill="var(--muted-foreground)" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="profit" name="Net profit" fill="var(--accent-foreground)" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+        <ChartCard
+          title="Course profitability"
+          subtitle="Net revenue, total cost, and profit for each related course."
+        >
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={courseChart} layout="vertical" margin={{ left: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
+                />
+                <YAxis dataKey="name" type="category" width={145} />
+                <Tooltip formatter={(value) => fmt(Number(value || 0), data[0]?.currency)} />
+                <Legend />
+                <Bar dataKey="revenue" name="Net revenue" fill="var(--primary)" />
+                <Bar dataKey="cost" name="Total cost" fill="var(--muted-foreground)" />
+                <Bar dataKey="profit" name="Net profit" fill="var(--accent-foreground)" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+      </div>
       <div className="bg-white border rounded-xl overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Program</TableHead>
               <TableHead>Course</TableHead>
               <TableHead>Attendees</TableHead>
               <TableHead>Net revenue</TableHead>
@@ -236,14 +389,22 @@ export function CoursesProfitPanel({
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-gray-400 py-8">
+                <TableCell colSpan={10} className="text-center text-gray-400 py-8">
                   No course attribution yet — link ledger/worklogs to courses or set cost config
                 </TableCell>
               </TableRow>
             ) : (
               data.map((c) => (
                 <TableRow key={c.course_uuid}>
-                  <TableCell className="font-medium max-w-[220px] truncate">
+                  <TableCell className="max-w-55">
+                    <div className="truncate font-medium">
+                      {c.program_name || 'Unassigned'}
+                    </div>
+                    <div className="text-xs capitalize text-gray-400">
+                      {c.program_type || 'course'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="max-w-55 truncate font-medium">
                     {c.course_name || c.course_uuid}
                   </TableCell>
                   <TableCell>{c.attendees}</TableCell>
@@ -353,6 +514,16 @@ export function PayrollPanel({
 
   if (isLoading) return <PageLoading />
 
+  const payrollChart = [...(data?.instructors || [])]
+    .sort((a, b) => b.amount - a.amount)
+    .map((instructor) => ({
+      name: shortLabel(
+        instructor.instructor_name || instructor.instructor_uuid || 'Instructor',
+        24
+      ),
+      pay: instructor.amount,
+    }))
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -405,6 +576,29 @@ export function PayrollPanel({
         </div>
       </div>
 
+      {payrollChart.length > 0 && (
+        <ChartCard
+          title="Instructor payroll cost"
+          subtitle={`Pay by instructor for ${month} (${data?.total_hours || 0} total hours).`}
+        >
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={payrollChart} layout="vertical" margin={{ left: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
+                />
+                <YAxis dataKey="name" type="category" width={145} />
+                <Tooltip formatter={(value) => fmt(Number(value || 0), data?.currency)} />
+                <Legend />
+                <Bar dataKey="pay" name="Pay" fill="var(--primary)" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+      )}
+
       <div className="bg-white border rounded-xl overflow-hidden">
         <Table>
           <TableHeader>
@@ -430,7 +624,7 @@ export function PayrollPanel({
                   </TableCell>
                   <TableCell>{i.hours}</TableCell>
                   <TableCell>{fmt(i.amount, i.currency || data.currency)}</TableCell>
-                  <TableCell className="text-xs text-gray-500 max-w-[240px] truncate">
+                  <TableCell className="max-w-60 truncate text-xs text-gray-500">
                     {(i.courses || []).join(', ') || '—'}
                   </TableCell>
                 </TableRow>
@@ -558,7 +752,7 @@ export function RefundsPanel({
                     {r.entry_title || r.entry_uuid}
                   </TableCell>
                   <TableCell>{fmt(r.amount, r.currency)}</TableCell>
-                  <TableCell className="text-sm text-gray-600 max-w-[220px] truncate">
+                  <TableCell className="max-w-55 truncate text-sm text-gray-600">
                     {r.reason}
                   </TableCell>
                   <TableCell className="capitalize text-sm">{r.status}</TableCell>

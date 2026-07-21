@@ -9,6 +9,10 @@ from fastapi import HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.db.academic.links import SemesterCourse, TrainingProgramCourse
+from src.db.academic.programs import Program
+from src.db.academic.semesters import Semester
+from src.db.academic.training_programs import TrainingProgram
 from src.db.courses.courses import Course
 from src.db.finance.ledger import FinanceEntryStatus, FinanceEntryType, FinanceLedgerEntry
 from src.db.finance.reporting import (
@@ -65,9 +69,15 @@ async def _org_or_404(db_session: AsyncSession, org_id: int) -> Organization:
     return org
 
 
-async def _course_name(db_session: AsyncSession, course_uuid: str) -> Optional[str]:
+async def _course_name(
+    db_session: AsyncSession, org_id: int, course_uuid: str
+) -> Optional[str]:
     course = (
-        await db_session.execute(select(Course).where(Course.course_uuid == course_uuid))
+        await db_session.execute(
+            select(Course).where(
+                Course.course_uuid == course_uuid, Course.org_id == org_id
+            )
+        )
     ).scalars().first()
     if course:
         return course.name
@@ -78,6 +88,37 @@ async def _course_name(db_session: AsyncSession, course_uuid: str) -> Optional[s
         "course_demo_investigation": "Administrative investigation (demo)",
     }
     return demo.get(course_uuid)
+
+
+async def _course_program(
+    db_session: AsyncSession, org_id: int, course_uuid: str
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    academic = (
+        await db_session.execute(
+            select(Program)
+            .join(Semester, Semester.program_id == Program.id)
+            .join(SemesterCourse, SemesterCourse.semester_id == Semester.id)
+            .join(Course, Course.id == SemesterCourse.course_id)
+            .where(Course.org_id == org_id, Course.course_uuid == course_uuid)
+        )
+    ).scalars().first()
+    if academic:
+        return academic.program_uuid, academic.name, "postgraduate"
+
+    training = (
+        await db_session.execute(
+            select(TrainingProgram)
+            .join(
+                TrainingProgramCourse,
+                TrainingProgramCourse.training_program_id == TrainingProgram.id,
+            )
+            .join(Course, Course.id == TrainingProgramCourse.course_id)
+            .where(Course.org_id == org_id, Course.course_uuid == course_uuid)
+        )
+    ).scalars().first()
+    if training:
+        return training.trainingprogram_uuid, training.name, "training"
+    return None, None, None
 
 
 async def _enrollment_count(db_session: AsyncSession, org_id: int, course_uuid: str) -> int:
@@ -390,10 +431,16 @@ async def _compute_course_profit(
     net_profit = _round_money(net_revenue - total_cost)
     margin = _round_money((net_profit / net_revenue) * 100) if net_revenue > 0 else 0.0
 
+    program_uuid, program_name, program_type = await _course_program(
+        db_session, org_id, course_uuid
+    )
     return CourseProfitRead(
         org_id=org_id,
         course_uuid=course_uuid,
-        course_name=await _course_name(db_session, course_uuid),
+        course_name=await _course_name(db_session, org_id, course_uuid),
+        program_uuid=program_uuid,
+        program_name=program_name,
+        program_type=program_type,
         currency=currency,
         attendees=attendees,
         certified_attendees=certified,

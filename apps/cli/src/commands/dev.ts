@@ -89,8 +89,57 @@ async function waitForHealth(label: string, command: string, args: string[], max
   return false
 }
 
-async function waitForHttp(label: string, url: string, maxAttempts = 90): Promise<boolean> {
-  for (let i = 0; i < maxAttempts; i++) {
+function isRemoteSqlHost(host: string | undefined): boolean {
+  if (!host) return false
+  const normalized = host.toLowerCase()
+  return !(
+    normalized === 'localhost' ||
+    normalized === '127.0.0.1' ||
+    normalized === 'db' ||
+    normalized === 'postgres' ||
+    normalized.endsWith('.local')
+  )
+}
+
+function readApiSqlConnectionString(root: string): string | undefined {
+  const fromEnv = process.env.OMNILEARN_SQL_CONNECTION_STRING
+  if (fromEnv) return fromEnv
+  try {
+    const envPath = path.join(root, 'apps', 'api', '.env')
+    if (!fs.existsSync(envPath)) return undefined
+    const match = fs
+      .readFileSync(envPath, 'utf8')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.startsWith('OMNILEARN_SQL_CONNECTION_STRING='))
+    if (!match) return undefined
+    return match.slice('OMNILEARN_SQL_CONNECTION_STRING='.length).replace(/^['"]|['"]$/g, '')
+  } catch {
+    return undefined
+  }
+}
+
+function sqlHostFromUrl(sqlUrl: string | undefined): string | undefined {
+  if (!sqlUrl) return undefined
+  try {
+    return new URL(sqlUrl.replace(/^postgres(ql)?(\+[^:]+)?:\/\//, 'postgresql://')).hostname
+  } catch {
+    return undefined
+  }
+}
+
+function defaultApiReadyAttempts(root = process.cwd()): number {
+  // Uvicorn reload + Windows spawn is already slow; remote managed Postgres
+  // (DigitalOcean / Neon / Supabase) is slower still because connect_to_db +
+  // auto_install must finish before the first HTTP response.
+  const remote = isRemoteSqlHost(sqlHostFromUrl(readApiSqlConnectionString(root)))
+  if (remote) return process.platform === 'win32' ? 420 : 300
+  return process.platform === 'win32' ? 240 : 90
+}
+
+async function waitForHttp(label: string, url: string, maxAttempts?: number): Promise<boolean> {
+  const attempts = maxAttempts ?? defaultApiReadyAttempts()
+  for (let i = 0; i < attempts; i++) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(2000) })
       if (res.ok) return true
@@ -399,11 +448,22 @@ export async function devCommand(opts: { ee?: boolean; adminEmail?: string; admi
   apiProc = startApi()
 
   const apiReadySpinner = p.spinner()
-  apiReadySpinner.start('Waiting for API to be ready on :1338...')
-  const apiReady = await waitForHttp('API', 'http://127.0.0.1:1338/')
+  const apiReadyAttempts = defaultApiReadyAttempts(root)
+  const remoteSql = isRemoteSqlHost(sqlHostFromUrl(readApiSqlConnectionString(root)))
+  apiReadySpinner.start(
+    remoteSql
+      ? `Waiting for API on :1338 (remote DB — up to ${apiReadyAttempts}s)...`
+      : 'Waiting for API to be ready on :1338...'
+  )
+  const apiReady = await waitForHttp('API', 'http://127.0.0.1:1338/', apiReadyAttempts)
   if (!apiReady) {
     apiReadySpinner.stop('API did not become ready')
     p.log.error('API failed to start. Check the [api] logs above.')
+    if (remoteSql) {
+      p.log.warn(
+        'Remote Postgres startups can exceed several minutes. Re-run after confirming the DB is reachable, or temporarily use the local DB.'
+      )
+    }
     await Promise.all([killProcess(apiProc)])
     process.exit(1)
   }

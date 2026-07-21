@@ -6,6 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from cli import _install_async
 from config.config import get_omnilearn_config
+from src.core.db_url import prepare_asyncpg_connection
 from src.db.organizations import Organization
 from src.services.setup.setup import install_default_elements
 
@@ -39,38 +40,23 @@ async def auto_install():
     # Refresh global default roles (IDs 1-4) so this release's new permission
     # keys (e.g. playgrounds, boards) land in the DB. Idempotent.
     try:
-        async_connection_string = str(sync_connection_string)
-        # Normalise every supported sync/driver prefix to asyncpg. Order matters:
-        # the more specific "postgresql+psycopg2://" must be handled before the
-        # generic "postgresql://", and the "postgres://" alias (Heroku/Supabase
-        # style) must be converted too — otherwise create_async_engine() raises
-        # because the default psycopg2/no driver is not async-capable.
-        if async_connection_string.startswith("postgresql+psycopg2://"):
-            async_connection_string = async_connection_string.replace(
-                "postgresql+psycopg2://", "postgresql+asyncpg://", 1
-            )
-        elif async_connection_string.startswith("postgresql://"):
-            async_connection_string = async_connection_string.replace(
-                "postgresql://", "postgresql+asyncpg://", 1
-            )
-        elif async_connection_string.startswith("postgres://"):
-            async_connection_string = async_connection_string.replace(
-                "postgres://", "postgresql+asyncpg://", 1
-            )
-        # On pooled Postgres (PgBouncer / Supavisor transaction mode) asyncpg's
-        # named prepared statements collide across recycled backend connections,
-        # raising DuplicatePreparedStatementError. Mirror the main engine's
-        # connect_args so this refresh works on pooled deployments instead of
+        # Normalise driver prefix + map libpq sslmode for asyncpg. Also mirror
+        # the main engine's prepared-statement connect_args so this refresh
+        # works on pooled deployments (PgBouncer / Supavisor) instead of
         # silently failing and leaving new RBAC permission keys out of the DB.
-        async_engine = create_async_engine(
-            async_connection_string,
-            echo=False,
-            pool_pre_ping=True,
-            connect_args={
+        async_connection_string, async_connect_args = prepare_asyncpg_connection(
+            str(sync_connection_string),
+            base_connect_args={
                 "statement_cache_size": 0,
                 "prepared_statement_name_func": lambda: "",
                 "prepared_statement_cache_size": 0,
             },
+        )
+        async_engine = create_async_engine(
+            async_connection_string,
+            echo=False,
+            pool_pre_ping=True,
+            connect_args=async_connect_args,
         )
         factory = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
         try:

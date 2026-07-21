@@ -3,10 +3,11 @@ import React, { useEffect, use } from 'react';
 import { motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import { getUriWithOrg } from '@services/config/config'
-import { UserPlus, Users, Shield, ShieldAlert } from 'lucide-react'
+import { UserPlus, Users, UsersRound, Shield, ShieldAlert } from 'lucide-react'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
 import OrgUsers from '@components/Dashboard/Pages/Users/OrgUsers/OrgUsers'
 import OrgUsersAdd from '@components/Dashboard/Pages/Users/OrgUsersAdd/OrgUsersAdd'
+import OrgUserGroups from '@components/Dashboard/Pages/Users/OrgUserGroups/OrgUserGroups'
 import OrgRoles from '@components/Dashboard/Pages/Users/OrgRoles/OrgRoles'
 import OrgAuditLogs from '@components/Dashboard/Pages/Org/OrgAuditLogs/OrgAuditLogs'
 import { useTranslation } from 'react-i18next'
@@ -29,6 +30,10 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
       setH1Label(t('dashboard.users.settings.pages.users.title'))
       setH2Label(t('dashboard.users.settings.pages.users.subtitle'))
     }
+    if (params.subpage == 'usergroups') {
+      setH1Label(t('dashboard.users.settings.pages.usergroups.title'))
+      setH2Label(t('dashboard.users.settings.pages.usergroups.subtitle'))
+    }
     if (params.subpage == 'add') {
       setH1Label(t('dashboard.users.settings.pages.add.title'))
       setH2Label(t('dashboard.users.settings.pages.add.subtitle'))
@@ -48,7 +53,7 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
   }, [params.subpage, params, t])
 
   useEffect(() => {
-    if (params.subpage === 'usergroups' || params.subpage === 'signups') {
+    if (params.subpage === 'signups') {
       router.replace(getUriWithOrg(params.orgslug, '') + `/dash/users/settings/users`)
     }
   }, [params.subpage, params.orgslug, router])
@@ -60,6 +65,14 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
       icon: <Users size={16} />,
       href: getUriWithOrg(params.orgslug, '') + `/dash/users/settings/users`,
       active: params.subpage === 'users',
+    },
+    {
+      key: 'usergroups',
+      label: t('dashboard.users.settings.tabs.usergroups'),
+      icon: <UsersRound size={16} />,
+      href: getUriWithOrg(params.orgslug, '') + `/dash/users/settings/usergroups`,
+      active: params.subpage === 'usergroups',
+      requiresPlan: 'standard',
     },
     {
       key: 'roles',
@@ -86,7 +99,7 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
     },
   ]
 
-  if (params.subpage === 'usergroups' || params.subpage === 'signups') {
+  if (params.subpage === 'signups') {
     return null
   }
 
@@ -120,6 +133,7 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
         className="min-w-0 overflow-y-auto overflow-x-hidden"
       >
         {params.subpage == 'users' ? <OrgUsers /> : ''}
+        {params.subpage == 'usergroups' ? <OrgUserGroups /> : ''}
         {params.subpage == 'add' ? <OrgUsersAdd /> : ''}
         {params.subpage == 'roles' ? <><div className="h-6"></div><OrgRoles /></> : ''}
         {params.subpage == 'audit-logs' ? <><div className="h-6"></div><OrgAuditLogs /></> : ''}

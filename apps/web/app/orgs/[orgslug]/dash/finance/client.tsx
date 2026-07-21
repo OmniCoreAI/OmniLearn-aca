@@ -4,13 +4,13 @@ import React, { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
-  Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
   Legend,
+  Line,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -48,6 +48,7 @@ import {
   createFinanceEntry,
   deleteFinanceEntry,
   getFinanceSummary,
+  listCourseProfits,
   listFinanceEntries,
   type FinanceEntryPayload,
   type FinanceLedgerEntry,
@@ -396,11 +397,23 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
     staleTime: 15_000,
   })
 
+  const coursesQuery = useQuery({
+    queryKey: ['finance-courses-overview', orgId, bounds.date_from, bounds.date_to],
+    queryFn: () =>
+      listCourseProfits(orgId!, accessToken!, {
+        date_from: bounds.date_from,
+        date_to: bounds.date_to,
+      }),
+    enabled: !!orgId && !!accessToken && section === 'overview',
+    staleTime: 15_000,
+  })
+
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['finance-summary', orgId] })
     queryClient.invalidateQueries({ queryKey: ['finance-entries', orgId] })
     queryClient.invalidateQueries({ queryKey: ['finance-pl', orgId] })
     queryClient.invalidateQueries({ queryKey: ['finance-courses', orgId] })
+    queryClient.invalidateQueries({ queryKey: ['finance-courses-overview', orgId] })
     queryClient.invalidateQueries({ queryKey: ['finance-refunds', orgId] })
     queryClient.invalidateQueries({ queryKey: ['finance-payroll', orgId] })
   }
@@ -432,6 +445,41 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
       label: d.date.slice(5),
     }))
   }, [summary])
+
+  const costComposition = useMemo(() => {
+    const expenses = summary?.total_expenses || 0
+    const instructorCost = summary?.instructor_cost || 0
+    const profit = Math.max(summary?.estimated_profit || 0, 0)
+    const loss = Math.max(-(summary?.estimated_profit || 0), 0)
+    return [
+      {
+        name: 'Revenue use',
+        expenses,
+        instructor: instructorCost,
+        profit,
+        loss,
+      },
+    ]
+  }, [summary])
+
+  const programRevenue = useMemo(() => {
+    const buckets = {
+      training: 0,
+      postgraduate: 0,
+      unassigned: 0,
+    }
+    for (const course of coursesQuery.data || []) {
+      const amount = Number(course.net_revenue) || 0
+      if (course.program_type === 'training') buckets.training += amount
+      else if (course.program_type === 'postgraduate') buckets.postgraduate += amount
+      else buckets.unassigned += amount
+    }
+    return [
+      { name: 'Training', value: buckets.training, color: '#3b82f6' },
+      { name: 'Postgraduate', value: buckets.postgraduate, color: '#8b5cf6' },
+      { name: 'Unassigned', value: buckets.unassigned, color: '#94a3b8' },
+    ].filter((slice) => slice.value > 0)
+  }, [coursesQuery.data])
 
   const removeEntry = async (entry: FinanceLedgerEntry) => {
     if (!accessToken) return
@@ -493,7 +541,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
   if (!orgId || !accessToken) return <PageLoading />
   if (
     section === 'overview' &&
-    (summaryQuery.isLoading || entriesQuery.isLoading)
+    (summaryQuery.isLoading || entriesQuery.isLoading || coursesQuery.isLoading)
   )
     return <PageLoading />
 
@@ -673,36 +721,114 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <div className="xl:col-span-2">
-            <ChartCard title="Cashflow over time" subtitle="Revenue, expenses and net by day">
+            <ChartCard
+              title="Revenue vs expenses"
+              subtitle="Daily comparison with net trend line"
+            >
               {daily.length === 0 ? (
                 <div className="h-52 flex items-center justify-center text-sm text-gray-300">
                   No entries in this range — add revenue or expenses
                 </div>
               ) : (
-                <div style={{ height: 220 }}>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <AreaChart data={daily}>
-                      <defs>
-                        <linearGradient id="netLocal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.28} />
-                          <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
-                        </linearGradient>
-                      </defs>
+                <div style={{ height: 240 }}>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <ComposedChart data={daily}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                       <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#9ca3af" />
                       <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                      <Tooltip formatter={(v: any, n: any) => [fmt(Number(v) || 0, currency), n]} />
+                      <Tooltip
+                        formatter={(v: any, n: any) => [fmt(Number(v) || 0, currency), n]}
+                      />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#16a34a" fill="transparent" strokeWidth={2} />
-                      <Area type="monotone" dataKey="expenses" name="Expenses" stroke="#dc2626" fill="transparent" strokeWidth={2} />
-                      <Area type="monotone" dataKey="net" name="Net" stroke="#10b981" fill="url(#netLocal)" strokeWidth={2} />
-                    </AreaChart>
+                      <Bar
+                        dataKey="revenue"
+                        name="Revenue"
+                        fill="#16a34a"
+                        radius={[3, 3, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="expenses"
+                        name="Expenses"
+                        fill="#dc2626"
+                        radius={[3, 3, 0, 0]}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="net"
+                        name="Net"
+                        stroke="#0f766e"
+                        strokeWidth={2.5}
+                        dot={false}
+                      />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               )}
             </ChartCard>
           </div>
 
+          <ChartCard
+            title="Cost composition"
+            subtitle="How revenue splits into costs and profit"
+          >
+            {(summary?.total_revenue || 0) <= 0 ? (
+              <div className="h-52 flex items-center justify-center text-sm text-gray-300">
+                No revenue yet
+              </div>
+            ) : (
+              <div style={{ height: 240 }}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={costComposition} layout="vertical" margin={{ left: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      tick={{ fontSize: 11 }}
+                      stroke="#9ca3af"
+                      tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={88}
+                      tick={{ fontSize: 11 }}
+                      stroke="#9ca3af"
+                    />
+                    <Tooltip formatter={(v: any) => fmt(Number(v) || 0, currency)} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar
+                      dataKey="expenses"
+                      name="Expenses"
+                      stackId="cost"
+                      fill="#ef4444"
+                    />
+                    <Bar
+                      dataKey="instructor"
+                      name="Instructor"
+                      stackId="cost"
+                      fill="#f59e0b"
+                    />
+                    <Bar
+                      dataKey="profit"
+                      name="Profit"
+                      stackId="cost"
+                      fill="#14b8a6"
+                      radius={[0, 4, 4, 0]}
+                    />
+                    <Bar
+                      dataKey="loss"
+                      name="Loss"
+                      stackId="cost"
+                      fill="#64748b"
+                      radius={[0, 4, 4, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </ChartCard>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <ChartCard title="Revenue by category" subtitle="Ledger revenue mix">
             {pieData.length === 0 ? (
               <div className="h-52 flex items-center justify-center text-sm text-gray-300">No revenue yet</div>
@@ -722,25 +848,56 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
               </div>
             )}
           </ChartCard>
-        </div>
 
-        <ChartCard title="Expenses by category" subtitle="Where money goes">
-          {expenseBars.length === 0 ? (
-            <div className="h-40 flex items-center justify-center text-sm text-gray-300">No expenses yet</div>
-          ) : (
-            <div style={{ height: 200 }}>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={expenseBars}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                  <XAxis dataKey="category" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                  <Tooltip formatter={(v: any) => fmt(Number(v) || 0, currency)} />
-                  <Bar dataKey="total" name="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </ChartCard>
+          <ChartCard title="Expenses by category" subtitle="Where money goes">
+            {expenseBars.length === 0 ? (
+              <div className="h-52 flex items-center justify-center text-sm text-gray-300">No expenses yet</div>
+            ) : (
+              <div style={{ height: 220 }}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={expenseBars}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                    <XAxis dataKey="category" tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                    <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                    <Tooltip formatter={(v: any) => fmt(Number(v) || 0, currency)} />
+                    <Bar dataKey="total" name="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </ChartCard>
+
+          <ChartCard
+            title="Training vs postgraduate"
+            subtitle="Course revenue by program type"
+          >
+            {programRevenue.length === 0 ? (
+              <div className="h-52 flex items-center justify-center text-sm text-gray-300">
+                No course-linked revenue yet
+              </div>
+            ) : (
+              <div style={{ height: 220 }}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={programRevenue}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={48}
+                      outerRadius={78}
+                    >
+                      {programRevenue.map((s) => (
+                        <Cell key={s.name} fill={s.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: any) => fmt(Number(v) || 0, currency)} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </ChartCard>
+        </div>
 
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
