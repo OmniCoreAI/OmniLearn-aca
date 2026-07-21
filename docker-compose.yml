@@ -1,8 +1,9 @@
 name: omnilearn
 
-# Full stack: Postgres + Redis + app (nginx → frontend + API + collab)
+# Full stack from one root .env:
+#   cp .env.example .env
 #   docker compose up --build
-# App UI: http://localhost:8080
+# UI: http://localhost:8080
 
 services:
   db:
@@ -13,6 +14,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-omnilearn}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omnilearn}
       POSTGRES_DB: ${POSTGRES_DB:-omnilearn}
+    ports:
+      # Host access for npm run dev (API rewrites @db → 127.0.0.1:5433)
+      - "5433:5432"
     volumes:
       - omnilearn_db_data:/var/lib/postgresql/data
     networks:
@@ -46,22 +50,16 @@ services:
     container_name: omnilearn-app
     restart: unless-stopped
     env_file:
-      - docker/.env
+      - .env
     environment:
-      # Always use the compose Postgres service. Do not pull from root .env (npm uses :5433).
-      OMNILEARN_SQL_CONNECTION_STRING: postgresql://omnilearn:omnilearn@db:5432/omnilearn
+      OMNILEARN_IN_DOCKER: "1"
+      # In-network service URLs (not host localhost)
       OMNILEARN_REDIS_CONNECTION_STRING: redis://redis:6379/omnilearn
       OMNILEARN_REDIS_URL: redis://redis:6379
-      # In-container services talk to each other on localhost.
       OMNILEARN_API_URL: http://127.0.0.1:9000
       OMNILEARN_FRONTEND_DOMAIN: ${OMNILEARN_FRONTEND_DOMAIN:-localhost:${HTTP_PORT:-8080}}
       NEXT_PUBLIC_OMNILEARN_DOMAIN: ${OMNILEARN_FRONTEND_DOMAIN:-localhost:${HTTP_PORT:-8080}}
-      # Next.js server routes call the API inside the same container.
       NEXT_PUBLIC_OMNILEARN_BACKEND_URL: http://127.0.0.1:9000
-      OMNILEARN_INITIAL_ORG_NAME: ${OMNILEARN_INITIAL_ORG_NAME:-aca}
-      OMNILEARN_INITIAL_ORG_SLUG: ${OMNILEARN_INITIAL_ORG_SLUG:-aca}
-      OMNILEARN_INITIAL_ADMIN_EMAIL: ${OMNILEARN_INITIAL_ADMIN_EMAIL:-admin@omnicoreai.com}
-      OMNILEARN_INITIAL_ADMIN_PASSWORD: ${OMNILEARN_INITIAL_ADMIN_PASSWORD:-change-me}
       COLLAB_PORT: ${COLLAB_PORT:-4040}
     ports:
       - "${HTTP_PORT:-8080}:80"
