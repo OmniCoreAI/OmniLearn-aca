@@ -74,6 +74,32 @@ export async function getStripeCharges(orgId: number, access_token: string, limi
   return res;
 }
 
+/**
+ * Fetch up to `maxPages` pages of Stripe charges for finance analytics.
+ * Soft-fails to whatever was collected if a later page errors.
+ */
+export async function getStripeChargesForAnalytics(
+  orgId: number,
+  access_token: string,
+  maxPages = 4,
+  pageSize = 100,
+) {
+  const all: any[] = []
+  let cursor: string | undefined
+  for (let i = 0; i < maxPages; i++) {
+    try {
+      const page = await getStripeCharges(orgId, access_token, pageSize, cursor)
+      const rows = page?.data || []
+      all.push(...rows)
+      if (!page?.has_more || !page?.next_cursor) break
+      cursor = page.next_cursor
+    } catch {
+      break
+    }
+  }
+  return all
+}
+
 export async function getStripeSubscriptions(orgId: number, access_token: string, status = 'active') {
   const result = await secureFetch(
     `${getAPIUrl()}payments/${encodeURIComponent(String(orgId))}/stripe/subscriptions?status=${encodeURIComponent(status)}`,

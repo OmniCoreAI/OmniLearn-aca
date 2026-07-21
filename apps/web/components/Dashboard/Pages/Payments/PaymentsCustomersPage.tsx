@@ -6,7 +6,6 @@ import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query/keys'
 import {
   getOrgCustomers,
-  getStripeOverview,
   getStripeCharges,
   getStripeSubscriptions,
 } from '@services/payments/payments'
@@ -17,15 +16,13 @@ import {
   ExternalLink,
   RefreshCcw,
   SquareCheck,
-  TrendingUp,
-  DollarSign,
   Users,
   Activity,
   ChevronRight,
   ChevronLeft,
   AlertCircle,
-  CheckCircle2,
   Clock,
+  Download,
 } from 'lucide-react'
 import { getUserAvatarMediaDirectory } from '@services/media/media'
 import UserAvatar from '@components/Objects/UserAvatar'
@@ -40,12 +37,21 @@ import {
   TableHeader,
   TableRow,
 } from '@components/ui/table'
+import FinanceOverviewTab from '@components/Dashboard/Pages/Payments/FinanceOverviewTab'
+import { downloadCsv, toCsv } from '@/lib/finance/exportCsv'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 function fmt(amount: number, currency = 'USD') {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: (currency || 'USD').toUpperCase(),
+    }).format(amount)
+  } catch {
+    return `${amount} ${currency}`
+  }
 }
 
 function fmtDate(iso: string) {
@@ -91,26 +97,6 @@ function StatusPill({ status }: { status: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Metric card
-// ---------------------------------------------------------------------------
-function MetricCard({
-  label, value, sub, icon: Icon, color,
-}: { label: string; value: string; sub?: string; icon: any; color: string }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 flex items-center space-x-4">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
-        <Icon size={18} />
-      </div>
-      <div>
-        <div className="text-2xl font-bold text-gray-900 tracking-tight">{value}</div>
-        <div className="text-xs text-gray-500">{label}</div>
-        {sub && <div className="text-xs text-gray-400 mt-0.5">{sub}</div>}
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Tab bar (internal)
 // ---------------------------------------------------------------------------
 type Tab = 'overview' | 'customers' | 'transactions' | 'subscriptions'
@@ -121,70 +107,6 @@ const TABS: { id: Tab; label: string; icon: any }[] = [
   { id: 'transactions',  label: 'Transactions',  icon: CreditCard },
   { id: 'subscriptions', label: 'Subscriptions', icon: RefreshCcw },
 ]
-
-// ---------------------------------------------------------------------------
-// Overview tab
-// ---------------------------------------------------------------------------
-function OverviewTab({ orgId, accessToken }: { orgId: number; accessToken: string }) {
-  const { data, error, isLoading } = useQuery({
-    queryKey: ['stripe', 'overview', orgId],
-    queryFn: () => getStripeOverview(orgId, accessToken),
-    enabled: !!(orgId && accessToken),
-    staleTime: 60_000,
-  })
-
-  if (isLoading) return <PageLoading />
-  if (error) return <StripeUnavailable />
-
-  const d = data as any
-
-  return (
-    <div className="space-y-6">
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        <MetricCard label="MRR"               value={fmt(d.mrr)}            icon={TrendingUp}  color="bg-blue-100 text-blue-600" />
-        <MetricCard label="ARR"               value={fmt(d.arr)}            icon={TrendingUp}  color="bg-indigo-100 text-indigo-600" />
-        <MetricCard label="Total revenue"     value={fmt(d.total_revenue)}  icon={DollarSign}  color="bg-green-100 text-green-600" />
-        <MetricCard label="Active subscribers" value={String(d.active_subscribers)} icon={RefreshCcw} color="bg-violet-100 text-violet-600" />
-        <MetricCard label="Total customers"   value={String(d.total_customers)} icon={Users}   color="bg-purple-100 text-purple-600" />
-        <MetricCard label="Churned (30d)"     value={String(d.churn_30d)}   icon={Activity}    color="bg-red-100 text-red-500" />
-      </div>
-
-      {/* Recent charges */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-          <span className="font-semibold text-gray-800 text-sm">Recent transactions</span>
-        </div>
-        {d.recent_charges.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-gray-400">No transactions yet</div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {d.recent_charges.map((ch: any) => (
-              <div key={ch.id} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${ch.paid ? 'bg-green-100' : 'bg-red-100'}`}>
-                    {ch.paid ? <CheckCircle2 size={13} className="text-green-600" /> : <AlertCircle size={13} className="text-red-500" />}
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-800">
-                      {ch.customer?.name ?? ch.customer?.email ?? ch.customer?.id ?? 'Unknown'}
-                    </div>
-                    <div className="text-xs text-gray-400">{fmtDate(ch.created)}</div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  {ch.card && <CardChip brand={ch.card.brand} last4={ch.card.last4} />}
-                  <span className="font-semibold text-gray-900">{fmt(ch.amount, ch.currency)}</span>
-                  <StatusPill status={ch.status} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // Customers tab
@@ -203,9 +125,37 @@ function CustomersTab({ orgId, accessToken }: { orgId: number; accessToken: stri
     return <Empty message="No customers yet" />
   }
 
+  const exportCustomers = () => {
+    const csv = toCsv(
+      [
+        'enrollment_id', 'name', 'email', 'offer', 'offer_type', 'amount', 'currency',
+        'status', 'since', 'last_charge_date', 'last_charge_amount', 'next_billing',
+      ],
+      customers.map((item: any) => {
+        const offer = item.offer
+        const stripe = item.stripe
+        const name = item.user?.first_name
+          ? `${item.user.first_name} ${item.user.last_name ?? ''}`.trim()
+          : item.user?.username
+        return [
+          item.enrollment_id, name, item.user?.email, offer?.name, offer?.offer_type,
+          offer?.amount, offer?.currency, item.status, item.creation_date,
+          stripe?.last_charge_date, stripe?.last_charge_amount, stripe?.next_billing_date,
+        ]
+      }),
+    )
+    downloadCsv('finance_customers.csv', csv)
+  }
+
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <Table>
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={exportCustomers}>
+          <Download size={14} className="mr-1.5" /> Export CSV
+        </Button>
+      </div>
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Customer</TableHead>
@@ -285,6 +235,7 @@ function CustomersTab({ orgId, accessToken }: { orgId: number; accessToken: stri
         </TableBody>
       </Table>
     </div>
+    </div>
   )
 }
 
@@ -319,8 +270,24 @@ function TransactionsTab({ orgId, accessToken }: { orgId: number; accessToken: s
   if (error) return <StripeUnavailable />
   if (!data?.data?.length) return <Empty message="No transactions yet" />
 
+  const exportPage = () => {
+    const csv = toCsv(
+      ['date', 'customer', 'email', 'amount', 'refunded', 'currency', 'status', 'description', 'receipt_url'],
+      data.data.map((ch: any) => [
+        ch.created, ch.customer?.name, ch.customer?.email, ch.amount, ch.amount_refunded,
+        ch.currency, ch.paid ? 'paid' : ch.status, ch.description, ch.receipt_url,
+      ]),
+    )
+    downloadCsv('finance_transactions_page.csv', csv)
+  }
+
   return (
     <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={exportPage}>
+          <Download size={14} className="mr-1.5" /> Export page CSV
+        </Button>
+      </div>
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <Table>
           <TableHeader>
@@ -395,26 +362,47 @@ function SubscriptionsTab({ orgId, accessToken }: { orgId: number; accessToken: 
     staleTime: 60_000,
   })
 
-  const statuses = ['active', 'trialing', 'past_due', 'canceled', 'all']
-
   if (isLoading) return <PageLoading />
   if (error) return <StripeUnavailable />
+
+  const statuses = ['active', 'trialing', 'past_due', 'canceled', 'all']
+
+  const exportSubs = () => {
+    if (!data?.data?.length) return
+    const csv = toCsv(
+      [
+        'id', 'customer_name', 'customer_email', 'plan_amount', 'plan_currency', 'plan_interval',
+        'status', 'period_start', 'period_end', 'cancel_at_period_end', 'created',
+      ],
+      data.data.map((sub: any) => [
+        sub.id, sub.customer?.name, sub.customer?.email, sub.plan?.amount, sub.plan?.currency,
+        sub.plan?.interval, sub.status, sub.current_period_start, sub.current_period_end,
+        sub.cancel_at_period_end, sub.created,
+      ]),
+    )
+    downloadCsv(`finance_subscriptions_${status}.csv`, csv)
+  }
 
   return (
     <div className="space-y-3">
       {/* Status filter */}
-      <div className="flex items-center space-x-1">
-        {statuses.map(s => (
-          <button
-            key={s}
-            onClick={() => setStatus(s)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
-              status === s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {s}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center space-x-1">
+          {statuses.map(s => (
+            <button
+              key={s}
+              onClick={() => setStatus(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
+                status === s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        <Button variant="outline" size="sm" onClick={exportSubs} disabled={!data?.data?.length}>
+          <Download size={14} className="mr-1.5" /> Export CSV
+        </Button>
       </div>
 
       {(!data?.data?.length) ? <Empty message={`No ${status} subscriptions`} /> : (
@@ -506,7 +494,7 @@ function PaymentsCustomersPage() {
   if (isLoading) return <PageLoading />
 
   return (
-    <div className="ml-10 mr-10 mx-auto space-y-4">
+    <div className="ml-10 mr-10 mx-auto space-y-4 pb-10">
       {/* Inner tab bar */}
       <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl w-fit">
         {TABS.map(({ id, label, icon: Icon }) => (
@@ -527,7 +515,7 @@ function PaymentsCustomersPage() {
 
       {/* Tab content */}
       <div>
-        {activeTab === 'overview'      && <OverviewTab       orgId={org.id} accessToken={access_token} />}
+        {activeTab === 'overview'      && <FinanceOverviewTab orgId={org.id} accessToken={access_token} />}
         {activeTab === 'customers'     && <CustomersTab      orgId={org.id} accessToken={access_token} />}
         {activeTab === 'transactions'  && <TransactionsTab   orgId={org.id} accessToken={access_token} />}
         {activeTab === 'subscriptions' && <SubscriptionsTab  orgId={org.id} accessToken={access_token} />}

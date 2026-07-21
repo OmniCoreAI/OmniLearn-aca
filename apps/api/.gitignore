@@ -171,3 +171,6 @@ run.py
 
 # Tinybird CLI local state
 .tinyb
+# Legacy import temp password dumps (never commit)
+scripts/output/
+

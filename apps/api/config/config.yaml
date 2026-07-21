@@ -25,6 +25,10 @@ hosting_config:
   allowed_origins:
     - http://localhost:3000
     - http://localhost:3001
+    - http://localhost:3002
+    - http://127.0.0.1:3000
+    - http://127.0.0.1:3001
+    - http://127.0.0.1:3002
   cookies_config:
     domain: ".localhost"
   allowed_regexp: '\b((?:https?://)[^\s/$.?#].[^\s]*)\b'
@@ -45,7 +49,7 @@ mailing_config:
   smtp_use_tls: true
 
 database_config:
-  sql_connection_string: postgresql://omnilearn:omnilearn@localhost:5432/omnilearn
+  sql_connection_string: postgresql://omnilearn:omnilearn@localhost:5433/omnilearn
 
 redis_config:
   redis_connection_string: redis://localhost:6379/omnilearn

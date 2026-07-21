@@ -189,6 +189,25 @@ export function getOrgLogoMediaDirectory(orgUUID: string, fileId: string) {
   return uri
 }
 
+export function getNewsCoverMediaDirectory(
+  orgUUID: string,
+  newsUUID: string,
+  fileId: string
+) {
+  if (!fileId) return ''
+  if (fileId.startsWith('http://') || fileId.startsWith('https://')) return fileId
+  if (fileId.startsWith('content/')) return `${getMediaUrl()}${fileId}`
+  return `${getMediaUrl()}content/orgs/${orgUUID}/cms/news/${newsUUID}/covers/${fileId}`
+}
+
+export function resolveNewsMediaUrl(pathOrUrl: string) {
+  if (!pathOrUrl) return ''
+  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) return pathOrUrl
+  if (pathOrUrl.startsWith('content/')) return `${getMediaUrl()}${pathOrUrl}`
+  if (pathOrUrl.startsWith('/')) return `${getMediaUrl()}${pathOrUrl.replace(/^\//, '')}`
+  return `${getMediaUrl()}${pathOrUrl}`
+}
+
 export function getOrgThumbnailMediaDirectory(orgUUID: string, fileId: string) {
   let uri = `${getMediaUrl()}content/orgs/${orgUUID}/thumbnails/${fileId}`
   return uri

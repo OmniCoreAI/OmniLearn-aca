@@ -31,6 +31,7 @@ from src.routers.instructors import (
     categories as instructor_categories_router_module,
     finance as instructor_finance_router_module,
 )
+from src.routers.finance import ledger as finance_ledger_router_module
 from src.routers.folders import folders as folders_router_module
 from src.routers.media import media as media_router_module
 from src.routers.courses import migration as migration_router_module
@@ -38,6 +39,7 @@ from src.routers.courses.activities import activities, blocks
 from src.routers.boards import boards as boards_router_module
 from src.routers.playgrounds import playgrounds as playgrounds_router_module
 from src.routers.playgrounds import playgrounds_generator as playgrounds_generator_router
+from src.routers.cms import news as cms_news_router
 from src.core.ee_hooks import register_ee_routers
 from src.services.dev.dev import isDevModeEnabledOrRaise
 from src.routers.utils import router as utils_router
@@ -222,6 +224,12 @@ v1_router.include_router(
     tags=["instructors", "finance"],
     dependencies=[Depends(require_authenticated_user)],
 )
+v1_router.include_router(
+    finance_ledger_router_module.router,
+    prefix="/finance",
+    tags=["finance"],
+    dependencies=[Depends(require_authenticated_user)],
+)
 v1_router.include_router(search.router, prefix="/search", tags=["search"])
 v1_router.include_router(
     assignments.router,
@@ -342,6 +350,13 @@ v1_router.include_router(
 
 # Plan limits (public, no auth — used by frontend pricing pages)
 v1_router.include_router(plans.router, prefix="/plans", tags=["plans"])
+
+# CMS (public reads + admin writes; auth/RBAC handled per-route)
+v1_router.include_router(
+    cms_news_router.router,
+    prefix="/cms",
+    tags=["cms"],
+)
 
 # Register EE Routers if available
 register_ee_routers(v1_router)

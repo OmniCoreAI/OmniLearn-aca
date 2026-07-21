@@ -105,6 +105,40 @@ class TestAdminCreateUser:
         assert link is not None
         assert link.role_id == DEFAULT_MEMBER_ROLE_ID
 
+
+@pytest.mark.asyncio
+async def test_admin_create_user_stores_optional_profile_metadata(
+    db, org, admin_user, mock_request
+):
+    p_rbac, p_limit, p_incr, p_track, p_hook = _patch_side_effects()
+    with p_rbac, p_limit, p_incr, p_track, p_hook:
+        result = await admin_create_user(
+            mock_request,
+            org.id,
+            AdminUserCreate(
+                username="profiled",
+                email="profiled@test.com",
+                phone="01012345678",
+                national_id="29801011234567",
+                gender="male",
+                birth_date="1998-01-01",
+            ),
+            db,
+            admin_user,
+        )
+
+    user = (
+        await db.execute(select(User).where(User.username == "profiled"))
+    ).scalars().first()
+    assert user is not None
+    assert user.extra_metadata == {
+        "phone": "01012345678",
+        "national_id": "29801011234567",
+        "gender": "male",
+        "birth_date": "1998-01-01",
+    }
+    assert result.user.extra_metadata == user.extra_metadata
+
     @pytest.mark.asyncio
     async def test_assigns_chosen_role(self, mock_request, db, org, admin_user):
         role = await _make_role(db, org, name="Instructor", role_uuid="role_instructor")

@@ -298,6 +298,7 @@ export default async function proxy(req: NextRequest) {
     pathname.startsWith('/auth/sso/')
     || pathname.startsWith('/auth/callback/')
     || pathname.startsWith('/auth/token-exchange')
+    || pathname.startsWith('/auth/handoff')
   ) {
     const response = NextResponse.rewrite(new URL(`${pathname}${search}`, req.url))
     setInstanceCookies(response, instance)

@@ -204,12 +204,62 @@ class MenuConfig(BaseModel):
     items: list[MenuLinkItem] = Field(default_factory=list)
 
 
+# ============================================================================
+# Public site navigation (mega menu / quick links) — independent of LMS menu
+# ============================================================================
+
+class NavLink(BaseModel):
+    label: str
+    href: str
+    icon: str = ""
+    open_in_new_tab: bool = False
+    order: int = 0
+    enabled: bool = True
+
+
+class NavGroup(BaseModel):
+    title: str
+    order: int = 0
+    links: list[NavLink] = Field(default_factory=list)
+
+
+class NavPanel(BaseModel):
+    title: str = ""
+    description: str = ""
+    href: str = ""
+    image_url: str = ""
+
+
+class NavItem(BaseModel):
+    key: str
+    label: str
+    href: str = ""
+    order: int = 0
+    enabled: bool = True
+    panel: Optional[NavPanel] = None
+    children: list[NavGroup] = Field(default_factory=list)
+
+
+class QuickLink(BaseModel):
+    label: str
+    href: str
+    icon: str = ""
+    order: int = 0
+    enabled: bool = True
+
+
+class NavigationConfig(BaseModel):
+    items: list[NavItem] = Field(default_factory=list)
+    quick_links: list[QuickLink] = Field(default_factory=list)
+
+
 class CustomizationConfig(BaseModel):
     general: GeneralCustomization = GeneralCustomization()
     auth_branding: AuthBrandingConfig = AuthBrandingConfig()
     seo: SeoOrgConfig = SeoOrgConfig()
     landing: dict = Field(default_factory=dict)
     menu: MenuConfig = MenuConfig()
+    navigation: NavigationConfig = NavigationConfig()
 
 
 # ============================================================================

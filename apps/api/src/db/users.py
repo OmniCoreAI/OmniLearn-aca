@@ -74,6 +74,11 @@ class AdminUserCreate(SQLModel):
     # read-only learner role (role_global_user). Identified by role_uuid so the
     # frontend can reuse GET /roles/org/{org_id}.
     role_uuid: Optional[str] = None
+    # Optional academy profile fields (stored on User.extra_metadata).
+    phone: Optional[str] = None
+    national_id: Optional[str] = None
+    gender: Optional[str] = None  # male | female | other
+    birth_date: Optional[str] = None  # YYYY-MM-DD
 
 
 class AdminUserCreateResult(SQLModel):

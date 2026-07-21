@@ -26,8 +26,12 @@ async def install_default_elements(db_session: AsyncSession):
 
     # Build the desired role definitions
     role_global_admin = Role(
-        name="Admin",
-        description="Full platform control",
+        name="Academy Admin",
+        description=(
+            "Creates and manages programs/courses/intakes, manages vouchers/discounts/refunds, "
+            "schedules sessions and assigns halls and instructors, approves certificate issuance, "
+            "and reviews reports and the executive KPI dashboard."
+        ),
         id=1,
         role_type=RoleTypeEnum.TYPE_GLOBAL,
         role_uuid="role_global_admin",
@@ -170,20 +174,23 @@ async def install_default_elements(db_session: AsyncSession):
     )
 
     role_global_maintainer = Role(
-        name="Maintainer",
-        description="Mid-level manager, wide permissions but no platform control",
+        name="Organization Coordinator",
+        description=(
+            "Uploads trainee lists (group registration via Excel), follows their organization's "
+            "trainees' progress and attendance, and receives financial and training reports."
+        ),
         id=2,
         role_type=RoleTypeEnum.TYPE_GLOBAL,
         role_uuid="role_global_maintainer",
         rights=Rights(
             courses=PermissionsWithOwn(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_read_own=True,
-                action_update=True,
-                action_update_own=True,
-                action_delete=True,
-                action_delete_own=True,
+                action_update=False,
+                action_update_own=False,
+                action_delete=False,
+                action_delete_own=False,
             ),
             users=Permission(
                 action_create=True,
@@ -195,19 +202,19 @@ async def install_default_elements(db_session: AsyncSession):
                 action_create=True,
                 action_read=True,
                 action_update=True,
-                action_delete=True,
+                action_delete=False,
             ),
             folders=Permission(
-                action_create=True,
+                action_create=False,
                 action_read=True,
-                action_update=True,
-                action_delete=True,
+                action_update=False,
+                action_delete=False,
             ),
             media=Permission(
-                action_create=True,
+                action_create=False,
                 action_read=True,
-                action_update=True,
-                action_delete=True,
+                action_update=False,
+                action_delete=False,
             ),
             organizations=Permission(
                 action_create=False,
@@ -216,22 +223,22 @@ async def install_default_elements(db_session: AsyncSession):
                 action_delete=False,
             ),
             coursechapters=Permission(
-                action_create=True,
+                action_create=False,
                 action_read=True,
-                action_update=True,
-                action_delete=True,
+                action_update=False,
+                action_delete=False,
             ),
             activities=Permission(
-                action_create=True,
+                action_create=False,
                 action_read=True,
-                action_update=True,
-                action_delete=True,
+                action_update=False,
+                action_delete=False,
             ),
             assignments=Permission(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_update=True,
-                action_delete=True,
+                action_delete=False,
             ),
             roles=Permission(
                 action_create=False,
@@ -243,70 +250,70 @@ async def install_default_elements(db_session: AsyncSession):
                 action_access=True,
             ),
             communities=Permission(
-                action_create=True,
+                action_create=False,
                 action_read=True,
-                action_update=True,
-                action_delete=True,
+                action_update=False,
+                action_delete=False,
             ),
             discussions=PermissionsWithOwn(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_read_own=True,
-                action_update=True,
-                action_update_own=True,
-                action_delete=True,
-                action_delete_own=True,
+                action_update=False,
+                action_update_own=False,
+                action_delete=False,
+                action_delete_own=False,
             ),
             podcasts=PermissionsWithOwn(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_read_own=True,
-                action_update=True,
-                action_update_own=True,
-                action_delete=True,
-                action_delete_own=True,
+                action_update=False,
+                action_update_own=False,
+                action_delete=False,
+                action_delete_own=False,
             ),
             boards=PermissionsWithOwn(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_read_own=True,
-                action_update=True,
-                action_update_own=True,
-                action_delete=True,
-                action_delete_own=True,
+                action_update=False,
+                action_update_own=False,
+                action_delete=False,
+                action_delete_own=False,
             ),
             playgrounds=PermissionsWithOwn(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_read_own=True,
-                action_update=True,
-                action_update_own=True,
-                action_delete=True,
-                action_delete_own=True,
+                action_update=False,
+                action_update_own=False,
+                action_delete=False,
+                action_delete_own=False,
             ),
             programs=PermissionsWithOwn(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_read_own=True,
-                action_update=True,
-                action_update_own=True,
-                action_delete=True,
-                action_delete_own=True,
+                action_update=False,
+                action_update_own=False,
+                action_delete=False,
+                action_delete_own=False,
             ),
             training_programs=PermissionsWithOwn(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_read_own=True,
-                action_update=True,
-                action_update_own=True,
-                action_delete=True,
-                action_delete_own=True,
+                action_update=False,
+                action_update_own=False,
+                action_delete=False,
+                action_delete_own=False,
             ),
             instructors=Permission(
-                action_create=True,
+                action_create=False,
                 action_read=True,
-                action_update=True,
-                action_delete=True,
+                action_update=False,
+                action_delete=False,
             ),
         ),
         creation_date=str(datetime.now()),
@@ -315,7 +322,10 @@ async def install_default_elements(db_session: AsyncSession):
 
     role_global_instructor = Role(
         name="Instructor",
-        description="Can manage their own content",
+        description=(
+            "Uploads educational content (video/PDF/files), delivers in-person or Zoom/VCR sessions, "
+            "records and evaluates attendance, and manages their own question bank."
+        ),
         id=3,
         role_type=RoleTypeEnum.TYPE_GLOBAL,
         role_uuid="role_global_instructor",
@@ -452,8 +462,12 @@ async def install_default_elements(db_session: AsyncSession):
     )
 
     role_global_user = Role(
-        name="User",
-        description="Read-Only Learner",
+        name="Trainee",
+        description=(
+            "Browses programs, registers (individually or via an organization), attends sessions "
+            "(in-person or VCR), takes exams, and receives a certificate when attendance/exam "
+            "requirements are met."
+        ),
         role_type=RoleTypeEnum.TYPE_GLOBAL,
         role_uuid="role_global_user",
         id=4,

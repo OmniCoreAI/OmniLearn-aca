@@ -69,6 +69,85 @@
     "source_category_base": "Category (base rate)",
     "source_instructor": "Instructor rate"
   },
+  "cms": {
+    "news": {
+      "title": "News",
+      "subtitle": "Publish organization news articles",
+      "keywords": "news, cms, articles, blog, announcements",
+      "new": "New article",
+      "edit": "Edit article",
+      "none": "No news yet",
+      "none_desc": "Create an article to show on the public academy site.",
+      "confirm_delete": "Delete this article?",
+      "deleted": "Article deleted",
+      "delete_failed": "Could not delete article",
+      "saved": "Article saved",
+      "created": "Article created",
+      "save_failed": "Could not save article",
+      "title_required": "Title is required",
+      "back": "Back to list",
+      "editor_subtitle": "Title, cover image, rich content, publish date and time",
+      "field_title": "Title",
+      "field_slug": "Slug (optional)",
+      "slug_hint": "Auto-generated from title if empty",
+      "field_excerpt": "Excerpt",
+      "field_cover": "Cover image",
+      "cover_choose": "Choose image",
+      "cover_uploading": "Uploading…",
+      "cover_remove": "Remove",
+      "cover_hint": "Upload a cover image. It will appear on the public news list.",
+      "cover_uploaded": "Cover image uploaded",
+      "cover_upload_failed": "Could not upload cover image",
+      "confirm_delete_title": "Delete article",
+      "confirm_delete_action": "Delete",
+      "link_modal_title": "Insert link",
+      "link_url": "URL",
+      "link_apply": "Apply",
+      "link_remove": "Remove link",
+      "field_body": "Rich content",
+      "body_placeholder": "Write the article…",
+      "field_published": "Published",
+      "published_hint": "Only published articles appear on the public site",
+      "field_datetime": "Date and time",
+      "datetime_hint": "Shown as the news publish date on the public site",
+      "field_images": "Images",
+      "field_videos": "Videos",
+      "images_choose": "Add images",
+      "videos_choose": "Add videos",
+      "images_uploaded": "Images uploaded",
+      "videos_uploaded": "Videos uploaded",
+      "media_uploading": "Uploading…",
+      "media_upload_failed": "Could not upload media",
+      "media_delete_failed": "Could not remove media",
+      "pending_files": "{{count}} file(s) will upload on save",
+      "pending_preview": "Will upload on save",
+      "images_empty": "No images yet",
+      "videos_empty": "No videos yet",
+      "remove_media_title": "Remove media",
+      "remove_media_confirm": "Remove this item? You can upload it again later.",
+      "media_removed": "Removed",
+      "open_video": "Open",
+      "published": "Published",
+      "draft": "Draft",
+      "search_placeholder": "Search by title, slug, or excerpt…",
+      "clear_search": "Clear search",
+      "date_from": "From date",
+      "date_to": "To date",
+      "filter_year": "Year",
+      "all_years": "All years",
+      "clear_filters": "Clear filters",
+      "results_count": "{{count}} result(s)",
+      "no_results": "No matching articles",
+      "no_results_desc": "Try changing your search or date filters.",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "page_of": "Page {{current}} of {{total}}"
+      },
+      "open": "Open",
+      "card_actions": "Article actions"
+    }
+  },
   "academic": {
     "postgraduate_studies": "Postgraduate Studies",
     "training_programs": "Training Programs",
@@ -213,6 +292,7 @@
     "assignments": "Assignments",
     "boards": "Boards",
     "payments": "Payments",
+    "finance": "Finance",
     "playgrounds": "Playgrounds",
     "organization": "Organization",
     "analytics": "Analytics",
@@ -1939,14 +2019,16 @@
   },
   "roles": {
     "custom_role": "Custom Role",
-    "role_admin": "ADMIN",
-    "role_admin_desc": "Full platform control with all permissions",
-    "role_maintainer": "MAINTAINER",
-    "role_maintainer_desc": "Mid-level manager with wide permissions",
-    "role_instructor": "INSTRUCTOR",
-    "role_instructor_desc": "Can manage their own content",
-    "role_user": "USER",
-    "role_user_desc": "Read-Only Learner",
+    "role_admin": "Academy Admin",
+    "role_admin_desc": "Creates and manages programs/courses/intakes, manages vouchers/discounts/refunds, schedules sessions and assigns halls and instructors, approves certificate issuance, and reviews reports and the executive KPI dashboard.",
+    "role_maintainer": "Organization Coordinator",
+    "role_maintainer_desc": "Uploads trainee lists (group registration via Excel), follows their organization's trainees' progress and attendance, and receives financial and training reports.",
+    "role_instructor": "Instructor",
+    "role_instructor_desc": "Uploads educational content (video/PDF/files), delivers in-person or Zoom/VCR sessions, records and evaluates attendance, and manages their own question bank.",
+    "role_user": "Trainee",
+    "role_user_desc": "Browses programs, registers (individually or via an organization), attends sessions (in-person or VCR), takes exams, and receives a certificate when attendance/exam requirements are met.",
+    "role_super_admin": "Super Admin",
+    "role_super_admin_desc": "Full platform control: role and permission management (RBAC), audit-log monitoring and website content management (CMS).",
     "instructor": "Instructor"
   },
   "time": {
@@ -2837,6 +2919,7 @@
           "seo": "SEO",
           "automations": "Automations",
           "menu": "Menu",
+          "navigation": "Site navigation",
           "danger": "Danger Zone"
         },
         "pages": {
@@ -2883,6 +2966,10 @@
           "menu": {
             "title": "Public menu",
             "subtitle": "Choose and order the links shown in your public navigation"
+          },
+          "navigation": {
+            "title": "Site navigation",
+            "subtitle": "Manage mega menu sections and quick links for the public site"
           },
           "danger": {
             "title": "Danger Zone",
@@ -3523,7 +3610,7 @@
           "usergroups": "UserGroups",
           "roles": "Roles",
           "signups": "Signups & Invite Codes",
-          "add": "Invite Members",
+          "add": "Create User",
           "audit_logs": "Audit Logs"
         },
         "pages": {
@@ -3536,8 +3623,8 @@
             "subtitle": "Choose from where users can join your organization"
           },
           "add": {
-            "title": "Invite Members",
-            "subtitle": "Invite members to join your organization"
+            "title": "Create User",
+            "subtitle": "Create a user account with a temporary password"
           },
           "usergroups": {
             "title": "UserGroups",
@@ -3660,14 +3747,24 @@
         }
       },
       "create_account": {
-        "title": "Create an account directly",
-        "subtitle": "Provision a user now with a temporary password — no email required. They must change it on first login.",
+        "title": "Create an account",
+        "subtitle": "Create a user with a temporary password. They must change it on first login.",
         "first_name": "First name",
         "last_name": "Last name",
         "username": "Username",
         "email": "Email",
+        "phone": "Phone",
+        "phone_placeholder": "e.g. 01012345678",
+        "national_id": "National ID",
+        "national_id_placeholder": "14-digit national ID",
+        "gender": "Gender",
+        "gender_unspecified": "Not specified",
+        "gender_male": "Male",
+        "gender_female": "Female",
+        "gender_other": "Other",
+        "birth_date": "Birth date",
         "role": "Role",
-        "default_role": "Default (Learner)",
+        "default_role": "Default (Trainee)",
         "create_button": "Create account",
         "creating": "Creating account...",
         "success": "Account created",
@@ -3852,7 +3949,7 @@
       },
       "roles": {
         "title": "Manage Roles & Permissions",
-        "subtitle": "Roles define what users can do within your organization. Create custom roles with specific permissions for different user types.",
+        "subtitle": "Academy roles define what users can do: Super Admin, Academy Admin, Organization Coordinator, Instructor, and Trainee.",
         "table": {
           "role_name": "Role Name",
           "description": "Description",
@@ -3863,6 +3960,12 @@
         "no_permissions": "No permissions",
         "permissions_count": "{{count}} permissions",
         "system_wide": "System-wide",
+        "platform_wide": "Platform-wide",
+        "super_admin": {
+          "name": "Super Admin",
+          "description": "Full platform control: role and permission management (RBAC), audit-log monitoring and website content management (CMS).",
+          "permissions": "Full platform access"
+        },
         "actions": {
           "edit": "Edit",
           "delete": "Delete",
@@ -3875,7 +3978,7 @@
             "description": "Create a new role with specific permissions",
             "form": {
               "role_name": "Role Name",
-              "role_name_placeholder": "e.g., Course Manager",
+              "role_name_placeholder": "e.g., Organization Coordinator",
               "description": "Description",
               "description_placeholder": "Describe what this role can do...",
               "permissions": "Permissions",
@@ -3898,41 +4001,25 @@
             },
             "presets": {
               "title": "Predefined Rights",
+              "super_admin": {
+                "name": "Super Admin",
+                "description": "Full platform control: role and permission management (RBAC), audit-log monitoring and website content management (CMS)."
+              },
               "admin": {
-                "name": "Admin",
-                "description": "Full platform control with all permissions"
+                "name": "Academy Admin",
+                "description": "Creates and manages programs/courses/intakes, manages vouchers/discounts/refunds, schedules sessions and assigns halls and instructors, approves certificate issuance, and reviews reports and the executive KPI dashboard."
               },
               "maintainer": {
-                "name": "Maintainer",
-                "description": "Can manage courses, chapters, and activities"
+                "name": "Organization Coordinator",
+                "description": "Uploads trainee lists (group registration via Excel), follows their organization's trainees' progress and attendance, and receives financial and training reports."
               },
               "instructor": {
                 "name": "Instructor",
-                "description": "Can create and manage their own courses"
+                "description": "Uploads educational content (video/PDF/files), delivers in-person or Zoom/VCR sessions, records and evaluates attendance, and manages their own question bank."
               },
               "viewer": {
-                "name": "Viewer",
-                "description": "Read-only access to courses and content"
-              },
-              "content_creator": {
-                "name": "Content Creator",
-                "description": "Can create and edit content but not manage users"
-              },
-              "user_manager": {
-                "name": "User Manager",
-                "description": "Can manage users and user groups"
-              },
-              "moderator": {
-                "name": "Moderator",
-                "description": "Can moderate content and manage activities"
-              },
-              "analyst": {
-                "name": "Analyst",
-                "description": "Read-only access with analytics capabilities"
-              },
-              "guest": {
-                "name": "Guest",
-                "description": "Limited access for external users"
+                "name": "Trainee",
+                "description": "Browses programs, registers, attends sessions, takes exams, and receives certificates when requirements are met."
               }
             },
             "permissions": {
@@ -3941,6 +4028,8 @@
                 "courses": "Courses",
                 "users": "Users",
                 "usergroups": "User Groups",
+                "folders": "Folders",
+                "media": "Media",
                 "organizations": "Organizations",
                 "coursechapters": "Course Chapters",
                 "activities": "Activities",
@@ -3983,6 +4072,8 @@
                 "courses": "Courses",
                 "users": "Users",
                 "usergroups": "User Groups",
+                "folders": "Folders",
+                "media": "Media",
                 "organizations": "Organizations",
                 "coursechapters": "Course Chapters",
                 "activities": "Activities",
@@ -4030,6 +4121,8 @@
             "courses": "Courses",
             "users": "Users",
             "usergroups": "User Groups",
+            "folders": "Folders",
+            "media": "Media",
             "organizations": "Organizations",
             "coursechapters": "Course Chapters",
             "activities": "Activities",
@@ -4525,8 +4618,8 @@
           "title": "Products"
         },
         "users_add": {
-          "description": "Invite new members",
-          "keywords": "invite, add, members, send"
+          "description": "Create a new user account",
+          "keywords": "create, add, user, account, password"
         },
         "users_audit_logs": {
           "description": "Organization activity log",

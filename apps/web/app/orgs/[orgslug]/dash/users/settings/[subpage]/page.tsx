@@ -1,16 +1,14 @@
 'use client'
 import React, { useEffect, use } from 'react';
 import { motion } from 'motion/react'
+import { useRouter } from 'next/navigation'
 import { getUriWithOrg } from '@services/config/config'
-import { ScanEye, SquareUserRound, UserPlus, Users, Shield } from 'lucide-react'
+import { UserPlus, Users, Shield, ShieldAlert } from 'lucide-react'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
 import OrgUsers from '@components/Dashboard/Pages/Users/OrgUsers/OrgUsers'
-import OrgAccess from '@components/Dashboard/Pages/Users/OrgAccess/OrgAccess'
 import OrgUsersAdd from '@components/Dashboard/Pages/Users/OrgUsersAdd/OrgUsersAdd'
-import OrgUserGroups from '@components/Dashboard/Pages/Users/OrgUserGroups/OrgUserGroups'
 import OrgRoles from '@components/Dashboard/Pages/Users/OrgRoles/OrgRoles'
 import OrgAuditLogs from '@components/Dashboard/Pages/Org/OrgAuditLogs/OrgAuditLogs'
-import { ShieldAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { DashTabBar, DashTabItem } from '@components/Dashboard/Shared/DashTabBar/DashTabBar'
 
@@ -21,6 +19,7 @@ export type SettingsParams = {
 
 function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
   const { t } = useTranslation()
+  const router = useRouter()
   const params = use(props.params);
   const [H1Label, setH1Label] = React.useState('')
   const [H2Label, setH2Label] = React.useState('')
@@ -30,17 +29,9 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
       setH1Label(t('dashboard.users.settings.pages.users.title'))
       setH2Label(t('dashboard.users.settings.pages.users.subtitle'))
     }
-    if (params.subpage == 'signups') {
-      setH1Label(t('dashboard.users.settings.pages.signups.title'))
-      setH2Label(t('dashboard.users.settings.pages.signups.subtitle'))
-    }
     if (params.subpage == 'add') {
       setH1Label(t('dashboard.users.settings.pages.add.title'))
       setH2Label(t('dashboard.users.settings.pages.add.subtitle'))
-    }
-    if (params.subpage == 'usergroups') {
-      setH1Label(t('dashboard.users.settings.pages.usergroups.title'))
-      setH2Label(t('dashboard.users.settings.pages.usergroups.subtitle'))
     }
     if (params.subpage == 'roles') {
       setH1Label(t('dashboard.users.settings.pages.roles.title'))
@@ -56,6 +47,12 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
     handleLabels()
   }, [params.subpage, params, t])
 
+  useEffect(() => {
+    if (params.subpage === 'usergroups' || params.subpage === 'signups') {
+      router.replace(getUriWithOrg(params.orgslug, '') + `/dash/users/settings/users`)
+    }
+  }, [params.subpage, params.orgslug, router])
+
   const tabs: DashTabItem[] = [
     {
       key: 'users',
@@ -65,27 +62,12 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
       active: params.subpage === 'users',
     },
     {
-      key: 'usergroups',
-      label: t('dashboard.users.settings.tabs.usergroups'),
-      icon: <SquareUserRound size={16} />,
-      href: getUriWithOrg(params.orgslug, '') + `/dash/users/settings/usergroups`,
-      active: params.subpage === 'usergroups',
-      requiresPlan: 'standard',
-    },
-    {
       key: 'roles',
       label: t('dashboard.users.settings.tabs.roles'),
       icon: <Shield size={16} />,
       href: getUriWithOrg(params.orgslug, '') + `/dash/users/settings/roles`,
       active: params.subpage === 'roles',
       requiresPlan: 'pro',
-    },
-    {
-      key: 'signups',
-      label: t('dashboard.users.settings.tabs.signups'),
-      icon: <ScanEye size={16} />,
-      href: getUriWithOrg(params.orgslug, '') + `/dash/users/settings/signups`,
-      active: params.subpage === 'signups',
     },
     {
       key: 'add',
@@ -103,6 +85,10 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
       requiresPlan: 'enterprise',
     },
   ]
+
+  if (params.subpage === 'usergroups' || params.subpage === 'signups') {
+    return null
+  }
 
   return (
     <div className="grid h-screen w-full grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]">
@@ -134,9 +120,7 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
         className="min-w-0 overflow-y-auto overflow-x-hidden"
       >
         {params.subpage == 'users' ? <OrgUsers /> : ''}
-        {params.subpage == 'signups' ? <OrgAccess /> : ''}
         {params.subpage == 'add' ? <OrgUsersAdd /> : ''}
-        {params.subpage == 'usergroups' ? <><div className="h-6"></div><OrgUserGroups /></> : ''}
         {params.subpage == 'roles' ? <><div className="h-6"></div><OrgRoles /></> : ''}
         {params.subpage == 'audit-logs' ? <><div className="h-6"></div><OrgAuditLogs /></> : ''}
       </motion.div>

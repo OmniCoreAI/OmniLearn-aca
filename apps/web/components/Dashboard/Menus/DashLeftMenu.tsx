@@ -20,10 +20,8 @@ import {
   ChatCircleDots,
   ChartBar,
   DotsThree,
-  UsersThree,
   Shield,
   UserPlus,
-  ClipboardText,
   Palette,
   Rocket,
   Robot,
@@ -40,6 +38,7 @@ import {
   GraduationCap,
   Certificate,
   ChalkboardTeacher,
+  Newspaper,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import CommandPaletteTrigger from '@components/Dashboard/CommandPalette/CommandPaletteTrigger'
@@ -181,7 +180,7 @@ function DashLeftMenu() {
     <nav
       aria-label="Dashboard sidebar navigation"
       className={cn(
-        "flex flex-col h-screen sticky top-0 z-overlay border-r border-[hsl(var(--dash-border))]/80 bg-[hsl(var(--dash-sidebar))] text-[hsl(var(--dash-ink))] transition-all duration-300",
+        "flex flex-col h-screen sticky top-0 shrink-0 self-start z-overlay border-r border-[hsl(var(--dash-border))]/80 bg-[hsl(var(--dash-sidebar))] text-[hsl(var(--dash-ink))] transition-all duration-300",
         isCollapsed ? "w-[72px]" : "w-64"
       )}
     >
@@ -282,6 +281,22 @@ function DashLeftMenu() {
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/instructors')}
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'instructors' })}
+              />
+              <MenuLink
+                href="/dash/finance"
+                icon={<CurrencyCircleDollar size={20} weight="fill" />}
+                label={t('common.finance', 'Finance')}
+                isCollapsed={isCollapsed}
+                active={isActivePath('/dash/finance')}
+                onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'finance' })}
+              />
+              <MenuLink
+                href="/dash/cms/news"
+                icon={<Newspaper size={20} weight="fill" />}
+                label={t('cms.news.title', 'News')}
+                isCollapsed={isCollapsed}
+                active={isActivePath('/dash/cms/news')}
+                onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'cms_news' })}
               />
             </NavSection>
 
@@ -397,21 +412,9 @@ function DashLeftMenu() {
                     </Link>
                   </HoverMenuItem>
                   <HoverMenuItem asChild>
-                    <Link href="/dash/users/settings/usergroups" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-ink))]/75 hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">
-                      <UsersThree size={16} weight="fill" />
-                      <span className="flex items-center">{t('dashboard.users.settings.tabs.usergroups')}<PlanBadge currentPlan={plan} requiredPlan="standard" variant="light" /></span>
-                    </Link>
-                  </HoverMenuItem>
-                  <HoverMenuItem asChild>
                     <Link href="/dash/users/settings/roles" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-ink))]/75 hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">
                       <Shield size={16} weight="fill" />
                       <span className="flex items-center">{t('dashboard.users.settings.tabs.roles')}<PlanBadge currentPlan={plan} requiredPlan="pro" variant="light" /></span>
-                    </Link>
-                  </HoverMenuItem>
-                  <HoverMenuItem asChild>
-                    <Link href="/dash/users/settings/signups" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-ink))]/75 hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">
-                      <ClipboardText size={16} weight="fill" />
-                      <span>{t('dashboard.users.settings.tabs.signups')}</span>
                     </Link>
                   </HoverMenuItem>
                   <HoverMenuItem asChild>

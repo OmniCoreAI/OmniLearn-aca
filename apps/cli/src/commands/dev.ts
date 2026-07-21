@@ -20,7 +20,7 @@ services:
       - POSTGRES_PASSWORD=omnilearn
       - POSTGRES_DB=omnilearn
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - omnilearn_db_dev_data:/var/lib/postgresql/data
     healthcheck:
@@ -85,6 +85,21 @@ async function waitForHealth(label: string, command: string, args: string[], max
       await sleep(1000)
     }
   }
+  p.log.warn(`${label} did not become ready in time`)
+  return false
+}
+
+async function waitForHttp(label: string, url: string, maxAttempts = 90): Promise<boolean> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(2000) })
+      if (res.ok) return true
+    } catch {
+      // not ready yet
+    }
+    await sleep(1000)
+  }
+  p.log.warn(`${label} did not become ready in time (${url})`)
   return false
 }
 
@@ -167,12 +182,37 @@ function killProcess(child: ChildProcess | null): Promise<void> {
       resolve()
       return
     }
-    child.on('exit', () => resolve())
+
+    const pid = child.pid
+    let settled = false
+    const done = () => {
+      if (settled) return
+      settled = true
+      resolve()
+    }
+
+    child.once('exit', done)
+
+    // On Windows, services are spawned with `shell: true`, so `child.kill()`
+    // only stops the cmd.exe wrapper and leaves uv/python/next/tsx orphans
+    // holding ports 1338/3000/4000. Kill the whole process tree instead.
+    if (process.platform === 'win32' && pid) {
+      try {
+        execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' })
+      } catch {
+        // Process may already be gone
+      }
+      // Give Windows a moment to release listeners, then resolve either way
+      setTimeout(done, 500)
+      return
+    }
+
     child.kill('SIGTERM')
     setTimeout(() => {
       if (!child.killed && child.exitCode === null) {
         child.kill('SIGKILL')
       }
+      setTimeout(done, 500)
     }, 5000)
   })
 }
@@ -353,7 +393,22 @@ export async function devCommand(opts: { ee?: boolean; adminEmail?: string; admi
     return spawnService('tsx', ['watch', 'src/index.ts'], path.join(root, 'apps', 'collab'), 'collab', pc.yellow)
   }
 
+  // Start API first and wait until it accepts requests.
+  // Web proxies to the API; starting them together caused "fetch failed"
+  // while uvicorn was still booting (especially with reload on Windows).
   apiProc = startApi()
+
+  const apiReadySpinner = p.spinner()
+  apiReadySpinner.start('Waiting for API to be ready on :1338...')
+  const apiReady = await waitForHttp('API', 'http://127.0.0.1:1338/')
+  if (!apiReady) {
+    apiReadySpinner.stop('API did not become ready')
+    p.log.error('API failed to start. Check the [api] logs above.')
+    await Promise.all([killProcess(apiProc)])
+    process.exit(1)
+  }
+  apiReadySpinner.stop('API is ready')
+
   webProc = startWeb()
   collabProc = startCollab()
 
@@ -419,6 +474,7 @@ export async function devCommand(opts: { ee?: boolean; adminEmail?: string; admi
           console.log(pc.magenta('\n  Restarting API...\n'))
           await killProcess(apiProc)
           apiProc = startApi()
+          await waitForHttp('API', 'http://127.0.0.1:1338/')
           printControls()
         } else if (key === 'w') {
           console.log(pc.cyan('\n  Restarting Web...\n'))
@@ -434,6 +490,7 @@ export async function devCommand(opts: { ee?: boolean; adminEmail?: string; admi
           console.log(pc.yellow('\n  Restarting all...\n'))
           await Promise.all([killProcess(apiProc), killProcess(webProc), killProcess(collabProc)])
           apiProc = startApi()
+          await waitForHttp('API', 'http://127.0.0.1:1338/')
           webProc = startWeb()
           collabProc = startCollab()
           printControls()

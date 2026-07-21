@@ -9,6 +9,7 @@ import {
   GraduationCap,
   Certificate,
   ChalkboardTeacher,
+  Newspaper,
 } from '@phosphor-icons/react'
 
 export interface DashboardMenuItem {
@@ -46,6 +47,18 @@ export const DASHBOARD_MENU_ITEMS: DashboardMenuItem[] = [
     href: '/dash/instructors',
     icon: ChalkboardTeacher,
     labelKey: 'instructors.title',
+  },
+  {
+    id: 'finance',
+    href: '/dash/finance',
+    icon: CurrencyCircleDollar,
+    labelKey: 'common.finance',
+  },
+  {
+    id: 'cms-news',
+    href: '/dash/cms/news',
+    icon: Newspaper,
+    labelKey: 'cms.news.title',
   },
   {
     id: 'assignments',
