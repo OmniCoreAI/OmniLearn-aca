@@ -169,6 +169,12 @@ async def auto_install():
             async_connection_string = async_connection_string.replace(
                 "postgres://", "postgresql+asyncpg://", 1
             )
+        # asyncpg expects `ssl`, not libpq's `sslmode` (kept on the canonical URL so
+        # the sync psycopg2 create_all above works). Translate for the async driver.
+        if "+asyncpg" in async_connection_string:
+            async_connection_string = async_connection_string.replace(
+                "sslmode=", "ssl="
+            )
         # On pooled Postgres (PgBouncer / Supavisor transaction mode) asyncpg's
         # named prepared statements collide across recycled backend connections,
         # raising DuplicatePreparedStatementError. Mirror the main engine's

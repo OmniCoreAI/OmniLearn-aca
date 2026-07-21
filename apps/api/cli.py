@@ -31,15 +31,19 @@ cli = typer.Typer()
 
 
 def _to_async_url(url: str) -> str:
+    # asyncpg uses the `ssl` connect arg, not libpq's `sslmode` (which the sync
+    # psycopg2 path needs), so translate it when producing the async URL.
     if "+asyncpg" in url:
-        return url
+        return url.replace("sslmode=", "ssl=")
     if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url.replace("sslmode=", "ssl=")
     return url
 
 
 def _to_sync_url(url: str) -> str:
-    return url.replace("+asyncpg", "")
+    # Sync engine uses psycopg2, which wants libpq's `sslmode`, so convert back.
+    return url.replace("+asyncpg", "").replace("ssl=", "sslmode=")
 
 
 @cli.command()
