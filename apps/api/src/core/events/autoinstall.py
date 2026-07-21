@@ -80,6 +80,50 @@ async def _ensure_initial_superadmin(db_session: AsyncSession) -> None:
     logger.info("Created initial superadmin %s on org '%s'", email, org.slug)
 
 
+async def _ensure_initial_org_logo(db_session: AsyncSession) -> None:
+    """Seed the initial org's logo from the bundled repo asset (idempotent).
+
+    Only sets the logo when the org has none, so a logo uploaded later via the
+    UI is never overwritten. The asset is baked into the image by the Dockerfile
+    at /app/api/assets/initial-org-logo.png.
+    """
+    import shutil
+
+    asset_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__), "..", "..", "..", "assets", "initial-org-logo.png"
+        )
+    )
+    if not os.path.exists(asset_path):
+        return
+
+    org_slug = _initial_org_slug()
+    org = (
+        await db_session.execute(
+            select(Organization).where(Organization.slug == org_slug)
+        )
+    ).scalars().first()
+    if not org:
+        org = (await db_session.execute(select(Organization))).scalars().first()
+    # Skip if there's no org or it already has a logo (respects manual uploads).
+    if not org or org.logo_image:
+        return
+
+    dest_dir = f"content/orgs/{org.org_uuid}/logos"
+    filename = "initial-org-logo.png"
+    try:
+        os.makedirs(dest_dir, exist_ok=True)
+        shutil.copyfile(asset_path, os.path.join(dest_dir, filename))
+    except OSError as e:
+        logger.warning("Could not seed initial org logo: %s", e)
+        return
+
+    org.logo_image = filename
+    db_session.add(org)
+    await db_session.commit()
+    logger.info("Seeded initial org logo for '%s'", org.slug)
+
+
 async def auto_install():
     # Get the database session
     omnilearn_config = get_omnilearn_config()
@@ -145,6 +189,7 @@ async def auto_install():
             async with factory() as session:
                 await install_default_elements(session)
                 await _ensure_initial_superadmin(session)
+                await _ensure_initial_org_logo(session)
         finally:
             await async_engine.dispose()
     except Exception as e:

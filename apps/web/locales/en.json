@@ -1644,7 +1644,7 @@
     "not_supported_title": "This activity is not supported",
     "not_supported_description": "This type of activity requires authentication and cannot be embedded.",
     "visit_activity": "Visit Activity Page",
-    "powered_by": "Powered by OmniLearn"
+    "powered_by": "Powered by OmniCore AI"
   },
   "assignments": {
     "submit_assignment": "Submit Assignment",

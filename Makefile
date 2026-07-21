@@ -31,7 +31,7 @@ up:
 up-prod:
 	@mkdir -p $(LOG_DIR)
 	@test -f $(PROD_ENV) || { echo "Missing $(PROD_ENV) — create it first."; exit 1; }
-	OMNILEARN_ENV_FILE=$(PROD_ENV) nohup $(COMPOSE) up --build > $(LOG_FILE) 2>&1 &
+	nohup $(COMPOSE) --env-file $(PROD_ENV) up --build > $(LOG_FILE) 2>&1 &
 	@echo "OmniLearn (prod, $(PROD_ENV)) is starting in the background (nohup)."
 	@echo "Follow logs with: make logs   (file: $(LOG_FILE))"
 

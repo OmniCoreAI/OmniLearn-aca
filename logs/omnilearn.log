@@ -1,0 +1,326 @@
+ Image omnilearn:local Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 536B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 5.16kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/oven/bun:1-alpine
+#3 DONE 0.1s
+
+#4 [internal] load metadata for docker.io/library/python:3.14.3-slim-bookworm
+#4 ...
+
+#5 [internal] load metadata for docker.io/library/node:24-alpine
+#5 DONE 3.2s
+
+#4 [internal] load metadata for docker.io/library/python:3.14.3-slim-bookworm
+#4 DONE 3.2s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 1.45kB done
+#6 DONE 0.0s
+
+#7 [collab-builder 1/7] FROM docker.io/oven/bun:1-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
+#7 resolve docker.io/oven/bun:1-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0 0.0s done
+#7 DONE 0.0s
+
+#8 [frontend-runner  1/10] FROM docker.io/library/node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd
+#8 resolve docker.io/library/node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd 0.0s done
+#8 DONE 0.0s
+
+#9 [runner  1/19] FROM docker.io/library/python:3.14.3-slim-bookworm@sha256:f21c0d5a44c56805654c15abccc1b2fd576c8d93aca0a3f74b4aba2dc92510e2
+#9 resolve docker.io/library/python:3.14.3-slim-bookworm@sha256:f21c0d5a44c56805654c15abccc1b2fd576c8d93aca0a3f74b4aba2dc92510e2 0.0s done
+#9 DONE 0.0s
+
+#10 [internal] load build context
+#10 transferring context: 11.66MB 4.6s
+#10 transferring context: 12.00MB 4.9s done
+#10 DONE 5.3s
+
+#11 [frontend-deps 2/5] RUN apk update && apk add --no-cache libc6-compat && rm -rf /var/cache/apk/*
+#11 CACHED
+
+#12 [frontend-deps 3/5] WORKDIR /app
+#12 CACHED
+
+#13 [frontend-deps 4/5] COPY apps/web/package.json apps/web/bun.lock* ./
+#13 CACHED
+
+#14 [frontend-deps 5/5] RUN bun install --frozen-lockfile
+#14 CACHED
+
+#15 [collab-builder 2/7] WORKDIR /app
+#15 CACHED
+
+#16 [frontend-builder 3/6] COPY --from=frontend-deps /app/node_modules ./node_modules
+#16 CACHED
+
+#17 [collab-builder 6/7] COPY apps/collab/src/ ./src/
+#17 CACHED
+
+#18 [collab-builder 3/7] COPY apps/collab/package.json apps/collab/bun.lock* ./
+#18 CACHED
+
+#19 [collab-builder 4/7] RUN bun install --frozen-lockfile
+#19 CACHED
+
+#20 [collab-builder 5/7] COPY apps/collab/tsconfig.json ./
+#20 CACHED
+
+#21 [collab-builder 7/7] RUN bun run build
+#21 CACHED
+
+#22 [frontend-builder 4/6] COPY apps/web .
+#22 DONE 24.7s
+
+#23 [frontend-builder 5/6] RUN rm -f .env*
+#23 DONE 0.3s
+
+#24 [frontend-builder 6/6] RUN bun run build
+#24 0.137 $ next build
+#24 0.708 [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+#24 0.842 ▲ Next.js 16.2.9 (Turbopack)
+#24 0.842 - Experiments (use with caution):
+#24 0.842   · clientTraceMetadata
+#24 0.842   · optimizePackageImports
+#24 0.843 
+#24 0.863   Creating an optimized production build ...
+#24 1.126 [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+#24 12.12 Turbopack build encountered 2 warnings:
+#24 12.12 ./next.config.js
+#24 12.12 Encountered unexpected file in NFT list
+#24 12.12 A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
+#24 12.12 - filesystem operations (like path.join, path.resolve or fs.readFile), or
+#24 12.12 - very dynamic requires (like require('./' + foo)).
+#24 12.12 To resolve this, you can
+#24 12.12 - remove them if possible, or
+#24 12.12 - only use them in development, or
+#24 12.12 - make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
+#24 12.12 - add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
+#24 12.12 
+#24 12.12 Import trace:
+#24 12.12   App Route:
+#24 12.12     ./next.config.js
+#24 12.12     ./services/config/config.ts
+#24 12.12     ./app/api/auth/[...path]/route.ts
+#24 12.12 
+#24 12.12 
+#24 12.12 ./next.config.js
+#24 12.12 Encountered unexpected file in NFT list
+#24 12.12 A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
+#24 12.12 - filesystem operations (like path.join, path.resolve or fs.readFile), or
+#24 12.12 - very dynamic requires (like require('./' + foo)).
+#24 12.12 To resolve this, you can
+#24 12.12 - remove them if possible, or
+#24 12.12 - only use them in development, or
+#24 12.12 - make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
+#24 12.12 - add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
+#24 12.12 
+#24 12.12 Output asset trace:
+#24 12.12   [output]/.next/server/instrumentation.js
+#24 12.12   [output]/.next/server/chunks/_1rzrc7g._.js
+#24 12.12 
+#24 12.12 Import trace:
+#24 12.12   App Route:
+#24 12.12     ./next.config.js
+#24 12.12     ./services/config/config.ts
+#24 12.12     ./app/api/auth/[...path]/route.ts
+#24 12.12 
+#24 12.12 
+#24 12.17 ✓ Compiled successfully in 11.0s
+#24 12.17   Running next.config.js provided runAfterProductionCompile ...
+#24 13.19 ✓ Completed runAfterProductionCompile in 1022ms
+#24 13.19   Running TypeScript ...
+#24 29.47   Finished TypeScript in 16.3s ...
+#24 29.48   Collecting page data using 13 workers ...
+#24 30.02   Generating static pages using 13 workers (0/25) ...
+#24 30.31   Generating static pages using 13 workers (6/25) 
+#24 30.32   Generating static pages using 13 workers (12/25) 
+#24 30.36   Generating static pages using 13 workers (18/25) 
+#24 30.41 ✓ Generating static pages using 13 workers (25/25) in 387ms
+#24 30.41   Finalizing page optimization ...
+#24 30.77 
+#24 30.77 Route (app)
+#24 30.77 ┌ ○ /_not-found
+#24 30.77 ├ ○ /admin
+#24 30.77 ├ ○ /admin/analytics
+#24 30.77 ├ ○ /admin/developers
+#24 30.77 ├ ○ /admin/login
+#24 30.77 ├ ○ /admin/organizations
+#24 30.77 ├ ƒ /admin/organizations/[orgId]
+#24 30.77 ├ ○ /admin/users
+#24 30.77 ├ ƒ /api/auth/[...path]
+#24 30.77 ├ ƒ /api/auth/establish
+#24 30.77 ├ ƒ /api/auth/google/authorize
+#24 30.77 ├ ƒ /api/auth/google/token
+#24 30.77 ├ ƒ /api/auth/token-exchange
+#24 30.77 ├ ƒ /api/health
+#24 30.77 ├ ƒ /api/revalidate
+#24 30.77 ├ ƒ /api/robots
+#24 30.77 ├ ƒ /api/scorm/[...path]
+#24 30.77 ├ ƒ /api/sitemap
+#24 30.77 ├ ƒ /api/v1/[...path]
+#24 30.77 ├ ƒ /auth/callback/google
+#24 30.77 ├ ƒ /auth/forgot
+#24 30.77 ├ ƒ /auth/handoff
+#24 30.77 ├ ƒ /auth/login
+#24 30.77 ├ ƒ /auth/reset
+#24 30.77 ├ ƒ /auth/signup
+#24 30.77 ├ ƒ /auth/sso/callback
+#24 30.77 ├ ƒ /auth/token-exchange
+#24 30.77 ├ ƒ /auth/verify-email
+#24 30.77 ├ ƒ /board/[boarduuid]
+#24 30.77 ├ ƒ /editor/course/[courseid]/activity/[activityuuid]/edit
+#24 30.77 ├ ƒ /editor/playground/[playgrounduuid]/edit
+#24 30.77 ├ ƒ /embed/[orgslug]/course/[courseuuid]/activity/[activityid]
+#24 30.77 ├ ○ /home
+#24 30.77 ├ ƒ /orgs/[orgslug]
+#24 30.77 ├ ƒ /orgs/[orgslug]/account
+#24 30.77 ├ ƒ /orgs/[orgslug]/account/[subpage]
+#24 30.77 ├ ƒ /orgs/[orgslug]/boards
+#24 30.77 ├ ƒ /orgs/[orgslug]/certificates/[uuid]/verify
+#24 30.77 ├ ƒ /orgs/[orgslug]/copilot
+#24 30.77 ├ ƒ /orgs/[orgslug]/course/[courseuuid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/course/[courseuuid]/activity/[activityid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/courses
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/analytics
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/assignments
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/assignments/[assignmentuuid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/boards
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/boards/[boarduuid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/boards/[boarduuid]/[subpage]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/cms/news
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/cms/news/[newsuuid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/cms/news/new
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/courses
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/courses/course/[courseuuid]/[subpage]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/courses/migrate
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/finance
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/instructors
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/instructors/categories
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/instructors/finance
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/library
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/library/folder/[folderid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/org/settings/[subpage]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/payments/[subpage]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/playgrounds
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/postgraduate
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/postgraduate/[programuuid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/postgraduate/[programuuid]/cohort/[cohortuuid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/postgraduate/[programuuid]/cohort/[cohortuuid]/semester/[semesteruuid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/training-programs
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/training-programs/[tpuuid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/dash/users/settings/[subpage]
+#24 30.77 ├ ƒ /orgs/[orgslug]/library
+#24 30.77 ├ ƒ /orgs/[orgslug]/library/folder/[folderid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/playground/[playgrounduuid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/playgrounds
+#24 30.77 ├ ƒ /orgs/[orgslug]/search
+#24 30.77 ├ ƒ /orgs/[orgslug]/store
+#24 30.77 ├ ƒ /orgs/[orgslug]/store/offers/[offerid]
+#24 30.77 ├ ƒ /orgs/[orgslug]/trail
+#24 30.77 ├ ƒ /orgs/[orgslug]/user/[username]
+#24 30.77 └ ○ /payments/stripe/connect/oauth
+#24 30.77 
+#24 30.77 
+#24 30.77 ƒ Proxy (Middleware)
+#24 30.77 
+#24 30.77 ○  (Static)   prerendered as static content
+#24 30.77 ƒ  (Dynamic)  server-rendered on demand
+#24 30.77 
+#24 DONE 31.5s
+
+#25 [frontend-runner  2/10] WORKDIR /app
+#25 CACHED
+
+#26 [frontend-runner  3/10] RUN apk update && apk add --no-cache curl && rm -rf /var/cache/apk/*
+#26 CACHED
+
+#27 [frontend-runner  4/10] RUN addgroup --system --gid 1001 nodejs     && adduser --system --uid 1001 nextjs
+#27 CACHED
+
+#28 [frontend-runner  5/10] COPY --from=frontend-builder /app/public ./public
+#28 CACHED
+
+#29 [frontend-runner  6/10] RUN mkdir .next && chown nextjs:nodejs .next
+#29 CACHED
+
+#30 [frontend-runner  7/10] COPY --from=frontend-builder --chown=nextjs:nodejs /app/.next/standalone ./
+#30 DONE 0.3s
+
+#31 [frontend-runner  8/10] COPY --from=frontend-builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+#31 DONE 0.1s
+
+#32 [frontend-runner  9/10] COPY --chown=nextjs:nodejs apps/web/server-wrapper.js ./
+#32 DONE 0.0s
+
+#33 [frontend-runner 10/10] RUN chmod +x server-wrapper.js
+#33 DONE 0.2s
+
+#34 [runner  2/19] RUN apt-get update     && apt-get install -y --no-install-recommends nginx curl netcat-openbsd ca-certificates gnupg unzip build-essential     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash -     && apt-get install -y --no-install-recommends nodejs     && npm install -g pm2     && curl -fsSL https://bun.sh/install | bash     && apt-get purge -y gnupg     && apt-get autoremove -y     && apt-get clean     && rm -rf /var/lib/apt/lists/* /tmp/* /root/.npm     && rm /etc/nginx/sites-enabled/default
+#34 CACHED
+
+#35 [runner  3/19] COPY --from=frontend-runner /app /app/web
+#35 DONE 0.3s
+
+#36 [runner  4/19] WORKDIR /app/api
+#36 DONE 0.0s
+
+#37 [runner  5/19] COPY ./apps/api/uv.lock ./apps/api/pyproject.toml ./
+#37 DONE 0.0s
+
+#38 [runner  6/19] RUN pip install --no-cache-dir --upgrade pip uv     && uv sync --no-dev
+#38 0.972 Requirement already satisfied: pip in /usr/local/lib/python3.14/site-packages (25.3)
+#38 1.369 Collecting pip
+#38 1.764   Downloading pip-26.1.2-py3-none-any.whl.metadata (4.6 kB)
+#38 3.081 Collecting uv
+#38 3.210   Downloading uv-0.11.30-py3-none-manylinux_2_28_aarch64.whl.metadata (11 kB)
+#38 3.323 Downloading pip-26.1.2-py3-none-any.whl (1.8 MB)
+#38 5.599    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 832.2 kB/s  0:00:02
+#38 5.708 Downloading uv-0.11.30-py3-none-manylinux_2_28_aarch64.whl (25.6 MB)
+#38 47.26    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.6/25.6 MB 658.1 kB/s  0:00:41
+#38 47.32 Installing collected packages: uv, pip
+#38 47.52   Attempting uninstall: pip
+#38 47.53     Found existing installation: pip 25.3
+#38 47.55     Uninstalling pip-25.3:
+#38 47.68       Successfully uninstalled pip-25.3
+#38 48.14 
+#38 48.14 Successfully installed pip-26.1.2 uv-0.11.30
+#38 48.14 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#38 48.74 Using CPython 3.14.3 interpreter at: /usr/local/bin/python3
+#38 48.74 Creating virtual environment at: .venv
+#38 48.74 Resolved 140 packages in 0.90ms
+#38 49.40 Downloading pygments (1.2MiB)
+#38 49.40 Downloading networkx (2.0MiB)
+#38 49.41 Downloading aiohttp (1.6MiB)
+#38 49.41 Downloading openai (1.3MiB)
+#38 49.65 Downloading faker (1.9MiB)
+#38 49.65 Downloading nltk (1.5MiB)
+#38 49.66 Downloading sqlalchemy (3.1MiB)
+#38 49.66 Downloading pydantic-core (1.9MiB)
+#38 49.66 Downloading tiktoken (1.1MiB)
+#38 49.66 Downloading stripe (2.1MiB)
+#38 49.66 Downloading pillow (6.1MiB)
+#38 49.66 Downloading psycopg2-binary (5.6MiB)
+#38 49.66 Downloading llama-index-core (11.4MiB)
+#38 49.66 Downloading asyncpg (3.3MiB)
+#38 49.67 Downloading botocore (14.6MiB)
+#38 49.67 Downloading mistralai (1.1MiB)
+#38 49.67 Downloading cryptography (4.5MiB)
+#38 49.67 Downloading numpy (15.0MiB)
+#38 110.2  Downloaded mistralai
+#38 110.2  Downloaded tiktoken
+#38 111.4  Downloaded pygments
+#38 114.0  Downloaded openai
+#38 118.8  Downloaded nltk
+#38 123.3  Downloaded aiohttp
+#38 126.6  Downloaded pydantic-core
+#38 126.9  Downloaded faker
+#38 127.6  Downloaded networkx
+#38 130.4  Downloaded stripe
+#38 144.0  Downloaded sqlalchemy
+#38 144.8  Downloaded asyncpg
