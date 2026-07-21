@@ -84,10 +84,9 @@ async def _install_async(short: bool) -> None:
                 print("Default elements installed ✅")
 
                 # Honor OMNILEARN_INITIAL_ORG_NAME / OMNILEARN_INITIAL_ORG_SLUG when
-                # the CLI passes them — falls back to "Default Organization" / "default"
-                # so existing standalone deployments still work unchanged.
-                org_name = os.environ.get("OMNILEARN_INITIAL_ORG_NAME", "Default Organization")
-                org_slug = os.environ.get("OMNILEARN_INITIAL_ORG_SLUG", "default").lower()
+                # set — defaults to ACA org for this deployment.
+                org_name = os.environ.get("OMNILEARN_INITIAL_ORG_NAME", "aca")
+                org_slug = os.environ.get("OMNILEARN_INITIAL_ORG_SLUG", "aca").lower()
 
                 # Create the Organization
                 print(f"Creating organization '{org_name}' (slug: {org_slug})...")

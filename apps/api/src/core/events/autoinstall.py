@@ -17,14 +17,18 @@ from src.services.setup.setup import (
 logger = logging.getLogger(__name__)
 
 DEFAULT_ADMIN_EMAIL = "admin@omnicoreai.com"
-DEFAULT_ORG_SLUG = "default"
+DEFAULT_ORG_SLUG = "aca"
+
+
+def _initial_org_slug() -> str:
+    return os.environ.get("OMNILEARN_INITIAL_ORG_SLUG", DEFAULT_ORG_SLUG).strip().lower() or DEFAULT_ORG_SLUG
 
 
 async def _ensure_initial_superadmin(db_session: AsyncSession) -> None:
-    """Create (or promote) the configured OmniCore AI superadmin if missing.
+    """Create (or promote) the configured superadmin if missing.
 
     Runs on every startup after the org already exists so rebuilds / compose
-    restarts still get ``admin@omnicoreai.com`` without wiping the database.
+    restarts still get the admin user without wiping the database.
     """
     email = os.environ.get("OMNILEARN_INITIAL_ADMIN_EMAIL", DEFAULT_ADMIN_EMAIL).strip()
     password = os.environ.get("OMNILEARN_INITIAL_ADMIN_PASSWORD")
@@ -47,9 +51,10 @@ async def _ensure_initial_superadmin(db_session: AsyncSession) -> None:
             logger.info("Promoted existing user %s to superadmin", email)
         return
 
+    org_slug = _initial_org_slug()
     org = (
         await db_session.execute(
-            select(Organization).where(Organization.slug == DEFAULT_ORG_SLUG)
+            select(Organization).where(Organization.slug == org_slug)
         )
     ).scalars().first()
     if not org:
