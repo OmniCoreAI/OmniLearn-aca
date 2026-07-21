@@ -1,4 +1,5 @@
 import logging
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlmodel import SQLModel, Session, select
@@ -7,9 +8,71 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from cli import _install_async
 from config.config import get_omnilearn_config
 from src.db.organizations import Organization
-from src.services.setup.setup import install_default_elements
+from src.db.users import User, UserCreate
+from src.services.setup.setup import (
+    install_create_organization_user,
+    install_default_elements,
+)
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_ADMIN_EMAIL = "admin@omnicoreai.com"
+DEFAULT_ORG_SLUG = "default"
+
+
+async def _ensure_initial_superadmin(db_session: AsyncSession) -> None:
+    """Create (or promote) the configured OmniCore AI superadmin if missing.
+
+    Runs on every startup after the org already exists so rebuilds / compose
+    restarts still get ``admin@omnicoreai.com`` without wiping the database.
+    """
+    email = os.environ.get("OMNILEARN_INITIAL_ADMIN_EMAIL", DEFAULT_ADMIN_EMAIL).strip()
+    password = os.environ.get("OMNILEARN_INITIAL_ADMIN_PASSWORD")
+    if not email or not password:
+        logger.info(
+            "Skipping initial superadmin ensure: set OMNILEARN_INITIAL_ADMIN_EMAIL "
+            "and OMNILEARN_INITIAL_ADMIN_PASSWORD to provision %s",
+            DEFAULT_ADMIN_EMAIL,
+        )
+        return
+
+    existing = (
+        await db_session.execute(select(User).where(User.email == email))
+    ).scalars().first()
+    if existing:
+        if not existing.is_superadmin:
+            existing.is_superadmin = True
+            db_session.add(existing)
+            await db_session.commit()
+            logger.info("Promoted existing user %s to superadmin", email)
+        return
+
+    org = (
+        await db_session.execute(
+            select(Organization).where(Organization.slug == DEFAULT_ORG_SLUG)
+        )
+    ).scalars().first()
+    if not org:
+        org = (await db_session.execute(select(Organization))).scalars().first()
+    if not org:
+        logger.warning("No organization found; cannot ensure initial superadmin")
+        return
+
+    username = "admin"
+    # Avoid username collision with an older default admin on the same org.
+    username_taken = (
+        await db_session.execute(select(User).where(User.username == username))
+    ).scalars().first()
+    if username_taken:
+        username = "omnicoreai_admin"
+
+    await install_create_organization_user(
+        UserCreate(username=username, email=email, password=password),
+        org.slug,
+        db_session,
+        is_superadmin=True,
+    )
+    logger.info("Created initial superadmin %s on org '%s'", email, org.slug)
 
 
 async def auto_install():
@@ -76,8 +139,9 @@ async def auto_install():
         try:
             async with factory() as session:
                 await install_default_elements(session)
+                await _ensure_initial_superadmin(session)
         finally:
             await async_engine.dispose()
     except Exception as e:
-        logger.warning("Default-role refresh skipped (non-fatal): %s", e)
+        logger.warning("Default-role refresh / superadmin ensure skipped (non-fatal): %s", e)
     logger.info("Organizations found. Skipping auto-installation")

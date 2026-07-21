@@ -257,7 +257,7 @@ export async function setupCommand(options: SetupOptions) {
       dockerIpv6: options.dockerIpv6,
       orgName: options.orgName || 'Default Organization',
       orgSlug: (options.orgSlug || 'default').toLowerCase(),
-      adminEmail: options.adminEmail || 'admin@school.dev',
+      adminEmail: options.adminEmail || 'admin@omnicoreai.com',
       adminPassword: options.adminPassword,
       aiEnabled: false,
       emailEnabled: false,

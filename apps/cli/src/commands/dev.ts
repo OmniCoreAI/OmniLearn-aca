@@ -283,8 +283,8 @@ export async function devCommand(opts: { ee?: boolean; adminEmail?: string; admi
     if (!adminEmail) {
       const emailInput = await p.text({
         message: 'Admin email',
-        placeholder: 'admin@school.dev',
-        defaultValue: 'admin@school.dev',
+        placeholder: 'admin@omnicoreai.com',
+        defaultValue: 'admin@omnicoreai.com',
       })
       if (p.isCancel(emailInput)) process.exit(0)
       adminEmail = emailInput

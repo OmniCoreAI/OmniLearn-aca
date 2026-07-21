@@ -66,7 +66,7 @@ program
   .option('--name <name>', 'Installation name (default: "default")')
   .option('--domain <domain>', 'Domain name (default: "localhost")')
   .option('--port <port>', 'HTTP port (default: 80)', parseInt)
-  .option('--admin-email <email>', 'Admin email (default: "admin@school.dev")')
+  .option('--admin-email <email>', 'Admin email (default: "admin@omnicoreai.com")')
   .option('--admin-password <password>', 'Admin password (required in --ci mode)')
   .option('--org-name <name>', 'Organization display name (default: "Default Organization")')
   .option('--org-slug <slug>', 'Organization slug used in URLs (default: "default")')
@@ -171,7 +171,7 @@ program
   .command('dev')
   .description('Start development environment (DB + Redis in Docker, API + Web locally)')
   .option('--ee', 'Enable Enterprise Edition features (keeps ee/ folder)')
-  .option('--admin-email <email>', 'Admin email (default: admin@school.dev)')
+  .option('--admin-email <email>', 'Admin email (default: admin@omnicoreai.com)')
   .option('--admin-password <password>', 'Admin password (skips interactive prompt)')
   .action(devCommand)
 

@@ -106,8 +106,8 @@ async def _install_async(short: bool) -> None:
 
                 # Create Organization User
                 print("Creating default organization user...")
-                # Use email from environment variable if provided, otherwise default to "admin@school.dev"
-                email = os.environ.get("OMNILEARN_INITIAL_ADMIN_EMAIL", "admin@school.dev")
+                # Use email from environment variable if provided, otherwise default to OmniCore AI admin
+                email = os.environ.get("OMNILEARN_INITIAL_ADMIN_EMAIL", "admin@omnicoreai.com")
                 # Require password from environment variable
                 password = os.environ.get("OMNILEARN_INITIAL_ADMIN_PASSWORD")
                 if not password:
@@ -115,7 +115,7 @@ async def _install_async(short: bool) -> None:
                     print("Please set OMNILEARN_INITIAL_ADMIN_PASSWORD environment variable before running installation.")
                     raise typer.Exit(code=1)
                 print("Using password from OMNILEARN_INITIAL_ADMIN_PASSWORD environment variable")
-                if email != "admin@school.dev":
+                if email != "admin@omnicoreai.com":
                     print(f"Using email from OMNILEARN_INITIAL_ADMIN_EMAIL environment variable: {email}")
                 user = UserCreate(
                     username="admin", email=email, password=password
