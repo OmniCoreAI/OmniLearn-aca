@@ -60,6 +60,21 @@ if is_testing:
 else:
     sql_url = str(omnilearn_config.database_config.sql_connection_string)  # type: ignore
 
+    # Log target host/port only (never password) so deploys can confirm env overrides config.yaml.
+    try:
+        from urllib.parse import urlparse
+
+        _parsed = urlparse(sql_url)
+        _db_target = f"{_parsed.hostname}:{_parsed.port or 5432}/{(_parsed.path or '/').lstrip('/')}"
+        _source = (
+            "OMNILEARN_SQL_CONNECTION_STRING"
+            if os.environ.get("OMNILEARN_SQL_CONNECTION_STRING")
+            else "config.yaml fallback"
+        )
+        logging.info("DB engine: connecting via %s → %s", _source, _db_target)
+    except Exception:
+        logging.info("DB engine: connecting (could not parse connection URL for log)")
+
     # Ensure we use the asyncpg driver for PostgreSQL
     if sql_url.startswith("postgresql+psycopg2://"):
         sql_url = sql_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
