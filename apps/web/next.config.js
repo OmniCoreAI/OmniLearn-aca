@@ -3,9 +3,10 @@ const path = require('path')
 
 /** @type {import('common.next').NextConfig} */
 const nextConfig = {
-  // Do NOT set turbopack.root to __dirname — Next 16 then resolves CSS
-  // @import "tailwindcss" from the parent folder (apps/) and fails.
-  // See: https://github.com/vercel/next.js/issues/90307
+  // Do not set turbopack.root to __dirname (breaks CSS @import on Next 16)
+  // or absolute Windows resolveAlias paths ("windows imports are not
+  // implemented yet"). An empty repo-root package-lock.json also steals
+  // the Turbopack workspace root — keep deps resolving from apps/web.
   // Required by PostHog's reverse-proxy rewrites below so the trailing-slash
   // handling on /ingest/* doesn't 308-redirect ingestion requests.
   skipTrailingSlashRedirect: true,
