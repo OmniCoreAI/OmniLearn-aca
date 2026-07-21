@@ -17,6 +17,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query/keys'
 import { useTranslation } from 'react-i18next'
 import { usePlan } from '@components/Hooks/usePlan'
+import { isSystemRole as isKnownSystemRole } from '@/lib/system-roles'
 
 function OrgRoles() {
     const { t } = useTranslation()
@@ -158,8 +159,8 @@ function OrgRoles() {
             return true
         }
 
-        // Check if the role name indicates it's a system role
-        if (role.name && ['Admin', 'Maintainer', 'Instructor', 'User'].includes(role.name)) {
+        // Check if the role name indicates it's a system role (current or legacy name)
+        if (isKnownSystemRole(role)) {
             return true
         }
 
@@ -225,6 +226,24 @@ function OrgRoles() {
                             ))}
                         </div>
                     ) : null}
+                    {!isRolesLoading && (
+                        <div className="bg-red-50 border border-red-100 rounded-lg p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <Shield className="w-4 h-4 text-red-500 shrink-0" />
+                                    <span className="font-medium text-sm">{t('dashboard.users.roles.super_admin.name')}</span>
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 shrink-0">
+                                        <Globe className="w-3 h-3 me-1" />
+                                        {t('dashboard.users.roles.platform_wide')}
+                                    </span>
+                                </div>
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 shrink-0">
+                                    {t('dashboard.users.roles.super_admin.permissions')}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-600">{t('dashboard.users.roles.super_admin.description')}</p>
+                        </div>
+                    )}
                     {roles?.map((role: any) => {
                         const isSystem = isSystemRole(role)
                         return (
@@ -348,6 +367,25 @@ function OrgRoles() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
+                            <tr className="bg-red-50/60 hover:bg-red-50 transition-colors">
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-2">
+                                        <Shield className="w-4 h-4 text-red-500" />
+                                        <span className="font-semibold text-gray-800 text-sm">{t('dashboard.users.roles.super_admin.name')}</span>
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                            <Globe className="w-3 h-3" />
+                                            {t('dashboard.users.roles.platform_wide')}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-500">{t('dashboard.users.roles.super_admin.description')}</td>
+                                <td className="px-6 py-4">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">
+                                        {t('dashboard.users.roles.super_admin.permissions')}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-end text-xs text-gray-400">—</td>
+                            </tr>
                             {roles?.map((role: any) => {
                                 const isSystem = isSystemRole(role)
                                 return (

@@ -17,6 +17,7 @@ import OrgEditSEO from '@components/Dashboard/Pages/Org/OrgEditSEO/OrgEditSEO'
 import OrgEditUsage from '@components/Dashboard/Pages/Org/OrgEditUsage/OrgEditUsage'
 import OrgEditAutomations from '@components/Dashboard/Pages/Org/OrgEditAutomations/OrgEditAutomations'
 import OrgEditMenu from '@components/Dashboard/Pages/Org/OrgEditMenu/OrgEditMenu'
+import OrgEditNavigation from '@components/Dashboard/Pages/Org/OrgEditNavigation/OrgEditNavigation'
 import OrgEditDangerZone from '@components/Dashboard/Pages/Org/OrgEditDangerZone/OrgEditDangerZone'
 import { useTranslation } from 'react-i18next'
 import { PlanLevel } from '@services/plans/plans'
@@ -39,6 +40,7 @@ const getSettingTabs = (t: any): TabConfig[] => [
   { id: 'general', label: t('dashboard.organization.settings.tabs.general'), icon: TextIcon },
   { id: 'branding', label: t('dashboard.organization.settings.tabs.branding'), icon: Palette },
   { id: 'menu', label: t('dashboard.organization.settings.tabs.menu') || 'Menu', icon: MenuIcon },
+  { id: 'navigation', label: t('dashboard.organization.settings.tabs.navigation') || 'Site navigation', icon: Globe },
   { id: 'landing', label: t('dashboard.organization.settings.tabs.landing'), icon: LayoutDashboardIcon },
   { id: 'seo', label: 'SEO', icon: Search },
   { id: 'ai', label: t('dashboard.organization.settings.tabs.ai') || 'AI', customIcon: '/lrn.svg', requiredPlan: 'standard' },
@@ -68,6 +70,9 @@ function OrgPage(props: { params: Promise<OrgParams> }) {
     } else if (params.subpage == 'menu') {
       setH1Label(t('dashboard.organization.settings.pages.menu.title') || 'Public menu')
       setH2Label(t('dashboard.organization.settings.pages.menu.subtitle') || 'Choose and order the links shown in your public navigation')
+    } else if (params.subpage == 'navigation') {
+      setH1Label(t('dashboard.organization.settings.pages.navigation.title') || 'Site navigation')
+      setH2Label(t('dashboard.organization.settings.pages.navigation.subtitle') || 'Manage mega menu sections and quick links for the public site')
     } else if (params.subpage == 'landing') {
       setH1Label(t('dashboard.organization.settings.pages.landing.title'))
       setH2Label(t('dashboard.organization.settings.pages.landing.subtitle'))
@@ -120,36 +125,39 @@ function OrgPage(props: { params: Promise<OrgParams> }) {
   }))
 
   return (
-    <div className="flex h-full w-full flex-col bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]">
-      <div className="relative z-10 flex-shrink-0 border-b border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-4 tracking-tight sm:px-10">
-        <div className="pt-6 pb-4">
+    <div className="flex min-w-0 w-full flex-col overflow-x-hidden bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]">
+      <div className="relative z-10 min-w-0 flex-shrink-0 border-b border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-4 tracking-tight sm:px-10">
+        <div className="pb-4 pt-6">
           <Breadcrumbs items={[
             { label: t('common.organization'), href: '/dash/org/settings/general', icon: <School size={14} /> }
           ]} />
         </div>
-        <div className="my-2 py-2">
-          <div className="w-full flex flex-col space-y-1 min-w-0">
-            <div className="pt-3 flex font-bold text-3xl sm:text-4xl tracking-tighter truncate">
+        <div className="my-2 py-3">
+          <div className="flex w-full min-w-0 flex-col space-y-1">
+            <div className="flex truncate pt-1 text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
               {H1Label}
             </div>
-            <div className="flex font-medium text-gray-400 text-md truncate">
+            <div className="flex truncate text-sm font-medium text-[hsl(var(--dash-muted))]">
               {H2Label}
             </div>
           </div>
         </div>
-        <DashTabBar tabs={tabs} />
+        <div className="min-w-0 pb-3">
+          <DashTabBar tabs={tabs} />
+        </div>
       </div>
-      <div className="h-6 flex-shrink-0"></div>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.1, type: 'spring', stiffness: 80 }}
-        className="flex-1 overflow-y-auto"
+        className="min-w-0 overflow-x-hidden"
       >
+        <div className="h-6" />
         {params.subpage == 'general' ? <OrgEditGeneral /> : ''}
         {params.subpage == 'branding' ? <OrgEditBranding /> : ''}
         {params.subpage == 'menu' ? <OrgEditMenu /> : ''}
+        {params.subpage == 'navigation' ? <OrgEditNavigation /> : ''}
         {params.subpage == 'landing' ? <OrgEditLanding /> : ''}
         {params.subpage == 'seo' ? <OrgEditSEO /> : ''}
         {params.subpage == 'ai' ? <OrgEditAI /> : ''}
@@ -160,6 +168,7 @@ function OrgPage(props: { params: Promise<OrgParams> }) {
         {params.subpage == 'usage' ? <OrgEditUsage /> : ''}
         {params.subpage == 'other' ? <OrgEditOther /> : ''}
         {params.subpage == 'danger' ? <OrgEditDangerZone /> : ''}
+        <div className="h-10" />
       </motion.div>
     </div>
   )

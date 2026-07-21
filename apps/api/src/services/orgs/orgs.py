@@ -1303,6 +1303,113 @@ async def update_org_menu_config(
     return {"detail": "Menu configuration updated"}
 
 
+def _filter_public_navigation(nav) -> dict:
+    """Return only enabled items/links, sorted by order."""
+    items = []
+    for item in sorted((i for i in nav.items if i.enabled), key=lambda i: i.order):
+        groups = []
+        for group in sorted(item.children, key=lambda g: g.order):
+            links = [
+                link.model_dump()
+                for link in sorted((l for l in group.links if l.enabled), key=lambda l: l.order)
+            ]
+            if links:
+                groups.append({"title": group.title, "order": group.order, "links": links})
+        items.append({
+            "key": item.key,
+            "label": item.label,
+            "href": item.href,
+            "order": item.order,
+            "enabled": item.enabled,
+            "panel": item.panel.model_dump() if item.panel else None,
+            "children": groups,
+        })
+
+    quick_links = [
+        ql.model_dump()
+        for ql in sorted((q for q in nav.quick_links if q.enabled), key=lambda q: q.order)
+    ]
+    return {"items": items, "quick_links": quick_links}
+
+
+async def get_org_navigation(
+    request: Request,
+    org_slug: str,
+    current_user: PublicUser | AnonymousUser,
+    db_session: AsyncSession,
+) -> dict:
+    """Public read of site navigation (mega menu + quick links) for an org slug."""
+    from src.db.organization_config import NavigationConfig
+
+    statement = select(Organization).where(Organization.slug == org_slug).order_by(Organization.id)
+    org = (await db_session.execute(statement)).scalars().first()
+
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    await rbac_check(request, org.org_uuid, current_user, "read", db_session)
+
+    statement = select(OrganizationConfig).where(OrganizationConfig.org_id == org.id)
+    org_config = (await db_session.execute(statement)).scalars().first()
+
+    if org_config is None:
+        return {"items": [], "quick_links": []}
+
+    config = org_config.config or {}
+    raw = {}
+    if _is_v2_config(config):
+        raw = (config.get("customization") or {}).get("navigation") or {}
+    else:
+        raw = (config.get("general") or {}).get("navigation") or config.get("navigation") or {}
+
+    nav = NavigationConfig(**(raw if isinstance(raw, dict) else {}))
+    return _filter_public_navigation(nav)
+
+
+async def update_org_navigation(
+    request: Request,
+    navigation: dict,
+    org_id: int,
+    current_user: PublicUser | AnonymousUser,
+    db_session: AsyncSession,
+):
+    """Admin write of site navigation tree stored on org config."""
+    from src.db.organization_config import NavigationConfig
+
+    statement = select(Organization).where(Organization.id == org_id)
+    org = (await db_session.execute(statement)).scalars().first()
+
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    await rbac_check(request, org.org_uuid, current_user, "update", db_session)
+
+    statement = select(OrganizationConfig).where(OrganizationConfig.org_id == org.id)
+    org_config = (await db_session.execute(statement)).scalars().first()
+
+    if org_config is None:
+        raise HTTPException(status_code=404, detail="Organization config not found")
+
+    nav_data = json.loads(NavigationConfig(**(navigation or {})).model_dump_json())
+
+    updated_config = _deep_copy_config(org_config)
+    if _is_v2_config(updated_config):
+        updated_config.setdefault("customization", {})
+        updated_config["customization"]["navigation"] = nav_data
+    else:
+        updated_config.setdefault("general", {"enabled": True})
+        updated_config["general"]["navigation"] = nav_data
+
+    org_config.config = updated_config
+    org_config.update_date = str(datetime.now())
+
+    db_session.add(org_config)
+    await db_session.commit()
+    await db_session.refresh(org_config)
+
+    return {"detail": "Navigation configuration updated"}
+
+
 async def update_org_auth_branding_config(
     request: Request,
     auth_branding: AuthBrandingConfig,

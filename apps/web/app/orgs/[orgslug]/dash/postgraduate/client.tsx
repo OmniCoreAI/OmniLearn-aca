@@ -147,7 +147,7 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
                   )
                 : null
             }
-            footerLabel={t(`academic.level_${p.program_level}`, p.program_level)}
+            footerLabel={String(t(`academic.level_${p.program_level}`, { defaultValue: p.program_level }))}
             onEdit={() => openEdit(p)}
             onDelete={() => handleDelete(p)}
           />

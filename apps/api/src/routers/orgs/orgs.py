@@ -59,6 +59,8 @@ from src.services.orgs.orgs import (
     upload_org_landing_content_service,
     update_org_auth_branding_config,
     update_org_menu_config,
+    get_org_navigation,
+    update_org_navigation,
     upload_org_auth_background_service,
     update_org_seo_config,
     upload_org_og_image_service,
@@ -805,6 +807,34 @@ async def api_update_org_menu_config(
 
 
 @router.put(
+    "/{org_id}/navigation",
+    summary="Update public site navigation",
+    description=(
+        "Replace the organization's public navigation tree (items with optional panel/"
+        "children groups, plus quick_links). Admin-only. Stored under "
+        "config.customization.navigation (v2)."
+    ),
+    responses={
+        200: {"description": "Navigation configuration updated."},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Caller is not an organization administrator"},
+        404: {"description": "Organization not found"},
+    },
+)
+async def api_update_org_navigation(
+    request: Request,
+    org_id: int,
+    navigation: dict,
+    current_user: PublicUser = Depends(get_current_user),
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    """Update organization public navigation configuration (admin-only)."""
+    return await update_org_navigation(
+        request, navigation, org_id, current_user, db_session
+    )
+
+
+@router.put(
     "/{org_id}/auth_background",
     summary="Upload auth page background",
     description="Upload the background image shown on the organization's authentication pages.",
@@ -1082,6 +1112,29 @@ async def api_get_org_by_slug(
     Get single Org by Slug
     """
     return await get_organization_by_slug(request, org_slug, db_session, current_user)
+
+
+@router.get(
+    "/slug/{org_slug}/navigation",
+    summary="Get public site navigation",
+    description=(
+        "Return the organization's public navigation tree (top-level items, dropdown "
+        "groups/links, and quick links). Only enabled entries are included, sorted by order. "
+        "Empty navigation returns `{ items: [], quick_links: [] }`."
+    ),
+    responses={
+        200: {"description": "Navigation tree for the organization."},
+        404: {"description": "Organization not found"},
+    },
+)
+async def api_get_org_navigation(
+    request: Request,
+    org_slug: str,
+    current_user: PublicUser = Depends(get_current_user),
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    """Public navigation (mega menu + quick links) by org slug."""
+    return await get_org_navigation(request, org_slug, current_user, db_session)
 
 
 @router.put(

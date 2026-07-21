@@ -1,7 +1,13 @@
 const { withSentryConfig } = require("@sentry/nextjs");
+const path = require('path')
 
 /** @type {import('common.next').NextConfig} */
 const nextConfig = {
+  // Monorepo has a root package-lock.json; pin Turbopack to apps/web so
+  // deps like tailwindcss / nextjs-toploader resolve from this package.
+  turbopack: {
+    root: path.join(__dirname),
+  },
   // Required by PostHog's reverse-proxy rewrites below so the trailing-slash
   // handling on /ingest/* doesn't 308-redirect ingestion requests.
   skipTrailingSlashRedirect: true,

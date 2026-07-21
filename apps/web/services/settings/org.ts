@@ -164,6 +164,65 @@ export async function updateOrgMenuConfig(
   return res
 }
 
+/** Public site navigation (mega menu / quick links) — separate from LMS MenuConfig */
+export interface NavLink {
+  label: string
+  href: string
+  icon?: string
+  open_in_new_tab?: boolean
+  order: number
+  enabled: boolean
+}
+
+export interface NavGroup {
+  title: string
+  order: number
+  links: NavLink[]
+}
+
+export interface NavPanel {
+  title: string
+  description: string
+  href: string
+  image_url?: string
+}
+
+export interface NavItem {
+  key: string
+  label: string
+  href?: string
+  order: number
+  enabled: boolean
+  panel?: NavPanel | null
+  children: NavGroup[]
+}
+
+export interface QuickLink {
+  label: string
+  href: string
+  icon?: string
+  order: number
+  enabled: boolean
+}
+
+export interface NavigationConfig {
+  items: NavItem[]
+  quick_links: QuickLink[]
+}
+
+export async function updateOrgNavigation(
+  org_id: string,
+  navigation: NavigationConfig,
+  access_token: string
+) {
+  const result: any = await fetch(
+    `${getAPIUrl()}orgs/${org_id}/navigation`,
+    RequestBodyWithAuthHeader('PUT', navigation, null, access_token)
+  )
+  const res = await errorHandling(result)
+  return res
+}
+
 export interface SeoOrgConfig {
   default_meta_title_suffix: string
   default_meta_description: string

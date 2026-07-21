@@ -21,6 +21,13 @@ type AddRoleProps = {
     setCreateRoleModal: any
 }
 
+function presetLocaleKey(roleKey: string): string {
+    if (roleKey === 'Super Admin') return 'super_admin'
+    if (roleKey === 'Organization Coordinator') return 'maintainer'
+    if (roleKey === 'Trainee') return 'viewer'
+    return roleKey.toLowerCase()
+}
+
 interface Rights {
     courses: {
         action_create: boolean;
@@ -166,9 +173,9 @@ const defaultRights: Rights = {
 }
 
 const predefinedRoles = {
-    'Admin': {
-        name: 'Admin',
-        description: 'Full platform control with all permissions',
+    'Super Admin': {
+        name: 'Super Admin',
+        description: 'Full platform control: role and permission management (RBAC), audit-log monitoring and website content management (CMS).',
         rights: {
             courses: { action_create: true, action_read: true, action_read_own: true, action_update: true, action_update_own: true, action_delete: true, action_delete_own: true },
             users: { action_create: true, action_read: true, action_update: true, action_delete: true },
@@ -182,25 +189,41 @@ const predefinedRoles = {
             dashboard: { action_access: true }
         }
     },
-    'Course Manager': {
-        name: 'Course Manager',
-        description: 'Can manage courses, chapters, and activities',
+    'Admin': {
+        name: 'Academy Admin',
+        description: 'Creates and manages programs/courses/intakes, manages vouchers/discounts/refunds, schedules sessions and assigns halls and instructors, approves certificate issuance, and reviews reports and the executive KPI dashboard.',
         rights: {
-            courses: { action_create: true, action_read: true, action_read_own: true, action_update: true, action_update_own: true, action_delete: false, action_delete_own: true },
-            users: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            usergroups: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            folders: { action_create: true, action_read: true, action_update: true, action_delete: false },
-            media: { action_create: true, action_read: true, action_update: true, action_delete: false },
-            organizations: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            coursechapters: { action_create: true, action_read: true, action_update: true, action_delete: false },
-            activities: { action_create: true, action_read: true, action_update: true, action_delete: false },
-            roles: { action_create: false, action_read: false, action_update: false, action_delete: false },
+            courses: { action_create: true, action_read: true, action_read_own: true, action_update: true, action_update_own: true, action_delete: true, action_delete_own: true },
+            users: { action_create: true, action_read: true, action_update: true, action_delete: true },
+            usergroups: { action_create: true, action_read: true, action_update: true, action_delete: true },
+            folders: { action_create: true, action_read: true, action_update: true, action_delete: true },
+            media: { action_create: true, action_read: true, action_update: true, action_delete: true },
+            organizations: { action_create: true, action_read: true, action_update: true, action_delete: true },
+            coursechapters: { action_create: true, action_read: true, action_update: true, action_delete: true },
+            activities: { action_create: true, action_read: true, action_update: true, action_delete: true },
+            roles: { action_create: true, action_read: true, action_update: true, action_delete: true },
+            dashboard: { action_access: true }
+        }
+    },
+    'Organization Coordinator': {
+        name: 'Organization Coordinator',
+        description: 'Uploads trainee lists (group registration via Excel), follows their organization\'s trainees\' progress and attendance, and receives financial and training reports.',
+        rights: {
+            courses: { action_create: false, action_read: true, action_read_own: true, action_update: false, action_update_own: false, action_delete: false, action_delete_own: false },
+            users: { action_create: true, action_read: true, action_update: true, action_delete: false },
+            usergroups: { action_create: true, action_read: true, action_update: true, action_delete: false },
+            folders: { action_create: false, action_read: true, action_update: false, action_delete: false },
+            media: { action_create: false, action_read: true, action_update: false, action_delete: false },
+            organizations: { action_create: false, action_read: true, action_update: false, action_delete: false },
+            coursechapters: { action_create: false, action_read: true, action_update: false, action_delete: false },
+            activities: { action_create: false, action_read: true, action_update: false, action_delete: false },
+            roles: { action_create: false, action_read: true, action_update: false, action_delete: false },
             dashboard: { action_access: true }
         }
     },
     'Instructor': {
         name: 'Instructor',
-        description: 'Can create and manage their own courses',
+        description: 'Uploads educational content (video/PDF/files), delivers in-person or Zoom/VCR sessions, records and evaluates attendance, and manages their own question bank.',
         rights: {
             courses: { action_create: true, action_read: true, action_read_own: true, action_update: false, action_update_own: true, action_delete: false, action_delete_own: true },
             users: { action_create: false, action_read: false, action_update: false, action_delete: false },
@@ -214,91 +237,11 @@ const predefinedRoles = {
             dashboard: { action_access: true }
         }
     },
-    'Viewer': {
-        name: 'Viewer',
-        description: 'Read-only access to courses and content',
+    'Trainee': {
+        name: 'Trainee',
+        description: 'Browses programs, registers, attends sessions, takes exams, and receives certificates when requirements are met.',
         rights: {
             courses: { action_create: false, action_read: true, action_read_own: true, action_update: false, action_update_own: false, action_delete: false, action_delete_own: false },
-            users: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            usergroups: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            folders: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            media: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            organizations: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            coursechapters: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            activities: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            roles: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            dashboard: { action_access: true }
-        }
-    },
-    'Content Creator': {
-        name: 'Content Creator',
-        description: 'Can create and edit content but not manage users',
-        rights: {
-            courses: { action_create: true, action_read: true, action_read_own: true, action_update: true, action_update_own: true, action_delete: false, action_delete_own: false },
-            users: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            usergroups: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            folders: { action_create: true, action_read: true, action_update: true, action_delete: false },
-            media: { action_create: true, action_read: true, action_update: true, action_delete: false },
-            organizations: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            coursechapters: { action_create: true, action_read: true, action_update: true, action_delete: false },
-            activities: { action_create: true, action_read: true, action_update: true, action_delete: false },
-            roles: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            dashboard: { action_access: true }
-        }
-    },
-    'User Manager': {
-        name: 'User Manager',
-        description: 'Can manage users and user groups',
-        rights: {
-            courses: { action_create: false, action_read: true, action_read_own: true, action_update: false, action_update_own: false, action_delete: false, action_delete_own: false },
-            users: { action_create: true, action_read: true, action_update: true, action_delete: true },
-            usergroups: { action_create: true, action_read: true, action_update: true, action_delete: true },
-            folders: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            media: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            organizations: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            coursechapters: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            activities: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            roles: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            dashboard: { action_access: true }
-        }
-    },
-    'Moderator': {
-        name: 'Moderator',
-        description: 'Can moderate content and manage activities',
-        rights: {
-            courses: { action_create: false, action_read: true, action_read_own: true, action_update: false, action_update_own: false, action_delete: false, action_delete_own: false },
-            users: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            usergroups: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            folders: { action_create: false, action_read: true, action_update: true, action_delete: false },
-            media: { action_create: false, action_read: true, action_update: true, action_delete: false },
-            organizations: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            coursechapters: { action_create: false, action_read: true, action_update: true, action_delete: false },
-            activities: { action_create: false, action_read: true, action_update: true, action_delete: false },
-            roles: { action_create: false, action_read: false, action_update: false, action_delete: false },
-            dashboard: { action_access: true }
-        }
-    },
-    'Analyst': {
-        name: 'Analyst',
-        description: 'Read-only access with analytics capabilities',
-        rights: {
-            courses: { action_create: false, action_read: true, action_read_own: true, action_update: false, action_update_own: false, action_delete: false, action_delete_own: false },
-            users: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            usergroups: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            folders: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            media: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            organizations: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            coursechapters: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            activities: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            roles: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            dashboard: { action_access: true }
-        }
-    },
-    'Guest': {
-        name: 'Guest',
-        description: 'Limited access for external users',
-        rights: {
-            courses: { action_create: false, action_read: true, action_read_own: false, action_update: false, action_update_own: false, action_delete: false, action_delete_own: false },
             users: { action_create: false, action_read: false, action_update: false, action_delete: false },
             usergroups: { action_create: false, action_read: false, action_update: false, action_delete: false },
             folders: { action_create: false, action_read: true, action_update: false, action_delete: false },
@@ -309,7 +252,7 @@ const predefinedRoles = {
             roles: { action_create: false, action_read: false, action_update: false, action_delete: false },
             dashboard: { action_access: false }
         }
-    }
+    },
 }
 
 const PermissionSection = ({ title, icon: Icon, section, permissions, rights, t, handleSelectAll, handleRightChange }: { title: string, icon: any, section: keyof Rights, permissions: string[], rights: Rights, t: any, handleSelectAll: (_section: keyof Rights, _value: boolean) => void, handleRightChange: (_section: keyof Rights, _action: string, _value: boolean) => void }) => {
@@ -320,14 +263,14 @@ const PermissionSection = ({ title, icon: Icon, section, permissions, rights, t,
     return (
         <div className="border border-gray-200 rounded-lg p-4 mb-4 bg-white shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                <div className="flex items-center space-x-2">
-                    <Icon className="w-4 h-4 text-gray-500" />
+                <div className="flex items-center gap-2">
+                    <Icon className="w-4 h-4 text-gray-500 shrink-0" />
                     <h3 className="font-semibold text-gray-800 text-sm sm:text-base">{title}</h3>
                 </div>
                 <button
                     type="button"
                     onClick={() => handleSelectAll(section, !allSelected)}
-                    className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-700 font-medium self-start sm:self-auto transition-colors"
+                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium self-start sm:self-auto transition-colors"
                 >
                     {allSelected ? <CheckSquare className="w-4 h-4" /> : someSelected ? <Square className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                     <span className="hidden sm:inline">{allSelected ? t('dashboard.users.roles.modals.create.permissions.deselect_all') : t('dashboard.users.roles.modals.create.permissions.select_all')}</span>
@@ -336,7 +279,7 @@ const PermissionSection = ({ title, icon: Icon, section, permissions, rights, t,
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {permissions.map((permission) => (
-                    <label key={permission} className="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-gray-50 transition-colors">
+                    <label key={permission} className="flex items-center gap-2 cursor-pointer p-2 rounded-md hover:bg-gray-50 transition-colors">
                         <input
                             type="checkbox"
                             checked={rights[section]?.[permission as keyof typeof rights[typeof section]] || false}
@@ -344,7 +287,7 @@ const PermissionSection = ({ title, icon: Icon, section, permissions, rights, t,
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
                         />
                         <span className="text-sm text-gray-700 capitalize">
-                            {t(`dashboard.users.roles.modals.create.permissions.actions.${permission.replace('action_', '').replace(/_/g, '_')}`)}
+                            {t(`dashboard.users.roles.modals.create.permissions.actions.${permission.replace('action_', '')}`)}
                         </span>
                     </label>
                 ))}
@@ -479,8 +422,9 @@ function AddRole(props: AddRoleProps) {
     const handlePredefinedRole = (roleKey: string) => {
         const role = predefinedRoles[roleKey as keyof typeof predefinedRoles]
         if (role) {
-            formik.setFieldValue('name', role.name)
-            formik.setFieldValue('description', role.description)
+            const localeKey = presetLocaleKey(roleKey)
+            formik.setFieldValue('name', t(`dashboard.users.roles.modals.create.presets.${localeKey}.name`))
+            formik.setFieldValue('description', t(`dashboard.users.roles.modals.create.presets.${localeKey}.description`))
             setRights(role.rights as Rights)
         }
     }
@@ -519,16 +463,16 @@ function AddRole(props: AddRoleProps) {
 
                         <div className="mt-6">
                             <h3 className="text-lg font-semibold text-gray-800 mb-4">{t('dashboard.users.roles.modals.create.presets.title')}</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {Object.keys(predefinedRoles).map((roleKey) => (
                                     <button
                                         key={roleKey}
                                         type="button"
                                         onClick={() => handlePredefinedRole(roleKey)}
-                                        className="p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 text-left bg-white shadow-sm hover:shadow-md"
+                                        className="p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 text-start bg-white shadow-sm hover:shadow-md"
                                     >
-                                        <div className="font-medium text-gray-900 text-sm sm:text-base">{t(`dashboard.users.roles.modals.create.presets.${roleKey === 'Course Manager' ? 'maintainer' : roleKey === 'Content Creator' ? 'content_creator' : roleKey === 'User Manager' ? 'user_manager' : roleKey.toLowerCase()}.name`)}</div>
-                                        <div className="text-xs sm:text-sm text-gray-500 mt-1">{t(`dashboard.users.roles.modals.create.presets.${roleKey === 'Course Manager' ? 'maintainer' : roleKey === 'Content Creator' ? 'content_creator' : roleKey === 'User Manager' ? 'user_manager' : roleKey.toLowerCase()}.description`)}</div>
+                                        <div className="font-medium text-gray-900 text-sm sm:text-base">{t(`dashboard.users.roles.modals.create.presets.${presetLocaleKey(roleKey)}.name`)}</div>
+                                        <div className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-3">{t(`dashboard.users.roles.modals.create.presets.${presetLocaleKey(roleKey)}.description`)}</div>
                                     </button>
                                 ))}
                             </div>

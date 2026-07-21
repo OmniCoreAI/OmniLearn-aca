@@ -97,6 +97,10 @@ export type AdminCreateUserBody = {
   first_name?: string
   last_name?: string
   role_uuid?: string | null
+  phone?: string | null
+  national_id?: string | null
+  gender?: 'male' | 'female' | 'other' | '' | null
+  birth_date?: string | null
 }
 
 export async function adminCreateUser(

@@ -645,6 +645,44 @@ async def _resolve_role_for_org(
     return role.id
 
 
+_ALLOWED_GENDERS = frozenset({"male", "female", "other"})
+
+
+def _build_admin_create_extra_metadata(payload: AdminUserCreate) -> dict | None:
+    """Normalize optional academy profile fields into User.extra_metadata."""
+    meta: dict = {}
+
+    phone = (payload.phone or "").strip()
+    if phone:
+        meta["phone"] = phone
+
+    national_id = (payload.national_id or "").strip()
+    if national_id:
+        meta["national_id"] = national_id
+
+    gender = (payload.gender or "").strip().lower()
+    if gender:
+        if gender not in _ALLOWED_GENDERS:
+            raise HTTPException(
+                status_code=400,
+                detail="Gender must be one of: male, female, other",
+            )
+        meta["gender"] = gender
+
+    birth_date = (payload.birth_date or "").strip()
+    if birth_date:
+        try:
+            datetime.strptime(birth_date, "%Y-%m-%d")
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Birth date must be YYYY-MM-DD",
+            ) from exc
+        meta["birth_date"] = birth_date
+
+    return meta or None
+
+
 async def admin_create_user(
     request: Request,
     org_id: int,
@@ -689,6 +727,7 @@ async def admin_create_user(
         raise HTTPException(status_code=400, detail="Email or username is already in use")
 
     temporary_password = generate_temporary_password()
+    extra_metadata = _build_admin_create_extra_metadata(payload)
 
     now_iso = str(datetime.now())
     user = User(
@@ -702,6 +741,7 @@ async def admin_create_user(
         email_verified_at=datetime.now(timezone.utc).isoformat(),
         signup_method="admin_created",
         must_change_password=True,
+        extra_metadata=extra_metadata,
         creation_date=now_iso,
         update_date=now_iso,
     )

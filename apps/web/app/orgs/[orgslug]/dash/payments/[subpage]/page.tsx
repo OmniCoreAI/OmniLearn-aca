@@ -31,8 +31,8 @@ function PaymentsPage(props: { params: Promise<PaymentsParams> }) {
     switch (subpage) {
       case 'overview':
         return {
-          h1: 'Overview',
-          h2: 'Revenue, transactions, subscriptions and customers'
+          h1: 'Finance Overview',
+          h2: 'Revenue, profit estimate, charts, transactions and exports'
         }
       case 'offers':
         return {

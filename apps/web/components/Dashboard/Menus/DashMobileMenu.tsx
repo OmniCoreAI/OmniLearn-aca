@@ -19,6 +19,7 @@ import {
   GraduationCap,
   Certificate,
   ChalkboardTeacher,
+  Newspaper,
   List,
   X,
   Check,
@@ -215,6 +216,8 @@ function DashMobileMenu() {
                 <PanelItem href="/dash/postgraduate" icon={<GraduationCap size={15} weight="fill" />} label={t('academic.postgraduate_studies', 'Postgraduate Studies')} active={isActive('/dash/postgraduate')} onClick={close} />
                 <PanelItem href="/dash/training-programs" icon={<Certificate size={15} weight="fill" />} label={t('academic.training_programs', 'Training Programs')} active={isActive('/dash/training-programs')} onClick={close} />
                 <PanelItem href="/dash/instructors" icon={<ChalkboardTeacher size={15} weight="fill" />} label={t('instructors.title', 'Instructors')} active={isActive('/dash/instructors')} onClick={close} />
+                <PanelItem href="/dash/finance" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.finance', 'Finance')} active={isActive('/dash/finance')} onClick={close} />
+                <PanelItem href="/dash/cms/news" icon={<Newspaper size={15} weight="fill" />} label={t('cms.news.title', 'News')} active={isActive('/dash/cms/news')} onClick={close} />
                 {isEnabled('folders') && <PanelItem href="/dash/library" icon={<FolderSimple size={15} weight="fill" />} label={t('library.library')} active={isActive('/dash/library')} onClick={close} />}
                 <PanelItem href="/dash/assignments" icon={<Files size={15} weight="fill" />} label={t('common.assignments')} active={isActive('/dash/assignments')} onClick={close} />
                 <PanelItem href="/dash/users/settings/users" icon={<Users size={15} weight="fill" />} label={t('common.users')} active={isActive('/dash/users')} onClick={close} />

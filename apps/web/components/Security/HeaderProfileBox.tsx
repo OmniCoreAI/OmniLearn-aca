@@ -27,6 +27,7 @@ import { changeLanguage } from '@/lib/i18n'
 import { AVAILABLE_LANGUAGES } from '@/lib/languages'
 import LanguageSwitcher from '@components/Utils/LanguageSwitcher'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
+import { isSystemRoleName } from '@/lib/system-roles'
 import { getMenuColorClasses } from '@services/utils/ts/colorUtils'
 
 interface RoleInfo {
@@ -35,6 +36,7 @@ interface RoleInfo {
   bgColor: string;
   textColor: string;
   description: string;
+  showBadge?: boolean;
 }
 
 interface CustomRoleInfo {
@@ -52,6 +54,17 @@ export const HeaderProfileBox = ({ primaryColor = '' }: { primaryColor?: string 
 
 
   const userRoleInfo = useMemo((): RoleInfo | null => {
+    if (session.data?.user?.is_superadmin === true) {
+      return {
+        name: t('roles.role_super_admin'),
+        icon: <Crown size={12} weight="fill" />,
+        bgColor: 'bg-red-600',
+        textColor: 'text-white',
+        description: t('roles.role_super_admin_desc'),
+        showBadge: true,
+      }
+    }
+
     if (!userRoles || userRoles.length === 0) return null;
 
     // Find the highest priority role for the current organization
@@ -79,28 +92,32 @@ export const HeaderProfileBox = ({ primaryColor = '' }: { primaryColor?: string 
         icon: <Crown size={12} weight="fill" />,
         bgColor: 'bg-purple-600',
         textColor: 'text-white',
-        description: t('roles.role_admin_desc')
+        description: t('roles.role_admin_desc'),
+        showBadge: true,
       },
       'role_global_maintainer': {
         name: t('roles.role_maintainer'),
         icon: <Shield size={12} weight="fill" />,
         bgColor: 'bg-blue-600',
         textColor: 'text-white',
-        description: t('roles.role_maintainer_desc')
+        description: t('roles.role_maintainer_desc'),
+        showBadge: true,
       },
       'role_global_instructor': {
         name: t('roles.role_instructor'),
         icon: <Users size={12} weight="fill" />,
         bgColor: 'bg-green-600',
         textColor: 'text-white',
-        description: t('roles.role_instructor_desc')
+        description: t('roles.role_instructor_desc'),
+        showBadge: true,
       },
       'role_global_user': {
         name: t('roles.role_user'),
         icon: <User size={12} weight="fill" />,
         bgColor: 'bg-gray-500',
         textColor: 'text-white',
-        description: t('roles.role_user_desc')
+        description: t('roles.role_user_desc'),
+        showBadge: false,
       }
     };
 
@@ -117,8 +134,8 @@ export const HeaderProfileBox = ({ primaryColor = '' }: { primaryColor?: string 
     }
 
     return roleConfigs[roleKey] || roleConfigs['role_global_user'];
-    // t is a real dependency: the labels must recompute on language change
-  }, [userRoles, org?.id, t]);
+    // t and superadmin flag are real dependencies: labels must recompute on language change
+  }, [userRoles, org?.id, t, session.data?.user?.is_superadmin]);
 
   const customRoles = useMemo((): CustomRoleInfo[] => {
     if (!userRoles || userRoles.length === 0) return [];
@@ -130,12 +147,11 @@ export const HeaderProfileBox = ({ primaryColor = '' }: { primaryColor?: string 
 
     // Filter for custom roles (not system roles)
     const customRoles = orgRoles.filter((role: any) => {
-      // Check if it's a system role
-      const isSystemRole = 
+      const isSystemRole =
         role.role.role_uuid?.startsWith('role_global_') ||
         [1, 2, 3, 4].includes(role.role.id) ||
-        ['Admin', 'Maintainer', 'Instructor', 'User'].includes(role.role.name);
-      
+        isSystemRoleName(role.role.name);
+
       return !isSystemRole;
     });
 
@@ -175,7 +191,7 @@ export const HeaderProfileBox = ({ primaryColor = '' }: { primaryColor?: string 
                   <div className="flex flex-col items-start space-y-0">
                     <div className="flex items-center space-x-2">
                       <p className={`text-sm font-semibold capitalize ${colors.profileName}`}>{session.data.user.username}</p>
-                      {userRoleInfo && userRoleInfo.name !== 'USER' && (
+                      {userRoleInfo && userRoleInfo.showBadge !== false && (
                         <Tooltip 
                           content={userRoleInfo.description}
                           sideOffset={15}

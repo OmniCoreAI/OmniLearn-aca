@@ -1,6 +1,5 @@
 import {
   Users,
-  UsersThree,
   ShieldCheck,
   UserPlus,
   ClipboardText,
@@ -27,30 +26,12 @@ export const searchMetas: SearchMeta[] = [
     group: 'users',
   },
   {
-    id: 'dash.users.usergroups',
-    titleKey: 'dashboard.users.settings.tabs.usergroups',
-    descriptionKey: 'dashboard.search.entries.usergroups.description',
-    keywordsKey: 'dashboard.search.entries.usergroups.keywords',
-    icon: UsersThree,
-    href: '/dash/users/settings/usergroups',
-    group: 'users',
-  },
-  {
     id: 'dash.users.roles',
     titleKey: 'dashboard.users.settings.tabs.roles',
     descriptionKey: 'dashboard.search.entries.roles.description',
     keywordsKey: 'dashboard.search.entries.roles.keywords',
     icon: ShieldCheck,
     href: '/dash/users/settings/roles',
-    group: 'users',
-  },
-  {
-    id: 'dash.users.signups',
-    titleKey: 'dashboard.users.settings.tabs.signups',
-    descriptionKey: 'dashboard.search.entries.signups.description',
-    keywordsKey: 'dashboard.search.entries.signups.keywords',
-    icon: UserPlus,
-    href: '/dash/users/settings/signups',
     group: 'users',
   },
   {

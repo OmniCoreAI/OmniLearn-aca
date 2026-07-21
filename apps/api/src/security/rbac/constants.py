@@ -4,10 +4,11 @@ RBAC Role Constants
 This module defines role ID constants used throughout the RBAC system.
 Using constants instead of magic numbers improves code maintainability and clarity.
 
-Role Hierarchy:
-    ADMIN (1) - Full access to all resources and organization management
-    MAINTAINER (2) - Can manage content but limited org-level permissions
-    MEMBER (3+) - Custom roles with configurable permissions
+Role Hierarchy (global org roles):
+    ACADEMY_ADMIN (1) - Full org administration: programs, courses, sessions, certificates, reports
+    ORGANIZATION_COORDINATOR (2) - Org trainee management, progress tracking, and reports
+    INSTRUCTOR (3) - Content delivery, sessions, attendance, and question bank
+    TRAINEE (4+) - Learner access; custom roles use configurable permissions
 """
 
 # Core role IDs - these match the database seed data
