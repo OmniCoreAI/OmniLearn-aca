@@ -219,7 +219,19 @@ prepare_env() {
   if [ -n "$DOMAIN" ]; then
     set_env OMNILEARN_DOMAIN "$DOMAIN"
     set_env OMNILEARN_FRONTEND_DOMAIN "$DOMAIN"
-    info "Domain set to ${DOMAIN}"
+
+    # Public, browser-facing API origin + scheme. Without this the browser would
+    # try to reach the internal 127.0.0.1:9000 and every fetch would fail.
+    if [ "$NO_TLS" != "1" ] && [ -n "$EMAIL" ]; then
+      set_env OMNILEARN_PUBLIC_URL "https://${DOMAIN}"
+      set_env NEXT_PUBLIC_OMNILEARN_HTTPS true
+      set_env NEXT_PUBLIC_COLLAB_URL "wss://${DOMAIN}/collab"
+    else
+      set_env OMNILEARN_PUBLIC_URL "http://${DOMAIN}"
+      set_env NEXT_PUBLIC_OMNILEARN_HTTPS false
+      set_env NEXT_PUBLIC_COLLAB_URL "ws://${DOMAIN}/collab"
+    fi
+    info "Domain set to ${DOMAIN} (public URL: $(grep -E '^OMNILEARN_PUBLIC_URL=' "$ENV_FILE" | cut -d= -f2-))"
   else
     warn "No --domain given; leaving OMNILEARN_DOMAIN as-is (IP/localhost)."
   fi

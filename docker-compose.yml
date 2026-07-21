@@ -49,8 +49,9 @@ services:
     image: omnilearn:local
     container_name: omnilearn-app
     restart: unless-stopped
+    # Dev uses .env by default; deploy with OMNILEARN_ENV_FILE=.env.production
     env_file:
-      - .env
+      - ${OMNILEARN_ENV_FILE:-.env}
     environment:
       OMNILEARN_IN_DOCKER: "1"
       # In-network service URLs (not host localhost)
@@ -59,7 +60,13 @@ services:
       OMNILEARN_API_URL: http://127.0.0.1:9000
       OMNILEARN_FRONTEND_DOMAIN: ${OMNILEARN_FRONTEND_DOMAIN:-localhost:${HTTP_PORT:-8080}}
       NEXT_PUBLIC_OMNILEARN_DOMAIN: ${OMNILEARN_FRONTEND_DOMAIN:-localhost:${HTTP_PORT:-8080}}
-      NEXT_PUBLIC_OMNILEARN_BACKEND_URL: http://127.0.0.1:9000
+      # Browser-facing API origin. For a public domain deploy set OMNILEARN_PUBLIC_URL
+      # (e.g. https://lms.example.com) in .env so the browser calls the API through
+      # nginx. Locally the browser uses same-origin /api/v1, so the internal default
+      # (127.0.0.1:9000, used for server-side rendering) is fine.
+      NEXT_PUBLIC_OMNILEARN_BACKEND_URL: ${OMNILEARN_PUBLIC_URL:-http://127.0.0.1:9000}
+      NEXT_PUBLIC_OMNILEARN_HTTPS: ${NEXT_PUBLIC_OMNILEARN_HTTPS:-false}
+      NEXT_PUBLIC_COLLAB_URL: ${NEXT_PUBLIC_COLLAB_URL:-ws://localhost:${COLLAB_PORT:-4040}}
       COLLAB_PORT: ${COLLAB_PORT:-4040}
     ports:
       # APP_BIND=127.0.0.1 keeps the port private (host nginx proxies to it);

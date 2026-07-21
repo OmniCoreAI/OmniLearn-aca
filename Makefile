@@ -12,11 +12,12 @@ SHELL := /bin/bash
 COMPOSE := docker compose
 LOG_DIR := logs
 LOG_FILE := $(LOG_DIR)/omnilearn.log
+PROD_ENV := .env.production
 
-.PHONY: help build up down logs restart ps deploy
+.PHONY: help build up up-prod down logs restart ps deploy
 
 help:
-	@echo "Targets: build | up | down | logs | restart | ps | deploy"
+	@echo "Targets: build | up | up-prod | down | logs | restart | ps | deploy"
 
 build:
 	$(COMPOSE) build
@@ -24,7 +25,14 @@ build:
 up:
 	@mkdir -p $(LOG_DIR)
 	nohup $(COMPOSE) up --build > $(LOG_FILE) 2>&1 &
-	@echo "OmniLearn is starting in the background (nohup)."
+	@echo "OmniLearn (dev, .env) is starting in the background (nohup)."
+	@echo "Follow logs with: make logs   (file: $(LOG_FILE))"
+
+up-prod:
+	@mkdir -p $(LOG_DIR)
+	@test -f $(PROD_ENV) || { echo "Missing $(PROD_ENV) — create it first."; exit 1; }
+	OMNILEARN_ENV_FILE=$(PROD_ENV) nohup $(COMPOSE) up --build > $(LOG_FILE) 2>&1 &
+	@echo "OmniLearn (prod, $(PROD_ENV)) is starting in the background (nohup)."
 	@echo "Follow logs with: make logs   (file: $(LOG_FILE))"
 
 down:
