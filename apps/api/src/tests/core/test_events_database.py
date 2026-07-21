@@ -510,6 +510,32 @@ def test_postgres_shorthand_url_is_rewritten_to_asyncpg(monkeypatch):
     assert received_urls[0].startswith("postgresql+asyncpg://"), received_urls[0]
 
 
+def test_sslmode_query_is_mapped_to_ssl_connect_arg(monkeypatch):
+    """libpq sslmode must not reach asyncpg.connect() as a keyword argument."""
+    received = {}
+
+    def capture_engine(url, *args, **kwargs):
+        received["url"] = url
+        received["kwargs"] = kwargs
+
+        class _FakeSyncEngine:
+            pass
+
+        class _E:
+            sync_engine = _FakeSyncEngine()
+
+        return _E()
+
+    _reload_with_url(
+        monkeypatch,
+        "postgresql://user:pw@host:25060/db?sslmode=require",
+        capture_engine,
+    )
+    assert "sslmode" not in received["url"]
+    assert received["url"].startswith("postgresql+asyncpg://")
+    assert received["kwargs"]["connect_args"]["ssl"] == "require"
+
+
 def test_pooler_url_uses_small_pool_and_logs(monkeypatch, caplog):
     """A Supavisor pooler URL should trigger the small pool path and log a message."""
     received_kwargs = {}

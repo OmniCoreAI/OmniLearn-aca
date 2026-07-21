@@ -143,6 +143,9 @@ export type CourseProfit = {
   org_id: number
   course_uuid: string
   course_name?: string | null
+  program_uuid?: string | null
+  program_name?: string | null
+  program_type?: 'postgraduate' | 'training' | null
   currency: string
   attendees: number
   certified_attendees: number

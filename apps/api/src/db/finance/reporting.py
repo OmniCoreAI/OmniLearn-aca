@@ -129,6 +129,9 @@ class CourseProfitRead(SQLModel):
     org_id: int
     course_uuid: str
     course_name: Optional[str] = None
+    program_uuid: Optional[str] = None
+    program_name: Optional[str] = None
+    program_type: Optional[str] = None  # postgraduate | training
     currency: str = "EGP"
     attendees: int = 0
     certified_attendees: int = 0

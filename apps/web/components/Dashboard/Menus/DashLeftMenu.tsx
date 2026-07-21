@@ -6,6 +6,7 @@ import {
   BookOpen,
   Files,
   Users,
+  UsersThree,
   CurrencyCircleDollar,
   Buildings,
   Globe,
@@ -409,6 +410,12 @@ function DashLeftMenu() {
                     <Link href="/dash/users/settings/users" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-ink))]/75 hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">
                       <Users size={16} weight="fill" />
                       <span>{t('dashboard.users.settings.tabs.users')}</span>
+                    </Link>
+                  </HoverMenuItem>
+                  <HoverMenuItem asChild>
+                    <Link href="/dash/users/settings/usergroups" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-ink))]/75 hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">
+                      <UsersThree size={16} weight="fill" />
+                      <span className="flex items-center">{t('dashboard.users.settings.tabs.usergroups')}<PlanBadge currentPlan={plan} requiredPlan="standard" variant="light" /></span>
                     </Link>
                   </HoverMenuItem>
                   <HoverMenuItem asChild>
