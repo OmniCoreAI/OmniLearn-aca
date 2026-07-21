@@ -134,7 +134,7 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
                   )
                 : null
             }
-            footerLabel={t(`academic.type_${p.training_type}`, p.training_type)}
+            footerLabel={String(t(`academic.type_${p.training_type}`, { defaultValue: p.training_type }))}
             onEdit={() => {
               setEditing(p)
               setModalOpen(true)

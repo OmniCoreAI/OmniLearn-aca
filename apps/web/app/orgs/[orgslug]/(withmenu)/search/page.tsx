@@ -663,8 +663,8 @@ function Pagination({
 }
 
 function gridClass(key: ResourceKey): string {
-  // Dense list for inline types (folders/discussions), card grid for rich types.
-  if (key === 'folders' || key === 'discussions' || key === 'users') {
+  // Dense list for inline types, card grid for rich types.
+  if (key === 'folders' || key === 'users') {
     return 'grid gap-3 md:grid-cols-2 lg:grid-cols-3'
   }
   return 'grid gap-4 md:grid-cols-2 lg:grid-cols-3'
