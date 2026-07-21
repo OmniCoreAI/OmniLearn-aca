@@ -78,7 +78,7 @@ const COLLAB_ENV: AppEnvSpec = {
       name: 'COLLAB_PORT',
       required: true,
       description: 'WebSocket server port',
-      defaultValue: '4000',
+      defaultValue: '4040',
     },
     {
       name: 'OMNILEARN_API_URL',

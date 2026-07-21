@@ -134,7 +134,7 @@ describe('generateEeCaddyfile', () => {
     const c = generateEeCaddyfile(baseEe())
     expect(c).toContain('{$DOMAIN} {')
     expect(c).toContain('reverse_proxy api:9000')
-    expect(c).toContain('reverse_proxy collab:4000')
+    expect(c).toContain('reverse_proxy collab:4040')
     expect(c).toContain('reverse_proxy web:3000')
     expect(c).not.toContain('on_demand')
     expect(c).not.toContain('local_certs')
