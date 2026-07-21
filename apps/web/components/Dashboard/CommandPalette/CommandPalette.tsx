@@ -60,10 +60,7 @@ function groupContentResults(results: ContentResult[]): Record<ContentResultType
   const groups: Record<ContentResultType, ContentResult[]> = {
     course: [],
     user: [],
-    community: [],
-    discussion: [],
     playground: [],
-    podcast: [],
   }
   for (const r of results) groups[r.type].push(r)
   return groups

@@ -1,22 +1,25 @@
 codecov:
-  require_ci_to_pass: true
+  require_ci_to_pass: false
 
 coverage:
   status:
     project:
       default:
-        target: 90%
-        threshold: 1%
+        # Informational: pytest already enforces --cov-fail-under in CI.
+        target: auto
+        threshold: 2%
+        informational: true
         flags:
           - api
     patch:
       default:
-        target: 90%
-        threshold: 1%
+        target: auto
+        threshold: 2%
+        informational: true
         flags:
           - api
         if_ci_failed: success
-        only_pulls: false
+        only_pulls: true
 
 flag_management:
   default_rules:

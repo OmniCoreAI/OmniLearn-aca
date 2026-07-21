@@ -168,7 +168,7 @@ class TestCSRFExemptions:
 
     def test_api_token_case_insensitive(self):
         mw = self._make_middleware()
-        req = _make_request(headers={"authorization": "BEARER OL_abc123"})
+        req = _make_request(headers={"authorization": "BEARER LH_abc123"})
         assert mw._is_csrf_exempt(req) is True
 
     def test_regular_bearer_jwt_not_exempt(self):

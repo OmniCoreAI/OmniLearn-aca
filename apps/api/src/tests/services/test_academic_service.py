@@ -28,7 +28,6 @@ from src.db.academic.semesters import SemesterCreate
 from src.db.academic.links import SemesterCourseUpdate
 from src.db.academic.training_programs import (
     TrainingProgramCreate,
-    TrainingProgramUpdate,
     TrainingType,
 )
 from src.db.academic.course_profiles import (

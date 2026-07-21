@@ -1311,7 +1311,10 @@ def _filter_public_navigation(nav) -> dict:
         for group in sorted(item.children, key=lambda g: g.order):
             links = [
                 link.model_dump()
-                for link in sorted((l for l in group.links if l.enabled), key=lambda l: l.order)
+                for link in sorted(
+                    (item for item in group.links if item.enabled),
+                    key=lambda item: item.order,
+                )
             ]
             if links:
                 groups.append({"title": group.title, "order": group.order, "links": links})
