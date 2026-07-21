@@ -283,7 +283,7 @@ const ROUTES_SINGLE = `	handle /api/v1/* {
 	}
 
 	handle /collab/* {
-		reverse_proxy collab:4000 {
+		reverse_proxy collab:4040 {
 			header_up Host {host}
 			header_up X-Real-IP {remote_host}
 			header_up X-Forwarded-For {remote_host}

@@ -65,6 +65,10 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     install_package("src.routers.courses.activities")
     install_package("src.routers.playgrounds")
     install_package("src.routers.integrations")
+    install_package("src.routers.academic")
+    install_package("src.routers.instructors")
+    install_package("src.routers.finance")
+    install_package("src.routers.cms")
     install_package("src.services")
     install_package("src.services.dev")
     install_package("src.security")
@@ -213,6 +217,68 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     sys.modules["src.routers.playgrounds"].playgrounds_generator = sys.modules[
         "src.routers.playgrounds.playgrounds_generator"
     ]
+
+    install_router_module(
+        "src.routers.academic.programs", "src.routers.academic.programs"
+    )
+    install_router_module(
+        "src.routers.academic.cohorts", "src.routers.academic.cohorts"
+    )
+    install_router_module(
+        "src.routers.academic.semesters", "src.routers.academic.semesters"
+    )
+    install_router_module(
+        "src.routers.academic.training_programs",
+        "src.routers.academic.training_programs",
+    )
+    install_router_module(
+        "src.routers.academic.course_profiles",
+        "src.routers.academic.course_profiles",
+    )
+    sys.modules["src.routers.academic"].programs = sys.modules[
+        "src.routers.academic.programs"
+    ]
+    sys.modules["src.routers.academic"].cohorts = sys.modules[
+        "src.routers.academic.cohorts"
+    ]
+    sys.modules["src.routers.academic"].semesters = sys.modules[
+        "src.routers.academic.semesters"
+    ]
+    sys.modules["src.routers.academic"].training_programs = sys.modules[
+        "src.routers.academic.training_programs"
+    ]
+    sys.modules["src.routers.academic"].course_profiles = sys.modules[
+        "src.routers.academic.course_profiles"
+    ]
+
+    install_router_module(
+        "src.routers.instructors.instructors", "src.routers.instructors.instructors"
+    )
+    install_router_module(
+        "src.routers.instructors.categories", "src.routers.instructors.categories"
+    )
+    install_router_module(
+        "src.routers.instructors.finance", "src.routers.instructors.finance"
+    )
+    sys.modules["src.routers.instructors"].instructors = sys.modules[
+        "src.routers.instructors.instructors"
+    ]
+    sys.modules["src.routers.instructors"].categories = sys.modules[
+        "src.routers.instructors.categories"
+    ]
+    sys.modules["src.routers.instructors"].finance = sys.modules[
+        "src.routers.instructors.finance"
+    ]
+
+    install_router_module(
+        "src.routers.finance.ledger", "src.routers.finance.ledger"
+    )
+    sys.modules["src.routers.finance"].ledger = sys.modules[
+        "src.routers.finance.ledger"
+    ]
+
+    install_router_module("src.routers.cms.news", "src.routers.cms.news")
+    sys.modules["src.routers.cms"].news = sys.modules["src.routers.cms.news"]
 
     install(
         "src.core.ee_hooks",

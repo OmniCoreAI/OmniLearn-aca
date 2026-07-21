@@ -25,9 +25,9 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 
 ENV NODE_ENV=production
-ENV COLLAB_PORT=4000
+ENV COLLAB_PORT=4040
 
-EXPOSE 4000
+EXPOSE 4040
 
 USER collab
 

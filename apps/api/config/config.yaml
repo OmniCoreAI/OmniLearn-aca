@@ -49,6 +49,8 @@ mailing_config:
   smtp_use_tls: true
 
 database_config:
+  # Fallback for local/dev only. Production/Docker must set OMNILEARN_SQL_CONNECTION_STRING
+  # (env always wins over this value — see config/config.py).
   sql_connection_string: postgresql://omnilearn:omnilearn@localhost:5433/omnilearn
 
 redis_config:

@@ -61,6 +61,12 @@ if is_testing:
 else:
     raw_sql_url = str(omnilearn_config.database_config.sql_connection_string)  # type: ignore
 
+    # asyncpg expects the `ssl` connect arg, not libpq's `sslmode`. The canonical
+    # connection string uses `sslmode=...` so the sync psycopg2 startup path works;
+    # translate it here for the async driver (e.g. managed DBs with sslmode=require).
+    if "+asyncpg" in sql_url:
+        sql_url = sql_url.replace("sslmode=", "ssl=")
+
     # PgBouncer/Supavisor in transaction pool mode recycles backend connections
     # between client requests, which breaks asyncpg's named prepared statements:
     # two asyncpg connections independently generate __asyncpg_stmt_N__ and when

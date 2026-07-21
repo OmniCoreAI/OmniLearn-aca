@@ -133,9 +133,40 @@ class OmniLearnConfig(BaseModel):
     judge0_config: Judge0Config | None
 
 
+def _repo_root() -> str:
+    # apps/api/config/config.py → repo root
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+
+def _load_unified_env() -> None:
+    """Load the single root `.env`, then optional local overrides (no override of set vars)."""
+    root_env = os.path.join(_repo_root(), ".env")
+    api_env = os.path.join(os.path.dirname(__file__), "..", ".env")
+    load_dotenv(root_env)
+    load_dotenv(api_env)  # optional; does not override values already set
+
+
+def _normalize_sql_url_for_runtime(url: str | None) -> str | None:
+    """Rewrite compose hostname `db` to the published host port outside Docker."""
+    if not url:
+        return url
+    in_docker = (
+        os.path.exists("/.dockerenv")
+        or os.environ.get("OMNILEARN_IN_DOCKER", "").lower() in ("1", "true", "yes")
+    )
+    if in_docker:
+        return url
+    # npm run dev / host tools: compose publishes db as localhost:5433
+    if "@db:5432" in url:
+        return url.replace("@db:5432", "@127.0.0.1:5433")
+    if "@db/" in url:
+        return url.replace("@db/", "@127.0.0.1:5433/")
+    return url
+
+
 def get_omnilearn_config() -> OmniLearnConfig:
 
-    load_dotenv()
+    _load_unified_env()
 
     # Get the YAML file
     yaml_path = os.path.join(os.path.dirname(__file__), "config.yaml")
@@ -372,9 +403,10 @@ def get_omnilearn_config() -> OmniLearnConfig:
     )
 
     # Database config
-    sql_connection_string = env_sql_connection_string or yaml_config.get(
-        "database_config", {}
-    ).get("sql_connection_string")
+    sql_connection_string = _normalize_sql_url_for_runtime(
+        env_sql_connection_string
+        or yaml_config.get("database_config", {}).get("sql_connection_string")
+    )
 
     # AI Config
     yaml_ai_config = yaml_config.get("ai_config", {}) or {}

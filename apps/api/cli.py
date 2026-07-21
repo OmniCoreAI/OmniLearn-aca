@@ -32,7 +32,8 @@ cli = typer.Typer()
 
 
 def _to_sync_url(url: str) -> str:
-    return url.replace("+asyncpg", "")
+    # Sync engine uses psycopg2, which wants libpq's `sslmode`, so convert back.
+    return url.replace("+asyncpg", "").replace("ssl=", "sslmode=")
 
 
 @cli.command()
@@ -78,10 +79,9 @@ async def _install_async(short: bool) -> None:
                 print("Default elements installed ✅")
 
                 # Honor OMNILEARN_INITIAL_ORG_NAME / OMNILEARN_INITIAL_ORG_SLUG when
-                # the CLI passes them — falls back to "Default Organization" / "default"
-                # so existing standalone deployments still work unchanged.
-                org_name = os.environ.get("OMNILEARN_INITIAL_ORG_NAME", "Default Organization")
-                org_slug = os.environ.get("OMNILEARN_INITIAL_ORG_SLUG", "default").lower()
+                # set — defaults to ACA org for this deployment.
+                org_name = os.environ.get("OMNILEARN_INITIAL_ORG_NAME", "aca")
+                org_slug = os.environ.get("OMNILEARN_INITIAL_ORG_SLUG", "aca").lower()
 
                 # Create the Organization
                 print(f"Creating organization '{org_name}' (slug: {org_slug})...")
@@ -100,8 +100,8 @@ async def _install_async(short: bool) -> None:
 
                 # Create Organization User
                 print("Creating default organization user...")
-                # Use email from environment variable if provided, otherwise default to "admin@school.dev"
-                email = os.environ.get("OMNILEARN_INITIAL_ADMIN_EMAIL", "admin@school.dev")
+                # Use email from environment variable if provided, otherwise default to OmniCore AI admin
+                email = os.environ.get("OMNILEARN_INITIAL_ADMIN_EMAIL", "admin@omnicoreai.com")
                 # Require password from environment variable
                 password = os.environ.get("OMNILEARN_INITIAL_ADMIN_PASSWORD")
                 if not password:
@@ -109,7 +109,7 @@ async def _install_async(short: bool) -> None:
                     print("Please set OMNILEARN_INITIAL_ADMIN_PASSWORD environment variable before running installation.")
                     raise typer.Exit(code=1)
                 print("Using password from OMNILEARN_INITIAL_ADMIN_PASSWORD environment variable")
-                if email != "admin@school.dev":
+                if email != "admin@omnicoreai.com":
                     print(f"Using email from OMNILEARN_INITIAL_ADMIN_EMAIL environment variable: {email}")
                 user = UserCreate(
                     username="admin", email=email, password=password

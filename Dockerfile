@@ -93,6 +93,10 @@ COPY ./apps/api/uv.lock ./apps/api/pyproject.toml ./
 RUN pip install --no-cache-dir --upgrade pip uv \
     && uv sync --no-dev
 COPY ./apps/api ./
+# Bake the initial organization logo; autoinstall seeds it on first startup.
+COPY EACA.png /app/api/assets/initial-org-logo.png
+# Host/dev .env must never ship in the image (points at 127.0.0.1:5433 for npm run dev).
+RUN rm -f /app/api/.env /app/api/.env.* /app/api/config/.env /app/api/config/.env.*
 
 # Remove Enterprise Edition folder for public builds
 ARG OMNILEARN_PUBLIC=false
@@ -111,8 +115,8 @@ COPY ./apps/api/docker-entrypoint.sh /app/api/docker-entrypoint.sh
 COPY ./docker/start.sh /app/start.sh
 RUN chmod +x /app/api/docker-entrypoint.sh /app/start.sh
 
-ENV PORT=8000 OMNILEARN_PORT=9000 COLLAB_PORT=4000 HOSTNAME=0.0.0.0 OMNILEARN_OSS=true NEXT_PUBLIC_OMNILEARN_OSS=true
+ENV PORT=8000 OMNILEARN_PORT=9000 COLLAB_PORT=4040 HOSTNAME=0.0.0.0 OMNILEARN_OSS=true NEXT_PUBLIC_OMNILEARN_OSS=true
 
-EXPOSE 80 9000 4000
+EXPOSE 80 9000 4040
 
 CMD ["sh", "/app/start.sh"]

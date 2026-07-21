@@ -5,14 +5,20 @@ on:
   push:
     branches:
       - dev
+      - main
     paths:
       - "apps/api/**"
+      - ".github/workflows/api-tests.yaml"
   pull_request:
     paths:
       - "apps/api/**"
+      - ".github/workflows/api-tests.yaml"
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
     steps:
       - uses: actions/checkout@v7
 
@@ -27,12 +33,18 @@ jobs:
           version: latest
 
       - name: Install dependencies
-        run: uv sync
-        working-directory: apps/api
+        run: uv sync --frozen
 
       - name: Run tests with coverage
-        run: uv run pytest src/tests/ -v --tb=short --cov=src --cov-report=html --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=25
-        working-directory: apps/api
+        # Exclude live Ollama opt-in tests; they only run locally with `-m ollama`.
+        run: >
+          uv run pytest src/tests/ -v --tb=short
+          -m "not ollama"
+          --cov=src
+          --cov-report=html
+          --cov-report=term-missing
+          --cov-report=xml:coverage.xml
+          --cov-fail-under=25
         env:
           TESTING: "true"
 
@@ -42,7 +54,9 @@ jobs:
           files: apps/api/coverage.xml
           flags: api
           name: api-coverage
-          fail_ci_if_error: true
+          # Don't fail the job on upload/network/token issues — pytest already gates coverage.
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7

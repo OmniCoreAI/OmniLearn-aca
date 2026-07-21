@@ -3,11 +3,14 @@ on:
   push:
     branches:
       - dev
+      - main
     paths:
       - "apps/web/**"
+      - ".github/workflows/web-lint.yaml"
   pull_request:
     paths:
       - "apps/web/**"
+      - ".github/workflows/web-lint.yaml"
 permissions:
   contents: read
 jobs:
@@ -28,12 +31,15 @@ jobs:
       # ESLint setup fails here instead of being masked by `|| true`.
       - name: Lint (full project, report-only)
         run: |
-          bunx eslint . || EXIT_CODE=$?
-          if [ "${EXIT_CODE:-0}" -eq 2 ]; then
+          set +e
+          bunx eslint .
+          EXIT_CODE=$?
+          set -e
+          if [ "$EXIT_CODE" -eq 2 ]; then
             echo "ESLint crashed (exit 2) — failing the workflow."
             exit 2
           fi
-          echo "ESLint ran to completion (exit ${EXIT_CODE:-0}); lint debt is reported above but not enforced yet."
+          echo "ESLint ran to completion (exit ${EXIT_CODE}); lint debt is reported above but not enforced yet."
         working-directory: ./apps/web
       # Strict gate: files changed in a PR must be lint-clean. This stops new
       # debt while the backlog shrinks, without blocking on pre-existing issues.
@@ -41,11 +47,13 @@ jobs:
         if: github.event_name == 'pull_request'
         working-directory: ./apps/web
         run: |
+          git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF}"
           # Pathspecs are resolved relative to working-directory (apps/web),
           # while --name-only output stays repo-root-relative — hence the sed.
           CHANGED=$(git diff --name-only --diff-filter=ACMR "origin/${GITHUB_BASE_REF}...HEAD" -- \
             '**/*.ts' '**/*.tsx' '**/*.js' '**/*.jsx' '**/*.mjs' \
-            | sed 's|^apps/web/||')
+            | sed 's|^apps/web/||' \
+            | grep -v '^$' || true)
           if [ -z "$CHANGED" ]; then
             echo "No changed lintable files."
             exit 0

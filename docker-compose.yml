@@ -1,5 +1,10 @@
 name: omnilearn
 
+# Full stack from one root .env:
+#   cp .env.example .env
+#   docker compose up --build
+# UI: http://localhost:8080
+
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -9,6 +14,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-omnilearn}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omnilearn}
       POSTGRES_DB: ${POSTGRES_DB:-omnilearn}
+    ports:
+      # Host access for npm run dev (API rewrites @db → 127.0.0.1:5433)
+      - "5433:5432"
     volumes:
       - omnilearn_db_data:/var/lib/postgresql/data
     networks:
@@ -41,16 +49,33 @@ services:
     image: omnilearn:local
     container_name: omnilearn-app
     restart: unless-stopped
+    # Dev uses .env by default; deploy with OMNILEARN_ENV_FILE=.env.production
     env_file:
-      - docker/.env
+      - ${OMNILEARN_ENV_FILE:-.env}
     environment:
-      OMNILEARN_SQL_CONNECTION_STRING: postgresql://${POSTGRES_USER:-omnilearn}:${POSTGRES_PASSWORD:-omnilearn}@db:5432/${POSTGRES_DB:-omnilearn}
+      OMNILEARN_IN_DOCKER: "1"
+      # In-network service URLs (not host localhost). Use OMNILEARN_SQL_CONNECTION_STRING
+      # from your env file (e.g. a managed DigitalOcean Postgres) when set; otherwise
+      # fall back to the compose `db` service. Without this the app would use
+      # config.yaml's localhost:5433 and fail to reach Postgres from the container.
+      OMNILEARN_SQL_CONNECTION_STRING: ${OMNILEARN_SQL_CONNECTION_STRING:-postgresql://${POSTGRES_USER:-omnilearn}:${POSTGRES_PASSWORD:-omnilearn}@db:5432/${POSTGRES_DB:-omnilearn}}
       OMNILEARN_REDIS_CONNECTION_STRING: redis://redis:6379/omnilearn
+      OMNILEARN_REDIS_URL: redis://redis:6379
+      OMNILEARN_API_URL: http://127.0.0.1:9000
       OMNILEARN_FRONTEND_DOMAIN: ${OMNILEARN_FRONTEND_DOMAIN:-localhost:${HTTP_PORT:-8080}}
       NEXT_PUBLIC_OMNILEARN_DOMAIN: ${OMNILEARN_FRONTEND_DOMAIN:-localhost:${HTTP_PORT:-8080}}
-      NEXT_PUBLIC_OMNILEARN_BACKEND_URL: http://localhost:${OMNILEARN_PORT:-9000}
+      # Browser-facing API origin. For a public domain deploy set OMNILEARN_PUBLIC_URL
+      # (e.g. https://lms.example.com) in .env so the browser calls the API through
+      # nginx. Locally the browser uses same-origin /api/v1, so the internal default
+      # (127.0.0.1:9000, used for server-side rendering) is fine.
+      NEXT_PUBLIC_OMNILEARN_BACKEND_URL: ${OMNILEARN_PUBLIC_URL:-http://127.0.0.1:9000}
+      NEXT_PUBLIC_OMNILEARN_HTTPS: ${NEXT_PUBLIC_OMNILEARN_HTTPS:-false}
+      NEXT_PUBLIC_COLLAB_URL: ${NEXT_PUBLIC_COLLAB_URL:-ws://localhost:${COLLAB_PORT:-4040}}
+      COLLAB_PORT: ${COLLAB_PORT:-4040}
     ports:
-      - "${HTTP_PORT:-8080}:80"
+      # APP_BIND=127.0.0.1 keeps the port private (host nginx proxies to it);
+      # default 0.0.0.0 exposes it directly (local dev / --no-nginx deploys).
+      - "${APP_BIND:-0.0.0.0}:${HTTP_PORT:-8080}:80"
     volumes:
       - omnilearn_content:/app/api/content
     depends_on:

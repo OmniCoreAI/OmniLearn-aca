@@ -45,8 +45,8 @@ async def _make_category(db, admin_user, org, *, name="Senior Lecturer", base=10
             hourly_rate=base,
             currency="USD",
             language_rates=[
-                InstructorCategoryLanguageRateInput(language=l, hourly_rate=r)
-                for (l, r) in (rates or [])
+                InstructorCategoryLanguageRateInput(language=lang, hourly_rate=rate)
+                for (lang, rate) in (rates or [])
             ],
         ),
     )

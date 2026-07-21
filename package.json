@@ -7,6 +7,7 @@
     "cli:install": "npm install --prefix apps/cli",
     "prepare:cli": "npm run cli:install && npm run cli:build",
     "omnilearn": "node apps/cli/dist/bin/omnilearn.js",
+    "build": "docker compose build",
     "dev": "node apps/cli/dist/bin/omnilearn.js dev",
     "setup": "node apps/cli/dist/bin/omnilearn.js setup",
     "start": "node apps/cli/dist/bin/omnilearn.js start",
@@ -14,7 +15,9 @@
     "docker:build": "docker compose build",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f app"
+    "docker:logs": "docker compose logs -f",
+    "docker:ps": "docker compose ps",
+    "web:build": "npm run build --prefix apps/web"
   },
   "engines": {
     "node": ">=18"

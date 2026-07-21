@@ -1,0 +1,57 @@
+name: Deploy to DigitalOcean
+
+# Continuous deployment to the droplet.
+#   • push to main  → auto-deploy
+#   • manual run    → deploy on demand (Actions ▸ Deploy ▸ Run workflow)
+#
+# One-time setup — add these repo secrets (Settings ▸ Secrets ▸ Actions):
+#   DROPLET_HOST         droplet public IP or hostname
+#   DROPLET_USER         SSH user (e.g. root or a sudo user)
+#   DROPLET_SSH_KEY      private key whose public half is in the droplet's authorized_keys
+#   DEPLOY_PATH          absolute path of the repo checkout on the droplet (e.g. /opt/omnilearn)
+# Optional (enables domain + HTTPS during deploy):
+#   DEPLOY_DOMAIN        public hostname (e.g. lms.example.com)
+#   DEPLOY_EMAIL         email for Let's Encrypt
+#
+# The droplet must already have the repo cloned at DEPLOY_PATH and this key
+# authorized. The very first install is done by running deploy/deploy.sh on the
+# droplet manually; afterwards this workflow keeps it up to date.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            echo "==> Fetching latest code"
+            git fetch --all --prune
+            git reset --hard origin/main
+
+            ARGS="--update"
+            if [ -n "${{ secrets.DEPLOY_DOMAIN }}" ]; then
+              ARGS="$ARGS --domain ${{ secrets.DEPLOY_DOMAIN }}"
+            fi
+            if [ -n "${{ secrets.DEPLOY_EMAIL }}" ]; then
+              ARGS="$ARGS --email ${{ secrets.DEPLOY_EMAIL }}"
+            fi
+
+            echo "==> Running deploy.sh $ARGS"
+            sudo ./deploy/deploy.sh $ARGS

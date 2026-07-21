@@ -14,13 +14,11 @@ from src.db.academic.cohorts import (
     Cohort,
     CohortCreate,
     CohortRead,
-    CohortStatus,
     CohortUpdate,
 )
 from src.db.academic.semesters import Semester
 from src.db.academic.links import SemesterCourse
 from src.db.courses.courses import Course
-from src.security.auth import resolve_acting_user_id
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import get_user_author
 from src.services.academic.validation import (

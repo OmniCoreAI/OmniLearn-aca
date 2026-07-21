@@ -244,7 +244,7 @@ function killProcess(child: ChildProcess | null): Promise<void> {
 
     // On Windows, services are spawned with `shell: true`, so `child.kill()`
     // only stops the cmd.exe wrapper and leaves uv/python/next/tsx orphans
-    // holding ports 1338/3000/4000. Kill the whole process tree instead.
+    // holding ports 1338/3000/4040. Kill the whole process tree instead.
     if (process.platform === 'win32' && pid) {
       try {
         execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' })
@@ -332,8 +332,8 @@ export async function devCommand(opts: { ee?: boolean; adminEmail?: string; admi
     if (!adminEmail) {
       const emailInput = await p.text({
         message: 'Admin email',
-        placeholder: 'admin@school.dev',
-        defaultValue: 'admin@school.dev',
+        placeholder: 'admin@omnicoreai.com',
+        defaultValue: 'admin@omnicoreai.com',
       })
       if (p.isCancel(emailInput)) process.exit(0)
       adminEmail = emailInput

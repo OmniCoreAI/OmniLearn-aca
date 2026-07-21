@@ -396,7 +396,7 @@ export const isEEAvailable = (): boolean => {
 }
 
 // Collaboration server WebSocket URL
-export const getCollabUrl = () => getConfig('NEXT_PUBLIC_COLLAB_URL', 'ws://localhost:4000')
+export const getCollabUrl = () => getConfig('NEXT_PUBLIC_COLLAB_URL', 'ws://localhost:4040')
 
 export const getDefaultOrg = () => {
   // 1. Env var (backward compat)

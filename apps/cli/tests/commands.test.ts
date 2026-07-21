@@ -244,7 +244,7 @@ describe('checkDevEnv', () => {
     writeEnv('apps/web/.env.local',
       'NEXT_PUBLIC_OMNILEARN_BACKEND_URL=http://localhost:9000\n')
     writeEnv('apps/collab/.env',
-      'COLLAB_PORT=4000\nOMNILEARN_API_URL=http://localhost:9000\n' +
+      'COLLAB_PORT=4040\nOMNILEARN_API_URL=http://localhost:9000\n' +
       'OMNILEARN_AUTH_JWT_SECRET_KEY=jwt\nCOLLAB_INTERNAL_KEY=collab\n')
 
     expect(await checkDevEnv(root)).toBe(true)
@@ -262,9 +262,9 @@ describe('checkDevEnv', () => {
     expect(fs.readFileSync(path.join(root, 'apps/api/.env'), 'utf-8'))
       .toContain('OMNILEARN_AUTH_JWT_SECRET_KEY=')
     // Assert an actual DEFAULT VALUE is written (not just that the file exists):
-    // the collab WebSocket port default must be 4000, the value the dev stack expects.
+    // the collab WebSocket port default must be 4040, the value the dev stack expects.
     expect(fs.readFileSync(path.join(root, 'apps/collab/.env'), 'utf-8'))
-      .toContain('COLLAB_PORT=4000')
+      .toContain('COLLAB_PORT=4040')
   })
 
   it('appends defaults to an existing env file that lacks a trailing newline', async () => {
@@ -936,7 +936,7 @@ describe('dev command guards', () => {
       fs.writeFileSync(path.join(root, 'apps/web/.env.local'),
         'NEXT_PUBLIC_OMNILEARN_BACKEND_URL=http://localhost:9000\n')
       fs.writeFileSync(path.join(root, 'apps/collab/.env'),
-        'COLLAB_PORT=4000\nOMNILEARN_API_URL=http://localhost:9000\n' +
+        'COLLAB_PORT=4040\nOMNILEARN_API_URL=http://localhost:9000\n' +
         'OMNILEARN_AUTH_JWT_SECRET_KEY=x\nCOLLAB_INTERNAL_KEY=y\n')
     }
     return root

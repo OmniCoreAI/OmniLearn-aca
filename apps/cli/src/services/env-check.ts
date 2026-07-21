@@ -40,7 +40,8 @@ function generateJwtSecret(): string {
  */
 const API_ENV: AppEnvSpec = {
   label: 'API',
-  envFile: 'apps/api/.env',
+  // Unified root .env (shared with docker compose)
+  envFile: '.env',
   vars: [
     {
       name: 'OMNILEARN_AUTH_JWT_SECRET_KEY',
@@ -53,6 +54,12 @@ const API_ENV: AppEnvSpec = {
       required: true,
       description: 'Shared key for collab ↔ API auth',
       defaultValue: 'dev-collab-internal-key-change-in-prod',
+    },
+    {
+      name: 'OMNILEARN_SQL_CONNECTION_STRING',
+      required: true,
+      description: 'Postgres URL (use @db:5432 for compose; host tools rewrite to :5433)',
+      defaultValue: 'postgresql://omnilearn:omnilearn@db:5432/omnilearn',
     },
   ],
 }
@@ -78,7 +85,7 @@ const COLLAB_ENV: AppEnvSpec = {
       name: 'COLLAB_PORT',
       required: true,
       description: 'WebSocket server port',
-      defaultValue: '4000',
+      defaultValue: '4040',
     },
     {
       name: 'OMNILEARN_API_URL',
