@@ -93,6 +93,8 @@ COPY ./apps/api/uv.lock ./apps/api/pyproject.toml ./
 RUN pip install --no-cache-dir --upgrade pip uv \
     && uv sync --no-dev
 COPY ./apps/api ./
+# Host/dev .env must never ship in the image (points at 127.0.0.1:5433 for npm run dev).
+RUN rm -f /app/api/.env /app/api/.env.* /app/api/config/.env /app/api/config/.env.*
 
 # Remove Enterprise Edition folder for public builds
 ARG OMNILEARN_PUBLIC=false

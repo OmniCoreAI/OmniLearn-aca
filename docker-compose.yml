@@ -48,7 +48,8 @@ services:
     env_file:
       - docker/.env
     environment:
-      # SQL URL comes from docker/.env (@db). Do not interpolate root .env (npm uses :5433).
+      # Always use the compose Postgres service. Do not pull from root .env (npm uses :5433).
+      OMNILEARN_SQL_CONNECTION_STRING: postgresql://omnilearn:omnilearn@db:5432/omnilearn
       OMNILEARN_REDIS_CONNECTION_STRING: redis://redis:6379/omnilearn
       OMNILEARN_REDIS_URL: redis://redis:6379
       # In-container services talk to each other on localhost.
