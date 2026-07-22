@@ -151,7 +151,7 @@ export function getTaskRefFileDir(
   activityUUID: string,
   assignmentUUID: string,
   assignmentTaskUUID: string,
-  fileID : string
+  fileID: string
 
 ) {
   let uri = `${getMediaUrl()}content/orgs/${orgUUID}/courses/${courseUUID}/activities/${activityUUID}/assignments/${assignmentUUID}/tasks/${assignmentTaskUUID}/${fileID}`
@@ -164,7 +164,7 @@ export function getTaskFileSubmissionDir(
   activityUUID: string,
   assignmentUUID: string,
   assignmentTaskUUID: string,
-  fileSubID : string
+  fileSubID: string
 ) {
   let uri = `${getMediaUrl()}content/orgs/${orgUUID}/courses/${courseUUID}/activities/${activityUUID}/assignments/${assignmentUUID}/tasks/${assignmentTaskUUID}/subs/${fileSubID}`
   return uri

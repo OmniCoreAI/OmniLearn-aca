@@ -227,6 +227,145 @@
     .dash-shimmer::after {
       animation: none;
     }
+    .auth-scanline {
+      animation: none;
+    }
+    .auth-btn-primary,
+    .auth-btn-primary:hover,
+    .auth-btn-primary:active {
+      transition: none;
+      transform: none;
+    }
+  }
+
+  /* Institutional auth portal */
+  .auth-shell {
+    background: hsl(var(--auth-canvas));
+  }
+
+  .auth-brand-panel {
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 0%, hsl(var(--auth-gold) / 0.18), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 80% 90%, hsl(var(--auth-flag-red) / 0.18), transparent 50%),
+      linear-gradient(165deg, hsl(var(--auth-navy)) 0%, hsl(var(--auth-navy-mid)) 55%, hsl(0 0% 4%) 100%);
+  }
+
+  .auth-flag-stripes {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--auth-flag-red)) 0%,
+      hsl(var(--auth-flag-red)) 33.33%,
+      hsl(0 0% 100%) 33.33%,
+      hsl(0 0% 100%) 66.66%,
+      hsl(0 0% 0%) 66.66%,
+      hsl(0 0% 0%) 100%
+    );
+    opacity: 0.14;
+  }
+
+  .auth-grid-overlay {
+    background-image:
+      linear-gradient(hsl(var(--auth-gold) / 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--auth-gold) / 0.07) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, black 20%, transparent 75%);
+  }
+
+  .auth-scanline {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      hsl(var(--auth-gold) / 0.06) 50%,
+      transparent 100%
+    );
+    background-size: 100% 220%;
+    animation: auth-scan 9s ease-in-out infinite;
+  }
+
+  .auth-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(40px);
+    pointer-events: none;
+  }
+
+  .auth-input {
+    height: 2.75rem;
+    border-radius: 0.625rem;
+    background: hsl(var(--auth-surface));
+    color: hsl(var(--auth-ink));
+    box-shadow: inset 0 0 0 1px hsl(var(--auth-border));
+    transition: box-shadow 160ms ease, background 160ms ease;
+  }
+  .auth-input:hover {
+    box-shadow: inset 0 0 0 1px hsl(40 18% 75%);
+  }
+  .auth-input:focus {
+    box-shadow: inset 0 0 0 1.5px hsl(var(--auth-focus)), 0 0 0 4px hsl(var(--auth-focus) / 0.14);
+  }
+
+  .auth-btn-primary {
+    background: linear-gradient(180deg, hsl(43 78% 48%), hsl(38 70% 36%));
+    color: hsl(0 0% 8%);
+    box-shadow: 0 1px 0 hsl(0 0% 100% / 0.25) inset, 0 8px 20px hsl(43 70% 20% / 0.28);
+    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+  }
+  .auth-btn-primary:hover {
+    filter: brightness(1.06);
+    box-shadow: 0 1px 0 hsl(0 0% 100% / 0.3) inset, 0 10px 24px hsl(43 70% 20% / 0.34);
+  }
+  .auth-btn-primary:active {
+    transform: translateY(1px);
+  }
+
+  /* Glassmorphism surfaces */
+  .dash-glass {
+    background: linear-gradient(
+      145deg,
+      hsl(0 0% 100% / 0.72),
+      hsl(43 40% 98% / 0.55)
+    );
+    backdrop-filter: blur(18px) saturate(1.25);
+    -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    border: 1px solid hsl(0 0% 100% / 0.7);
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / 0.8) inset,
+      0 10px 36px hsl(0 0% 0% / 0.06),
+      0 0 0 1px hsl(var(--dash-border) / 0.55);
+  }
+
+  .dash-glass-dark {
+    background: linear-gradient(
+      145deg,
+      hsl(0 0% 10% / 0.72),
+      hsl(0 0% 6% / 0.55)
+    );
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    border: 1px solid hsl(var(--auth-gold) / 0.22);
+    box-shadow: 0 12px 40px hsl(0 0% 0% / 0.28);
+  }
+
+  .finance-shell {
+    position: relative;
+    isolation: isolate;
+  }
+  .finance-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 60% 40% at 10% 0%, hsl(var(--dash-accent) / 0.12), transparent 55%),
+      radial-gradient(ellipse 50% 35% at 95% 10%, hsl(var(--dash-warn) / 0.08), transparent 50%),
+      linear-gradient(
+        90deg,
+        hsl(var(--dash-warn) / 0.035) 0%,
+        hsl(0 0% 100% / 0) 12%,
+        hsl(0 0% 100% / 0) 88%,
+        hsl(0 0% 0% / 0.035) 100%
+      );
   }
 
   /* Hide scrollbar while maintaining scroll functionality */
@@ -375,33 +514,52 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
 
-    /* Skillio-inspired dashboard — violet palette */
-    --dash-canvas: 250 33% 97%;
+    /* EACA brand — gold primary + Egyptian flag (red / white / black) */
+    --dash-canvas: 40 18% 96%;
     --dash-sidebar: 0 0% 100%;
-    --dash-ink: 245 25% 13%;
-    --dash-muted: 246 10% 47%;
-    --dash-accent: 262 83% 58%;
-    --dash-accent-soft: 262 80% 96%;
-    --dash-border: 248 20% 91%;
+    --dash-ink: 0 0% 8%;
+    --dash-muted: 0 0% 38%;
+    --dash-accent: 43 72% 45%;
+    --dash-accent-soft: 43 55% 94%;
+    --dash-border: 40 14% 86%;
     --dash-surface: 0 0% 100%;
-    --dash-warn: 24 95% 53%;
-    --dash-warn-soft: 33 100% 96%;
+    --dash-warn: 351 84% 44%;
+    --dash-warn-soft: 351 70% 95%;
     --dash-radius: 1.25rem;
-    /* Hero banner gradient stops (violet → purple → magenta) */
-    --dash-gradient-from: 258 90% 60%;
-    --dash-gradient-via: 270 85% 56%;
-    --dash-gradient-to: 288 82% 54%;
-    /* Pastel icon tiles (bg / fg pairs) */
-    --dash-tile-mint: 152 60% 94%;
-    --dash-tile-mint-fg: 158 64% 36%;
-    --dash-tile-amber: 40 100% 94%;
-    --dash-tile-amber-fg: 32 92% 44%;
-    --dash-tile-lavender: 262 80% 95%;
-    --dash-tile-lavender-fg: 262 72% 52%;
-    --dash-tile-sky: 204 94% 94%;
-    --dash-tile-sky-fg: 206 90% 42%;
-    --dash-tile-rose: 340 90% 95%;
-    --dash-tile-rose-fg: 340 72% 50%;
+    /* Gold metallic gradient */
+    --dash-gradient-from: 43 78% 52%;
+    --dash-gradient-via: 38 70% 42%;
+    --dash-gradient-to: 32 65% 32%;
+    /* Brand tiles */
+    --dash-tile-mint: 43 55% 94%;
+    --dash-tile-mint-fg: 43 72% 32%;
+    --dash-tile-amber: 43 70% 92%;
+    --dash-tile-amber-fg: 38 75% 36%;
+    --dash-tile-lavender: 0 0% 94%;
+    --dash-tile-lavender-fg: 0 0% 18%;
+    --dash-tile-sky: 0 0% 96%;
+    --dash-tile-sky-fg: 0 0% 22%;
+    --dash-tile-rose: 351 70% 95%;
+    --dash-tile-rose-fg: 351 84% 40%;
+    /* Chart brand colors (usable from JS via CSS vars if needed) */
+    --dash-chart-gold: #c9a227;
+    --dash-chart-red: #ce1126;
+    --dash-chart-black: #111111;
+    --dash-chart-muted: #6b6b6b;
+
+    /* Institutional auth — black / gold / flag accents */
+    --auth-navy: 0 0% 7%;
+    --auth-navy-mid: 0 0% 12%;
+    --auth-navy-soft: 0 0% 18%;
+    --auth-gold: 43 72% 48%;
+    --auth-gold-soft: 43 55% 92%;
+    --auth-ink: 0 0% 8%;
+    --auth-muted: 0 0% 40%;
+    --auth-border: 40 14% 86%;
+    --auth-canvas: 40 16% 97%;
+    --auth-surface: 0 0% 100%;
+    --auth-focus: 43 72% 40%;
+    --auth-flag-red: 351 84% 44%;
 
     /* Z-Index Layering System */
     --z-behind: -10;
@@ -478,6 +636,11 @@
   100% {
     transform: translateX(100%);
   }
+}
+
+@keyframes auth-scan {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 0% 100%; }
 }
 
     /* Confirmation Modal Animations */

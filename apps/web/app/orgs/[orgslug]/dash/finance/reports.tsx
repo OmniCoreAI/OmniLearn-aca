@@ -52,6 +52,15 @@ function fmt(amount: number, currency = 'EGP') {
 
 type Bounds = { date_from?: string; date_to?: string }
 
+const BRAND = {
+  gold: '#c9a227',
+  red: '#ce1126',
+  black: '#111111',
+  muted: '#6b6b6b',
+  grid: '#e8e2d4',
+} as const
+
+
 function ChartCard({
   title,
   subtitle,
@@ -62,9 +71,14 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-w-0 overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] p-5 nice-shadow">
-      <h3 className="text-sm font-semibold text-[hsl(var(--dash-ink))]">{title}</h3>
-      <p className="mb-4 mt-0.5 text-xs text-[hsl(var(--dash-muted))]">{subtitle}</p>
+    <div className="dash-glass min-w-0 overflow-hidden rounded-[var(--dash-radius)] p-5 sm:p-6">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold tracking-tight text-[hsl(var(--dash-ink))]">{title}</h3>
+          <p className="mt-0.5 text-xs leading-relaxed text-[hsl(var(--dash-muted))]">{subtitle}</p>
+        </div>
+        <span className="mt-0.5 h-1.5 w-8 shrink-0 rounded-full bg-gradient-to-r from-[hsl(var(--dash-accent))] via-white to-[hsl(var(--dash-warn))]" />
+      </div>
       {children}
     </div>
   )
@@ -149,7 +163,7 @@ export function ProfitLossPanel({
           ['Net revenue', data.net_revenue],
           ['Net profit', data.net_profit],
         ].map(([label, value]) => (
-          <div key={String(label)} className="dash-lift rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] px-4 py-3 nice-shadow">
+          <div key={String(label)} className="dash-lift rounded-[var(--dash-radius)] dash-glass px-4 py-3">
             <div className="text-xs text-[hsl(var(--dash-muted))]">{label}</div>
             <div className="text-lg font-bold">{fmt(Number(value), data.currency)}</div>
           </div>
@@ -169,13 +183,13 @@ export function ProfitLossPanel({
                 formatter={(value) => fmt(Number(value || 0), data.currency)}
               />
               <Legend />
-              <Bar dataKey="revenue" name="Revenue" fill="#7c3aed" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expense" name="Expenses" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="revenue" name="Revenue" fill={BRAND.gold} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="expense" name="Expenses" fill={BRAND.muted} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </ChartCard>
-      <div className="overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] nice-shadow">
+      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-glass">
         <Table>
           <TableHeader>
             <TableRow>
@@ -354,9 +368,9 @@ export function CoursesProfitPanel({
                 />
                 <Tooltip formatter={(value) => fmt(Number(value || 0), data[0]?.currency)} />
                 <Legend />
-                <Bar dataKey="revenue" name="Net revenue" fill="#7c3aed" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="cost" name="Total cost" fill="#94a3b8" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="profit" name="Net profit" fill="#10b981" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="revenue" name="Net revenue" fill={BRAND.gold} radius={[0, 4, 4, 0]} />
+                <Bar dataKey="cost" name="Total cost" fill={BRAND.muted} radius={[0, 4, 4, 0]} />
+                <Bar dataKey="profit" name="Net profit" fill={BRAND.black} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -376,15 +390,15 @@ export function CoursesProfitPanel({
                 <YAxis dataKey="name" type="category" width={145} />
                 <Tooltip formatter={(value) => fmt(Number(value || 0), data[0]?.currency)} />
                 <Legend />
-                <Bar dataKey="revenue" name="Net revenue" fill="#7c3aed" />
-                <Bar dataKey="cost" name="Total cost" fill="#94a3b8" />
-                <Bar dataKey="profit" name="Net profit" fill="#10b981" />
+                <Bar dataKey="revenue" name="Net revenue" fill={BRAND.gold} />
+                <Bar dataKey="cost" name="Total cost" fill={BRAND.muted} />
+                <Bar dataKey="profit" name="Net profit" fill={BRAND.black} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </ChartCard>
       </div>
-      <div className="overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] nice-shadow">
+      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-glass">
         <Table>
           <TableHeader>
             <TableRow>
@@ -452,7 +466,7 @@ export function CoursesProfitPanel({
       </div>
 
       {editing && (
-        <div className="max-w-xl space-y-3 rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] p-5 nice-shadow">
+        <div className="dash-glass max-w-xl space-y-3 rounded-[var(--dash-radius)] p-5">
           <h3 className="font-semibold text-sm">
             Cost assumptions — {editing.course_name || editing.course_uuid}
           </h3>
@@ -578,11 +592,11 @@ export function PayrollPanel({
       </div>
 
       <div className="grid grid-cols-2 gap-3 max-w-md">
-        <div className="dash-lift rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] px-4 py-3 nice-shadow">
+        <div className="dash-lift rounded-[var(--dash-radius)] dash-glass px-4 py-3">
           <div className="text-xs text-[hsl(var(--dash-muted))]">Total hours</div>
           <div className="text-xl font-bold">{data?.total_hours ?? 0}</div>
         </div>
-        <div className="dash-lift rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] px-4 py-3 nice-shadow">
+        <div className="dash-lift rounded-[var(--dash-radius)] dash-glass px-4 py-3">
           <div className="text-xs text-[hsl(var(--dash-muted))]">Total pay</div>
           <div className="text-xl font-bold">
             {fmt(data?.total_pay || 0, data?.currency)}
@@ -606,14 +620,14 @@ export function PayrollPanel({
                 <YAxis dataKey="name" type="category" width={145} />
                 <Tooltip formatter={(value) => fmt(Number(value || 0), data?.currency)} />
                 <Legend />
-                <Bar dataKey="pay" name="Pay" fill="#7c3aed" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="pay" name="Pay" fill={BRAND.gold} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </ChartCard>
       )}
 
-      <div className="overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] nice-shadow">
+      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-glass">
         <Table>
           <TableHeader>
             <TableRow>
@@ -712,7 +726,7 @@ export function RefundsPanel({
 
   return (
     <div className="space-y-6">
-      <div className="max-w-xl space-y-3 rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] p-5 nice-shadow">
+      <div className="dash-glass max-w-xl space-y-3 rounded-[var(--dash-radius)] p-5">
         <h3 className="font-semibold text-sm">Request refund (manual accounting)</h3>
         <p className="text-xs text-[hsl(var(--dash-muted))]">
           No payment gateway — approval records the refund for reports only.
@@ -741,7 +755,7 @@ export function RefundsPanel({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] nice-shadow">
+      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-glass">
         <Table>
           <TableHeader>
             <TableRow>
