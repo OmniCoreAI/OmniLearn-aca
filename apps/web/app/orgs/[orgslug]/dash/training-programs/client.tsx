@@ -14,6 +14,7 @@ import {
   AcademicPageShell,
   AcademicHeader,
   AcademicGrid,
+  AcademicGridSkeleton,
   AcademicEmptyState,
   AcademicCard,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
@@ -70,15 +71,15 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
 
   const badgesFor = (p: any) => {
     const badges: { label: string; className?: string }[] = [
-      { label: t(`academic.type_${p.training_type}`), className: 'bg-orange-100 text-orange-700' },
+      { label: t(`academic.type_${p.training_type}`), className: 'bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]' },
       p.is_paid
-        ? { label: t('academic.paid'), className: 'bg-indigo-100 text-indigo-700' }
-        : { label: t('academic.free'), className: 'bg-teal-100 text-teal-700' },
+        ? { label: t('academic.paid'), className: 'bg-[hsl(var(--dash-tile-lavender))] text-[hsl(var(--dash-tile-lavender-fg))]' }
+        : { label: t('academic.free'), className: 'bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]' },
       p.published
-        ? { label: t('academic.published'), className: 'bg-green-100 text-green-700' }
-        : { label: t('academic.draft'), className: 'bg-gray-100 text-gray-500' },
+        ? { label: t('academic.published'), className: 'bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]' }
+        : { label: t('academic.draft'), className: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]' },
     ]
-    if (p.in_plan === false) badges.push({ label: t('academic.out_of_plan'), className: 'bg-orange-100 text-orange-700' })
+    if (p.in_plan === false) badges.push({ label: t('academic.out_of_plan'), className: 'bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]' })
     return badges
   }
 
@@ -110,6 +111,7 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
         }
       />
 
+      {isLoading && <AcademicGridSkeleton />}
       <AcademicGrid>
         {!isLoading && programs.length === 0 && (
           <AcademicEmptyState
@@ -279,7 +281,7 @@ function TrainingProgramForm({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-[hsl(var(--dash-ink))]">
           <input type="checkbox" checked={isPaid} onChange={(e) => setIsPaid(e.target.checked)} />
           {t('academic.paid')}
         </label>
@@ -306,11 +308,11 @@ function TrainingProgramForm({
       </Field>
 
       <div className="flex flex-wrap gap-4">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-[hsl(var(--dash-ink))]">
           <input type="checkbox" checked={inPlan} onChange={(e) => setInPlan(e.target.checked)} />
           {t('academic.in_plan')}
         </label>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-[hsl(var(--dash-ink))]">
           <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
           {t('academic.published')}
         </label>

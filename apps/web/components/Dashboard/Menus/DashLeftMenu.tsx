@@ -3,7 +3,6 @@ import { useOrg } from '@components/Contexts/OrgContext'
 import { signOut } from '@components/Contexts/AuthContext'
 import {
   House,
-  BookOpen,
   Files,
   Users,
   UsersThree,
@@ -49,7 +48,7 @@ import React, { useEffect, useState } from 'react'
 import UserAvatar from '../../Objects/UserAvatar'
 import AdminAuthorization from '@components/Security/AdminAuthorization'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
-import { getUriWithOrg, getAPIUrl } from '@services/config/config'
+import { getUriWithOrg } from '@services/config/config'
 import { useTranslation } from 'react-i18next'
 import { changeLanguage } from '@/lib/i18n'
 import {
@@ -69,10 +68,8 @@ import { FeedbackModal } from '@components/Objects/Modals/FeedbackModal'
 import { AVAILABLE_LANGUAGES } from '@/lib/languages'
 import { getOrgLogoMediaDirectory } from '@services/media/media'
 import { cn } from '@/lib/utils'
-import { useQuery } from '@tanstack/react-query'
-import { queryKeys } from '@/lib/query/keys'
-import { RequestBodyWithAuthHeader } from '@services/utils/ts/requests'
 import { getAssignmentsFromACourse } from '@services/courses/assignments'
+import { getOrgCourses } from '@services/courses/courses'
 import { getDeploymentMode } from '@services/config/config'
 import PlanBadge from '@components/Dashboard/Shared/PlanRestricted/PlanBadge'
 import { usePlan } from '@components/Hooks/usePlan'
@@ -96,44 +93,31 @@ function DashLeftMenu() {
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const access_token = session?.data?.tokens?.access_token
 
-  // Fetch recent courses
-  const { data: coursesData } = useQuery({
-    queryKey: [...queryKeys.courses.list(org?.slug || ''), 'recent', 8],
-    queryFn: async () => {
-      const url = `${getAPIUrl()}courses/org_slug/${org.slug}/page/1/limit/8`
-      const res = await fetch(url, RequestBodyWithAuthHeader('GET', null, null, access_token))
-      if (!res.ok) throw new Error('Failed to fetch courses')
-      return res.json()
-    },
-    enabled: !!org?.slug,
-    staleTime: 60_000,
-  })
-  const recentCourses = coursesData?.slice(0, 8) || []
-
-  // Lazy-load assignments only when the assignments hover menu is opened
+  // Lazy-load courses + assignments only when the assignments hover menu is opened.
+  // Nothing is fetched on mount — keeps the sidebar off the critical path.
   const [assignmentsFetched, setAssignmentsFetched] = useState(false)
 
   const fetchAssignments = () => {
-    if (assignmentsFetched || !coursesData || !access_token) return
+    if (assignmentsFetched || !org?.slug || !access_token) return
     setAssignmentsFetched(true)
-    const coursesToFetch = coursesData.slice(0, 5)
-    const promises = coursesToFetch.map((course: any) =>
-      getAssignmentsFromACourse(course.course_uuid, access_token)
-    )
-    Promise.all(promises).then((results) => {
-      const allAssignments: any[] = []
-      results.forEach((res: any, index: number) => {
-        if (res?.data) {
-          res.data.forEach((assignment: any) => {
-            allAssignments.push({
-              ...assignment,
-              courseName: coursesToFetch[index].name
-            })
-          })
-        }
+    getOrgCourses(org.slug, null, access_token)
+      .then((courses: any[]) => {
+        const coursesToFetch = (courses ?? []).slice(0, 5)
+        return Promise.all(
+          coursesToFetch.map((course: any) =>
+            getAssignmentsFromACourse(course.course_uuid, access_token).then((res: any) =>
+              (res?.data ?? []).map((assignment: any) => ({
+                ...assignment,
+                courseName: course.name,
+              }))
+            )
+          )
+        )
       })
-      setRecentAssignments(allAssignments.slice(0, 8))
-    }).catch(() => {})
+      .then((results) => {
+        setRecentAssignments(results.flat().slice(0, 8))
+      })
+      .catch(() => {})
   }
 
   useEffect(() => {
@@ -181,7 +165,7 @@ function DashLeftMenu() {
     <nav
       aria-label="Dashboard sidebar navigation"
       className={cn(
-        "flex flex-col h-screen sticky top-0 shrink-0 self-start z-overlay border-r border-[hsl(var(--dash-border))]/80 bg-[hsl(var(--dash-sidebar))] text-[hsl(var(--dash-ink))] transition-all duration-300",
+        "flex flex-col h-screen sticky top-0 shrink-0 self-start z-overlay border-e border-[hsl(var(--dash-border))]/80 bg-[hsl(var(--dash-sidebar))] text-[hsl(var(--dash-ink))] transition-all duration-300",
         isCollapsed ? "w-[72px]" : "w-64"
       )}
     >
@@ -348,8 +332,8 @@ function DashLeftMenu() {
                     className={cn(
                       "relative flex items-center w-full rounded-lg transition-all",
                       active
-                        ? "bg-[hsl(var(--dash-canvas))] font-medium text-[hsl(var(--dash-ink))]"
-                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]",
+                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
+                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
                       isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
                     )}
                   >
@@ -362,7 +346,7 @@ function DashLeftMenu() {
                     {!isCollapsed && (
                       <>
                         <span className="text-sm font-medium flex-1 text-left">{t('common.assignments')}</span>
-                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-ink))]/75" : "text-[hsl(var(--dash-muted))]"} />
+                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-accent))]/70" : "text-[hsl(var(--dash-muted))]"} />
                       </>
                     )}
                   </Link>
@@ -443,8 +427,8 @@ function DashLeftMenu() {
                     className={cn(
                       "relative flex items-center w-full rounded-lg transition-all",
                       active
-                        ? "bg-[hsl(var(--dash-canvas))] font-medium text-[hsl(var(--dash-ink))]"
-                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]",
+                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
+                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
                       isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
                     )}
                   >
@@ -457,7 +441,7 @@ function DashLeftMenu() {
                     {!isCollapsed && (
                       <>
                         <span className="text-sm font-medium flex-1 text-left">{t('common.users')}</span>
-                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-ink))]/75" : "text-[hsl(var(--dash-muted))]"} />
+                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-accent))]/70" : "text-[hsl(var(--dash-muted))]"} />
                       </>
                     )}
                   </Link>
@@ -554,8 +538,8 @@ function DashLeftMenu() {
                     className={cn(
                       "relative flex items-center w-full rounded-lg transition-all",
                       active
-                        ? "bg-[hsl(var(--dash-canvas))] font-medium text-[hsl(var(--dash-ink))]"
-                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]",
+                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
+                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
                       isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
                     )}
                   >
@@ -568,7 +552,7 @@ function DashLeftMenu() {
                     {!isCollapsed && (
                       <>
                         <span className="text-sm font-medium flex-1 text-left">{t('common.organization')}</span>
-                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-ink))]/75" : "text-[hsl(var(--dash-muted))]"} />
+                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-accent))]/70" : "text-[hsl(var(--dash-muted))]"} />
                       </>
                     )}
                   </Link>
@@ -607,8 +591,8 @@ function DashLeftMenu() {
                     className={cn(
                       "relative flex items-center w-full rounded-lg transition-all",
                       active
-                        ? "bg-[hsl(var(--dash-canvas))] font-medium text-[hsl(var(--dash-ink))]"
-                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]",
+                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
+                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
                       isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
                     )}
                   >
@@ -621,7 +605,7 @@ function DashLeftMenu() {
                     {!isCollapsed && (
                       <>
                         <span className="text-sm font-medium flex-1 text-left">{t('common.analytics')}</span>
-                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-ink))]/75" : "text-[hsl(var(--dash-muted))]"} />
+                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-accent))]/70" : "text-[hsl(var(--dash-muted))]"} />
                       </>
                     )}
                   </Link>
@@ -894,13 +878,20 @@ const MenuLink = ({ href, icon, label, isCollapsed, isExternal, active, onClick 
   const content = (
     <div
       className={cn(
-        "relative flex w-full items-center rounded-xl transition-all",
+        "relative flex w-full items-center rounded-xl transition-all duration-200",
         active
-          ? "bg-[hsl(var(--dash-canvas))] font-medium text-[hsl(var(--dash-ink))]"
-          : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]",
+          ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
+          : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
         isCollapsed ? "h-10 justify-center" : "gap-3 px-3 py-2.5"
       )}
     >
+      {/* Active indicator bar */}
+      {active && !isCollapsed && (
+        <span
+          aria-hidden="true"
+          className="absolute start-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-e-full bg-[hsl(var(--dash-accent))]"
+        />
+      )}
       {icon}
       {!isCollapsed && (
         <span className="text-sm">{label}</span>

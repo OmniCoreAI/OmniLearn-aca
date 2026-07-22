@@ -2115,7 +2115,6 @@
       "no_courses_yet": "No courses yet",
       "create_your_first_course": "Create your first course",
       "chapter": "chapter",
-      "chapters": "chapters",
       "recent_members": "Recent Members",
       "total": "total",
       "no_members_yet": "No members yet",
@@ -2131,7 +2130,21 @@
       "ai_credits": "AI Credits",
       "used": "used",
       "no_credits_remaining": "No credits remaining",
-      "includes_purchased": "Includes {{count}} purchased"
+      "includes_purchased": "Includes {{count}} purchased",
+      "hero_title": "Build your next great course today",
+      "hero_subtitle": "Create engaging content and keep your learners moving forward.",
+      "hero_subtitle_org": "Create engaging content for {{org}} and keep your learners moving forward.",
+      "hero_cta": "Create a course",
+      "progress_hint": "Share of courses published",
+      "continue_building": "Continue building",
+      "events": "Events",
+      "no_upcoming_deadlines": "No upcoming deadlines",
+      "assignment": "Assignment",
+      "activity": "Activity",
+      "last_30_days": "Last 30 days",
+      "no_data_yet": "No data yet",
+      "active_users": "Active users",
+      "course": "Course"
     },
     "courses": {
       "title": "Courses",
@@ -4697,7 +4710,8 @@
           "description": "Your purchases and subscriptions",
           "keywords": "purchases, subscriptions, billing, history, receipts"
         }
-      }
+      },
+      "global_placeholder": "Search by topic, title, or name..."
     }
   },
   "editor": {

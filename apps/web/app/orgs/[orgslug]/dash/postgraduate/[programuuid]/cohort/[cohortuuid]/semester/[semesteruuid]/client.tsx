@@ -17,6 +17,7 @@ import {
   AcademicPageShell,
   AcademicHeader,
   AcademicEmptyState,
+  AcademicGridSkeleton,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { Field, SubmitRow, inputCls } from '../../../../../client'
 import {
@@ -123,6 +124,7 @@ function SemesterDetail({
         }
       />
 
+      {isLoading && <AcademicGridSkeleton count={4} />}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {!isLoading && courses.length === 0 && (
           <AcademicEmptyState title={t('academic.no_courses')} description={t('academic.no_courses_desc')} />
@@ -138,12 +140,12 @@ function SemesterDetail({
             {(course.code || course.credit_hours != null) && (
               <div className="absolute bottom-2 left-2 z-10 flex flex-wrap gap-1">
                 {course.code && (
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]">
                     {course.code}
                   </span>
                 )}
                 {course.credit_hours != null && (
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-100 text-cyan-700">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[hsl(var(--dash-tile-sky))] text-[hsl(var(--dash-tile-sky-fg))]">
                     {course.credit_hours} {t('academic.credit_hours')}
                   </span>
                 )}
@@ -153,21 +155,21 @@ function SemesterDetail({
               <button
                 onClick={() => setProfileCourse(course)}
                 title={t('academic.academic_profile')}
-                className="p-1.5 rounded-md bg-white/90 nice-shadow text-gray-500 hover:text-black"
+                className="p-1.5 rounded-md bg-white/90 nice-shadow text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))]"
               >
                 <SlidersHorizontal className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setEditing(course)}
                 title={t('academic.edit')}
-                className="p-1.5 rounded-md bg-white/90 nice-shadow text-gray-500 hover:text-black"
+                className="p-1.5 rounded-md bg-white/90 nice-shadow text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))]"
               >
                 <Pencil className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleUnlink(course.course_uuid)}
                 title={t('academic.delete')}
-                className="p-1.5 rounded-md bg-white/90 nice-shadow text-gray-500 hover:text-red-600"
+                className="p-1.5 rounded-md bg-white/90 nice-shadow text-[hsl(var(--dash-muted))] hover:text-red-500"
               >
                 <Unlink className="w-4 h-4" />
               </button>
@@ -283,7 +285,7 @@ function CourseMetaForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <p className="text-sm text-gray-500">{course?.name}</p>
+      <p className="text-sm text-[hsl(var(--dash-muted))]">{course?.name}</p>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('academic.code')}>
           <input className={inputCls} value={code} onChange={(e) => setCode(e.target.value)} />

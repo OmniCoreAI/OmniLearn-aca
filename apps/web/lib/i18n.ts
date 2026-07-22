@@ -69,6 +69,29 @@ i18n
     }
   });
 
+// Languages written right-to-left
+export const RTL_LANGUAGES = ['ar', 'fa', 'he', 'ur']
+
+export function isRTL(lng: string): boolean {
+  return RTL_LANGUAGES.includes(lng.split('-')[0])
+}
+
+/**
+ * Keep <html dir> and <html lang> in sync with the active language so the
+ * whole site flips to RTL for Arabic/Persian and screen readers get the
+ * right language.
+ */
+export function applyDocumentDirection(lng: string) {
+  if (typeof document === 'undefined') return
+  const code = lng.split('-')[0]
+  document.documentElement.dir = isRTL(code) ? 'rtl' : 'ltr'
+  document.documentElement.lang = code
+}
+
+i18n.on('languageChanged', applyDocumentDirection)
+// Apply on first load (covers a saved Arabic preference)
+applyDocumentDirection(i18n.language)
+
 // Load the detected language if it's not English — export the promise
 // so I18nProvider can wait for resources before rendering
 export const initialLocaleReady = loadLocale(i18n.language.split('-')[0]);

@@ -24,9 +24,9 @@ import {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white rounded-xl nice-shadow border border-gray-100 p-4">
-      <p className="text-xs uppercase font-bold tracking-wide text-gray-400">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+    <div className="dash-lift rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] p-4 nice-shadow">
+      <p className="text-xs font-bold uppercase tracking-wide text-[hsl(var(--dash-muted))]">{label}</p>
+      <p className="mt-1 text-2xl font-bold tracking-tight text-[hsl(var(--dash-ink))]">{value}</p>
     </div>
   )
 }
@@ -105,10 +105,17 @@ function InstructorFinanceHome({ orgslug }: { orgslug: string }) {
         <StatCard label={t('instructors.entries', 'Entries')} value={String(summary?.entry_count ?? 0)} />
       </div>
 
-      <div className="bg-white rounded-xl nice-shadow border border-gray-100 overflow-hidden">
+      {isLoading && (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="dash-shimmer h-12 rounded-xl" />
+          ))}
+        </div>
+      )}
+      <div className="overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] nice-shadow">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-400 text-xs uppercase border-b border-gray-100">
+            <tr className="border-b border-[hsl(var(--dash-border))] text-left text-xs uppercase text-[hsl(var(--dash-muted))]">
               <th className="px-4 py-3 font-bold">{t('instructors.title', 'Instructor')}</th>
               <th className="px-4 py-3 font-bold">{t('instructors.language', 'Language')}</th>
               <th className="px-4 py-3 font-bold text-right">{t('instructors.hours', 'Hours')}</th>
@@ -121,28 +128,28 @@ function InstructorFinanceHome({ orgslug }: { orgslug: string }) {
           <tbody>
             {!isLoading && logs.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-10 text-center text-[hsl(var(--dash-muted))]">
                   {t('instructors.no_logs', 'No work logs yet.')}
                 </td>
               </tr>
             )}
             {logs.map((l: any) => (
-              <tr key={l.worklog_uuid} className="border-b border-gray-50 last:border-b-0">
+              <tr key={l.worklog_uuid} className="border-b border-[hsl(var(--dash-border))]/60 last:border-b-0 transition-colors hover:bg-[hsl(var(--dash-accent-soft))]/40">
                 <td className="px-4 py-3">
-                  <div className="font-medium text-gray-800">{l.instructor_name || '—'}</div>
-                  {l.description && <div className="text-xs text-gray-400">{l.description}</div>}
+                  <div className="font-medium text-[hsl(var(--dash-ink))]">{l.instructor_name || '—'}</div>
+                  {l.description && <div className="text-xs text-[hsl(var(--dash-muted))]">{l.description}</div>}
                 </td>
-                <td className="px-4 py-3 text-gray-600">{l.language || '—'}</td>
-                <td className="px-4 py-3 text-right text-gray-600">{l.hours}</td>
-                <td className="px-4 py-3 text-right text-gray-600">{l.rate_applied}</td>
-                <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                <td className="px-4 py-3 text-[hsl(var(--dash-muted))]">{l.language || '—'}</td>
+                <td className="px-4 py-3 text-right text-[hsl(var(--dash-muted))]">{l.hours}</td>
+                <td className="px-4 py-3 text-right text-[hsl(var(--dash-muted))]">{l.rate_applied}</td>
+                <td className="px-4 py-3 text-right font-semibold text-[hsl(var(--dash-ink))]">
                   {l.amount} {l.currency || ''}
                 </td>
-                <td className="px-4 py-3 text-gray-500">{(l.work_date || '').slice(0, 10)}</td>
+                <td className="px-4 py-3 text-[hsl(var(--dash-muted))]">{(l.work_date || '').slice(0, 10)}</td>
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={() => handleDelete(l)}
-                    className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600"
+                    className="p-1.5 rounded-md hover:bg-red-50 text-[hsl(var(--dash-muted))] hover:text-red-500"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -321,7 +328,7 @@ function WorkLogForm({
             type="button"
             onClick={doPreview}
             disabled={!instructorUuid || hours === ''}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-[hsl(var(--dash-border))] rounded-lg text-sm font-semibold text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-accent-soft))] disabled:opacity-40"
           >
             <Calculator className="w-4 h-4" /> {t('instructors.preview', 'Preview cost')}
           </button>
@@ -329,16 +336,16 @@ function WorkLogForm({
       </div>
 
       {preview && (
-        <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 text-sm">
+        <div className="rounded-lg border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-canvas))] p-3 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-500">
+            <span className="text-[hsl(var(--dash-muted))]">
               {preview.hours} × {preview.rate_applied}
             </span>
-            <span className="font-bold text-gray-900">
+            <span className="font-bold text-[hsl(var(--dash-ink))]">
               {preview.amount} {preview.currency || ''}
             </span>
           </div>
-          <div className="text-xs text-gray-400 mt-1">
+          <div className="text-xs text-[hsl(var(--dash-muted))] mt-1">
             {t('instructors.rate_source', 'Rate source')}: {t(`instructors.source_${preview.rate_source}`, preview.rate_source) as string}
           </div>
         </div>

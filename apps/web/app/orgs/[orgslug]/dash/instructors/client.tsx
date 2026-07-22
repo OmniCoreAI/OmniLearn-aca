@@ -14,6 +14,7 @@ import {
   AcademicPageShell,
   AcademicHeader,
   AcademicGrid,
+  AcademicGridSkeleton,
   AcademicEmptyState,
   AcademicCard,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
@@ -67,16 +68,16 @@ function InstructorsHome({ orgslug }: { orgslug: string }) {
   const badgesFor = (i: any) => {
     const badges: { label: string; className?: string }[] = []
     if (i.category?.name)
-      badges.push({ label: i.category.name, className: 'bg-indigo-100 text-indigo-700' })
-    if (i.department) badges.push({ label: i.department, className: 'bg-gray-100 text-gray-600' })
+      badges.push({ label: i.category.name, className: 'bg-[hsl(var(--dash-tile-lavender))] text-[hsl(var(--dash-tile-lavender-fg))]' })
+    if (i.department) badges.push({ label: i.department, className: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]' })
     const statusCls: Record<string, string> = {
-      active: 'bg-green-100 text-green-700',
-      inactive: 'bg-gray-100 text-gray-500',
-      on_leave: 'bg-amber-100 text-amber-700',
+      active: 'bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]',
+      inactive: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]',
+      on_leave: 'bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]',
     }
     badges.push({
       label: t(`instructors.status_${i.status}`, i.status) as string,
-      className: statusCls[i.status] || 'bg-gray-100 text-gray-600',
+      className: statusCls[i.status] || 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]',
     })
     return badges
   }
@@ -112,6 +113,7 @@ function InstructorsHome({ orgslug }: { orgslug: string }) {
 
       <InstructorTabs orgslug={orgslug} />
 
+      {isLoading && <AcademicGridSkeleton />}
       <AcademicGrid>
         {!isLoading && instructors.length === 0 && (
           <AcademicEmptyState

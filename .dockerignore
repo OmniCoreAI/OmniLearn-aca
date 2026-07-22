@@ -1,5 +1,6 @@
-# Dependencies
+# Dependencies (root and nested, e.g. apps/web/node_modules)
 node_modules
+**/node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -7,6 +8,7 @@ pnpm-debug.log*
 
 # Production builds
 .next
+**/.next
 out
 dist
 build

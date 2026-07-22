@@ -86,32 +86,39 @@ function InstructorCategoriesHome({ orgslug }: { orgslug: string }) {
 
       <InstructorTabs orgslug={orgslug} />
 
-      <div className="bg-white rounded-xl nice-shadow border border-gray-100 overflow-hidden">
+      {isLoading && (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="dash-shimmer h-20 rounded-[var(--dash-radius)]" />
+          ))}
+        </div>
+      )}
+      <div className="overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] nice-shadow">
         {!isLoading && categories.length === 0 && (
-          <div className="p-10 text-center text-gray-400">
+          <div className="p-10 text-center text-[hsl(var(--dash-muted))]">
             {t('instructors.no_categories', 'No categories yet. Create one to define hourly rates.')}
           </div>
         )}
         {categories.map((c: any) => (
-          <div key={c.category_uuid} className="flex items-start justify-between gap-4 p-4 border-b border-gray-50 last:border-b-0">
+          <div key={c.category_uuid} className="flex items-start justify-between gap-4 border-b border-[hsl(var(--dash-border))]/60 p-4 transition-colors last:border-b-0 hover:bg-[hsl(var(--dash-accent-soft))]/40">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-gray-900">{c.name}</h3>
+                <h3 className="font-semibold text-[hsl(var(--dash-ink))]">{c.name}</h3>
                 {c.instructor_count > 0 && (
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                  <span className="rounded-full bg-[hsl(var(--dash-canvas))] px-2 py-0.5 text-[10px] font-bold uppercase text-[hsl(var(--dash-muted))]">
                     {c.instructor_count} {t('instructors.title', 'Instructors')}
                   </span>
                 )}
               </div>
-              {c.description && <p className="text-sm text-gray-500 mt-0.5">{c.description}</p>}
-              <div className="flex flex-wrap gap-1.5 mt-2">
+              {c.description && <p className="mt-0.5 text-sm text-[hsl(var(--dash-muted))]">{c.description}</p>}
+              <div className="mt-2 flex flex-wrap gap-1.5">
                 {c.hourly_rate != null && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-teal-50 text-teal-700">
+                  <span className="rounded-full bg-[hsl(var(--dash-tile-mint))] px-2 py-0.5 text-xs text-[hsl(var(--dash-tile-mint-fg))]">
                     {t('instructors.base_rate', 'Base')}: {c.hourly_rate} {c.currency || ''}
                   </span>
                 )}
                 {(c.language_rates || []).map((r: any) => (
-                  <span key={r.id} className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                  <span key={r.id} className="rounded-full bg-[hsl(var(--dash-tile-lavender))] px-2 py-0.5 text-xs text-[hsl(var(--dash-tile-lavender-fg))]">
                     {r.language}: {r.hourly_rate} {c.currency || ''}
                   </span>
                 ))}
@@ -123,13 +130,13 @@ function InstructorCategoriesHome({ orgslug }: { orgslug: string }) {
                   setEditing(c)
                   setModalOpen(true)
                 }}
-                className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-700"
+                className="rounded-md p-1.5 text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))]"
               >
                 <Pencil className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleDelete(c)}
-                className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600"
+                className="rounded-md p-1.5 text-[hsl(var(--dash-muted))] hover:bg-red-50 hover:text-red-500"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -244,20 +251,20 @@ function CategoryForm({
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-[hsl(var(--dash-ink))]">
             {t('instructors.language_rates', 'Per-language rates')}
           </label>
           <button
             type="button"
             onClick={addRate}
-            className="text-xs font-bold text-black flex items-center gap-1 hover:opacity-70"
+            className="text-xs font-bold text-[hsl(var(--dash-accent))] flex items-center gap-1 hover:opacity-70"
           >
             <Plus className="w-3.5 h-3.5" /> {t('instructors.add_language', 'Add language')}
           </button>
         </div>
         <div className="space-y-2">
           {rates.length === 0 && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[hsl(var(--dash-muted))]">
               {t('instructors.no_language_rates', 'No per-language rates. The base rate applies to all languages.')}
             </p>
           )}
@@ -281,7 +288,7 @@ function CategoryForm({
               <button
                 type="button"
                 onClick={() => removeRate(i)}
-                className="p-2 text-gray-400 hover:text-red-600 shrink-0"
+                className="p-2 text-[hsl(var(--dash-muted))] hover:text-red-500 shrink-0"
                 aria-label={t('academic.delete', 'Delete')}
               >
                 <X className="w-4 h-4" />

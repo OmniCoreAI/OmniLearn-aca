@@ -1475,7 +1475,29 @@
       "ai_credits": "أرصدة الذكاء الاصطناعي",
       "used": "مستخدَم",
       "no_credits_remaining": "لا توجد أرصدة متبقية",
-      "includes_purchased": "يشمل {{count}} مشتراة"
+      "includes_purchased": "يشمل {{count}} مشتراة",
+      "hero_title": "أنشئ دورتك الرائعة القادمة اليوم",
+      "hero_subtitle": "أنشئ محتوى جذابًا وحافظ على تقدم المتعلمين لديك.",
+      "hero_subtitle_org": "أنشئ محتوى جذابًا لـ {{org}} وحافظ على تقدم المتعلمين لديك.",
+      "hero_cta": "إنشاء دورة",
+      "progress_hint": "نسبة الدورات المنشورة",
+      "continue_building": "واصل البناء",
+      "events": "الفعاليات",
+      "no_upcoming_deadlines": "لا توجد مواعيد نهائية قادمة",
+      "assignment": "واجب",
+      "activity": "النشاط",
+      "last_30_days": "آخر 30 يومًا",
+      "no_data_yet": "لا توجد بيانات بعد",
+      "active_users": "المستخدمون النشطون",
+      "course": "دورة",
+      "all_status": "جميع الحالات",
+      "search_courses": "ابحث عن دورة...",
+      "course_title": "عنوان الدورة",
+      "status": "الحالة",
+      "progress": "التقدم",
+      "action": "إجراء",
+      "open": "فتح",
+      "upcoming_class": "الحصة القادمة"
     },
     "courses": {
       "title": "الدورات",
@@ -4027,7 +4049,8 @@
           "description": "مشترياتك واشتراكاتك",
           "keywords": "مشتريات, اشتراكات, فواتير, تاريخ, إيصالات"
         }
-      }
+      },
+      "global_placeholder": "ابحث حسب الموضوع أو العنوان أو الاسم..."
     }
   },
   "editor": {

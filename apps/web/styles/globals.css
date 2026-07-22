@@ -182,11 +182,51 @@
 
 @layer utilities {
   .nice-shadow {
-    box-shadow: 0 1px 2px hsl(220 18% 14% / 0.04), 0 0 0 1px hsl(var(--dash-border));
+    box-shadow: 0 1px 2px hsl(245 25% 13% / 0.04), 0 0 0 1px hsl(var(--dash-border));
   }
 
   .light-shadow {
-    box-shadow: 0 8px 24px hsl(220 18% 14% / 0.06), 0 0 0 1px hsl(var(--dash-border));
+    box-shadow: 0 8px 24px hsl(245 25% 13% / 0.06), 0 0 0 1px hsl(var(--dash-border));
+  }
+
+  /* Card hover lift — used across dashboard cards */
+  .dash-lift {
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .dash-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px hsl(245 25% 13% / 0.08), 0 0 0 1px hsl(var(--dash-border));
+  }
+
+  /* Shimmer skeleton */
+  .dash-shimmer {
+    position: relative;
+    overflow: hidden;
+    background-color: hsl(var(--dash-border) / 0.5);
+  }
+  .dash-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(0 0% 100% / 0.55),
+      transparent
+    );
+    animation: dash-shimmer-slide 1.6s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dash-lift,
+    .dash-lift:hover {
+      transition: none;
+      transform: none;
+    }
+    .dash-shimmer::after {
+      animation: none;
+    }
   }
 
   /* Hide scrollbar while maintaining scroll functionality */
@@ -335,18 +375,33 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
 
-    /* Soft Academic Workspace — Quez-inspired dashboard */
-    --dash-canvas: 220 14% 96%;
+    /* Skillio-inspired dashboard — violet palette */
+    --dash-canvas: 250 33% 97%;
     --dash-sidebar: 0 0% 100%;
-    --dash-ink: 220 18% 14%;
-    --dash-muted: 220 9% 46%;
-    --dash-accent: 173 72% 34%;
-    --dash-accent-soft: 168 45% 94%;
-    --dash-border: 220 14% 90%;
+    --dash-ink: 245 25% 13%;
+    --dash-muted: 246 10% 47%;
+    --dash-accent: 262 83% 58%;
+    --dash-accent-soft: 262 80% 96%;
+    --dash-border: 248 20% 91%;
     --dash-surface: 0 0% 100%;
     --dash-warn: 24 95% 53%;
     --dash-warn-soft: 33 100% 96%;
-    --dash-radius: 1rem;
+    --dash-radius: 1.25rem;
+    /* Hero banner gradient stops (violet → purple → magenta) */
+    --dash-gradient-from: 258 90% 60%;
+    --dash-gradient-via: 270 85% 56%;
+    --dash-gradient-to: 288 82% 54%;
+    /* Pastel icon tiles (bg / fg pairs) */
+    --dash-tile-mint: 152 60% 94%;
+    --dash-tile-mint-fg: 158 64% 36%;
+    --dash-tile-amber: 40 100% 94%;
+    --dash-tile-amber-fg: 32 92% 44%;
+    --dash-tile-lavender: 262 80% 95%;
+    --dash-tile-lavender-fg: 262 72% 52%;
+    --dash-tile-sky: 204 94% 94%;
+    --dash-tile-sky-fg: 206 90% 42%;
+    --dash-tile-rose: 340 90% 95%;
+    --dash-tile-rose-fg: 340 72% 50%;
 
     /* Z-Index Layering System */
     --z-behind: -10;
@@ -409,6 +464,19 @@
     @apply bg-background text-foreground;
     font-family: var(--font-default, 'Wix Madefor Text'), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     letter-spacing: -0.02em;
+  }
+
+  /* RTL (Arabic, Persian): negative letter-spacing breaks Arabic script
+     ligatures — reset it and let system Arabic fonts render naturally. */
+  html[dir='rtl'],
+  html[dir='rtl'] body {
+    letter-spacing: 0;
+  }
+}
+
+@keyframes dash-shimmer-slide {
+  100% {
+    transform: translateX(100%);
   }
 }
 

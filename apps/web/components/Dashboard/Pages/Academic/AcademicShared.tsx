@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { getUriWithOrg } from '@services/config/config'
 import { MoreVertical, Trash2, Pencil, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FadeIn, Stagger, StaggerItem } from '@components/Dashboard/Shared/DashMotion'
 
 export function AcademicPageShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-full w-full bg-[hsl(var(--dash-canvas))] px-4 text-[hsl(var(--dash-ink))] sm:px-10">
-      <div className="mb-6 pt-6">{children}</div>
+      <FadeIn className="mb-6 pt-6">{children}</FadeIn>
     </div>
   )
 }
@@ -39,8 +40,33 @@ export function AcademicHeader({
 
 export function AcademicGrid({ children }: { children: React.ReactNode }) {
   return (
+    <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {React.Children.map(children, (child, i) =>
+        child == null ? null : <StaggerItem key={i}>{child}</StaggerItem>
+      )}
+    </Stagger>
+  )
+}
+
+/**
+ * Shimmer skeleton grid shown while a section's list is loading —
+ * replaces the previous blank screen for perceived speed.
+ */
+export function AcademicGridSkeleton({ count = 8 }: { count?: number }) {
+  return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-      {children}
+      {Array.from({ length: count }, (_, i) => (
+        <div
+          key={i}
+          className="overflow-hidden rounded-[var(--dash-radius)] border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))]"
+        >
+          <div className="dash-shimmer aspect-video w-full" />
+          <div className="space-y-2 p-3">
+            <div className="dash-shimmer h-4 w-3/4 rounded" />
+            <div className="dash-shimmer h-3 w-1/2 rounded" />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -99,7 +125,7 @@ export function AcademicCard({
   const image = thumbnailUrl || '/empty_thumbnail.png'
 
   return (
-    <div className="group relative flex w-full flex-col overflow-hidden rounded-xl bg-[hsl(var(--dash-surface))] nice-shadow transition-all duration-300 hover:scale-[1.01]">
+    <div className="dash-lift group relative flex w-full flex-col overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] nice-shadow">
       {hasMenu && (
         <div
           className={cn(
@@ -222,7 +248,7 @@ export function AcademicPrimaryButton({
   return (
     <button
       className={cn(
-        'inline-flex items-center gap-2 rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white transition-colors hover:brightness-110',
+        'dash-lift inline-flex items-center gap-2 rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white shadow-[0_4px_12px_hsl(var(--dash-accent)/0.3)] transition-colors hover:brightness-110',
         className
       )}
       {...props}
