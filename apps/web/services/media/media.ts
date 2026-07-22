@@ -188,8 +188,10 @@ export function getActivityMediaDirectory(
 }
 
 export function getOrgLogoMediaDirectory(orgUUID: string, fileId: string) {
-  let uri = `${getMediaUrl()}content/orgs/${orgUUID}/logos/${fileId}`
-  return uri
+  if (!fileId) return ''
+  // Allow absolute URLs (e.g. hosted org logos) — same pattern as news covers.
+  if (fileId.startsWith('http://') || fileId.startsWith('https://')) return fileId
+  return `${getMediaUrl()}content/orgs/${orgUUID}/logos/${fileId}`
 }
 
 export function getNewsCoverMediaDirectory(
