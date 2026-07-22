@@ -11,7 +11,15 @@ const nextConfig = {
   // handling on /ingest/* doesn't 308-redirect ingestion requests.
   skipTrailingSlashRedirect: true,
   async rewrites() {
+    const backend =
+      process.env.NEXT_PUBLIC_OMNILEARN_BACKEND_URL || 'http://localhost:8080/'
+    const backendOrigin = backend.replace(/\/$/, '')
     return [
+      // Proxy authenticated media in local Next.js so /content works same-origin
+      {
+        source: '/content/:path*',
+        destination: `${backendOrigin}/content/:path*`,
+      },
       // PostHog reverse proxy (EU cloud) — served same-origin so adblockers
       // don't strip ingestion. The client SDK points at api_host: '/ingest'.
       {

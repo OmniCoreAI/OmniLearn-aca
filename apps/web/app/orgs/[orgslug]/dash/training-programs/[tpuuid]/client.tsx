@@ -17,6 +17,7 @@ import {
   AcademicPageShell,
   AcademicHeader,
   AcademicEmptyState,
+  AcademicGridSkeleton,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import {
   getTrainingProgram,
@@ -92,6 +93,7 @@ function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: s
         }
       />
 
+      {isLoading && <AcademicGridSkeleton count={4} />}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {!isLoading && courses.length === 0 && (
           <AcademicEmptyState title={t('academic.no_courses')} description={t('academic.no_courses_desc')} />
@@ -108,14 +110,14 @@ function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: s
               <button
                 onClick={() => setProfileCourse(course)}
                 title={t('academic.academic_profile')}
-                className="p-1.5 rounded-md bg-white/90 nice-shadow text-gray-500 hover:text-black"
+                className="p-1.5 rounded-md bg-white/90 nice-shadow text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))]"
               >
                 <SlidersHorizontal className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleUnlink(course.course_uuid)}
                 title={t('academic.delete')}
-                className="p-1.5 rounded-md bg-white/90 nice-shadow text-gray-500 hover:text-red-600"
+                className="p-1.5 rounded-md bg-white/90 nice-shadow text-[hsl(var(--dash-muted))] hover:text-red-500"
               >
                 <Unlink className="w-4 h-4" />
               </button>

@@ -22,6 +22,7 @@ import { useOrgMembership } from '@components/Contexts/OrgContext'
 import { isFeatureAvailable } from '@services/plans/plans'
 import { normalizeForSearch } from '@/lib/search/normalize'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
+import OrgLogo from '@components/Dashboard/Shared/OrgLogo'
 
 const CONTENT_TYPE_ICON: Record<ContentResultType, SearchMeta['icon']> = {
   course: BookOpen,
@@ -71,6 +72,7 @@ export default function CommandPalette() {
   const { open, setOpen } = useCommandPalette()
   const router = useRouter()
   const { track } = useOmniLearnAnalytics('dashboard')
+  const { org } = useOrgMembership()
   const [query, setQuery] = useState('')
 
   const pages = usePagesFiltered()
@@ -235,12 +237,11 @@ export default function CommandPalette() {
                   className="w-full bg-transparent text-[18px] sm:text-[22px] font-medium leading-tight tracking-tight text-white outline-none placeholder:font-medium placeholder:text-white/35"
                 />
               </div>
-              <img
-                src="/lrn-dash.svg"
+              <OrgLogo
+                org={org}
+                className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 opacity-90"
+                fallbackClassName="text-sm bg-white/10 text-white"
                 alt=""
-                aria-hidden="true"
-                draggable={false}
-                className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 select-none opacity-90"
               />
             </div>
 

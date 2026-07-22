@@ -14,6 +14,7 @@ import {
   AcademicPageShell,
   AcademicHeader,
   AcademicGrid,
+  AcademicGridSkeleton,
   AcademicEmptyState,
   AcademicCard,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
@@ -103,7 +104,7 @@ function CohortDetail({
           <AuthenticatedClientElement checkMethod="roles" action="update" ressourceType="programs" orgId={orgId!}>
             <button
               onClick={() => setEnrollOpen(true)}
-              className="rounded-lg bg-white text-black border border-gray-200 text-xs font-bold px-5 py-2 flex items-center gap-2 nice-shadow hover:scale-105 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-surface))] text-[hsl(var(--dash-muted))] border border-[hsl(var(--dash-border))] text-xs font-semibold px-5 py-2 flex items-center gap-2 transition-all hover:border-[hsl(var(--dash-accent))]/40 hover:text-[hsl(var(--dash-accent))]"
             >
               <Users className="w-4 h-4" /> {t('academic.manage_enrollment')}
             </button>
@@ -120,6 +121,7 @@ function CohortDetail({
         }
       />
 
+      {isLoading && <AcademicGridSkeleton count={4} />}
       <AcademicGrid>
         {!isLoading && semesters.length === 0 && (
           <AcademicEmptyState title={t('academic.no_semesters')} description={t('academic.no_semesters_desc')} />
@@ -131,7 +133,7 @@ function CohortDetail({
             href={`/dash/postgraduate/${programuuid}/cohort/${cohortuuid}/semester/${s.semester_uuid.replace('semester_', '')}`}
             title={s.name}
             subtitle={s.description}
-            badges={[{ label: `#${s.order}`, className: 'bg-slate-100 text-slate-600' }]}
+            badges={[{ label: `#${s.order}`, className: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]' }]}
             onEdit={() => {
               setEditing(s)
               setModalOpen(true)

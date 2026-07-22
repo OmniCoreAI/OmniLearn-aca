@@ -14,6 +14,7 @@ import {
   AcademicPageShell,
   AcademicHeader,
   AcademicGrid,
+  AcademicGridSkeleton,
   AcademicEmptyState,
   AcademicCard,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
@@ -36,16 +37,16 @@ const LEVELS = [
 const PROGRAM_STATUSES = ['draft', 'active', 'suspended', 'archived']
 
 const LEVEL_BADGE: Record<string, string> = {
-  phd: 'bg-purple-100 text-purple-700',
-  masters: 'bg-blue-100 text-blue-700',
+  phd: 'bg-[hsl(var(--dash-tile-lavender))] text-[hsl(var(--dash-tile-lavender-fg))]',
+  masters: 'bg-[hsl(var(--dash-tile-sky))] text-[hsl(var(--dash-tile-sky-fg))]',
   diploma: 'bg-emerald-100 text-emerald-700',
 }
 
 const PROGRAM_STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-500',
-  active: 'bg-green-100 text-green-700',
-  suspended: 'bg-amber-100 text-amber-700',
-  archived: 'bg-gray-200 text-gray-600',
+  draft: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]',
+  active: 'bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]',
+  suspended: 'bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]',
+  archived: 'bg-[hsl(var(--dash-border))] text-[hsl(var(--dash-muted))]',
 }
 
 function ProgramsHome({ orgslug }: { orgslug: string }) {
@@ -93,10 +94,10 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
       { label: t(`academic.level_${p.program_level}`), className: LEVEL_BADGE[p.program_level] },
       { label: t(`academic.pstatus_${p.status || 'draft'}`), className: PROGRAM_STATUS_BADGE[p.status || 'draft'] },
       p.is_paid
-        ? { label: t('academic.paid'), className: 'bg-indigo-100 text-indigo-700' }
-        : { label: t('academic.free'), className: 'bg-teal-100 text-teal-700' },
+        ? { label: t('academic.paid'), className: 'bg-[hsl(var(--dash-tile-lavender))] text-[hsl(var(--dash-tile-lavender-fg))]' }
+        : { label: t('academic.free'), className: 'bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]' },
     ]
-    if (p.in_plan === false) badges.push({ label: t('academic.out_of_plan'), className: 'bg-orange-100 text-orange-700' })
+    if (p.in_plan === false) badges.push({ label: t('academic.out_of_plan'), className: 'bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]' })
     return badges
   }
 
@@ -126,6 +127,7 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
         }
       />
 
+      {isLoading && <AcademicGridSkeleton />}
       <AcademicGrid>
         {!isLoading && programs.length === 0 && (
           <AcademicEmptyState title={t('academic.no_programs')} description={t('academic.no_programs_desc')} />
@@ -322,7 +324,7 @@ function ProgramForm({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-[hsl(var(--dash-ink))]">
           <input type="checkbox" checked={isPaid} onChange={(e) => setIsPaid(e.target.checked)} />
           {t('academic.paid')}
         </label>
@@ -345,17 +347,17 @@ function ProgramForm({
       </Field>
 
       <div className="flex flex-wrap gap-4">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-[hsl(var(--dash-ink))]">
           <input type="checkbox" checked={inPlan} onChange={(e) => setInPlan(e.target.checked)} />
           {t('academic.in_plan')}
         </label>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-[hsl(var(--dash-ink))]">
           <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
           {t('academic.published')}
         </label>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 border-t border-gray-100 pt-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 border-t border-[hsl(var(--dash-border))] pt-3 sm:grid-cols-2">
         <div className="space-y-2">
           <ImageField label={t('academic.thumbnail')} onFile={(f) => handleImage('thumbnail', f)} />
           {thumbnailPreview ? (
@@ -382,11 +384,11 @@ function ProgramForm({
   )
 }
 
-function ImageField({ label, onFile }: { label: string; onFile: (f?: File) => void }) {
+function ImageField({ label, onFile }: { label: string; onFile: (_f?: File) => void }) {
   return (
     <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
-      <label className="flex items-center gap-2 px-3 py-2 bg-white border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 cursor-pointer hover:border-gray-400">
+      <label className="block text-sm font-medium text-[hsl(var(--dash-ink))]">{label}</label>
+      <label className="flex items-center gap-2 px-3 py-2 bg-[hsl(var(--dash-surface))] border border-dashed border-[hsl(var(--dash-border))] rounded-lg text-sm text-[hsl(var(--dash-muted))] cursor-pointer hover:border-[hsl(var(--dash-accent))]/50">
         <ImageIcon className="w-4 h-4" />
         <span className="truncate">{label}</span>
         <input
@@ -401,12 +403,12 @@ function ImageField({ label, onFile }: { label: string; onFile: (f?: File) => vo
 }
 
 export const inputCls =
-  'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]'
+  'w-full px-3 py-2 bg-[hsl(var(--dash-surface))] border border-[hsl(var(--dash-border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/30 focus:border-[hsl(var(--dash-accent))]/50'
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <label className="block text-sm font-medium text-[hsl(var(--dash-ink))]">{label}</label>
       {children}
     </div>
   )
@@ -419,7 +421,7 @@ export function SubmitRow({ saving }: { saving: boolean }) {
       <button
         type="submit"
         disabled={saving}
-        className="px-4 py-2 bg-[hsl(var(--dash-accent))] text-white text-sm font-bold rounded-lg disabled:opacity-50"
+        className="dash-lift rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-white shadow-[0_4px_12px_hsl(var(--dash-accent)/0.3)] hover:brightness-110 disabled:opacity-50"
       >
         {saving ? '…' : t('academic.save')}
       </button>

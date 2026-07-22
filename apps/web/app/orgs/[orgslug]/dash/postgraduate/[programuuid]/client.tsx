@@ -14,6 +14,7 @@ import {
   AcademicPageShell,
   AcademicHeader,
   AcademicGrid,
+  AcademicGridSkeleton,
   AcademicEmptyState,
   AcademicCard,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
@@ -29,10 +30,10 @@ import {
 
 const STATUSES = ['upcoming', 'active', 'completed', 'archived']
 const STATUS_BADGE: Record<string, string> = {
-  upcoming: 'bg-amber-100 text-amber-700',
-  active: 'bg-green-100 text-green-700',
-  completed: 'bg-blue-100 text-blue-700',
-  archived: 'bg-gray-100 text-gray-500',
+  upcoming: 'bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]',
+  active: 'bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]',
+  completed: 'bg-[hsl(var(--dash-tile-sky))] text-[hsl(var(--dash-tile-sky-fg))]',
+  archived: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]',
 }
 
 function ProgramDetail({ orgslug, programuuid }: { orgslug: string; programuuid: string }) {
@@ -103,6 +104,7 @@ function ProgramDetail({ orgslug, programuuid }: { orgslug: string; programuuid:
         }
       />
 
+      {isLoading && <AcademicGridSkeleton count={4} />}
       <AcademicGrid>
         {!isLoading && cohorts.length === 0 && (
           <AcademicEmptyState title={t('academic.no_cohorts')} description={t('academic.no_cohorts_desc')} />
@@ -116,10 +118,10 @@ function ProgramDetail({ orgslug, programuuid }: { orgslug: string; programuuid:
             subtitle={c.description}
             badges={[
               { label: t(`academic.status_${c.status}`), className: STATUS_BADGE[c.status] },
-              ...(c.academic_year ? [{ label: c.academic_year, className: 'bg-slate-100 text-slate-600' }] : []),
+              ...(c.academic_year ? [{ label: c.academic_year, className: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]' }] : []),
               {
                 label: `${c.enrolled_count ?? 0}${c.capacity != null ? `/${c.capacity}` : ''} ${t('academic.enrolled_short')}`,
-                className: 'bg-gray-100 text-gray-600',
+                className: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]',
               },
             ]}
             onEdit={() => {

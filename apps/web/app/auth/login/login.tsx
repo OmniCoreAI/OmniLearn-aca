@@ -222,11 +222,11 @@ const LoginClient = (props: LoginClientProps) => {
         {showErrorModal && (
           <div className={`
             w-full px-4 py-3 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-200
-            ${errorType === 'EMAIL_NOT_VERIFIED' && !verificationResent ? 'bg-amber-500 text-white' : ''}
-            ${verificationResent ? 'bg-green-500 text-white' : ''}
-            ${errorType === 'ACCOUNT_LOCKED' ? 'bg-red-500 text-white' : ''}
-            ${errorType === 'RATE_LIMITED' ? 'bg-orange-500 text-white' : ''}
-            ${error && !verificationResent && errorType !== 'EMAIL_NOT_VERIFIED' && errorType !== 'ACCOUNT_LOCKED' && errorType !== 'RATE_LIMITED' ? 'bg-red-500 text-white' : ''}
+            ${errorType === 'EMAIL_NOT_VERIFIED' && !verificationResent ? 'bg-amber-600 text-white' : ''}
+            ${verificationResent ? 'bg-emerald-600 text-white' : ''}
+            ${errorType === 'ACCOUNT_LOCKED' ? 'bg-red-600 text-white' : ''}
+            ${errorType === 'RATE_LIMITED' ? 'bg-orange-600 text-white' : ''}
+            ${error && !verificationResent && errorType !== 'EMAIL_NOT_VERIFIED' && errorType !== 'ACCOUNT_LOCKED' && errorType !== 'RATE_LIMITED' ? 'bg-red-600 text-white' : ''}
           `}>
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {errorType === 'EMAIL_NOT_VERIFIED' && !verificationResent && <Mail size={18} className="shrink-0" />}
@@ -282,107 +282,128 @@ const LoginClient = (props: LoginClientProps) => {
           </div>
         )}
 
-        <div className="flex-1 flex flex-row">
-        <div className="m-auto w-full max-w-sm px-6 py-8 sm:py-0">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">{t('auth.welcome_back')}</h1>
-            <p className="text-gray-500 mt-1">{t('auth.enter_credentials')}</p>
-          </div>
-
-          {/* Login Form Card */}
-          <div className="bg-white rounded-xl p-6 nice-shadow">
-            <FormLayout onSubmit={formik.handleSubmit}>
-              <FormField name="email">
-                <FormLabelAndMessage
-                  label={t('auth.email')}
-                  message={formik.touched.email ? formik.errors.email : undefined}
-                />
-                <Form.Control asChild>
-                  <Input
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    value={formik.values.email}
-                    type="email"
-                  />
-                </Form.Control>
-              </FormField>
-
-              <FormField name="password">
-                <FormLabelAndMessage
-                  label={t('auth.password')}
-                  message={formik.touched.password ? formik.errors.password : undefined}
-                />
-                <Form.Control asChild>
-                  <Input
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    value={formik.values.password}
-                    type="password"
-                    autoComplete="current-password"
-                  />
-                </Form.Control>
-              </FormField>
-
-              <div className="flex justify-end">
-                <Link
-                  href="/forgot"
-                  className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {t('auth.forgot_password')}
-                </Link>
+        <div className="flex flex-1 flex-col justify-center px-6 py-10 sm:px-10">
+          <div className="mx-auto w-full max-w-[400px] animate-fade-in">
+            <div className="mb-8">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-[hsl(var(--auth-gold-soft))] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--auth-ink))]">
+                <Shield size={12} strokeWidth={2.25} />
+                {t('auth.secure_sign_in', 'Secure sign-in')}
               </div>
-
-              <div className="pt-2">
-                <Form.Submit asChild>
-                  <button className="w-full bg-black text-white font-semibold text-center py-2.5 rounded-lg hover:bg-gray-800 transition-colors">
-                    {isSubmitting ? t('common.loading') : t('auth.login')}
-                  </button>
-                </Form.Submit>
-              </div>
-            </FormLayout>
-
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-white text-gray-400">{t('common.or')}</span>
-              </div>
+              <h1 className="text-[1.75rem] font-semibold tracking-tight text-[hsl(var(--auth-ink))]">
+                {t('auth.welcome_back')}
+              </h1>
+              <p className="mt-2 text-[15px] leading-relaxed text-[hsl(var(--auth-muted))]">
+                {t('auth.enter_credentials')}
+              </p>
             </div>
 
-            {/* Social & SSO Buttons */}
-            <div className="space-y-2.5">
-              <button
-                onClick={handleGoogleSignIn}
-                className="flex items-center justify-center gap-2 w-full py-2.5 bg-white border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="" className="w-4 h-4" />
-                <span>{t('auth.sign_in_with_google')}</span>
-              </button>
+            <div className="rounded-2xl border border-[hsl(var(--auth-border))] bg-[hsl(var(--auth-surface))] p-6 sm:p-7 shadow-[0_1px_0_hsl(215_30%_20%/0.03),0_18px_40px_hsl(215_40%_12%/0.06)]">
+              <FormLayout onSubmit={formik.handleSubmit} className="space-y-1">
+                <FormField name="email">
+                  <FormLabelAndMessage
+                    label={t('auth.email')}
+                    message={formik.touched.email ? formik.errors.email : undefined}
+                  />
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[hsl(var(--auth-muted))]" />
+                    <Form.Control asChild>
+                      <Input
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                        value={formik.values.email}
+                        type="email"
+                        autoComplete="email"
+                        placeholder="name@institution.gov"
+                        className="auth-input !h-11 !rounded-[0.625rem] !bg-white !px-10 !text-[hsl(var(--auth-ink))] !shadow-none placeholder:!text-[hsl(var(--auth-muted)/0.55)]"
+                      />
+                    </Form.Control>
+                  </div>
+                </FormField>
 
-              {ssoEnabled && (
+                <FormField name="password">
+                  <FormLabelAndMessage
+                    label={t('auth.password')}
+                    message={formik.touched.password ? formik.errors.password : undefined}
+                  />
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[hsl(var(--auth-muted))]" />
+                    <Form.Control asChild>
+                      <Input
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                        value={formik.values.password}
+                        type="password"
+                        autoComplete="current-password"
+                        className="auth-input !h-11 !rounded-[0.625rem] !bg-white !px-10 !text-[hsl(var(--auth-ink))] !shadow-none placeholder:!text-[hsl(var(--auth-muted)/0.55)]"
+                      />
+                    </Form.Control>
+                  </div>
+                </FormField>
+
+                <div className="flex justify-end pb-1 pt-0.5">
+                  <Link
+                    href="/forgot"
+                    className="text-xs font-medium text-[hsl(var(--auth-focus))] hover:underline"
+                  >
+                    {t('auth.forgot_password')}
+                  </Link>
+                </div>
+
+                <div className="pt-2">
+                  <Form.Submit asChild>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="auth-btn-primary w-full rounded-xl py-3 text-center text-sm font-semibold disabled:opacity-60"
+                    >
+                      {isSubmitting ? t('common.loading') : t('auth.login')}
+                    </button>
+                  </Form.Submit>
+                </div>
+              </FormLayout>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-[hsl(var(--auth-border))]" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-[hsl(var(--auth-surface))] px-3 font-medium uppercase tracking-[0.14em] text-[hsl(var(--auth-muted))]">
+                    {t('common.or')}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
                 <button
-                  onClick={handleSSOLogin}
-                  disabled={ssoLoading}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-[hsl(var(--auth-border))] bg-white py-2.5 text-sm font-medium text-[hsl(var(--auth-ink))] transition-colors hover:bg-[hsl(var(--auth-canvas))]"
                 >
-                  <Shield size={16} />
-                  <span>{ssoLoading ? t('common.loading') : t('auth.sign_in_with_sso')}</span>
+                  <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="" className="h-4 w-4" />
+                  <span>{t('auth.sign_in_with_google')}</span>
                 </button>
-              )}
-            </div>
-          </div>
 
-          {/* Sign Up Link */}
-          <p className="text-center text-gray-600 mt-6">
-            {t('auth.no_account')}{' '}
-            <Link href="/signup" className="font-semibold text-gray-900 hover:underline">
-              {t('auth.sign_up')}
-            </Link>
-          </p>
-        </div>
+                {ssoEnabled && (
+                  <button
+                    type="button"
+                    onClick={handleSSOLogin}
+                    disabled={ssoLoading}
+                    className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-[hsl(var(--auth-navy))] py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    <Shield size={16} />
+                    <span>{ssoLoading ? t('common.loading') : t('auth.sign_in_with_sso')}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <p className="mt-7 text-center text-sm text-[hsl(var(--auth-muted))]">
+              {t('auth.no_account')}{' '}
+              <Link href="/signup" className="font-semibold text-[hsl(var(--auth-ink))] underline-offset-2 hover:underline">
+                {t('auth.sign_up')}
+              </Link>
+            </p>
+          </div>
         </div>
     </AuthLayout>
   )

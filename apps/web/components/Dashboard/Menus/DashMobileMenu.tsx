@@ -39,7 +39,7 @@ import { getUriWithOrg, getDeploymentMode } from '@services/config/config'
 import { useTranslation } from 'react-i18next'
 import { changeLanguage } from '@/lib/i18n'
 import { AVAILABLE_LANGUAGES } from '@/lib/languages'
-import { getOrgLogoMediaDirectory } from '@services/media/media'
+import OrgLogo from '@components/Dashboard/Shared/OrgLogo'
 import { cn } from '@/lib/utils'
 import { usePlan } from '@components/Hooks/usePlan'
 import { FeedbackModal } from '@components/Objects/Modals/FeedbackModal'
@@ -93,17 +93,16 @@ function DashMobileMenu() {
           className="flex items-center gap-0.5 px-1.5 py-1.5 rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))]/95 backdrop-blur-xl"
           style={{ boxShadow: '0 8px 28px hsl(160 12% 12% / 0.10)' }}
         >
-          {/* OmniLearn logo — links to home */}
+          {/* Org logo — links to home */}
           <Link
             href="/dash"
             className="flex items-center justify-center px-2.5 py-2.5 rounded-full transition-all duration-200"
             aria-label="Home"
           >
-            <img
-              src="/lrn-dash.svg"
-              alt="OmniLearn"
-              className="h-[18px] w-[18px] opacity-60 hover:opacity-90 transition-opacity"
-              style={{ filter: 'none' }}
+            <OrgLogo
+              org={org}
+              className="h-[18px] w-[18px] opacity-80 hover:opacity-100 transition-opacity"
+              fallbackClassName="text-[10px]"
             />
           </Link>
           {/* Progressive reveal — more icons as viewport widens */}
@@ -183,17 +182,7 @@ function DashMobileMenu() {
             >
               {/* Org header */}
               <div className="flex items-center gap-3 px-4 py-3.5">
-                {plan === 'enterprise' && org?.logo_image ? (
-                  <img
-                    src={getOrgLogoMediaDirectory(org.org_uuid, org.logo_image)}
-                    alt={org?.name}
-                    className="h-7 w-7 object-contain rounded-lg"
-                  />
-                ) : (
-                  <div className="h-7 w-7 flex items-center justify-center bg-[hsl(var(--dash-accent-soft))] rounded-lg">
-                    <img src="/lrn-dash.svg" alt="OmniLearn" className="h-4 w-4" style={{ filter: 'none' }} />
-                  </div>
-                )}
+                <OrgLogo org={org} className="h-7 w-7" fallbackClassName="text-xs" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-[hsl(var(--dash-ink))] truncate leading-none mb-0.5">{org?.name}</p>
                   <p className={cn(

@@ -12,27 +12,31 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({ org, welcomeText, children }: AuthLayoutProps) {
   return (
-    <div className="flex flex-col lg:grid lg:grid-cols-[1fr_600px] h-screen">
-      <div className="absolute top-4 right-4 z-dropdown">
+    <div className="auth-shell flex min-h-screen flex-col lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,520px)] lg:h-screen lg:overflow-hidden">
+      <div className="absolute end-4 top-4 z-dropdown">
         <LanguageSwitcher />
       </div>
 
-      {/* Mobile Header - visible only on small screens */}
       <div className="lg:hidden">
         <AuthMobileHeader org={org} />
       </div>
 
-      {/* Left Panel - Branding (hidden on mobile) */}
-      <div className="hidden lg:block h-full">
-        <AuthBrandingPanel
-          org={org}
-          welcomeText={welcomeText}
-        />
+      <div className="hidden h-full min-h-0 lg:block">
+        <AuthBrandingPanel org={org} welcomeText={welcomeText} />
       </div>
 
-      {/* Right Panel - Content */}
-      <div className="bg-gray-50 flex flex-col relative flex-1 lg:h-full overflow-auto">
-        {children}
+      <div className="relative flex flex-1 flex-col overflow-auto bg-[hsl(var(--auth-canvas))] lg:h-full lg:border-s lg:border-[hsl(var(--auth-border))]">
+        {/* subtle paper grain */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage:
+              'radial-gradient(hsl(215 30% 40% / 0.05) 0.6px, transparent 0.6px)',
+            backgroundSize: '14px 14px',
+          }}
+        />
+        <div className="relative z-10 flex min-h-full flex-1 flex-col">{children}</div>
       </div>
     </div>
   )

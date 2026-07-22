@@ -42,9 +42,6 @@ const LanguageSwitcher = ({ primaryColor = '' }: { primaryColor?: string }) => {
             key={language.code}
             className="flex items-center justify-between cursor-pointer"
             onClick={() => {
-              try {
-                localStorage.setItem('i18nextLng_userPicked', '1')
-              } catch { /* ignore */ }
               track(AnalyticsEvent.LanguageChanged, {
                 language_code: language.code,
                 source: 'language_switcher',

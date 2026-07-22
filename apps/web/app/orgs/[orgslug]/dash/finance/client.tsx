@@ -32,7 +32,6 @@ import {
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
 import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import PageLoading from '@components/Objects/Loaders/PageLoading'
-import { Button } from '@components/ui/button'
 import {
   Table,
   TableBody,
@@ -110,6 +109,15 @@ function rangeBounds(key: RangeKey): { date_from?: string; date_to?: string } {
   }
 }
 
+const BRAND = {
+  gold: '#c9a227',
+  red: '#ce1126',
+  black: '#111111',
+  muted: '#6b6b6b',
+  grid: '#e8e2d4',
+  tick: '#6b6b6b',
+} as const
+
 function MetricCard({
   label,
   value,
@@ -124,14 +132,16 @@ function MetricCard({
   color: string
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 flex items-center space-x-4">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
+    <div className="dash-lift dash-glass flex items-center gap-4 rounded-[var(--dash-radius)] px-5 py-4">
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ring-black/5 ${color}`}>
         <Icon size={18} />
       </div>
       <div className="min-w-0">
-        <div className="text-xl font-bold text-gray-900 tracking-tight truncate">{value}</div>
-        <div className="text-xs text-gray-500">{label}</div>
-        {sub && <div className="text-xs text-gray-400 mt-0.5">{sub}</div>}
+        <div className="truncate text-xl font-bold tracking-tight text-[hsl(var(--dash-ink))]">{value}</div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[hsl(var(--dash-muted))]">
+          {label}
+        </div>
+        {sub && <div className="mt-0.5 text-xs text-[hsl(var(--dash-muted))]/75">{sub}</div>}
       </div>
     </div>
   )
@@ -147,14 +157,69 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 min-h-[280px] overflow-hidden min-w-0">
-      <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
-      {subtitle ? (
-        <p className="text-xs text-gray-400 mt-0.5 mb-4">{subtitle}</p>
-      ) : (
-        <div className="mb-4" />
-      )}
+    <div className="dash-glass min-h-[300px] min-w-0 overflow-hidden rounded-[var(--dash-radius)] p-5 sm:p-6">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold tracking-tight text-[hsl(var(--dash-ink))]">{title}</h3>
+          {subtitle ? (
+            <p className="mt-0.5 text-xs leading-relaxed text-[hsl(var(--dash-muted))]">{subtitle}</p>
+          ) : null}
+        </div>
+        <span className="mt-0.5 h-1.5 w-8 shrink-0 rounded-full bg-gradient-to-r from-[hsl(var(--dash-accent))] via-white to-[hsl(var(--dash-warn))]" />
+      </div>
       {children}
+    </div>
+  )
+}
+
+/** Segmented pill tabs used for section / range / type filters. */
+function PillGroup<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T
+  options: [T, string][]
+  onChange: (_v: T) => void
+}) {
+  return (
+    <div className="dash-glass flex w-fit items-center gap-1 overflow-x-auto rounded-full p-1">
+      {options.map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onChange(id)}
+          className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium capitalize transition-all duration-200 ${
+            value === id
+              ? 'bg-[hsl(var(--dash-ink))] text-[hsl(var(--auth-gold))] shadow-[0_4px_14px_hsl(0_0%_0%/0.18)]'
+              : 'text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-ink))]'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Shimmer skeleton shown while the overview data loads. */
+function OverviewSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-3">
+        <div className="dash-shimmer h-9 w-64 rounded-full" />
+        <div className="dash-shimmer h-9 w-44 rounded-full" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
+        {Array.from({ length: 5 }, (_, i) => (
+          <div key={i} className="dash-shimmer h-[84px] rounded-[var(--dash-radius)]" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="dash-shimmer h-[280px] rounded-[var(--dash-radius)] xl:col-span-2" />
+        <div className="dash-shimmer h-[280px] rounded-[var(--dash-radius)]" />
+      </div>
+      <div className="dash-shimmer h-64 rounded-[var(--dash-radius)]" />
     </div>
   )
 }
@@ -196,7 +261,7 @@ function EntryForm({
 
   const categories = form.entry_type === 'revenue' ? REVENUE_CATEGORIES : EXPENSE_CATEGORIES
   const inputCls =
-    'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200'
+    'w-full rounded-lg border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/30 focus:border-[hsl(var(--dash-accent))]/50'
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -232,7 +297,7 @@ function EntryForm({
     <form onSubmit={submit} className="space-y-4 text-left">
       <div className="grid grid-cols-2 gap-3">
         <label className="space-y-1 text-sm">
-          <span className="text-gray-600">Type</span>
+          <span className="text-[hsl(var(--dash-muted))]">Type</span>
           <select
             className={inputCls}
             value={form.entry_type}
@@ -249,7 +314,7 @@ function EntryForm({
           </select>
         </label>
         <label className="space-y-1 text-sm">
-          <span className="text-gray-600">Category</span>
+          <span className="text-[hsl(var(--dash-muted))]">Category</span>
           <select
             className={inputCls}
             value={form.category}
@@ -265,7 +330,7 @@ function EntryForm({
       </div>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-gray-600">Title</span>
+        <span className="text-[hsl(var(--dash-muted))]">Title</span>
         <input
           className={inputCls}
           value={form.title}
@@ -277,7 +342,7 @@ function EntryForm({
 
       <div className="grid grid-cols-3 gap-3">
         <label className="space-y-1 text-sm">
-          <span className="text-gray-600">Amount</span>
+          <span className="text-[hsl(var(--dash-muted))]">Amount</span>
           <input
             type="number"
             min={0}
@@ -289,15 +354,18 @@ function EntryForm({
           />
         </label>
         <label className="space-y-1 text-sm">
-          <span className="text-gray-600">Currency</span>
-          <input
+          <span className="text-[hsl(var(--dash-muted))]">Currency</span>
+          <select
             className={inputCls}
-            value={form.currency}
-            onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
-          />
+            value={form.currency === 'USD' ? 'USD' : 'EGP'}
+            onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
+          >
+            <option value="EGP">Egyptian Pound (EGP)</option>
+            <option value="USD">US Dollar (USD)</option>
+          </select>
         </label>
         <label className="space-y-1 text-sm">
-          <span className="text-gray-600">Date</span>
+          <span className="text-[hsl(var(--dash-muted))]">Date</span>
           <input
             type="date"
             className={inputCls}
@@ -310,7 +378,7 @@ function EntryForm({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="space-y-1 text-sm">
-          <span className="text-gray-600">Payment method</span>
+          <span className="text-[hsl(var(--dash-muted))]">Payment method</span>
           <select
             className={inputCls}
             value={form.payment_method || 'cash'}
@@ -324,7 +392,7 @@ function EntryForm({
           </select>
         </label>
         <label className="space-y-1 text-sm">
-          <span className="text-gray-600">Linked offer (optional)</span>
+          <span className="text-[hsl(var(--dash-muted))]">Linked offer (optional)</span>
           <select
             className={inputCls}
             value={form.offer_uuid || ''}
@@ -341,7 +409,7 @@ function EntryForm({
       </div>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-gray-600">Notes</span>
+        <span className="text-[hsl(var(--dash-muted))]">Notes</span>
         <textarea
           className={inputCls}
           rows={3}
@@ -351,9 +419,13 @@ function EntryForm({
       </label>
 
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="submit" disabled={saving}>
+        <button
+          type="submit"
+          disabled={saving}
+          className="dash-lift inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-ink))] px-5 py-2 text-sm font-semibold text-[hsl(var(--auth-gold))] shadow-[0_4px_14px_hsl(0_0%_0%/0.2)] hover:brightness-110 disabled:opacity-60"
+        >
           {saving ? 'Saving…' : 'Save entry'}
-        </Button>
+        </button>
       </div>
     </form>
   )
@@ -429,7 +501,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
       .map((c, i) => ({
         name: c.category,
         value: c.total,
-        color: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#64748b'][i % 6],
+        color: [BRAND.gold, BRAND.red, BRAND.black, '#e8c547', '#8b1e2d', BRAND.muted][i % 6],
       }))
   }, [summary])
 
@@ -475,9 +547,9 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
       else buckets.unassigned += amount
     }
     return [
-      { name: 'Training', value: buckets.training, color: '#3b82f6' },
-      { name: 'Postgraduate', value: buckets.postgraduate, color: '#8b5cf6' },
-      { name: 'Unassigned', value: buckets.unassigned, color: '#94a3b8' },
+      { name: 'Training', value: buckets.training, color: BRAND.gold },
+      { name: 'Postgraduate', value: buckets.postgraduate, color: BRAND.red },
+      { name: 'Unassigned', value: buckets.unassigned, color: BRAND.muted },
     ].filter((slice) => slice.value > 0)
   }, [coursesQuery.data])
 
@@ -539,16 +611,14 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
   }
 
   if (!orgId || !accessToken) return <PageLoading />
-  if (
+  const overviewLoading =
     section === 'overview' &&
     (summaryQuery.isLoading || entriesQuery.isLoading || coursesQuery.isLoading)
-  )
-    return <PageLoading />
 
   return (
-    <div className="h-screen w-full bg-[hsl(var(--dash-canvas))] flex flex-col">
-      <div className="pl-4 pr-4 sm:pl-10 sm:pr-10 tracking-tight bg-[hsl(var(--dash-surface))] z-10 nice-shadow flex-shrink-0">
-        <div className="pt-6 pb-4">
+    <div className="finance-shell flex h-screen w-full flex-col bg-[hsl(var(--dash-canvas))]">
+      <div className="dash-glass z-10 flex-shrink-0 px-4 tracking-tight sm:px-10">
+        <div className="pb-4 pt-6">
           <Breadcrumbs
             items={[
               {
@@ -559,73 +629,65 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
             ]}
           />
         </div>
-        <div className="my-2 py-2 flex flex-wrap gap-3 items-end justify-between">
+        <div className="my-2 flex flex-wrap items-end justify-between gap-3 py-2">
           <div>
-            <div className="pt-1 flex font-bold text-3xl sm:text-4xl tracking-tighter">
+            <div className="flex pt-1 text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))] sm:text-[1.75rem]">
               Finance
             </div>
-            <div className="flex font-medium text-gray-400 text-md">
+            <div className="flex text-sm text-[hsl(var(--dash-muted))]">
               Local reporting — ledger, P&amp;L, course profit, payroll &amp; refunds (no gateways)
             </div>
           </div>
           {section === 'overview' && (
             <div className="flex flex-wrap items-center gap-2 pb-1">
-              <Button variant="outline" size="sm" onClick={exportSummary}>
-                <Download size={14} className="mr-1.5" /> Summary CSV
-              </Button>
-              <Button variant="outline" size="sm" onClick={exportEntries}>
-                <Download size={14} className="mr-1.5" /> Entries CSV
-              </Button>
-              <Button size="sm" onClick={() => setModalOpen(true)}>
-                <Plus size={14} className="mr-1.5" /> Add entry
-              </Button>
+              <button
+                type="button"
+                onClick={exportSummary}
+                className="dash-glass inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-ink))]"
+              >
+                <Download size={14} /> Summary CSV
+              </button>
+              <button
+                type="button"
+                onClick={exportEntries}
+                className="dash-glass inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-ink))]"
+              >
+                <Download size={14} /> Entries CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="dash-lift inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-ink))] px-4 py-2 text-xs font-semibold text-[hsl(var(--auth-gold))] shadow-[0_4px_14px_hsl(0_0%_0%/0.2)] hover:brightness-110"
+              >
+                <Plus size={14} /> Add entry
+              </button>
             </div>
           )}
         </div>
-        <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl w-fit mb-4 overflow-x-auto">
-          {(
-            [
+        <div className="mb-4">
+          <PillGroup
+            value={section}
+            onChange={setSection}
+            options={[
               ['overview', 'Overview'],
               ['pl', 'P&L'],
               ['courses', 'Courses'],
               ['payroll', 'Payroll'],
               ['refunds', 'Refunds'],
-            ] as [SectionTab, string][]
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setSection(id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                section === id
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+            ]}
+          />
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 sm:px-10 py-6 space-y-6">
         {(section === 'pl' || section === 'courses') && (
-          <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl w-fit">
-            {(['7d', '30d', '90d', 'all'] as RangeKey[]).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRange(r)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  range === r
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {r === 'all' ? 'All time' : r}
-              </button>
-            ))}
-          </div>
+          <PillGroup
+            value={range}
+            onChange={setRange}
+            options={(['7d', '30d', '90d', 'all'] as RangeKey[]).map(
+              (r) => [r, r === 'all' ? 'All time' : r] as [RangeKey, string]
+            )}
+          />
         )}
         {section === 'pl' && orgId && accessToken && (
           <ProfitLossPanel orgId={orgId} accessToken={accessToken} bounds={bounds} />
@@ -640,41 +702,27 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
           <RefundsPanel orgId={orgId} accessToken={accessToken} />
         )}
 
-        {section === 'overview' && (
+        {overviewLoading && <OverviewSkeleton />}
+
+        {section === 'overview' && !overviewLoading && (
           <>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl w-fit">
-            {(['7d', '30d', '90d', 'all'] as RangeKey[]).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRange(r)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  range === r
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {r === 'all' ? 'All time' : r}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl w-fit">
-            {(['all', 'revenue', 'expense'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTypeFilter(t)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
-                  typeFilter === t
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+          <PillGroup
+            value={range}
+            onChange={setRange}
+            options={(['7d', '30d', '90d', 'all'] as RangeKey[]).map(
+              (r) => [r, r === 'all' ? 'All time' : r] as [RangeKey, string]
+            )}
+          />
+          <PillGroup
+            value={typeFilter}
+            onChange={setTypeFilter}
+            options={[
+              ['all', 'All'],
+              ['revenue', 'Revenue'],
+              ['expense', 'Expense'],
+            ]}
+          />
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -683,21 +731,21 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
             value={fmt(summary?.total_revenue || 0, currency)}
             sub={`${summary?.revenue_count || 0} entries`}
             icon={TrendingUp}
-            color="bg-green-100 text-green-600"
+            color="bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]"
           />
           <MetricCard
             label="Expenses"
             value={fmt(summary?.total_expenses || 0, currency)}
             sub={`${summary?.expense_count || 0} entries`}
             icon={TrendingDown}
-            color="bg-red-100 text-red-600"
+            color="bg-[hsl(var(--dash-tile-rose))] text-[hsl(var(--dash-tile-rose-fg))]"
           />
           <MetricCard
             label="Instructor cost"
             value={fmt(summary?.instructor_cost || 0, currency)}
             sub="From work logs"
             icon={Users}
-            color="bg-amber-100 text-amber-700"
+            color="bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]"
           />
           <MetricCard
             label="Est. profit"
@@ -706,8 +754,8 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
             icon={Wallet}
             color={
               (summary?.estimated_profit || 0) >= 0
-                ? 'bg-teal-100 text-teal-700'
-                : 'bg-red-100 text-red-600'
+                ? 'bg-[hsl(var(--dash-tile-lavender))] text-[hsl(var(--dash-tile-lavender-fg))]'
+                : 'bg-[hsl(var(--dash-tile-rose))] text-[hsl(var(--dash-tile-rose-fg))]'
             }
           />
           <MetricCard
@@ -715,7 +763,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
             value={`${(summary?.estimated_margin || 0).toFixed(0)}%`}
             sub="Of revenue"
             icon={Percent}
-            color="bg-indigo-100 text-indigo-600"
+            color="bg-[hsl(var(--dash-tile-sky))] text-[hsl(var(--dash-tile-sky-fg))]"
           />
         </div>
 
@@ -726,16 +774,16 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
               subtitle="Daily comparison with net trend line"
             >
               {daily.length === 0 ? (
-                <div className="h-52 flex items-center justify-center text-sm text-gray-300">
+                <div className="h-52 flex items-center justify-center text-sm text-[hsl(var(--dash-muted))]/60">
                   No entries in this range — add revenue or expenses
                 </div>
               ) : (
                 <div style={{ height: 240 }}>
                   <ResponsiveContainer width="100%" height={240}>
                     <ComposedChart data={daily}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                      <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                      <CartesianGrid strokeDasharray="3 3" stroke={BRAND.grid} vertical={false} />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke={BRAND.tick} />
+                      <YAxis tick={{ fontSize: 11 }} stroke={BRAND.tick} />
                       <Tooltip
                         formatter={(v: any, n: any) => [fmt(Number(v) || 0, currency), n]}
                       />
@@ -743,20 +791,20 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
                       <Bar
                         dataKey="revenue"
                         name="Revenue"
-                        fill="#16a34a"
+                        fill={BRAND.gold}
                         radius={[3, 3, 0, 0]}
                       />
                       <Bar
                         dataKey="expenses"
                         name="Expenses"
-                        fill="#dc2626"
+                        fill={BRAND.red}
                         radius={[3, 3, 0, 0]}
                       />
                       <Line
                         type="monotone"
                         dataKey="net"
                         name="Net"
-                        stroke="#0f766e"
+                        stroke={BRAND.black}
                         strokeWidth={2.5}
                         dot={false}
                       />
@@ -772,18 +820,18 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
             subtitle="How revenue splits into costs and profit"
           >
             {(summary?.total_revenue || 0) <= 0 ? (
-              <div className="h-52 flex items-center justify-center text-sm text-gray-300">
+              <div className="h-52 flex items-center justify-center text-sm text-[hsl(var(--dash-muted))]/60">
                 No revenue yet
               </div>
             ) : (
               <div style={{ height: 240 }}>
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={costComposition} layout="vertical" margin={{ left: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={BRAND.grid} horizontal={false} />
                     <XAxis
                       type="number"
                       tick={{ fontSize: 11 }}
-                      stroke="#9ca3af"
+                      stroke={BRAND.tick}
                       tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
                     />
                     <YAxis
@@ -791,7 +839,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
                       dataKey="name"
                       width={88}
                       tick={{ fontSize: 11 }}
-                      stroke="#9ca3af"
+                      stroke={BRAND.tick}
                     />
                     <Tooltip formatter={(v: any) => fmt(Number(v) || 0, currency)} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -799,26 +847,26 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
                       dataKey="expenses"
                       name="Expenses"
                       stackId="cost"
-                      fill="#ef4444"
+                      fill={BRAND.red}
                     />
                     <Bar
                       dataKey="instructor"
                       name="Instructor"
                       stackId="cost"
-                      fill="#f59e0b"
+                      fill="#e8c547"
                     />
                     <Bar
                       dataKey="profit"
                       name="Profit"
                       stackId="cost"
-                      fill="#14b8a6"
+                      fill={BRAND.gold}
                       radius={[0, 4, 4, 0]}
                     />
                     <Bar
                       dataKey="loss"
                       name="Loss"
                       stackId="cost"
-                      fill="#64748b"
+                      fill={BRAND.muted}
                       radius={[0, 4, 4, 0]}
                     />
                   </BarChart>
@@ -831,7 +879,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <ChartCard title="Revenue by category" subtitle="Ledger revenue mix">
             {pieData.length === 0 ? (
-              <div className="h-52 flex items-center justify-center text-sm text-gray-300">No revenue yet</div>
+              <div className="h-52 flex items-center justify-center text-sm text-[hsl(var(--dash-muted))]/60">No revenue yet</div>
             ) : (
               <div style={{ height: 220 }}>
                 <ResponsiveContainer width="100%" height={220}>
@@ -851,16 +899,16 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
 
           <ChartCard title="Expenses by category" subtitle="Where money goes">
             {expenseBars.length === 0 ? (
-              <div className="h-52 flex items-center justify-center text-sm text-gray-300">No expenses yet</div>
+              <div className="h-52 flex items-center justify-center text-sm text-[hsl(var(--dash-muted))]/60">No expenses yet</div>
             ) : (
               <div style={{ height: 220 }}>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={expenseBars}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                    <XAxis dataKey="category" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                    <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={BRAND.grid} vertical={false} />
+                    <XAxis dataKey="category" tick={{ fontSize: 11 }} stroke={BRAND.tick} />
+                    <YAxis tick={{ fontSize: 11 }} stroke={BRAND.tick} />
                     <Tooltip formatter={(v: any) => fmt(Number(v) || 0, currency)} />
-                    <Bar dataKey="total" name="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="total" name="Expenses" fill={BRAND.red} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -872,7 +920,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
             subtitle="Course revenue by program type"
           >
             {programRevenue.length === 0 ? (
-              <div className="h-52 flex items-center justify-center text-sm text-gray-300">
+              <div className="h-52 flex items-center justify-center text-sm text-[hsl(var(--dash-muted))]/60">
                 No course-linked revenue yet
               </div>
             ) : (
@@ -899,15 +947,15 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
           </ChartCard>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-            <span className="font-semibold text-gray-800 text-sm flex items-center gap-2">
-              <Activity size={14} /> Ledger entries
+        <div className="dash-glass overflow-hidden rounded-[var(--dash-radius)]">
+          <div className="flex items-center justify-between border-b border-[hsl(var(--dash-border))] px-5 py-3">
+            <span className="flex items-center gap-2 text-sm font-semibold text-[hsl(var(--dash-ink))]">
+              <Activity size={14} className="text-[hsl(var(--dash-accent))]" /> Ledger entries
             </span>
-            <span className="text-xs text-gray-400">{entries.length} rows</span>
+            <span className="text-xs text-[hsl(var(--dash-muted))]">{entries.length} rows</span>
           </div>
           {entries.length === 0 ? (
-            <div className="px-5 py-10 text-center text-sm text-gray-400">
+            <div className="px-5 py-10 text-center text-sm text-[hsl(var(--dash-muted))]">
               No entries yet. Click “Add entry” to record revenue or expenses.
             </div>
           ) : (
@@ -926,13 +974,13 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
               <TableBody>
                 {entries.map((e) => (
                   <TableRow key={e.entry_uuid}>
-                    <TableCell className="text-sm text-gray-500 whitespace-nowrap">{e.entry_date}</TableCell>
+                    <TableCell className="text-sm text-[hsl(var(--dash-muted))] whitespace-nowrap">{e.entry_date}</TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
                           e.entry_type === 'revenue'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-600'
+                            ? 'bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]'
+                            : 'bg-[hsl(var(--dash-tile-rose))] text-[hsl(var(--dash-tile-rose-fg))]'
                         }`}
                       >
                         {e.entry_type}
@@ -942,10 +990,10 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
                     <TableCell className="font-medium">
                       <div>{e.title}</div>
                       {e.offer_uuid && (
-                        <div className="text-xs text-gray-400">Offer: {e.offer_uuid}</div>
+                        <div className="text-xs text-[hsl(var(--dash-muted))]">Offer: {e.offer_uuid}</div>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm text-gray-500 capitalize">
+                    <TableCell className="text-sm text-[hsl(var(--dash-muted))] capitalize">
                       {(e.payment_method || '—').replace('_', ' ')}
                     </TableCell>
                     <TableCell className="font-semibold">
@@ -955,7 +1003,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
                       <button
                         type="button"
                         onClick={() => void removeEntry(e)}
-                        className="text-gray-400 hover:text-red-600 transition"
+                        className="text-[hsl(var(--dash-muted))] hover:text-red-500 transition"
                         title="Delete"
                       >
                         <Trash2 size={14} />

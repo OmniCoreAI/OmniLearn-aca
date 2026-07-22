@@ -2,32 +2,34 @@
 
 import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
-import { queryKeys } from '@/lib/query/keys'
 import { useTranslation } from 'react-i18next'
 import { useOrg } from '@components/Contexts/OrgContext'
-import { useLHSession } from '@components/Contexts/LHSessionContext'
-import { getOrgCourses } from '@services/courses/courses'
+import { useAdminOrgCourses } from '@/hooks/queries/useCourses'
 import { MagnifyingGlass, Plus, CaretDown } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+
+/**
+ * Content-completeness heuristic for a course:
+ * chapters present (up to 60%) + published state (40%).
+ * Replaces the old hardcoded 72%/28% placeholder.
+ */
+function courseCompleteness(course: any): number {
+  const chapters = course.chapters?.length ?? course.chapter_count ?? 0
+  const chapterScore = Math.min(chapters / 5, 1) * 60
+  const publishScore = course.published ? 40 : 0
+  return Math.round(chapterScore + publishScore)
+}
 
 export default function CoursesTable() {
   const { t } = useTranslation()
   const org = useOrg() as any
-  const session = useLHSession() as any
-  const token = session?.data?.tokens?.access_token
   const orgslug = org?.slug
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<'all' | 'published' | 'draft'>('all')
 
-  const { data: coursesData, isLoading } = useQuery({
-    queryKey: [...queryKeys.courses.list(orgslug), 'home-table'],
-    queryFn: () => getOrgCourses(orgslug, null, token, true),
-    enabled: !!token && !!orgslug,
-    staleTime: 60_000,
-  })
+  const { data: coursesData, isLoading } = useAdminOrgCourses(orgslug)
 
-  const courses: any[] = coursesData ?? []
+  const courses: any[] = useMemo(() => coursesData ?? [], [coursesData])
 
   const filtered = useMemo(() => {
     return courses.filter((course) => {
@@ -44,7 +46,7 @@ export default function CoursesTable() {
   }, [courses, query, status])
 
   return (
-    <section className="overflow-hidden rounded-[var(--dash-radius)] border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] shadow-[0_1px_2px_hsl(220_18%_14%/0.04)]">
+    <section className="overflow-hidden rounded-[var(--dash-radius)] border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] shadow-[0_1px_2px_hsl(245_25%_13%/0.04)]">
       <div className="flex flex-col gap-4 border-b border-[hsl(var(--dash-border))] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
         <h3 className="text-base font-semibold text-[hsl(var(--dash-ink))]">
           {t('dashboard.home.courses')}
@@ -52,7 +54,7 @@ export default function CoursesTable() {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/dash/courses?new=true"
-            className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-accent))] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:brightness-110"
+            className="dash-lift inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-accent))] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_4px_12px_hsl(var(--dash-accent)/0.3)] hover:brightness-110"
           >
             <Plus size={14} weight="bold" />
             {t('dashboard.home.create_course')}
@@ -61,7 +63,7 @@ export default function CoursesTable() {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as typeof status)}
-              className="appearance-none rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-canvas))] py-2 pl-3 pr-8 text-xs text-[hsl(var(--dash-ink))] outline-none"
+              className="appearance-none rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-canvas))] py-2 pl-3 pr-8 text-xs text-[hsl(var(--dash-ink))] outline-none transition-shadow focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/25"
             >
               <option value="all">{t('dashboard.home.all_status', 'All status')}</option>
               <option value="published">{t('dashboard.home.published')}</option>
@@ -81,7 +83,7 @@ export default function CoursesTable() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('dashboard.home.search_courses', 'Search course...')}
-              className="w-full rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-canvas))] py-2 pl-8 pr-3 text-xs text-[hsl(var(--dash-ink))] outline-none placeholder:text-[hsl(var(--dash-muted))]"
+              className="w-full rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-canvas))] py-2 pl-8 pr-3 text-xs text-[hsl(var(--dash-ink))] outline-none transition-shadow placeholder:text-[hsl(var(--dash-muted))] focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/25"
             />
           </div>
         </div>
@@ -103,7 +105,7 @@ export default function CoursesTable() {
               [1, 2, 3, 4].map((i) => (
                 <tr key={i} className="border-b border-[hsl(var(--dash-border))]/70">
                   <td colSpan={5} className="px-5 py-4">
-                    <div className="h-4 w-full animate-pulse rounded bg-[hsl(var(--dash-canvas))]" />
+                    <div className="dash-shimmer h-4 w-full rounded" />
                   </td>
                 </tr>
               ))
@@ -117,16 +119,16 @@ export default function CoursesTable() {
               filtered.slice(0, 8).map((course: any) => {
                 const courseId = course.course_uuid?.replace('course_', '')
                 const chapters = course.chapters?.length ?? course.chapter_count ?? 0
-                const progress = course.published ? 72 : 28
+                const progress = courseCompleteness(course)
                 return (
                   <tr
                     key={course.course_uuid}
-                    className="border-b border-[hsl(var(--dash-border))]/70 last:border-0 hover:bg-[hsl(var(--dash-canvas))]/70"
+                    className="border-b border-[hsl(var(--dash-border))]/70 transition-colors last:border-0 hover:bg-[hsl(var(--dash-canvas))]/70"
                   >
                     <td className="px-5 py-3.5">
                       <Link
                         href={`/dash/courses/course/${courseId}/general`}
-                        className="font-medium text-[hsl(var(--dash-ink))] hover:text-[hsl(var(--dash-accent))]"
+                        className="font-medium text-[hsl(var(--dash-ink))] transition-colors hover:text-[hsl(var(--dash-accent))]"
                       >
                         {course.name}
                       </Link>
@@ -152,7 +154,7 @@ export default function CoursesTable() {
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[hsl(var(--dash-canvas))]">
                           <div
-                            className="h-full rounded-full bg-[hsl(var(--dash-accent))]"
+                            className="h-full rounded-full bg-[hsl(var(--dash-accent))] transition-[width] duration-700 ease-out"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
@@ -162,7 +164,7 @@ export default function CoursesTable() {
                     <td className="px-5 py-3.5 text-right">
                       <Link
                         href={`/dash/courses/course/${courseId}/general`}
-                        className="inline-flex rounded-full border border-[hsl(var(--dash-border))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-canvas))]"
+                        className="inline-flex rounded-full border border-[hsl(var(--dash-border))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--dash-ink))] transition-colors hover:border-[hsl(var(--dash-accent))]/40 hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))]"
                       >
                         {t('dashboard.home.open', 'Open')}
                       </Link>

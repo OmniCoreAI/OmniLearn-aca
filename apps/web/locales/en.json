@@ -19,6 +19,8 @@
     "directory": "Directory",
     "categories": "Categories & Rates",
     "categories_desc": "Set an hourly rate per delivery language (e.g. English, Arabic)",
+    "currency_egp": "Egyptian Pound (EGP)",
+    "currency_usd": "US Dollar (USD)",
     "finance": "Finance",
     "finance_desc": "Log delivered hours — cost is Hours × Rate",
     "new_instructor": "New Instructor",
@@ -510,7 +512,7 @@
     "email": "Email",
     "password": "Password",
     "forgot_password": "Forgot password?",
-    "login_to": "Welcome back",
+    "login_to": "Welcome to the learning portal",
     "sign_up": "Sign up",
     "sign_in_with_google": "Sign in with Google",
     "wrong_email_password": "Wrong Email or password",
@@ -557,8 +559,14 @@
     "resend_verification_failed": "Failed to resend verification email. Please try again.",
     "verification_email_resent": "Verification Email Sent",
     "check_inbox_message": "Please check your inbox and click the verification link.",
-    "welcome_back": "Welcome back",
-    "enter_credentials": "Enter your credentials to access your account",
+    "welcome_back": "Sign in to continue",
+    "enter_credentials": "Use your institutional credentials to access the portal",
+    "secure_sign_in": "Secure sign-in",
+    "official_portal": "Official Learning Portal",
+    "institutional_tagline": "Secure learning portal for authorized personnel",
+    "trust_secure": "Secure access",
+    "trust_authorized": "Authorized users only",
+    "footer_rights": "Restricted institutional system",
     "no_account": "Don't have an account?",
     "already_have_account": "Already have an account?",
     "create_your_account": "Create your account",
@@ -2115,7 +2123,6 @@
       "no_courses_yet": "No courses yet",
       "create_your_first_course": "Create your first course",
       "chapter": "chapter",
-      "chapters": "chapters",
       "recent_members": "Recent Members",
       "total": "total",
       "no_members_yet": "No members yet",
@@ -2131,7 +2138,21 @@
       "ai_credits": "AI Credits",
       "used": "used",
       "no_credits_remaining": "No credits remaining",
-      "includes_purchased": "Includes {{count}} purchased"
+      "includes_purchased": "Includes {{count}} purchased",
+      "hero_title": "Build your next great course today",
+      "hero_subtitle": "Create engaging content and keep your learners moving forward.",
+      "hero_subtitle_org": "Create engaging content for {{org}} and keep your learners moving forward.",
+      "hero_cta": "Create a course",
+      "progress_hint": "Share of courses published",
+      "continue_building": "Continue building",
+      "events": "Events",
+      "no_upcoming_deadlines": "No upcoming deadlines",
+      "assignment": "Assignment",
+      "activity": "Activity",
+      "last_30_days": "Last 30 days",
+      "no_data_yet": "No data yet",
+      "active_users": "Active users",
+      "course": "Course"
     },
     "courses": {
       "title": "Courses",
@@ -4697,7 +4718,8 @@
           "description": "Your purchases and subscriptions",
           "keywords": "purchases, subscriptions, billing, history, receipts"
         }
-      }
+      },
+      "global_placeholder": "Search by topic, title, or name..."
     }
   },
   "editor": {

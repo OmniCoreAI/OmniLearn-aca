@@ -18,6 +18,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query/keys'
+import { revalidateTags } from '@services/utils/ts/requests'
 
 const SUPPORTED_FILES = constructAcceptValue(['png', 'jpg'])
 
@@ -123,6 +124,7 @@ export default function OrgEditImages() {
         await uploadOrganizationLogo(org.id, file, access_token)
         await new Promise((r) => setTimeout(r, 1500))
         toast.success(t('dashboard.organization.images.toasts.logo_success'), { id: loadingToast })
+        await revalidateTags(['organizations'], org.slug)
         queryClient.invalidateQueries({ queryKey: queryKeys.org.detail(org.slug) })
         router.refresh()
       } catch (err) {

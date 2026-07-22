@@ -1,7 +1,6 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import CopilotBubble from '@components/Copilot/CopilotBubble'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query/keys'
@@ -159,12 +158,18 @@ export const OrgMenu = (props: any) => {
                   {org?.logo_image ? (
                     <img
                       src={`${getOrgLogoMediaDirectory(org.org_uuid, org?.logo_image)}`}
-                      alt="OmniLearn"
+                      alt={org?.name || 'Organization'}
                       style={{ width: 'auto', height: '100%' }}
                       className="rounded-md"
                     />
                   ) : (
-                    <OmniLearnLogo logoFilter={colors.logoFilter} />
+                    <div
+                      className="flex h-9 w-9 items-center justify-center rounded-md bg-black/10 text-sm font-semibold"
+                      style={{ filter: colors.logoFilter || undefined }}
+                      aria-label={org?.name || 'Organization'}
+                    >
+                      {(org?.name?.trim()?.charAt(0) || 'O').toUpperCase()}
+                    </div>
                   )}
                 </div>
               </Link>
@@ -557,14 +562,3 @@ const CopilotMenuButton = ({
   )
 }
 
-const OmniLearnLogo = ({ logoFilter }: { logoFilter: string }) => {
-  return (
-    <Image
-      src="/lrn-text.svg"
-      alt="OmniLearn logo"
-      width={133}
-      height={40}
-      style={{ height: 'auto', filter: logoFilter }}
-    />
-  )
-}

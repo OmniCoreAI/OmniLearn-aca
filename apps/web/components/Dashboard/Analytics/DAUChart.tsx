@@ -32,8 +32,8 @@ export default function DAUChart({ days = '30' }: { days?: string }) {
             <AreaChart data={rows}>
               <defs>
                 <linearGradient id="dauGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6b8de3" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#6b8de3" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
@@ -71,7 +71,7 @@ export default function DAUChart({ days = '30' }: { days?: string }) {
               <Area
                 type="monotone"
                 dataKey="dau"
-                stroke="#6b8de3"
+                stroke="#7c3aed"
                 strokeWidth={2}
                 fill="url(#dauGradient)"
                 dot={false}

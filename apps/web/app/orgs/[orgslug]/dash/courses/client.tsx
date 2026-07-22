@@ -63,7 +63,7 @@ function CoursesHome(params: CourseProps) {
   const { data: coursesData, isLoading: isCoursesLoading } = useQuery({
     queryKey: queryKeys.courses.list(orgslug),
     queryFn: async () => {
-      const url = `${getAPIUrl()}courses/org_slug/${orgslug}/page/1/limit/500?include_unpublished=true`
+      const url = `${getAPIUrl()}courses/org_slug/${orgslug}/page/1/limit/100?include_unpublished=true`
       const res = await fetch(url, RequestBodyWithAuthHeader('GET', null, null, access_token))
       if (!res.ok) throw new Error('Failed to fetch courses')
       return res.json()
@@ -90,45 +90,48 @@ function CoursesHome(params: CourseProps) {
 
   // Usergroup filter — only shown on personal/family plans
   const usergroupsAvailable = currentPlan === 'personal' || currentPlan === 'family'
-  const [usergroups, setUsergroups] = useState<any[]>([])
   const [selectedUsergroupId, setSelectedUsergroupId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('lh_course_usergroup_filter') || ''
     }
     return ''
   })
-  const [usergroupResourceUuids, setUsergroupResourceUuids] = useState<Set<string> | null>(null)
   const [showUsergroupInfo, setShowUsergroupInfo] = useState(false)
 
-  // Fetch usergroups
-  React.useEffect(() => {
-    if (!usergroupsAvailable || !access_token || !orgId) return
-    getUserGroups(orgId, access_token)
-      .then((res: any) => {
-        const list = Array.isArray(res) ? res : res?.data || []
-        setUsergroups(list)
-        // Clear saved selection if the usergroup no longer exists
-        if (selectedUsergroupId && !list.some((ug: any) => String(ug.id) === selectedUsergroupId)) {
-          setSelectedUsergroupId('')
-          localStorage.removeItem('lh_course_usergroup_filter')
-        }
-      })
-      .catch(() => setUsergroups([]))
-  }, [usergroupsAvailable, access_token, orgId])
+  // Usergroups — cached with React Query instead of refetching on every mount
+  const { data: usergroupsData } = useQuery({
+    queryKey: ['usergroups', orgId],
+    queryFn: () => getUserGroups(orgId!, access_token),
+    enabled: usergroupsAvailable && !!access_token && !!orgId,
+    staleTime: 60_000,
+  })
+  const usergroups = useMemo(() => {
+    const res: any = usergroupsData
+    return Array.isArray(res) ? res : res?.data || []
+  }, [usergroupsData])
 
-  // Fetch resource UUIDs for selected usergroup
+  // Clear saved selection if the usergroup no longer exists
   React.useEffect(() => {
-    if (!selectedUsergroupId || !access_token || !orgId) {
-      setUsergroupResourceUuids(null)
-      return
+    if (!usergroupsData) return
+    if (selectedUsergroupId && !usergroups.some((ug: any) => String(ug.id) === selectedUsergroupId)) {
+      setSelectedUsergroupId('')
+      localStorage.removeItem('lh_course_usergroup_filter')
     }
-    getUserGroupResources(selectedUsergroupId, orgId, access_token)
-      .then((res: any) => {
-        const uuids = Array.isArray(res) ? res : res?.data || []
-        setUsergroupResourceUuids(new Set(uuids))
-      })
-      .catch(() => setUsergroupResourceUuids(null))
-  }, [selectedUsergroupId, access_token, orgId])
+  }, [usergroupsData, usergroups, selectedUsergroupId])
+
+  // Resource UUIDs for selected usergroup — also cached
+  const { data: usergroupResourcesData } = useQuery({
+    queryKey: ['usergroup-resources', orgId, selectedUsergroupId],
+    queryFn: () => getUserGroupResources(selectedUsergroupId, orgId!, access_token),
+    enabled: !!selectedUsergroupId && !!access_token && !!orgId,
+    staleTime: 60_000,
+  })
+  const usergroupResourceUuids = useMemo(() => {
+    if (!selectedUsergroupId || usergroupResourcesData == null) return null
+    const res: any = usergroupResourcesData
+    const uuids = Array.isArray(res) ? res : res?.data || []
+    return new Set<string>(uuids)
+  }, [selectedUsergroupId, usergroupResourcesData])
 
   const handleUsergroupChange = (value: string) => {
     setSelectedUsergroupId(value)
@@ -431,16 +434,19 @@ function CoursesHome(params: CourseProps) {
   if (isCoursesLoading) {
     return (
       <div className="h-full w-full bg-[hsl(var(--dash-canvas))] pl-4 pr-4 sm:pl-10 sm:pr-10">
-        <div className="mb-6 pt-6 animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-32 mb-6" />
-          <div className="h-8 bg-gray-200 rounded w-48 mb-8" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="mb-6 pt-6">
+          <div className="dash-shimmer mb-6 h-4 w-32 rounded" />
+          <div className="dash-shimmer mb-8 h-8 w-48 rounded-lg" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-                <div className="h-[131px] bg-gray-200" />
-                <div className="p-3 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+              <div
+                key={i}
+                className="overflow-hidden rounded-[var(--dash-radius)] border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))]"
+              >
+                <div className="dash-shimmer h-[131px]" />
+                <div className="space-y-2 p-3">
+                  <div className="dash-shimmer h-4 w-3/4 rounded" />
+                  <div className="dash-shimmer h-3 w-1/2 rounded" />
                 </div>
               </div>
             ))}
@@ -459,7 +465,7 @@ function CoursesHome(params: CourseProps) {
         ]} />
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4">
           <div className="flex items-center space-x-4">
-            <h1 className="text-3xl font-bold mb-4 sm:mb-0">{t('dashboard.courses.title')}</h1>
+            <h1 className="mb-4 text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))] sm:mb-0 sm:text-[1.75rem]">{t('dashboard.courses.title')}</h1>
           </div>
           <AuthenticatedClientElement
             checkMethod="roles"
@@ -469,7 +475,7 @@ function CoursesHome(params: CourseProps) {
           >
             <div className="flex items-center space-x-2">
               {courseLimitReached && (
-                <div className="text-xs text-gray-500 bg-gray-100 px-3 py-2 rounded-lg">
+                <div className="rounded-lg bg-[hsl(var(--dash-warn-soft))] px-3 py-2 text-xs text-[hsl(var(--dash-warn))]">
                   {t('dashboard.courses.limit_reached', { limit: courseLimit })}
                 </div>
               )}
@@ -487,8 +493,10 @@ function CoursesHome(params: CourseProps) {
                 dialogTrigger={
                   <button
                     disabled={courseLimitReached}
-                    className={`rounded-lg bg-black transition-all duration-100 ease-linear antialiased p-2 px-5 my-auto font text-xs font-bold text-white nice-shadow flex space-x-2 items-center ${
-                      courseLimitReached ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
+                    className={`my-auto flex items-center space-x-2 rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] p-2 px-5 text-xs font-semibold text-[hsl(var(--dash-muted))] antialiased transition-all duration-200 ${
+                      courseLimitReached
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'hover:border-[hsl(var(--dash-accent))]/40 hover:text-[hsl(var(--dash-accent))]'
                     }`}
                   >
                     <Download className="w-4 h-4" />
@@ -532,7 +540,7 @@ function CoursesHome(params: CourseProps) {
           <div className="flex items-center gap-3 w-full sm:w-auto">
             {/* Search Input */}
             <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[hsl(var(--dash-muted))] w-4 h-4" />
               <input
                 type="text"
                 value={searchQuery}
@@ -543,7 +551,7 @@ function CoursesHome(params: CourseProps) {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -554,7 +562,7 @@ function CoursesHome(params: CourseProps) {
             {usergroupsAvailable && usergroups.length > 0 && (
               <div className="relative flex items-center gap-1.5">
                 <div className="relative">
-                  <Users className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                  <Users className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-[hsl(var(--dash-muted))] w-4 h-4 pointer-events-none" />
                   <select
                     value={selectedUsergroupId}
                     onChange={(e) => handleUsergroupChange(e.target.value)}
@@ -570,14 +578,14 @@ function CoursesHome(params: CourseProps) {
                 </div>
                 <button
                   onClick={() => setShowUsergroupInfo(!showUsergroupInfo)}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded-md hover:bg-gray-100"
+                  className="p-1.5 text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))] transition-colors rounded-md hover:bg-[hsl(var(--dash-accent-soft))]"
                 >
                   <Info className="w-3.5 h-3.5" />
                 </button>
                 {showUsergroupInfo && (
-                  <div className="absolute top-full left-0 mt-2 z-50 w-72 bg-white nice-shadow rounded-lg p-3 border border-gray-100">
-                    <p className="text-xs font-semibold text-gray-700 mb-1">{t('courses.usergroup_filter.info_title')}</p>
-                    <p className="text-xs text-gray-500 leading-relaxed">{t('courses.usergroup_filter.info_description')}</p>
+                  <div className="absolute top-full left-0 mt-2 z-50 w-72 bg-white nice-shadow rounded-lg p-3 border border-[hsl(var(--dash-border))]">
+                    <p className="text-xs font-semibold text-[hsl(var(--dash-ink))] mb-1">{t('courses.usergroup_filter.info_title')}</p>
+                    <p className="text-xs text-[hsl(var(--dash-muted))] leading-relaxed">{t('courses.usergroup_filter.info_description')}</p>
                   </div>
                 )}
               </div>
@@ -593,18 +601,18 @@ function CoursesHome(params: CourseProps) {
               orgId={orgId!}
             >
               <div className="flex items-center gap-2 ml-auto">
-                <span className="text-sm font-medium text-gray-500 px-2">
+                <span className="text-sm font-medium text-[hsl(var(--dash-muted))] px-2">
                   {t('courses.selected_count', { count: selectedCourses.size })}
                 </span>
                 <button
                   onClick={selectAllCourses}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 bg-white nice-shadow rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))] bg-white nice-shadow rounded-lg transition-colors"
                 >
                   <span>{t('courses.select_all')}</span>
                 </button>
                 <button
                   onClick={clearSelection}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 bg-white nice-shadow rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))] bg-white nice-shadow rounded-lg transition-colors"
                 >
                   <X className="w-4 h-4" />
                   <span>{t('courses.clear_selection')}</span>
@@ -614,7 +622,7 @@ function CoursesHome(params: CourseProps) {
                   confirmationMessage={t('courses.clone_selected_confirm', { count: selectedCourses.size })}
                   dialogTitle={t('courses.clone_courses_title')}
                   dialogTrigger={
-                    <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white nice-shadow rounded-lg transition-colors">
+                    <button className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-ink))] hover:text-[hsl(var(--dash-accent))] bg-white nice-shadow rounded-lg transition-colors">
                       <Copy className="w-4 h-4" />
                       <span>{t('courses.clone_selected')}</span>
                     </button>
@@ -624,7 +632,7 @@ function CoursesHome(params: CourseProps) {
                 />
                 <button
                   onClick={bulkExportCourses}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white nice-shadow rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-ink))] hover:text-[hsl(var(--dash-accent))] bg-white nice-shadow rounded-lg transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   <span>{t('courses.export_selected')}</span>
@@ -650,7 +658,7 @@ function CoursesHome(params: CourseProps) {
 
       {/* Search Results Info */}
       {searchQuery && (
-        <div className="mb-4 text-sm text-gray-500">
+        <div className="mb-4 text-sm text-[hsl(var(--dash-muted))]">
           {t('courses.search_results', { count: filteredCourses.length, query: searchQuery })}
         </div>
       )}
@@ -670,11 +678,11 @@ function CoursesHome(params: CourseProps) {
         {filteredCourses.length === 0 && searchQuery && (
           <div className="col-span-full flex justify-center items-center py-8">
             <div className="text-center">
-              <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-600 mb-2">
+              <Search className="w-12 h-12 text-[hsl(var(--dash-border))] mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-[hsl(var(--dash-ink))] mb-2">
                 {t('courses.no_search_results')}
               </h2>
-              <p className="text-gray-400">
+              <p className="text-[hsl(var(--dash-muted))]">
                 {t('courses.try_different_search')}
               </p>
             </div>
@@ -695,10 +703,10 @@ function CoursesHome(params: CourseProps) {
                   {/* ... SVG content ... */}
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-600 mb-2">
+              <h2 className="text-2xl font-bold text-[hsl(var(--dash-ink))] mb-2">
                 {t('dashboard.courses.no_courses')}
               </h2>
-              <p className="text-lg text-gray-400">
+              <p className="text-lg text-[hsl(var(--dash-muted))]">
                 {isUserAdmin ? (
                   t('dashboard.courses.create_course_placeholder')
                 ) : (
@@ -730,7 +738,7 @@ function CoursesHome(params: CourseProps) {
           <button
             onClick={() => goToPage(currentPage - 1)}
             disabled={currentPage === 1}
-            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 bg-white nice-shadow rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-[hsl(var(--dash-muted))] bg-[hsl(var(--dash-surface))] nice-shadow rounded-lg hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
             <span className="hidden sm:inline">{t('pagination.previous')}</span>
@@ -740,14 +748,14 @@ function CoursesHome(params: CourseProps) {
             {getVisiblePageNumbers().map((page, index) => (
               <React.Fragment key={index}>
                 {page === '...' ? (
-                  <span className="px-2 py-1 text-gray-400">...</span>
+                  <span className="px-2 py-1 text-[hsl(var(--dash-muted))]">...</span>
                 ) : (
                   <button
                     onClick={() => goToPage(page as number)}
                     className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                       currentPage === page
                         ? 'bg-[hsl(var(--dash-accent))] text-white'
-                        : 'bg-white text-gray-600 nice-shadow hover:bg-gray-50'
+                        : 'bg-[hsl(var(--dash-surface))] text-[hsl(var(--dash-muted))] nice-shadow hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))]'
                     }`}
                   >
                     {page}
@@ -760,7 +768,7 @@ function CoursesHome(params: CourseProps) {
           <button
             onClick={() => goToPage(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 bg-white nice-shadow rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-[hsl(var(--dash-muted))] bg-[hsl(var(--dash-surface))] nice-shadow rounded-lg hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <span className="hidden sm:inline">{t('pagination.next')}</span>
             <ChevronRight className="w-4 h-4" />
@@ -770,7 +778,7 @@ function CoursesHome(params: CourseProps) {
 
       {/* Pagination info */}
       {totalPages > 1 && (
-        <div className="mb-6 text-center text-sm text-gray-500">
+        <div className="mb-6 text-center text-sm text-[hsl(var(--dash-muted))]">
           {t('pagination.showing_page', { current: currentPage, total: totalPages })}
         </div>
       )}

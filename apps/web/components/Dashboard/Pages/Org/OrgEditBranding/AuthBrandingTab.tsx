@@ -321,14 +321,16 @@ export default function AuthBrandingTab() {
                 )}>
                   {/* Organization logo */}
                   <div
-                    className="w-10 h-10 bg-contain bg-no-repeat bg-center rounded-lg"
+                    className="w-10 h-10 bg-contain bg-no-repeat bg-center rounded-lg flex items-center justify-center text-xs font-semibold"
                     style={{
                       backgroundImage: org?.logo_image
                         ? `url(${getOrgLogoMediaDirectory(org?.org_uuid, org?.logo_image)})`
                         : undefined,
                       backgroundColor: org?.logo_image ? 'white' : 'rgba(255,255,255,0.2)'
                     }}
-                  />
+                  >
+                    {!org?.logo_image && (org?.name?.trim()?.charAt(0) || 'O').toUpperCase()}
+                  </div>
                   {/* Organization name */}
                   <p className="text-xs font-bold">{org?.name}</p>
                   {/* Welcome message */}
