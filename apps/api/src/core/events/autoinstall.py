@@ -81,22 +81,27 @@ async def _ensure_initial_superadmin(db_session: AsyncSession) -> None:
     logger.info("Created initial superadmin %s on org '%s'", email, org.slug)
 
 
-async def _ensure_initial_org_logo(db_session: AsyncSession) -> None:
-    """Seed the initial org's logo from the bundled repo asset (idempotent).
+def _logo_file_missing(org: Organization) -> bool:
+    """True when logo_image points at a local file that is not on disk."""
+    logo = (org.logo_image or "").strip()
+    if not logo:
+        return True
+    if logo.startswith("http://") or logo.startswith("https://"):
+        return False
+    return not os.path.exists(f"content/orgs/{org.org_uuid}/logos/{logo}")
 
-    Only sets the logo when the org has none, so a logo uploaded later via the
-    UI is never overwritten. The asset is baked into the image by the Dockerfile
-    at /app/api/assets/initial-org-logo.png.
+
+async def _ensure_initial_org_logo(db_session: AsyncSession) -> None:
+    """Seed the initial org's logo (idempotent).
+
+    Prefer ``OMNILEARN_INITIAL_ORG_LOGO_URL`` (absolute http/https URL stored
+    directly on the org). Fall back to the bundled asset at
+    ``assets/initial-org-logo.png``.
+
+    Only sets/repairs the logo when missing or when the stored local file is
+    gone — never overwrites a working logo (uploaded or external).
     """
     import shutil
-
-    asset_path = os.path.abspath(
-        os.path.join(
-            os.path.dirname(__file__), "..", "..", "..", "assets", "initial-org-logo.png"
-        )
-    )
-    if not os.path.exists(asset_path):
-        return
 
     org_slug = _initial_org_slug()
     org = (
@@ -106,8 +111,23 @@ async def _ensure_initial_org_logo(db_session: AsyncSession) -> None:
     ).scalars().first()
     if not org:
         org = (await db_session.execute(select(Organization))).scalars().first()
-    # Skip if there's no org or it already has a logo (respects manual uploads).
-    if not org or org.logo_image:
+    if not org or not _logo_file_missing(org):
+        return
+
+    logo_url = os.environ.get("OMNILEARN_INITIAL_ORG_LOGO_URL", "").strip()
+    if logo_url.startswith("http://") or logo_url.startswith("https://"):
+        org.logo_image = logo_url
+        db_session.add(org)
+        await db_session.commit()
+        logger.info("Seeded initial org logo URL for '%s'", org.slug)
+        return
+
+    asset_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__), "..", "..", "..", "assets", "initial-org-logo.png"
+        )
+    )
+    if not os.path.exists(asset_path):
         return
 
     dest_dir = f"content/orgs/{org.org_uuid}/logos"
