@@ -313,9 +313,10 @@ const PillLink = ({
 }) => (
   <Link
     href={href}
+    prefetch
     className={cn(
-      'flex items-center justify-center p-2.5 rounded-full transition-all duration-200',
-      active ? 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]' : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]',
+      'flex items-center justify-center p-2.5 rounded-full transition-[background-color,color,transform] duration-200 ease-out',
+      active ? 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))] scale-105' : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]',
       className
     )}
   >
@@ -338,10 +339,11 @@ const PanelItem = ({
 }) => (
   <Link
     href={href}
+    prefetch
     onClick={onClick}
     aria-current={active ? 'page' : undefined}
     className={cn(
-      'relative flex items-center w-full rounded-lg px-2.5 py-2 gap-2 transition-all',
+      'relative flex items-center w-full rounded-lg px-2.5 py-2 gap-2 transition-[background-color,color] duration-200 ease-out',
       active ? 'text-[hsl(var(--dash-accent))] bg-[hsl(var(--dash-accent-soft))]' : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]'
     )}
   >

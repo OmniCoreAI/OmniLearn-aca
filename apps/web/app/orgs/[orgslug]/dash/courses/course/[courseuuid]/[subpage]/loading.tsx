@@ -1,5 +1,5 @@
-import PageLoading from '@components/Objects/Loaders/PageLoading'
+import DashPageSkeleton from '@components/Dashboard/Shared/DashPageSkeleton'
 
 export default function Loading() {
-  return <PageLoading />
+  return <DashPageSkeleton />
 }

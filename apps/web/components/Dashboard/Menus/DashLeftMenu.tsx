@@ -866,7 +866,7 @@ const MenuLink = ({ href, icon, label, isCollapsed, isExternal, active, onClick 
   const content = (
     <div
       className={cn(
-        "relative flex w-full items-center rounded-xl transition-all duration-200",
+        "relative flex w-full items-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-200 ease-out",
         active
           ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
           : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
@@ -877,7 +877,7 @@ const MenuLink = ({ href, icon, label, isCollapsed, isExternal, active, onClick 
       {active && !isCollapsed && (
         <span
           aria-hidden="true"
-          className="absolute start-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-e-full bg-[hsl(var(--dash-accent))]"
+          className="absolute start-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-e-full bg-[hsl(var(--dash-accent))] transition-all duration-300 ease-out"
         />
       )}
       {icon}
@@ -893,7 +893,7 @@ const MenuLink = ({ href, icon, label, isCollapsed, isExternal, active, onClick 
       {content}
     </a>
   ) : (
-    <Link aria-label={label} aria-current={ariaCurrent} href={href} onClick={onClick}>
+    <Link aria-label={label} aria-current={ariaCurrent} href={href} prefetch onClick={onClick}>
       {content}
     </Link>
   )

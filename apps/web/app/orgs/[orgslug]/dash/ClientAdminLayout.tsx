@@ -27,9 +27,9 @@ function ClientAdminLayout({
                     {isMobile && <DashMobileMenu />}
                     <div className="dash-soft flex min-h-screen flex-col bg-[hsl(var(--dash-canvas))] lg:flex-row">
                         {!isMobile && <DashLeftMenu />}
-                        <div className="relative isolate flex min-w-0 w-full flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0">
+                        <div className="relative isolate flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0">
                             <FreePlanUpgradeBanner />
-                            {children}
+                            <div className="flex min-h-0 flex-1 flex-col">{children}</div>
                             <OnboardingBar />
                         </div>
                         <WelcomeModal />
