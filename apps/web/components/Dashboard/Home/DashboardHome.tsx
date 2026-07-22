@@ -11,7 +11,7 @@ import HeroBanner from './HeroBanner'
 import GlobalSearchBar from './GlobalSearchBar'
 import QuezStatCards from './QuezStatCards'
 import UpcomingCourseCards from './UpcomingCourseCards'
-import { FadeIn } from '@components/Dashboard/Shared/DashMotion'
+import { FadeIn, Stagger, StaggerItem } from '@components/Dashboard/Shared/DashMotion'
 
 const chartSkeleton = (
   <div className="dash-shimmer h-[300px] rounded-[var(--dash-radius)] border border-[hsl(var(--dash-border))]" />
@@ -72,32 +72,34 @@ export default function DashboardHome() {
           </div>
         </FadeIn>
 
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-[1.75rem] font-semibold tracking-tight text-[hsl(var(--dash-ink))] sm:text-[2rem]">
-              {t('dashboard.home.hi_name', 'Hi, {{name}}!', {
-                name: firstName || t('dashboard.home.there', 'there'),
-              })}{' '}
-              <span aria-hidden="true">👋</span>
-            </h1>
-            <p className="mt-1.5 max-w-xl text-sm text-[hsl(var(--dash-muted))]">
-              {org?.name
-                ? t(
-                    'dashboard.home.week_activity',
-                    'Your academic workspace for {{org}} — keep classes, people, and progress moving.',
-                    { org: org.name }
-                  )
-                : t(
-                    'dashboard.home.week_activity_generic',
-                    'Your academic workspace — keep classes, people, and progress moving.'
-                  )}
-            </p>
-          </div>
-        </header>
+        <FadeIn delay={0.05}>
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-[1.75rem] font-semibold tracking-tight text-[hsl(var(--dash-ink))] sm:text-[2rem]">
+                {t('dashboard.home.hi_name', 'Hi, {{name}}!', {
+                  name: firstName || t('dashboard.home.there', 'there'),
+                })}{' '}
+                <span aria-hidden="true">👋</span>
+              </h1>
+              <p className="mt-1.5 max-w-xl text-sm text-[hsl(var(--dash-muted))]">
+                {org?.name
+                  ? t(
+                      'dashboard.home.week_activity',
+                      'Your academic workspace for {{org}} — keep classes, people, and progress moving.',
+                      { org: org.name }
+                    )
+                  : t(
+                      'dashboard.home.week_activity_generic',
+                      'Your academic workspace — keep classes, people, and progress moving.'
+                    )}
+              </p>
+            </div>
+          </header>
+        </FadeIn>
 
         <AdminAuthorization authorizationMode="component">
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="min-w-0 space-y-6">
+          <Stagger className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <StaggerItem className="min-w-0 space-y-6">
               <HeroBanner orgName={org?.name} />
               <QuezStatCards />
 
@@ -108,6 +110,7 @@ export default function DashboardHome() {
                   </h2>
                   <Link
                     href="/dash/courses"
+                    prefetch
                     className="text-xs font-medium text-[hsl(var(--dash-accent))] hover:underline"
                   >
                     {t('dashboard.home.view_all', 'View All')}
@@ -118,13 +121,13 @@ export default function DashboardHome() {
 
               <ActivityChart />
               <CoursesTable />
-            </div>
+            </StaggerItem>
 
-            <div className="min-w-0 space-y-6">
+            <StaggerItem className="min-w-0 space-y-6">
               <EventsWidget />
               <MembersWidget />
-            </div>
-          </div>
+            </StaggerItem>
+          </Stagger>
         </AdminAuthorization>
       </div>
     </div>

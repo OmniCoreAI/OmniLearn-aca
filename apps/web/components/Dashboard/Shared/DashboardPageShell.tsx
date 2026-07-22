@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { FadeIn } from '@components/Dashboard/Shared/DashMotion'
 import { cn } from '@/lib/utils'
 
 interface DashboardPageShellProps {
@@ -34,27 +35,35 @@ export default function DashboardPageShell({
       )}
     >
       <div className="mx-auto w-full max-w-[1600px] px-4 pb-10 pt-8 sm:px-10">
-        <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0 space-y-1.5">
-            <h1 className="text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))] sm:text-[1.75rem]">
-              {title}
-            </h1>
-            {description ? (
-              <p className="max-w-2xl text-sm leading-relaxed text-[hsl(var(--dash-muted))]">
-                {description}
-              </p>
-            ) : null}
-          </div>
-          {actions ? (
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {actions}
+        <FadeIn>
+          <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0 space-y-1.5">
+              <h1 className="text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))] sm:text-[1.75rem]">
+                {title}
+              </h1>
+              {description ? (
+                <p className="max-w-2xl text-sm leading-relaxed text-[hsl(var(--dash-muted))]">
+                  {description}
+                </p>
+              ) : null}
             </div>
-          ) : null}
-        </header>
+            {actions ? (
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                {actions}
+              </div>
+            ) : null}
+          </header>
+        </FadeIn>
 
-        {tabs ? <div className="mb-6">{tabs}</div> : null}
+        {tabs ? (
+          <FadeIn delay={0.04} className="mb-6">
+            {tabs}
+          </FadeIn>
+        ) : null}
 
-        <div className={cn('space-y-6', contentClassName)}>{children}</div>
+        <FadeIn delay={0.08} className={cn('space-y-6', contentClassName)}>
+          {children}
+        </FadeIn>
       </div>
     </div>
   )

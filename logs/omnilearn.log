@@ -7,242 +7,265 @@
 #2 transferring dockerfile: 5.16kB done
 #2 DONE 0.0s
 
-#3 [internal] load metadata for docker.io/library/node:24-alpine
-#3 ...
+#3 [internal] load metadata for docker.io/oven/bun:1-alpine
+#3 DONE 0.1s
 
-#4 [internal] load metadata for docker.io/oven/bun:1-alpine
-#4 DONE 0.2s
+#4 [internal] load metadata for docker.io/library/node:24-alpine
+#4 ...
 
 #5 [internal] load metadata for docker.io/library/python:3.14.3-slim-bookworm
-#5 DONE 2.0s
+#5 DONE 1.9s
 
-#3 [internal] load metadata for docker.io/library/node:24-alpine
-#3 DONE 2.0s
+#4 [internal] load metadata for docker.io/library/node:24-alpine
+#4 DONE 1.9s
 
 #6 [internal] load .dockerignore
 #6 transferring context: 1.52kB done
 #6 DONE 0.0s
 
-#7 [frontend-runner  1/10] FROM docker.io/library/node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd
-#7 resolve docker.io/library/node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd 0.0s done
+#7 [runner  1/19] FROM docker.io/library/python:3.14.3-slim-bookworm@sha256:f21c0d5a44c56805654c15abccc1b2fd576c8d93aca0a3f74b4aba2dc92510e2
+#7 resolve docker.io/library/python:3.14.3-slim-bookworm@sha256:f21c0d5a44c56805654c15abccc1b2fd576c8d93aca0a3f74b4aba2dc92510e2 0.0s done
 #7 DONE 0.0s
 
-#8 [runner  1/19] FROM docker.io/library/python:3.14.3-slim-bookworm@sha256:f21c0d5a44c56805654c15abccc1b2fd576c8d93aca0a3f74b4aba2dc92510e2
-#8 resolve docker.io/library/python:3.14.3-slim-bookworm@sha256:f21c0d5a44c56805654c15abccc1b2fd576c8d93aca0a3f74b4aba2dc92510e2 0.0s done
+#8 [collab-builder 1/7] FROM docker.io/oven/bun:1-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
+#8 resolve docker.io/oven/bun:1-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0 0.0s done
 #8 DONE 0.0s
 
-#9 [collab-builder 1/7] FROM docker.io/oven/bun:1-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
-#9 resolve docker.io/oven/bun:1-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0 0.0s done
+#9 [frontend-runner  1/10] FROM docker.io/library/node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd
+#9 resolve docker.io/library/node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd 0.0s done
 #9 DONE 0.0s
 
 #10 [internal] load build context
-#10 transferring context: 6.14MB 4.6s done
-#10 DONE 4.7s
+#10 transferring context: 3.61MB 7.7s
+#10 transferring context: 3.68MB 9.4s done
+#10 DONE 9.6s
 
-#11 [frontend-deps 4/5] COPY apps/web/package.json apps/web/bun.lock* ./
+#11 [collab-builder 2/7] WORKDIR /app
 #11 CACHED
 
-#12 [frontend-deps 5/5] RUN bun install --frozen-lockfile
+#12 [frontend-deps 3/5] WORKDIR /app
 #12 CACHED
 
-#13 [collab-builder 2/7] WORKDIR /app
+#13 [frontend-deps 4/5] COPY apps/web/package.json apps/web/bun.lock* ./
 #13 CACHED
 
-#14 [frontend-deps 2/5] RUN apk update && apk add --no-cache libc6-compat && rm -rf /var/cache/apk/*
+#14 [frontend-deps 5/5] RUN bun install --frozen-lockfile
 #14 CACHED
 
-#15 [frontend-deps 3/5] WORKDIR /app
+#15 [frontend-deps 2/5] RUN apk update && apk add --no-cache libc6-compat && rm -rf /var/cache/apk/*
 #15 CACHED
 
 #16 [frontend-builder 3/6] COPY --from=frontend-deps /app/node_modules ./node_modules
 #16 CACHED
 
-#17 [frontend-builder 4/6] COPY apps/web .
-#17 DONE 0.2s
+#17 [collab-builder 3/7] COPY apps/collab/package.json apps/collab/bun.lock* ./
+#17 CACHED
 
-#18 [frontend-builder 5/6] RUN rm -f .env*
-#18 DONE 0.1s
+#18 [collab-builder 4/7] RUN bun install --frozen-lockfile
+#18 CACHED
 
-#19 [frontend-builder 6/6] RUN bun run build
-#19 0.132 $ next build
-#19 0.580 [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
-#19 0.631 ▲ Next.js 16.2.9 (Turbopack)
-#19 0.631 - Experiments (use with caution):
-#19 0.631   · clientTraceMetadata
-#19 0.631   · optimizePackageImports
-#19 0.631 
-#19 0.649   Creating an optimized production build ...
-#19 0.880 [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
-#19 10.32 Turbopack build encountered 1 warnings:
-#19 10.32 ./next.config.js
-#19 10.32 Encountered unexpected file in NFT list
-#19 10.32 A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
-#19 10.32 - filesystem operations (like path.join, path.resolve or fs.readFile), or
-#19 10.32 - very dynamic requires (like require('./' + foo)).
-#19 10.32 To resolve this, you can
-#19 10.32 - remove them if possible, or
-#19 10.32 - only use them in development, or
-#19 10.32 - make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
-#19 10.32 - add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
-#19 10.32 
-#19 10.32 Import trace:
-#19 10.32   App Route:
-#19 10.32     ./next.config.js
-#19 10.32     ./services/config/config.ts
-#19 10.32     ./app/api/auth/[...path]/route.ts
-#19 10.32 
-#19 10.32 
-#19 10.34 ✓ Compiled successfully in 9.4s
-#19 10.34   Running next.config.js provided runAfterProductionCompile ...
-#19 11.31 ✓ Completed runAfterProductionCompile in 966ms
-#19 11.31   Running TypeScript ...
-#19 26.16   Finished TypeScript in 14.8s ...
-#19 26.18   Collecting page data using 13 workers ...
-#19 26.76   Generating static pages using 13 workers (0/25) ...
-#19 27.07   Generating static pages using 13 workers (6/25) 
-#19 27.07   Generating static pages using 13 workers (12/25) 
-#19 27.11   Generating static pages using 13 workers (18/25) 
-#19 27.17 ✓ Generating static pages using 13 workers (25/25) in 413ms
-#19 27.17   Finalizing page optimization ...
-#19 27.54 
-#19 27.54 Route (app)
-#19 27.54 ┌ ○ /_not-found
-#19 27.54 ├ ○ /admin
-#19 27.54 ├ ○ /admin/analytics
-#19 27.54 ├ ○ /admin/developers
-#19 27.54 ├ ○ /admin/login
-#19 27.54 ├ ○ /admin/organizations
-#19 27.54 ├ ƒ /admin/organizations/[orgId]
-#19 27.54 ├ ○ /admin/users
-#19 27.54 ├ ƒ /api/auth/[...path]
-#19 27.54 ├ ƒ /api/auth/establish
-#19 27.54 ├ ƒ /api/auth/google/authorize
-#19 27.54 ├ ƒ /api/auth/google/token
-#19 27.54 ├ ƒ /api/auth/token-exchange
-#19 27.54 ├ ƒ /api/health
-#19 27.54 ├ ƒ /api/revalidate
-#19 27.54 ├ ƒ /api/robots
-#19 27.54 ├ ƒ /api/scorm/[...path]
-#19 27.54 ├ ƒ /api/sitemap
-#19 27.54 ├ ƒ /api/v1/[...path]
-#19 27.54 ├ ƒ /auth/callback/google
-#19 27.54 ├ ƒ /auth/forgot
-#19 27.54 ├ ƒ /auth/handoff
-#19 27.54 ├ ƒ /auth/login
-#19 27.54 ├ ƒ /auth/reset
-#19 27.54 ├ ƒ /auth/signup
-#19 27.54 ├ ƒ /auth/sso/callback
-#19 27.54 ├ ƒ /auth/token-exchange
-#19 27.54 ├ ƒ /auth/verify-email
-#19 27.54 ├ ƒ /board/[boarduuid]
-#19 27.54 ├ ƒ /editor/course/[courseid]/activity/[activityuuid]/edit
-#19 27.54 ├ ƒ /editor/playground/[playgrounduuid]/edit
-#19 27.54 ├ ƒ /embed/[orgslug]/course/[courseuuid]/activity/[activityid]
-#19 27.54 ├ ○ /home
-#19 27.54 ├ ƒ /orgs/[orgslug]
-#19 27.54 ├ ƒ /orgs/[orgslug]/account
-#19 27.54 ├ ƒ /orgs/[orgslug]/account/[subpage]
-#19 27.54 ├ ƒ /orgs/[orgslug]/boards
-#19 27.54 ├ ƒ /orgs/[orgslug]/certificates/[uuid]/verify
-#19 27.54 ├ ƒ /orgs/[orgslug]/copilot
-#19 27.54 ├ ƒ /orgs/[orgslug]/course/[courseuuid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/course/[courseuuid]/activity/[activityid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/courses
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/analytics
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/assignments
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/assignments/[assignmentuuid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/boards
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/boards/[boarduuid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/boards/[boarduuid]/[subpage]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/cms/news
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/cms/news/[newsuuid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/cms/news/new
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/courses
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/courses/course/[courseuuid]/[subpage]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/courses/migrate
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/finance
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/instructors
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/instructors/categories
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/instructors/finance
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/library
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/library/folder/[folderid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/org/settings/[subpage]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/payments/[subpage]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/playgrounds
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/postgraduate
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/postgraduate/[programuuid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/postgraduate/[programuuid]/cohort/[cohortuuid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/postgraduate/[programuuid]/cohort/[cohortuuid]/semester/[semesteruuid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/training-programs
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/training-programs/[tpuuid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/dash/users/settings/[subpage]
-#19 27.54 ├ ƒ /orgs/[orgslug]/library
-#19 27.54 ├ ƒ /orgs/[orgslug]/library/folder/[folderid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/playground/[playgrounduuid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/playgrounds
-#19 27.54 ├ ƒ /orgs/[orgslug]/search
-#19 27.54 ├ ƒ /orgs/[orgslug]/store
-#19 27.54 ├ ƒ /orgs/[orgslug]/store/offers/[offerid]
-#19 27.54 ├ ƒ /orgs/[orgslug]/trail
-#19 27.54 ├ ƒ /orgs/[orgslug]/user/[username]
-#19 27.54 └ ○ /payments/stripe/connect/oauth
-#19 27.54 
-#19 27.54 
-#19 27.54 ƒ Proxy (Middleware)
-#19 27.54 
-#19 27.54 ○  (Static)   prerendered as static content
-#19 27.54 ƒ  (Dynamic)  server-rendered on demand
-#19 27.54 
-#19 DONE 27.9s
+#19 [collab-builder 5/7] COPY apps/collab/tsconfig.json ./
+#19 CACHED
 
-#20 [frontend-runner  3/10] RUN apk update && apk add --no-cache curl && rm -rf /var/cache/apk/*
+#20 [collab-builder 6/7] COPY apps/collab/src/ ./src/
 #20 CACHED
 
-#21 [frontend-runner  4/10] RUN addgroup --system --gid 1001 nodejs     && adduser --system --uid 1001 nextjs
+#21 [collab-builder 7/7] RUN bun run build
 #21 CACHED
 
-#22 [frontend-runner  5/10] COPY --from=frontend-builder /app/public ./public
-#22 CACHED
+#22 [frontend-builder 4/6] COPY apps/web .
+#22 DONE 0.3s
 
-#23 [frontend-runner  2/10] WORKDIR /app
-#23 CACHED
+#23 [frontend-builder 5/6] RUN rm -f .env*
+#23 DONE 0.2s
 
-#24 [frontend-runner  6/10] RUN mkdir .next && chown nextjs:nodejs .next
-#24 CACHED
+#24 [frontend-builder 6/6] RUN bun run build
+#24 0.157 $ next build
+#24 0.627 [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+#24 0.685 ▲ Next.js 16.2.11 (Turbopack)
+#24 0.685 - Experiments (use with caution):
+#24 0.685   · clientTraceMetadata
+#24 0.685   · optimizePackageImports
+#24 0.685 
+#24 0.703   Creating an optimized production build ...
+#24 0.944 [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+#24 11.26 Turbopack build encountered 2 warnings:
+#24 11.26 ./next.config.js
+#24 11.26 Encountered unexpected file in NFT list
+#24 11.26 A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
+#24 11.26 - filesystem operations (like path.join, path.resolve or fs.readFile), or
+#24 11.26 - very dynamic requires (like require('./' + foo)).
+#24 11.26 To resolve this, you can
+#24 11.26 - remove them if possible, or
+#24 11.26 - only use them in development, or
+#24 11.26 - make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
+#24 11.26 - add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
+#24 11.26 
+#24 11.26 Import trace:
+#24 11.26   App Route:
+#24 11.26     ./next.config.js
+#24 11.26     ./services/config/config.ts
+#24 11.26     ./app/api/auth/[...path]/route.ts
+#24 11.26 
+#24 11.26 
+#24 11.26 ./next.config.js
+#24 11.26 Encountered unexpected file in NFT list
+#24 11.26 A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
+#24 11.26 - filesystem operations (like path.join, path.resolve or fs.readFile), or
+#24 11.26 - very dynamic requires (like require('./' + foo)).
+#24 11.26 To resolve this, you can
+#24 11.26 - remove them if possible, or
+#24 11.26 - only use them in development, or
+#24 11.26 - make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
+#24 11.26 - add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
+#24 11.26 
+#24 11.26 Output asset trace:
+#24 11.26   [output]/.next/server/instrumentation.js
+#24 11.26   [output]/.next/server/chunks/_1rzrc7g._.js
+#24 11.26 
+#24 11.26 Import trace:
+#24 11.26   App Route:
+#24 11.26     ./next.config.js
+#24 11.26     ./services/config/config.ts
+#24 11.26     ./app/api/auth/[...path]/route.ts
+#24 11.26 
+#24 11.26 
+#24 11.32 ✓ Compiled successfully in 10.3s
+#24 11.35   Running next.config.js provided runAfterProductionCompile ...
+#24 12.01 ✓ Completed runAfterProductionCompile in 651ms
+#24 12.01   Running TypeScript ...
+#24 28.80   Finished TypeScript in 16.8s ...
+#24 28.82   Collecting page data using 13 workers ...
+#24 29.58   Generating static pages using 13 workers (0/25) ...
+#24 29.94   Generating static pages using 13 workers (6/25) 
+#24 29.95   Generating static pages using 13 workers (12/25) 
+#24 29.99   Generating static pages using 13 workers (18/25) 
+#24 30.05 ✓ Generating static pages using 13 workers (25/25) in 475ms
+#24 30.06   Finalizing page optimization ...
+#24 30.46 
+#24 30.47 Route (app)
+#24 30.47 ┌ ○ /_not-found
+#24 30.47 ├ ○ /admin
+#24 30.47 ├ ○ /admin/analytics
+#24 30.47 ├ ○ /admin/developers
+#24 30.47 ├ ○ /admin/login
+#24 30.47 ├ ○ /admin/organizations
+#24 30.47 ├ ƒ /admin/organizations/[orgId]
+#24 30.47 ├ ○ /admin/users
+#24 30.47 ├ ƒ /api/auth/[...path]
+#24 30.47 ├ ƒ /api/auth/establish
+#24 30.47 ├ ƒ /api/auth/google/authorize
+#24 30.47 ├ ƒ /api/auth/google/token
+#24 30.47 ├ ƒ /api/auth/token-exchange
+#24 30.47 ├ ƒ /api/health
+#24 30.47 ├ ƒ /api/revalidate
+#24 30.47 ├ ƒ /api/robots
+#24 30.47 ├ ƒ /api/scorm/[...path]
+#24 30.47 ├ ƒ /api/sitemap
+#24 30.47 ├ ƒ /api/v1/[...path]
+#24 30.47 ├ ƒ /auth/callback/google
+#24 30.47 ├ ƒ /auth/forgot
+#24 30.47 ├ ƒ /auth/handoff
+#24 30.47 ├ ƒ /auth/login
+#24 30.47 ├ ƒ /auth/reset
+#24 30.47 ├ ƒ /auth/signup
+#24 30.47 ├ ƒ /auth/sso/callback
+#24 30.47 ├ ƒ /auth/token-exchange
+#24 30.47 ├ ƒ /auth/verify-email
+#24 30.47 ├ ƒ /board/[boarduuid]
+#24 30.47 ├ ƒ /editor/course/[courseid]/activity/[activityuuid]/edit
+#24 30.47 ├ ƒ /editor/playground/[playgrounduuid]/edit
+#24 30.47 ├ ƒ /embed/[orgslug]/course/[courseuuid]/activity/[activityid]
+#24 30.47 ├ ○ /home
+#24 30.47 ├ ƒ /orgs/[orgslug]
+#24 30.47 ├ ƒ /orgs/[orgslug]/account
+#24 30.47 ├ ƒ /orgs/[orgslug]/account/[subpage]
+#24 30.47 ├ ƒ /orgs/[orgslug]/boards
+#24 30.47 ├ ƒ /orgs/[orgslug]/certificates/[uuid]/verify
+#24 30.47 ├ ƒ /orgs/[orgslug]/copilot
+#24 30.47 ├ ƒ /orgs/[orgslug]/course/[courseuuid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/course/[courseuuid]/activity/[activityid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/courses
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/analytics
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/assignments
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/assignments/[assignmentuuid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/boards
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/boards/[boarduuid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/boards/[boarduuid]/[subpage]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/cms/news
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/cms/news/[newsuuid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/cms/news/new
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/courses
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/courses/course/[courseuuid]/[subpage]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/courses/migrate
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/finance
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/instructors
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/instructors/categories
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/instructors/finance
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/library
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/library/folder/[folderid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/org/settings/[subpage]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/payments/[subpage]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/playgrounds
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/postgraduate
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/postgraduate/[programuuid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/postgraduate/[programuuid]/cohort/[cohortuuid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/postgraduate/[programuuid]/cohort/[cohortuuid]/semester/[semesteruuid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/training-programs
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/training-programs/[tpuuid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/dash/users/settings/[subpage]
+#24 30.47 ├ ƒ /orgs/[orgslug]/library
+#24 30.47 ├ ƒ /orgs/[orgslug]/library/folder/[folderid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/playground/[playgrounduuid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/playgrounds
+#24 30.47 ├ ƒ /orgs/[orgslug]/search
+#24 30.47 ├ ƒ /orgs/[orgslug]/store
+#24 30.47 ├ ƒ /orgs/[orgslug]/store/offers/[offerid]
+#24 30.47 ├ ƒ /orgs/[orgslug]/trail
+#24 30.47 ├ ƒ /orgs/[orgslug]/user/[username]
+#24 30.47 └ ○ /payments/stripe/connect/oauth
+#24 30.47 
+#24 30.47 
+#24 30.47 ƒ Proxy (Middleware)
+#24 30.47 
+#24 30.47 ○  (Static)   prerendered as static content
+#24 30.47 ƒ  (Dynamic)  server-rendered on demand
+#24 30.47 
+#24 DONE 31.2s
 
-#25 [frontend-runner  7/10] COPY --from=frontend-builder --chown=nextjs:nodejs /app/.next/standalone ./
-#25 DONE 0.3s
+#25 [frontend-runner  5/10] COPY --from=frontend-builder /app/public ./public
+#25 CACHED
 
-#26 [frontend-runner  8/10] COPY --from=frontend-builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-#26 DONE 0.1s
+#26 [frontend-runner  2/10] WORKDIR /app
+#26 CACHED
 
-#27 [frontend-runner  9/10] COPY --chown=nextjs:nodejs apps/web/server-wrapper.js ./
-#27 DONE 0.0s
+#27 [frontend-runner  3/10] RUN apk update && apk add --no-cache curl && rm -rf /var/cache/apk/*
+#27 CACHED
 
-#28 [frontend-runner 10/10] RUN chmod +x server-wrapper.js
-#28 DONE 0.2s
+#28 [frontend-runner  4/10] RUN addgroup --system --gid 1001 nodejs     && adduser --system --uid 1001 nextjs
+#28 CACHED
 
-#29 [runner  2/19] RUN apt-get update     && apt-get install -y --no-install-recommends nginx curl netcat-openbsd ca-certificates gnupg unzip build-essential     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash -     && apt-get install -y --no-install-recommends nodejs     && npm install -g pm2     && curl -fsSL https://bun.sh/install | bash     && apt-get purge -y gnupg     && apt-get autoremove -y     && apt-get clean     && rm -rf /var/lib/apt/lists/* /tmp/* /root/.npm     && rm /etc/nginx/sites-enabled/default
+#29 [frontend-runner  6/10] RUN mkdir .next && chown nextjs:nodejs .next
 #29 CACHED
 
-#30 [collab-builder 3/7] COPY apps/collab/package.json apps/collab/bun.lock* ./
-#30 CACHED
+#30 [frontend-runner  7/10] COPY --from=frontend-builder --chown=nextjs:nodejs /app/.next/standalone ./
+#30 DONE 0.5s
 
-#31 [collab-builder 4/7] RUN bun install --frozen-lockfile
-#31 CACHED
+#31 [frontend-runner  8/10] COPY --from=frontend-builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+#31 DONE 0.1s
 
-#32 [collab-builder 5/7] COPY apps/collab/tsconfig.json ./
-#32 CACHED
+#32 [frontend-runner  9/10] COPY --chown=nextjs:nodejs apps/web/server-wrapper.js ./
+#32 DONE 0.0s
 
-#33 [collab-builder 6/7] COPY apps/collab/src/ ./src/
-#33 CACHED
+#33 [frontend-runner 10/10] RUN chmod +x server-wrapper.js
+#33 DONE 0.2s
 
-#34 [collab-builder 7/7] RUN bun run build
+#34 [runner  2/19] RUN apt-get update     && apt-get install -y --no-install-recommends nginx curl netcat-openbsd ca-certificates gnupg unzip build-essential     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash -     && apt-get install -y --no-install-recommends nodejs     && npm install -g pm2     && curl -fsSL https://bun.sh/install | bash     && apt-get purge -y gnupg     && apt-get autoremove -y     && apt-get clean     && rm -rf /var/lib/apt/lists/* /tmp/* /root/.npm     && rm /etc/nginx/sites-enabled/default
 #34 CACHED
 
 #35 [runner  3/19] COPY --from=frontend-runner /app /app/web
-#35 DONE 0.3s
+#35 DONE 0.4s
 
 #36 [runner  4/19] WORKDIR /app/api
 #36 DONE 0.0s
@@ -251,205 +274,205 @@
 #37 DONE 0.0s
 
 #38 [runner  6/19] RUN pip install --no-cache-dir --upgrade pip uv     && uv sync --no-dev
-#38 0.930 Requirement already satisfied: pip in /usr/local/lib/python3.14/site-packages (25.3)
-#38 1.605 Collecting pip
-#38 1.971   Downloading pip-26.1.2-py3-none-any.whl.metadata (4.6 kB)
-#38 2.517 Collecting uv
-#38 2.853   Downloading uv-0.11.30-py3-none-manylinux_2_28_aarch64.whl.metadata (11 kB)
-#38 2.961 Downloading pip-26.1.2-py3-none-any.whl (1.8 MB)
-#38 3.586    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 3.9 MB/s  0:00:00
-#38 3.681 Downloading uv-0.11.30-py3-none-manylinux_2_28_aarch64.whl (25.6 MB)
-#38 8.278    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.6/25.6 MB 5.6 MB/s  0:00:04
-#38 8.311 Installing collected packages: uv, pip
-#38 8.507   Attempting uninstall: pip
-#38 8.508     Found existing installation: pip 25.3
-#38 8.525     Uninstalling pip-25.3:
-#38 8.606       Successfully uninstalled pip-25.3
-#38 9.060 
-#38 9.061 Successfully installed pip-26.1.2 uv-0.11.30
-#38 9.061 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
-#38 9.601 Using CPython 3.14.3 interpreter at: /usr/local/bin/python3
-#38 9.601 Creating virtual environment at: .venv
-#38 9.606 Resolved 140 packages in 0.79ms
-#38 9.969 Downloading mistralai (1.1MiB)
-#38 9.971 Downloading cryptography (4.5MiB)
-#38 9.972 Downloading sqlalchemy (3.1MiB)
-#38 9.984 Downloading nltk (1.5MiB)
-#38 9.985 Downloading pydantic-core (1.9MiB)
-#38 9.987 Downloading openai (1.3MiB)
-#38 9.987 Downloading pillow (6.1MiB)
-#38 9.989 Downloading pygments (1.2MiB)
-#38 9.989 Downloading botocore (14.6MiB)
-#38 9.989 Downloading faker (1.9MiB)
-#38 9.991 Downloading stripe (2.1MiB)
-#38 9.991 Downloading asyncpg (3.3MiB)
-#38 9.991 Downloading psycopg2-binary (5.6MiB)
-#38 9.992 Downloading networkx (2.0MiB)
-#38 9.992 Downloading tiktoken (1.1MiB)
-#38 9.999 Downloading llama-index-core (11.4MiB)
-#38 10.03 Downloading numpy (15.0MiB)
-#38 10.04 Downloading aiohttp (1.6MiB)
-#38 20.19  Downloaded mistralai
-#38 20.55  Downloaded tiktoken
-#38 20.85  Downloaded pygments
-#38 21.48  Downloaded openai
-#38 22.56  Downloaded nltk
-#38 23.05  Downloaded aiohttp
-#38 23.58  Downloaded faker
-#38 23.58  Downloaded pydantic-core
-#38 23.80  Downloaded networkx
-#38 23.98  Downloaded stripe
-#38 26.28  Downloaded sqlalchemy
-#38 26.56  Downloaded asyncpg
-#38 28.71  Downloaded cryptography
-#38 30.45  Downloaded psycopg2-binary
-#38 30.94  Downloaded pillow
-#38 35.43  Downloaded llama-index-core
-#38 37.15  Downloaded botocore
-#38 37.18  Downloaded numpy
-#38 37.18 Prepared 137 packages in 27.56s
-#38 37.31 Installed 137 packages in 129ms
-#38 37.31  + aiohappyeyeballs==2.6.1
-#38 37.31  + aiohttp==3.13.5
-#38 37.31  + aiosignal==1.4.0
-#38 37.31  + aiosqlite==0.22.1
-#38 37.31  + alembic==1.18.4
-#38 37.31  + alembic-postgresql-enum==1.10.0
-#38 37.31  + annotated-doc==0.0.4
-#38 37.31  + annotated-types==0.7.0
-#38 37.31  + anthropic==0.109.1
-#38 37.31  + anyio==4.12.1
-#38 37.31  + argon2-cffi==25.1.0
-#38 37.31  + argon2-cffi-bindings==25.1.0
-#38 37.31  + asyncpg==0.31.0
-#38 37.31  + attrs==25.4.0
-#38 37.31  + banks==2.4.1
-#38 37.31  + beautifulsoup4==4.15.0
-#38 37.31  + boto3==1.43.33
-#38 37.31  + botocore==1.43.33
-#38 37.31  + certifi==2026.1.4
-#38 37.31  + cffi==2.0.0
-#38 37.31  + charset-normalizer==3.4.4
-#38 37.31  + click==8.3.1
-#38 37.31  + colorama==0.4.6
-#38 37.31  + coverage==7.13.2
-#38 37.31  + cryptography==48.0.1
-#38 37.31  + dataclasses-json==0.6.7
-#38 37.31  + defusedxml==0.7.1
-#38 37.31  + deprecated==1.3.1
-#38 37.31  + dirtyjson==1.0.8
-#38 37.31  + distro==1.9.0
-#38 37.31  + dnspython==2.8.0
-#38 37.31  + docstring-parser==0.18.0
-#38 37.31  + email-validator==2.3.0
-#38 37.31  + eval-type-backport==0.4.0
-#38 37.31  + faker==40.23.0
-#38 37.31  + fastapi==0.137.2
-#38 37.31  + filetype==1.2.0
-#38 37.31  + frozenlist==1.8.0
-#38 37.31  + fsspec==2026.2.0
-#38 37.31  + genai-prices==0.0.66
-#38 37.31  + google-auth==2.49.1
-#38 37.31  + google-genai==2.9.0
-#38 37.31  + greenlet==3.3.1
-#38 37.31  + griffe==2.0.0
-#38 37.31  + griffecli==2.0.0
-#38 37.31  + griffelib==2.0.0
-#38 37.31  + h11==0.16.0
-#38 37.31  + httpcore==1.0.9
-#38 37.31  + httpcore2==2.3.0
-#38 37.31  + httpx==0.28.1
-#38 37.31  + httpx2==2.3.0
-#38 37.31  + idna==3.11
-#38 37.31  + importlib-metadata==8.7.1
-#38 37.31  + iniconfig==2.3.0
-#38 37.31  + jinja2==3.1.6
-#38 37.31  + jiter==0.15.0
-#38 37.31  + jmespath==1.1.0
-#38 37.31  + joblib==1.5.3
-#38 37.31  + jsonpath-python==1.1.6
-#38 37.31  + llama-index-core==0.14.22
-#38 37.31  + llama-index-instrumentation==0.4.2
-#38 37.31  + llama-index-workflows==2.14.2
-#38 37.31  + logfire-api==4.36.0
-#38 37.31  + mako==1.3.10
-#38 37.31  + markdown-it-py==4.0.0
-#38 37.31  + markupsafe==3.0.3
-#38 37.31  + marshmallow==3.26.2
-#38 37.31  + mdurl==0.1.2
-#38 37.31  + mistralai==2.4.9
-#38 37.31  + multidict==6.7.1
-#38 37.31  + mypy-extensions==1.1.0
-#38 37.31  + nest-asyncio==1.6.0
-#38 37.31  + networkx==3.6.1
-#38 37.31  + nltk==3.9.4
-#38 37.31  + numpy==2.4.2
-#38 37.31  + openai==2.41.1
-#38 37.31  + opentelemetry-api==1.39.1
-#38 37.31  + opentelemetry-semantic-conventions==0.60b1
-#38 37.31  + packaging==26.0
-#38 37.31  + pgvector==0.4.2
-#38 37.31  + pillow==12.2.0
-#38 37.31  + platformdirs==4.9.2
-#38 37.31  + pluggy==1.6.0
-#38 37.31  + propcache==0.4.1
-#38 37.31  + protobuf==7.35.1
-#38 37.31  + psycopg2-binary==2.9.12
-#38 37.31  + pwdlib==0.3.0
-#38 37.31  + pyasn1==0.6.3
-#38 37.31  + pyasn1-modules==0.4.2
-#38 37.31  + pycparser==3.0
-#38 37.31  + pydantic==2.13.4
-#38 37.31  + pydantic-ai-slim==1.107.0
-#38 37.31  + pydantic-core==2.46.4
-#38 37.31  + pydantic-graph==1.107.0
-#38 37.31  + pygments==2.20.0
-#38 37.31  + pyjwt==2.13.0
-#38 37.31  + pypdf==6.13.3
-#38 37.31  + pytest==9.1.0
-#38 37.31  + pytest-asyncio==1.4.0
-#38 37.31  + pytest-cov==7.1.0
-#38 37.31  + python-dateutil==2.9.0.post0
-#38 37.31  + python-dotenv==1.2.2
-#38 37.31  + python-multipart==0.0.32
-#38 37.31  + pyyaml==6.0.3
-#38 37.31  + redis==8.0.0
-#38 37.31  + regex==2026.1.15
-#38 37.31  + requests==2.34.2
-#38 37.31  + resend==2.32.2
-#38 37.31  + rich==14.3.1
-#38 37.31  + s3transfer==0.19.0
-#38 37.31  + sentry-sdk==2.63.0
-#38 37.31  + setuptools==82.0.0
-#38 37.31  + shellingham==1.5.4
-#38 37.31  + six==1.17.0
-#38 37.31  + sniffio==1.3.1
-#38 37.31  + soupsieve==2.8.3
-#38 37.31  + sqlalchemy==2.0.46
-#38 37.31  + sqlalchemy-utils==0.42.1
-#38 37.31  + sqlmodel==0.0.38
-#38 37.31  + starlette==0.50.0
-#38 37.31  + stripe==15.2.1
-#38 37.31  + tenacity==9.1.2
-#38 37.31  + tiktoken==0.13.0
-#38 37.31  + tinytag==2.2.1
-#38 37.31  + tqdm==4.67.3
-#38 37.31  + truststore==0.10.4
-#38 37.31  + typer==0.26.7
-#38 37.31  + typing-extensions==4.15.0
-#38 37.31  + typing-inspect==0.9.0
-#38 37.31  + typing-inspection==0.4.2
-#38 37.31  + urllib3==2.6.3
-#38 37.31  + uvicorn==0.49.0
-#38 37.31  + websockets==15.0.1
-#38 37.31  + workos==8.2.0
-#38 37.31  + wrapt==1.17.3
-#38 37.31  + yarl==1.22.0
-#38 37.31  + zipp==4.1.0
-#38 DONE 37.5s
+#38 1.022 Requirement already satisfied: pip in /usr/local/lib/python3.14/site-packages (25.3)
+#38 1.499 Collecting pip
+#38 1.893   Downloading pip-26.1.2-py3-none-any.whl.metadata (4.6 kB)
+#38 2.732 Collecting uv
+#38 2.818   Downloading uv-0.11.31-py3-none-manylinux_2_28_aarch64.whl.metadata (11 kB)
+#38 2.933 Downloading pip-26.1.2-py3-none-any.whl (1.8 MB)
+#38 3.800    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 2.4 MB/s  0:00:00
+#38 3.880 Downloading uv-0.11.31-py3-none-manylinux_2_28_aarch64.whl (25.5 MB)
+#38 11.53    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.5/25.5 MB 3.3 MB/s  0:00:07
+#38 11.57 Installing collected packages: uv, pip
+#38 11.76   Attempting uninstall: pip
+#38 11.76     Found existing installation: pip 25.3
+#38 11.78     Uninstalling pip-25.3:
+#38 11.86       Successfully uninstalled pip-25.3
+#38 12.32 
+#38 12.32 Successfully installed pip-26.1.2 uv-0.11.31
+#38 12.32 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#38 12.93 Using CPython 3.14.3 interpreter at: /usr/local/bin/python3
+#38 12.93 Creating virtual environment at: .venv
+#38 12.94 Resolved 140 packages in 1ms
+#38 13.33 Downloading sqlalchemy (3.1MiB)
+#38 13.33 Downloading faker (1.9MiB)
+#38 13.33 Downloading nltk (1.5MiB)
+#38 13.33 Downloading llama-index-core (11.4MiB)
+#38 13.33 Downloading aiohttp (1.6MiB)
+#38 13.33 Downloading cryptography (4.5MiB)
+#38 13.33 Downloading openai (1.3MiB)
+#38 13.33 Downloading asyncpg (3.3MiB)
+#38 13.34 Downloading mistralai (1.1MiB)
+#38 13.34 Downloading pygments (1.2MiB)
+#38 13.34 Downloading botocore (14.6MiB)
+#38 13.35 Downloading psycopg2-binary (5.6MiB)
+#38 13.35 Downloading networkx (2.0MiB)
+#38 13.35 Downloading stripe (2.1MiB)
+#38 13.37 Downloading pydantic-core (1.9MiB)
+#38 13.37 Downloading pillow (6.1MiB)
+#38 13.39 Downloading tiktoken (1.1MiB)
+#38 13.39 Downloading numpy (15.0MiB)
+#38 22.15  Downloaded mistralai
+#38 22.15  Downloaded tiktoken
+#38 22.56  Downloaded pygments
+#38 22.76  Downloaded openai
+#38 23.33  Downloaded nltk
+#38 23.79  Downloaded aiohttp
+#38 24.25  Downloaded faker
+#38 24.34  Downloaded pydantic-core
+#38 24.39  Downloaded networkx
+#38 24.55  Downloaded stripe
+#38 26.37  Downloaded sqlalchemy
+#38 26.87  Downloaded asyncpg
+#38 28.51  Downloaded cryptography
+#38 29.83  Downloaded psycopg2-binary
+#38 30.55  Downloaded pillow
+#38 34.73  Downloaded llama-index-core
+#38 36.01  Downloaded botocore
+#38 36.16  Downloaded numpy
+#38 36.16 Prepared 137 packages in 23.21s
+#38 36.35 Installed 137 packages in 185ms
+#38 36.35  + aiohappyeyeballs==2.6.1
+#38 36.35  + aiohttp==3.13.5
+#38 36.35  + aiosignal==1.4.0
+#38 36.35  + aiosqlite==0.22.1
+#38 36.35  + alembic==1.18.4
+#38 36.35  + alembic-postgresql-enum==1.10.0
+#38 36.35  + annotated-doc==0.0.4
+#38 36.35  + annotated-types==0.7.0
+#38 36.35  + anthropic==0.109.1
+#38 36.35  + anyio==4.12.1
+#38 36.35  + argon2-cffi==25.1.0
+#38 36.35  + argon2-cffi-bindings==25.1.0
+#38 36.35  + asyncpg==0.31.0
+#38 36.35  + attrs==25.4.0
+#38 36.35  + banks==2.4.1
+#38 36.35  + beautifulsoup4==4.15.0
+#38 36.35  + boto3==1.43.33
+#38 36.35  + botocore==1.43.33
+#38 36.35  + certifi==2026.1.4
+#38 36.35  + cffi==2.0.0
+#38 36.35  + charset-normalizer==3.4.4
+#38 36.35  + click==8.3.1
+#38 36.35  + colorama==0.4.6
+#38 36.35  + coverage==7.13.2
+#38 36.35  + cryptography==48.0.1
+#38 36.35  + dataclasses-json==0.6.7
+#38 36.35  + defusedxml==0.7.1
+#38 36.35  + deprecated==1.3.1
+#38 36.35  + dirtyjson==1.0.8
+#38 36.35  + distro==1.9.0
+#38 36.35  + dnspython==2.8.0
+#38 36.35  + docstring-parser==0.18.0
+#38 36.35  + email-validator==2.3.0
+#38 36.35  + eval-type-backport==0.4.0
+#38 36.35  + faker==40.23.0
+#38 36.35  + fastapi==0.137.2
+#38 36.35  + filetype==1.2.0
+#38 36.35  + frozenlist==1.8.0
+#38 36.35  + fsspec==2026.2.0
+#38 36.35  + genai-prices==0.0.66
+#38 36.35  + google-auth==2.49.1
+#38 36.35  + google-genai==2.9.0
+#38 36.35  + greenlet==3.3.1
+#38 36.35  + griffe==2.0.0
+#38 36.35  + griffecli==2.0.0
+#38 36.35  + griffelib==2.0.0
+#38 36.35  + h11==0.16.0
+#38 36.35  + httpcore==1.0.9
+#38 36.35  + httpcore2==2.3.0
+#38 36.35  + httpx==0.28.1
+#38 36.35  + httpx2==2.3.0
+#38 36.35  + idna==3.11
+#38 36.35  + importlib-metadata==8.7.1
+#38 36.35  + iniconfig==2.3.0
+#38 36.35  + jinja2==3.1.6
+#38 36.35  + jiter==0.15.0
+#38 36.35  + jmespath==1.1.0
+#38 36.35  + joblib==1.5.3
+#38 36.35  + jsonpath-python==1.1.6
+#38 36.35  + llama-index-core==0.14.22
+#38 36.35  + llama-index-instrumentation==0.4.2
+#38 36.35  + llama-index-workflows==2.14.2
+#38 36.35  + logfire-api==4.36.0
+#38 36.35  + mako==1.3.10
+#38 36.35  + markdown-it-py==4.0.0
+#38 36.35  + markupsafe==3.0.3
+#38 36.35  + marshmallow==3.26.2
+#38 36.35  + mdurl==0.1.2
+#38 36.35  + mistralai==2.4.9
+#38 36.35  + multidict==6.7.1
+#38 36.35  + mypy-extensions==1.1.0
+#38 36.35  + nest-asyncio==1.6.0
+#38 36.35  + networkx==3.6.1
+#38 36.35  + nltk==3.9.4
+#38 36.35  + numpy==2.4.2
+#38 36.35  + openai==2.41.1
+#38 36.35  + opentelemetry-api==1.39.1
+#38 36.35  + opentelemetry-semantic-conventions==0.60b1
+#38 36.35  + packaging==26.0
+#38 36.35  + pgvector==0.4.2
+#38 36.35  + pillow==12.2.0
+#38 36.35  + platformdirs==4.9.2
+#38 36.35  + pluggy==1.6.0
+#38 36.35  + propcache==0.4.1
+#38 36.35  + protobuf==7.35.1
+#38 36.35  + psycopg2-binary==2.9.12
+#38 36.35  + pwdlib==0.3.0
+#38 36.35  + pyasn1==0.6.3
+#38 36.35  + pyasn1-modules==0.4.2
+#38 36.35  + pycparser==3.0
+#38 36.35  + pydantic==2.13.4
+#38 36.35  + pydantic-ai-slim==1.107.0
+#38 36.35  + pydantic-core==2.46.4
+#38 36.35  + pydantic-graph==1.107.0
+#38 36.35  + pygments==2.20.0
+#38 36.35  + pyjwt==2.13.0
+#38 36.35  + pypdf==6.13.3
+#38 36.35  + pytest==9.1.0
+#38 36.35  + pytest-asyncio==1.4.0
+#38 36.35  + pytest-cov==7.1.0
+#38 36.35  + python-dateutil==2.9.0.post0
+#38 36.35  + python-dotenv==1.2.2
+#38 36.35  + python-multipart==0.0.32
+#38 36.35  + pyyaml==6.0.3
+#38 36.35  + redis==8.0.0
+#38 36.35  + regex==2026.1.15
+#38 36.35  + requests==2.34.2
+#38 36.35  + resend==2.32.2
+#38 36.35  + rich==14.3.1
+#38 36.35  + s3transfer==0.19.0
+#38 36.35  + sentry-sdk==2.63.0
+#38 36.35  + setuptools==82.0.0
+#38 36.35  + shellingham==1.5.4
+#38 36.35  + six==1.17.0
+#38 36.35  + sniffio==1.3.1
+#38 36.35  + soupsieve==2.8.3
+#38 36.35  + sqlalchemy==2.0.46
+#38 36.35  + sqlalchemy-utils==0.42.1
+#38 36.35  + sqlmodel==0.0.38
+#38 36.35  + starlette==0.50.0
+#38 36.35  + stripe==15.2.1
+#38 36.35  + tenacity==9.1.2
+#38 36.35  + tiktoken==0.13.0
+#38 36.35  + tinytag==2.2.1
+#38 36.35  + tqdm==4.67.3
+#38 36.35  + truststore==0.10.4
+#38 36.35  + typer==0.26.7
+#38 36.35  + typing-extensions==4.15.0
+#38 36.35  + typing-inspect==0.9.0
+#38 36.35  + typing-inspection==0.4.2
+#38 36.35  + urllib3==2.6.3
+#38 36.35  + uvicorn==0.49.0
+#38 36.35  + websockets==15.0.1
+#38 36.35  + workos==8.2.0
+#38 36.35  + wrapt==1.17.3
+#38 36.35  + yarl==1.22.0
+#38 36.35  + zipp==4.1.0
+#38 DONE 36.6s
 
 #39 [runner  7/19] COPY ./apps/api ./
-#39 DONE 4.6s
+#39 DONE 5.1s
 
 #40 [runner  8/19] COPY EACA.png /app/api/assets/initial-org-logo.png
 #40 DONE 0.1s
@@ -458,7 +481,7 @@
 #41 DONE 0.1s
 
 #42 [runner 10/19] RUN if [ "false" = "true" ]; then rm -rf /app/api/ee; fi
-#42 DONE 0.2s
+#42 DONE 0.1s
 
 #43 [runner 11/19] WORKDIR /app/collab
 #43 DONE 0.0s
@@ -470,17 +493,17 @@
 #45 DONE 0.0s
 
 #46 [runner 14/19] RUN bun install --production
-#46 0.104 bun install v1.3.14 (0d9b296a)
-#46 1.310 
-#46 1.310 + @hocuspocus/extension-database@4.0.0
-#46 1.310 + @hocuspocus/server@4.0.0
-#46 1.310 + dotenv@17.3.1
-#46 1.310 + ioredis@5.10.0
-#46 1.310 + jsonwebtoken@9.0.3
-#46 1.310 + yjs@13.6.29
-#46 1.310 
-#46 1.310 37 packages installed [1217.00ms]
-#46 DONE 1.3s
+#46 0.162 bun install v1.3.14 (0d9b296a)
+#46 1.183 
+#46 1.183 + @hocuspocus/extension-database@4.0.0
+#46 1.183 + @hocuspocus/server@4.0.0
+#46 1.183 + dotenv@17.3.1
+#46 1.183 + ioredis@5.10.0
+#46 1.183 + jsonwebtoken@9.0.3
+#46 1.183 + yjs@13.6.29
+#46 1.183 
+#46 1.183 37 packages installed [1039.00ms]
+#46 DONE 1.2s
 
 #47 [runner 15/19] WORKDIR /app
 #47 DONE 0.0s
@@ -499,60 +522,61 @@
 
 #52 exporting to image
 #52 exporting layers
-#52 exporting layers 7.7s done
-#52 exporting manifest sha256:db85351f1bbdc0e5281084e4c5b279e9fecf349d1be8e36a4b84b8155cd0e37f done
-#52 exporting config sha256:b16903fa970971de0c2090f581a223698ea7e2bb49ac90230b0634e59013443d done
-#52 exporting attestation manifest sha256:6d057d229e86019f12b22e619ad0704a044e162154d9c9eb36c2aa44b63f4f73 done
-#52 exporting manifest list sha256:73627c1a8e5734e07ae308997e68f38676da1669c5820f59f81c0b089fde09ec done
+#52 exporting layers 7.8s done
+#52 exporting manifest sha256:cc2abccc221025a81de0e378bf5122dc12f86526b973ed0361f0c9e861f8899e done
+#52 exporting config sha256:b76184ca5f8df10598b649034c823184523813f83f337313aba9225cb11a8189 done
+#52 exporting attestation manifest sha256:3321e870a358de8d37194ed350dc3f13d0d0108c621d691f870effdd6e2cde07
+#52 exporting attestation manifest sha256:3321e870a358de8d37194ed350dc3f13d0d0108c621d691f870effdd6e2cde07 0.0s done
+#52 exporting manifest list sha256:d72eeb2e8e0320d369e0d0241f8e02e5771e440b8f1f949196a754075a747a14 done
 #52 naming to docker.io/library/omnilearn:local done
 #52 unpacking to docker.io/library/omnilearn:local
 #52 unpacking to docker.io/library/omnilearn:local 5.4s done
-#52 DONE 13.2s
+#52 DONE 13.4s
 
 #53 resolving provenance for metadata file
-#53 DONE 0.0s
+#53 DONE 0.1s
  Image omnilearn:local Built 
  Network omnilearn_omnilearn-network Creating 
  Network omnilearn_omnilearn-network Created 
  Container omnilearn-redis Creating 
  Container omnilearn-db Creating 
- Container omnilearn-db Created 
  Container omnilearn-redis Created 
+ Container omnilearn-db Created 
  Container omnilearn-app Creating 
  Container omnilearn-app Created 
 Attaching to omnilearn-app, omnilearn-db, omnilearn-redis
- Container omnilearn-db Starting 
  Container omnilearn-redis Starting 
+ Container omnilearn-db Starting 
  Container omnilearn-db Started 
  Container omnilearn-redis Started 
  Container omnilearn-db Waiting 
  Container omnilearn-redis Waiting 
-omnilearn-redis  | 1:C 22 Jul 2026 01:24:35.547 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
-omnilearn-redis  | 1:C 22 Jul 2026 01:24:35.547 * Redis version=7.2.3, bits=64, commit=00000000, modified=0, pid=1, just started
-omnilearn-redis  | 1:C 22 Jul 2026 01:24:35.547 * Configuration loaded
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.547 * monotonic clock: POSIX clock_gettime
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.548 * Running mode=standalone, port=6379.
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.548 * Server initialized
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.549 * Reading RDB base file on AOF loading...
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.549 * Loading RDB produced by version 7.2.3
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.549 * RDB age 1767069 seconds
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.549 * RDB memory usage when created 0.86 Mb
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.549 * RDB is base AOF
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.549 * Done loading RDB, keys loaded: 0, keys expired: 0.
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.549 * DB loaded from base file appendonly.aof.1.base.rdb: 0.000 seconds
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.553 * DB loaded from incr file appendonly.aof.1.incr.aof: 0.004 seconds
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.553 * DB loaded from append only file: 0.004 seconds
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.553 * Opening AOF incr file appendonly.aof.1.incr.aof on server start
-omnilearn-redis  | 1:M 22 Jul 2026 01:24:35.553 * Ready to accept connections tcp
+omnilearn-redis  | 1:C 22 Jul 2026 04:33:05.322 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+omnilearn-redis  | 1:C 22 Jul 2026 04:33:05.322 * Redis version=7.2.3, bits=64, commit=00000000, modified=0, pid=1, just started
+omnilearn-redis  | 1:C 22 Jul 2026 04:33:05.322 * Configuration loaded
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.323 * monotonic clock: POSIX clock_gettime
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.323 * Running mode=standalone, port=6379.
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.324 * Server initialized
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.325 * Reading RDB base file on AOF loading...
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.325 * Loading RDB produced by version 7.2.3
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.325 * RDB age 1778379 seconds
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.325 * RDB memory usage when created 0.86 Mb
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.325 * RDB is base AOF
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.325 * Done loading RDB, keys loaded: 0, keys expired: 0.
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.325 * DB loaded from base file appendonly.aof.1.base.rdb: 0.000 seconds
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.330 * DB loaded from incr file appendonly.aof.1.incr.aof: 0.006 seconds
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.330 * DB loaded from append only file: 0.006 seconds
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.330 * Opening AOF incr file appendonly.aof.1.incr.aof on server start
+omnilearn-redis  | 1:M 22 Jul 2026 04:33:05.330 * Ready to accept connections tcp
 omnilearn-db     | 
 omnilearn-db     | PostgreSQL Database directory appears to contain a database; Skipping initialization
 omnilearn-db     | 
-omnilearn-db     | 2026-07-22 01:24:35.628 UTC [1] LOG:  starting PostgreSQL 16.14 (Debian 16.14-1.pgdg12+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
-omnilearn-db     | 2026-07-22 01:24:35.628 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
-omnilearn-db     | 2026-07-22 01:24:35.628 UTC [1] LOG:  listening on IPv6 address "::", port 5432
-omnilearn-db     | 2026-07-22 01:24:35.630 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
-omnilearn-db     | 2026-07-22 01:24:35.632 UTC [29] LOG:  database system was shut down at 2026-07-22 01:22:57 UTC
-omnilearn-db     | 2026-07-22 01:24:35.642 UTC [1] LOG:  database system is ready to accept connections
+omnilearn-db     | 2026-07-22 04:33:05.405 UTC [1] LOG:  starting PostgreSQL 16.14 (Debian 16.14-1.pgdg12+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
+omnilearn-db     | 2026-07-22 04:33:05.405 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+omnilearn-db     | 2026-07-22 04:33:05.405 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+omnilearn-db     | 2026-07-22 04:33:05.408 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+omnilearn-db     | 2026-07-22 04:33:05.411 UTC [29] LOG:  database system was shut down at 2026-07-22 04:31:16 UTC
+omnilearn-db     | 2026-07-22 04:33:05.422 UTC [1] LOG:  database system is ready to accept connections
  Container omnilearn-redis Healthy 
  Container omnilearn-db Healthy 
  Container omnilearn-app Starting 
@@ -563,24 +587,24 @@ omnilearn-app    | [PM2] Done.
 omnilearn-app    | ┌────┬──────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
 omnilearn-app    | │ id │ name             │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
 omnilearn-app    | ├────┼──────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-omnilearn-app    | │ 1  │ omnilearn-api    │ default     │ N/A     │ fork    │ 96       │ 0s     │ 0    │ online    │ 0%       │ 12.8mb   │ root     │ disabled │
-omnilearn-app    | │ 0  │ omnilearn-web    │ default     │ 1.2.7   │ fork    │ 72       │ 0s     │ 0    │ online    │ 100%     │ 63.7mb   │ root     │ disabled │
+omnilearn-app    | │ 1  │ omnilearn-api    │ default     │ N/A     │ fork    │ 97       │ 0s     │ 0    │ online    │ 0%       │ 5.3mb    │ root     │ disabled │
+omnilearn-app    | │ 0  │ omnilearn-web    │ default     │ 1.2.7   │ fork    │ 73       │ 0s     │ 0    │ online    │ 0%       │ 63.9mb   │ root     │ disabled │
 omnilearn-app    | └────┴──────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
 omnilearn-app    | [PM2] Starting /usr/bin/node in fork_mode (1 instance)
 omnilearn-app    | [PM2] Done.
 omnilearn-app    | ┌────┬─────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
 omnilearn-app    | │ id │ name                │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
 omnilearn-app    | ├────┼─────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-omnilearn-app    | │ 1  │ omnilearn-api       │ default     │ N/A     │ fork    │ 96       │ 0s     │ 0    │ online    │ 100%     │ 45.5mb   │ root     │ disabled │
-omnilearn-app    | │ 2  │ omnilearn-collab    │ default     │ N/A     │ fork    │ 109      │ 0s     │ 0    │ online    │ 0%       │ 20.1mb   │ root     │ disabled │
-omnilearn-app    | │ 0  │ omnilearn-web       │ default     │ 1.2.7   │ fork    │ 72       │ 0s     │ 0    │ online    │ 100%     │ 77.7mb   │ root     │ disabled │
+omnilearn-app    | │ 1  │ omnilearn-api       │ default     │ N/A     │ fork    │ 97       │ 0s     │ 0    │ online    │ 0%       │ 26.3mb   │ root     │ disabled │
+omnilearn-app    | │ 2  │ omnilearn-collab    │ default     │ N/A     │ fork    │ 110      │ 0s     │ 0    │ online    │ 0%       │ 21.1mb   │ root     │ disabled │
+omnilearn-app    | │ 0  │ omnilearn-web       │ default     │ 1.2.7   │ fork    │ 73       │ 0s     │ 0    │ online    │ 0%       │ 78.0mb   │ root     │ disabled │
 omnilearn-app    | └────┴─────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
 omnilearn-app    | ┌────┬─────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
 omnilearn-app    | │ id │ name                │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
 omnilearn-app    | ├────┼─────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-omnilearn-app    | │ 1  │ omnilearn-api       │ default     │ N/A     │ fork    │ 96       │ 0s     │ 0    │ online    │ 0%       │ 45.5mb   │ root     │ disabled │
-omnilearn-app    | │ 2  │ omnilearn-collab    │ default     │ N/A     │ fork    │ 109      │ 0s     │ 0    │ online    │ 0%       │ 71.3mb   │ root     │ disabled │
-omnilearn-app    | │ 0  │ omnilearn-web       │ default     │ 1.2.7   │ fork    │ 72       │ 0s     │ 0    │ online    │ 0%       │ 87.8mb   │ root     │ disabled │
+omnilearn-app    | │ 1  │ omnilearn-api       │ default     │ N/A     │ fork    │ 97       │ 0s     │ 0    │ online    │ 0%       │ 26.3mb   │ root     │ disabled │
+omnilearn-app    | │ 2  │ omnilearn-collab    │ default     │ N/A     │ fork    │ 110      │ 0s     │ 0    │ online    │ 0%       │ 72.5mb   │ root     │ disabled │
+omnilearn-app    | │ 0  │ omnilearn-web       │ default     │ 1.2.7   │ fork    │ 73       │ 0s     │ 0    │ online    │ 0%       │ 87.2mb   │ root     │ disabled │
 omnilearn-app    | └────┴─────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
 omnilearn-app    | [TAILING] Tailing last 15 lines for [all] processes (change the value with --lines option)
 omnilearn-app    | /root/.pm2/logs/omnilearn-web-error.log last 15 lines:
@@ -590,7 +614,7 @@ omnilearn-app    | warning: Ignoring existing virtual environment linked to non-
 omnilearn-app    | 
 omnilearn-app    | Using CPython 3.14.3 interpreter at: /usr/local/bin/python3
 omnilearn-app    | /root/.pm2/logs/omnilearn-web-out.log last 15 lines:
-omnilearn-app    | ▲ Next.js 16.2.9
+omnilearn-app    | ▲ Next.js 16.2.11
 omnilearn-app    | - Local:         http://localhost:8000
 omnilearn-app    | - Network:       http://0.0.0.0:8000
 omnilearn-app    | ✓ Ready in 0ms
@@ -614,236 +638,37 @@ omnilearn-app    | Removed virtual environment at: .venv
 omnilearn-app    | Creating virtual environment at: .venv
 omnilearn-app    | Downloading ruff (10.4MiB)
 omnilearn-app    |  Downloaded ruff
-omnilearn-app    | Installed 138 packages in 7.38s
+omnilearn-app    | Installed 138 packages in 7.31s
 omnilearn-app    | INFO:     Started server process [182]
 omnilearn-app    | INFO:     Waiting for application startup.
 omnilearn-app    | INFO:     Application startup complete.
 omnilearn-app    | INFO:     Uvicorn running on http://0.0.0.0:9000 (Press CTRL+C to quit)
-omnilearn-app    | INFO:     127.0.0.1:53338 - "GET /api/v1/instance/info HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:53348 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:53338 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:53348 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43138 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/orgs/slug/default HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/users/session HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/users/session HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/orgs/slug/default HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:56636 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:56642 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:56650 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/analytics/events HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:56636 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:56642 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/courses/org_slug/default/page/1/limit/100 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:56636 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:56636 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:56636 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:56636 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:43150 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/analytics/dashboard/daily_active_users?org_id=1&days=14 HTTP/1.0" 503 Service Unavailable
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/analytics/dashboard/daily_active_users?org_id=1&days=30 HTTP/1.0" 503 Service Unavailable
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/orgs/1/users?page=1&limit=5&sort_order=desc HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/orgs/1/users?page=1&limit=1 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/courses/org_slug/default/page/1/limit/100?include_unpublished=true HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/analytics/dashboard/daily_active_users?org_id=1&days=14 HTTP/1.0" 503 Service Unavailable
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/analytics/dashboard/daily_active_users?org_id=1&days=30 HTTP/1.0" 503 Service Unavailable
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_policy_analysis HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_governance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_public_finance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_24fa56ba-5fb2-42f9-bd9e-766a583c831a HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:44918 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:44918 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:44918 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:44918 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_compliance_systems HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_a63e1423-f5de-42c5-ab39-3021a04f8e2c HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_integrity HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/analytics/events HTTP/1.0" 400 Bad Request
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_investigation HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/programs/org/1/page/1/limit/100 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:44928 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:44938 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:44950 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:44928 - "GET /api/v1/instance/info HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:44938 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/analytics/events HTTP/1.0" 400 Bad Request
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/finance/org/1/entries?date_from=2026-06-23&date_to=2026-07-22 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/finance/org/1/summary?date_from=2026-06-23&date_to=2026-07-22 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/finance/org/1/courses?date_from=2026-06-23&date_to=2026-07-22 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/finance/org/1/profit-loss?date_from=2026-06-23&date_to=2026-07-22 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/finance/org/1/courses?date_from=2026-06-23&date_to=2026-07-22 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/finance/org/1/payroll?month=2026-07 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/courses/org_slug/default/page/1/limit/100 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_public_finance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_policy_analysis HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_compliance_systems HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_24fa56ba-5fb2-42f9-bd9e-766a583c831a HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_investigation HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40186 - "GET /api/v1/instance/info HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40190 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_compliance_systems HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_public_finance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_24fa56ba-5fb2-42f9-bd9e-766a583c831a HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_policy_analysis HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_investigation HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/courses/org_slug/default/page/1/limit/100?include_unpublished=true HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_governance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_integrity HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_public_finance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_compliance_systems HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_policy_analysis HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_governance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_24fa56ba-5fb2-42f9-bd9e-766a583c831a HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_integrity HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_investigation HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_a63e1423-f5de-42c5-ab39-3021a04f8e2c HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_a63e1423-f5de-42c5-ab39-3021a04f8e2c HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39974 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/analytics/events HTTP/1.0" 400 Bad Request
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/analytics/dashboard/daily_active_users?org_id=1&days=14 HTTP/1.0" 503 Service Unavailable
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/analytics/dashboard/daily_active_users?org_id=1&days=30 HTTP/1.0" 503 Service Unavailable
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_policy_analysis HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_public_finance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_pg_compliance_systems HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_24fa56ba-5fb2-42f9-bd9e-766a583c831a HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_governance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/courses/org_slug/default/page/1/limit/100?include_unpublished=true HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/orgs/1/users?page=1&limit=1 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_integrity HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_a63e1423-f5de-42c5-ab39-3021a04f8e2c HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39974 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/analytics/dashboard/daily_active_users?org_id=1&days=14 HTTP/1.0" 503 Service Unavailable
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/assignments/course/course_demo_investigation HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/analytics/dashboard/daily_active_users?org_id=1&days=30 HTTP/1.0" 503 Service Unavailable
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/analytics/events HTTP/1.0" 400 Bad Request
-omnilearn-app    | INFO:     127.0.0.1:39974 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/orgs/1/users?page=1&limit=5&sort_order=desc HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/programs/org/1/page/1/limit/100 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/programs/program_pg_masters_governance/cohorts HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39974 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/programs/program_pg_masters_governance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39974 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/cohorts/cohort_seed_eco_pg-ma-gov-2026 HTTP/1.0" 404 Not Found
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/cohorts/cohort_seed_eco_pg-ma-gov-2026/semesters HTTP/1.0" 404 Not Found
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/cohorts/cohort_seed_eco_pg-ma-gov-2026/semesters HTTP/1.0" 404 Not Found
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/cohorts/cohort_seed_eco_pg-ma-gov-2026 HTTP/1.0" 404 Not Found
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/cohorts/cohort_seed_eco_pg-ma-gov-2026/semesters HTTP/1.0" 404 Not Found
-omnilearn-db     | 2026-07-22 01:29:35.706 UTC [27] LOG:  checkpoint starting: time
-omnilearn-db     | 2026-07-22 01:29:35.720 UTC [27] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.001 s, total=0.014 s; sync files=2, longest=0.001 s, average=0.001 s; distance=0 kB, estimate=0 kB; lsn=0/1DC0E48, redo lsn=0/1DC0E10
-omnilearn-redis  | 1:M 22 Jul 2026 01:29:36.018 * 100 changes in 300 seconds. Saving...
-omnilearn-redis  | 1:M 22 Jul 2026 01:29:36.019 * Background saving started by pid 377
-omnilearn-redis  | 377:C 22 Jul 2026 01:29:36.022 * DB saved on disk
-omnilearn-redis  | 377:C 22 Jul 2026 01:29:36.022 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
-omnilearn-redis  | 1:M 22 Jul 2026 01:29:36.124 * Background saving terminated with success
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/cohorts/cohort_seed_eco_pg-ma-gov-2026/semesters HTTP/1.0" 404 Not Found
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/cohorts/cohort_seed_eco_pg-ma-gov-2026/semesters HTTP/1.0" 404 Not Found
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/cohorts/cohort_seed_eco_pg-ma-gov-2026/semesters HTTP/1.0" 404 Not Found
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/cohorts/cohort_seed_eco_pg-ma-gov-2026/semesters HTTP/1.0" 404 Not Found
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/cohorts/cohort_seed_eco_pg-ma-gov-2026/semesters HTTP/1.0" 404 Not Found
-omnilearn-app    | INFO:     127.0.0.1:47838 - "GET /api/v1/instance/info HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/analytics/events HTTP/1.0" 400 Bad Request
-omnilearn-app    | INFO:     127.0.0.1:47850 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/training-programs/org/1/page/1/limit/100 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39230 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:47850 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39238 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39230 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39230 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/training-programs/trainingprogram_demo_investigation HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39230 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/analytics/events HTTP/1.0" 400 Bad Request
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/training-programs/trainingprogram_demo_investigation/courses HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39230 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/programs/program_pg_diploma_compliance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/programs/program_pg_diploma_compliance/cohorts HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:39230 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/programs/org/1/page/1/limit/100 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/orgs/1/users?page=1&limit=50&search= HTTP/1.0" 200 OK
+omnilearn-app    | INFO:     172.217.119.4:0 - "GET /api/v1/users/session HTTP/1.0" 200 OK
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/programs/program_pg_diploma_compliance/cohorts HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/programs/program_pg_diploma_compliance/cohorts HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:46946 - "GET /api/v1/instance/info HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:46946 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:46946 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:46946 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:46962 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:46974 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:46946 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:46946 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:46962 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/cohorts/cohort_942ec450-35a4-4578-903f-cc9a9d61c79f HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/cohorts/cohort_942ec450-35a4-4578-903f-cc9a9d61c79f/semesters HTTP/1.0" 200 OK
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/cohorts/cohort_942ec450-35a4-4578-903f-cc9a9d61c79f/semesters HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/cohorts/cohort_942ec450-35a4-4578-903f-cc9a9d61c79f/semesters HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:50742 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:50742 - "GET /api/v1/instance/info HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:50746 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:50742 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/semesters/semester_10b396bd-4d23-4486-b6db-7f2129d3809c HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/semesters/semester_10b396bd-4d23-4486-b6db-7f2129d3809c/courses HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/programs/program_pg_diploma_compliance HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/orgs/slug/default HTTP/1.0" 200 OK
+omnilearn-db     | 2026-07-22 04:38:05.475 UTC [27] LOG:  checkpoint starting: time
+omnilearn-db     | 2026-07-22 04:38:05.485 UTC [27] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.001 s, total=0.011 s; sync files=2, longest=0.001 s, average=0.001 s; distance=0 kB, estimate=0 kB; lsn=0/1DEF960, redo lsn=0/1DEF928
+omnilearn-redis  | 1:M 22 Jul 2026 04:38:06.074 * 100 changes in 300 seconds. Saving...
+omnilearn-redis  | 1:M 22 Jul 2026 04:38:06.076 * Background saving started by pid 377
+omnilearn-redis  | 377:C 22 Jul 2026 04:38:06.085 * DB saved on disk
+omnilearn-redis  | 377:C 22 Jul 2026 04:38:06.086 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+omnilearn-redis  | 1:M 22 Jul 2026 04:38:06.180 * Background saving terminated with success
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/courses/?org_id=1 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/analytics/events HTTP/1.0" 400 Bad Request
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/semesters/semester_10b396bd-4d23-4486-b6db-7f2129d3809c/courses HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/semesters/semester_10b396bd-4d23-4486-b6db-7f2129d3809c/courses HTTP/1.0" 200 OK
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/courses/course_77be4096-bc60-4151-a9e7-d1fb1c9bfa5b/meta?slim=true HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "PUT /api/v1/semesters/semester_10b396bd-4d23-4486-b6db-7f2129d3809c/courses/course_77be4096-bc60-4151-a9e7-d1fb1c9bfa5b HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/semesters/semester_10b396bd-4d23-4486-b6db-7f2129d3809c/courses HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/health HTTP/1.0" 200 OK
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/health HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40926 - "GET /api/v1/instance/info HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40936 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40926 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40926 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40962 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/courses/org_slug/aca/page/1/limit/500?include_unpublished=true HTTP/1.0" 404 Not Found
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/analytics/events HTTP/1.0" 400 Bad Request
-omnilearn-app    | INFO:     127.0.0.1:40936 - "GET /api/v1/users/session HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/courses/course_77be4096-bc60-4151-a9e7-d1fb1c9bfa5b/rights HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/courses/course_77be4096-bc60-4151-a9e7-d1fb1c9bfa5b/meta?with_unpublished_activities=true HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40936 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40936 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40936 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:40926 - "GET /api/v1/courses/course_77be4096-bc60-4151-a9e7-d1fb1c9bfa5b/meta?slim=true HTTP/1.1" 200 OK
-omnilearn-app    | ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:8000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/courses/course_77be4096-bc60-4151-a9e7-d1fb1c9bfa5b/contributors HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:38422 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     127.0.0.1:38422 - "GET /api/v1/orgs/slug/default HTTP/1.1" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/certifications/course/course_77be4096-bc60-4151-a9e7-d1fb1c9bfa5b?org_id=1 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "POST /api/v1/certifications/?org_id=1 HTTP/1.0" 200 OK
-omnilearn-app    | INFO:     164.92.183.64:0 - "GET /api/v1/certifications/course/course_77be4096-bc60-4151-a9e7-d1fb1c9bfa5b?org_id=1 HTTP/1.0" 200 OK
+omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
+omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
+omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
+omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
+omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
+omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
+omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
+omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK
 omnilearn-app    | INFO:     127.0.0.1:0 - "GET /api/v1/health HTTP/1.0" 200 OK

@@ -31,7 +31,6 @@ import {
 } from 'lucide-react'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
 import Modal from '@components/Objects/StyledElements/Modal/Modal'
-import PageLoading from '@components/Objects/Loaders/PageLoading'
 import {
   Table,
   TableBody,
@@ -610,7 +609,15 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
     downloadCsv(`local_finance_entries_${range}.csv`, csv)
   }
 
-  if (!orgId || !accessToken) return <PageLoading />
+  if (!orgId || !accessToken) {
+    return (
+      <div className="finance-shell flex h-screen w-full flex-col bg-[hsl(var(--dash-canvas))]">
+        <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-10">
+          <OverviewSkeleton />
+        </div>
+      </div>
+    )
+  }
   const overviewLoading =
     section === 'overview' &&
     (summaryQuery.isLoading || entriesQuery.isLoading || coursesQuery.isLoading)

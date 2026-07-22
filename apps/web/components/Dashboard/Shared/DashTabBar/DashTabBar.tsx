@@ -123,15 +123,15 @@ export function DashTabBar({ tabs }: DashTabBarProps) {
           }
 
           const tabClass = cn(
-            'w-fit cursor-pointer rounded-full text-center transition-all',
+            'w-fit cursor-pointer rounded-full text-center transition-[background-color,color,transform] duration-200 ease-out',
             tab.active
-              ? 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]'
+              ? 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))] shadow-sm'
               : 'text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]'
           )
 
           if (tab.href) {
             return (
-              <Link key={tab.key} href={tab.href} prefetch={false}>
+              <Link key={tab.key} href={tab.href} prefetch>
                 <div className={tabClass} {...(tab.active ? { 'data-tab-active': '' } : {})}>
                   {inner}
                 </div>
