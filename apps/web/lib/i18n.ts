@@ -96,13 +96,36 @@ applyDocumentDirection(i18n.language)
 // so I18nProvider can wait for resources before rendering
 export const initialLocaleReady = loadLocale(i18n.language.split('-')[0]);
 
+export const USER_PICKED_LANG_KEY = 'i18nextLng_userPicked'
+
 /**
  * Switch language safely — preloads the bundle before switching
  * so the UI never flashes English as a fallback.
+ *
+ * When markUserPicked is true (default), OrgLanguageSync will not
+ * override the choice with the org default language.
  */
-export async function changeLanguage(lng: string) {
-  await loadLocale(lng)
-  return i18n.changeLanguage(lng)
+export async function changeLanguage(lng: string, options?: { markUserPicked?: boolean }) {
+  const code = lng.split('-')[0]
+  const markUserPicked = options?.markUserPicked !== false
+  await loadLocale(code)
+
+  if (typeof window !== 'undefined') {
+    try {
+      if (markUserPicked) {
+        localStorage.setItem(USER_PICKED_LANG_KEY, '1')
+      }
+      localStorage.setItem('i18nextLng', code)
+      // Keep cookie cache in sync with LanguageDetector lookupCookie
+      document.cookie = `i18next=${encodeURIComponent(code)};path=/;max-age=31536000;SameSite=Lax`
+    } catch {
+      /* ignore storage / cookie failures */
+    }
+  }
+
+  const result = await i18n.changeLanguage(code)
+  applyDocumentDirection(code)
+  return result
 }
 
 export default i18n;

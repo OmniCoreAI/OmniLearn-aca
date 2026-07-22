@@ -180,7 +180,9 @@ function CategoryForm({
   const { t } = useTranslation()
   const [name, setName] = useState(category?.name || '')
   const [description, setDescription] = useState(category?.description || '')
-  const [currency, setCurrency] = useState(category?.currency || 'USD')
+  const [currency, setCurrency] = useState<'EGP' | 'USD'>(
+    category?.currency === 'USD' ? 'USD' : 'EGP'
+  )
   const [baseRate, setBaseRate] = useState<string>(
     category?.hourly_rate != null ? String(category.hourly_rate) : ''
   )
@@ -233,7 +235,14 @@ function CategoryForm({
           <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>
         <Field label={t('academic.currency')}>
-          <input className={inputCls} value={currency} onChange={(e) => setCurrency(e.target.value)} />
+          <select
+            className={inputCls}
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value as 'EGP' | 'USD')}
+          >
+            <option value="EGP">{t('instructors.currency_egp', 'Egyptian Pound (EGP)')}</option>
+            <option value="USD">{t('instructors.currency_usd', 'US Dollar (USD)')}</option>
+          </select>
         </Field>
       </div>
 

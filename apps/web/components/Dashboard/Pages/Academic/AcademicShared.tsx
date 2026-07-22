@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { getUriWithOrg } from '@services/config/config'
 import { MoreVertical, Trash2, Pencil, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { FadeIn, Stagger, StaggerItem } from '@components/Dashboard/Shared/DashMotion'
+import { FadeIn } from '@components/Dashboard/Shared/DashMotion'
 
 export function AcademicPageShell({ children }: { children: React.ReactNode }) {
   return (
@@ -40,11 +40,9 @@ export function AcademicHeader({
 
 export function AcademicGrid({ children }: { children: React.ReactNode }) {
   return (
-    <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-      {React.Children.map(children, (child, i) =>
-        child == null ? null : <StaggerItem key={i}>{child}</StaggerItem>
-      )}
-    </Stagger>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {children}
+    </div>
   )
 }
 

@@ -66,8 +66,8 @@ import {
 } from "@components/ui/hover-menu"
 import { FeedbackModal } from '@components/Objects/Modals/FeedbackModal'
 import { AVAILABLE_LANGUAGES } from '@/lib/languages'
-import { getOrgLogoMediaDirectory } from '@services/media/media'
 import { cn } from '@/lib/utils'
+import OrgLogo from '@components/Dashboard/Shared/OrgLogo'
 import { getAssignmentsFromACourse } from '@services/courses/assignments'
 import { getOrgCourses } from '@services/courses/courses'
 import { getDeploymentMode } from '@services/config/config'
@@ -178,19 +178,7 @@ function DashLeftMenu() {
           className={cn("flex items-center transition-opacity hover:opacity-70", isCollapsed ? "" : "space-x-3")}
           href={'/'}
         >
-          {plan === 'enterprise' && org?.logo_image ? (
-            <img
-              src={getOrgLogoMediaDirectory(org.org_uuid, org.logo_image)}
-              alt={org?.name}
-              className="h-9 w-9 object-contain rounded-lg"
-            />
-          ) : (
-            <img
-              src="/lrn-dash.svg"
-              alt="OmniLearn logo"
-              className="h-8 w-8"
-            />
-          )}
+          <OrgLogo org={org} className="h-9 w-9" fallbackClassName="text-sm" />
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm text-[hsl(var(--dash-ink))] truncate">

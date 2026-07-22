@@ -89,7 +89,7 @@ export default function ActivityChart() {
                 strokeWidth={2.5}
                 fill="url(#homeActivityGradient)"
                 dot={false}
-                animationDuration={900}
+                animationDuration={450}
                 animationEasing="ease-out"
               />
             </AreaChart>

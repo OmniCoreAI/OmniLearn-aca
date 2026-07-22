@@ -30,7 +30,8 @@ export function useAdminOrgCourses(orgSlug: string) {
     queryKey: [...queryKeys.courses.list(orgSlug), 'admin'],
     queryFn: () => getOrgCourses(orgSlug, null, accessToken, true),
     enabled: !!orgSlug && !!accessToken,
-    staleTime: 60_000,
+    staleTime: 120_000,
+    gcTime: 10 * 60_000,
   })
 }
 

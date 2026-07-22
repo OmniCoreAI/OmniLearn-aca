@@ -2,9 +2,7 @@
 
 import { useEffect } from 'react'
 import { useOrg } from './OrgContext'
-import i18n, { changeLanguage } from '@/lib/i18n'
-
-const USER_PICKED_KEY = 'i18nextLng_userPicked'
+import i18n, { changeLanguage, USER_PICKED_LANG_KEY } from '@/lib/i18n'
 
 export default function OrgLanguageSync() {
   const org = useOrg() as any
@@ -18,12 +16,13 @@ export default function OrgLanguageSync() {
 
     let userPicked: string | null = null
     try {
-      userPicked = localStorage.getItem(USER_PICKED_KEY)
+      userPicked = localStorage.getItem(USER_PICKED_LANG_KEY)
     } catch {}
     if (userPicked) return
 
     if (i18n.language.split('-')[0] !== orgDefault) {
-      changeLanguage(orgDefault)
+      // Org default only — do not mark as a user pick
+      changeLanguage(orgDefault, { markUserPicked: false })
     }
   }, [orgDefault])
 

@@ -341,11 +341,14 @@ function EntryForm({
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-[hsl(var(--dash-muted))]">Currency</span>
-          <input
+          <select
             className={inputCls}
-            value={form.currency}
-            onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
-          />
+            value={form.currency === 'USD' ? 'USD' : 'EGP'}
+            onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
+          >
+            <option value="EGP">Egyptian Pound (EGP)</option>
+            <option value="USD">US Dollar (USD)</option>
+          </select>
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-[hsl(var(--dash-muted))]">Date</span>

@@ -32,9 +32,9 @@ export function FadeIn({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, delay, ease: EASE }}
+      transition={{ duration: 0.28, delay, ease: EASE }}
     >
       {children}
     </motion.div>
@@ -47,7 +47,7 @@ export function FadeIn({
 export function Stagger({
   children,
   className,
-  staggerDelay = 0.07,
+  staggerDelay = 0.04,
 }: {
   children: React.ReactNode
   className?: string
@@ -91,8 +91,8 @@ export function StaggerItem({
     <motion.div
       className={className}
       variants={{
-        hidden: { opacity: 0, y: 14 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE } },
+        hidden: { opacity: 0, y: 8 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: EASE } },
       }}
     >
       {children}
@@ -106,7 +106,7 @@ export function StaggerItem({
 export function CountUp({ value, className }: { value: number; className?: string }) {
   const reduceMotion = useReducedMotion()
   const motionValue = useMotionValue(0)
-  const spring = useSpring(motionValue, { stiffness: 90, damping: 24 })
+  const spring = useSpring(motionValue, { stiffness: 160, damping: 28 })
   const display = useTransform(spring, (v) => Math.round(v).toLocaleString())
 
   React.useEffect(() => {
@@ -175,7 +175,7 @@ export function ProgressRing({
             strokeDasharray={circumference}
             initial={{ strokeDashoffset: circumference }}
             animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1.1, ease: EASE, delay: 0.2 }}
+            transition={{ duration: 0.55, ease: EASE, delay: 0.05 }}
           />
         )}
       </svg>

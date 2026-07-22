@@ -1,8 +1,6 @@
 'use client'
 import React from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
-import omnilearnIcon from '@public/lrn.svg'
 import { getOrgLogoMediaDirectory, getOrgAuthBackgroundMediaDirectory } from '@services/media/media'
 import { getUriWithOrg } from '@services/config/config'
 import { cn } from '@/lib/utils'
@@ -107,14 +105,9 @@ export default function AuthBrandingPanel({ org, welcomeText }: AuthBrandingPane
                     className="w-full h-full object-contain p-3"
                   />
                 ) : (
-                  <Image
-                    quality={100}
-                    width={96}
-                    height={96}
-                    src={omnilearnIcon}
-                    alt="OmniLearn"
-                    className="object-contain"
-                  />
+                  <span className="text-3xl font-semibold text-gray-800">
+                    {(org?.name?.trim()?.charAt(0) || 'O').toUpperCase()}
+                  </span>
                 )}
               </div>
             </Link>

@@ -63,7 +63,7 @@ function CoursesHome(params: CourseProps) {
   const { data: coursesData, isLoading: isCoursesLoading } = useQuery({
     queryKey: queryKeys.courses.list(orgslug),
     queryFn: async () => {
-      const url = `${getAPIUrl()}courses/org_slug/${orgslug}/page/1/limit/500?include_unpublished=true`
+      const url = `${getAPIUrl()}courses/org_slug/${orgslug}/page/1/limit/100?include_unpublished=true`
       const res = await fetch(url, RequestBodyWithAuthHeader('GET', null, null, access_token))
       if (!res.ok) throw new Error('Failed to fetch courses')
       return res.json()

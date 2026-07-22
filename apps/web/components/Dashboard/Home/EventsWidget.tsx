@@ -22,10 +22,32 @@ const TILE_STYLES = [
 
 const TILE_ICONS = [ClipboardText, NotePencil, Exam, PencilRuler]
 
+/** Cap how many courses we fan-out assignment requests for — N+1 was killing load time. */
+const MAX_COURSES_FOR_ASSIGNMENTS = 5
+const ASSIGNMENT_CONCURRENCY = 3
+
+async function mapPool<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      results[i] = await fn(items[i]!, i)
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  )
+  return results
+}
+
 function WeekStrip() {
   const days = useMemo(() => {
     const today = new Date()
-    // Center the strip: 2 days before today through 4 days after
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(today)
       d.setDate(today.getDate() - 2 + i)
@@ -76,26 +98,50 @@ export default function EventsWidget() {
 
   const { data: coursesData } = useAdminOrgCourses(orgslug)
   const courses: any[] = useMemo(() => coursesData ?? [], [coursesData])
-  const courseUuids = useMemo(() => courses.map((c: any) => c.course_uuid), [courses])
-  const courseNameByUuid = useMemo(() => {
-    const map: Record<string, string> = {}
-    for (const c of courses) map[c.course_uuid] = c.name
-    return map
+
+  // Only the most recently updated courses — never fan-out across the full catalog
+  const sampledCourses = useMemo(() => {
+    return [...courses]
+      .sort((a, b) => {
+        const ta = new Date(a.updated_at || a.creation_date || 0).getTime()
+        const tb = new Date(b.updated_at || b.creation_date || 0).getTime()
+        return tb - ta
+      })
+      .slice(0, MAX_COURSES_FOR_ASSIGNMENTS)
   }, [courses])
 
+  const courseUuids = useMemo(
+    () => sampledCourses.map((c: any) => c.course_uuid as string),
+    [sampledCourses]
+  )
+  const courseNameByUuid = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const c of sampledCourses) map[c.course_uuid] = c.name
+    return map
+  }, [sampledCourses])
+
+  const uuidsKey = courseUuids.join(',')
+
   const { data: assignmentsData, isLoading } = useQuery({
-    queryKey: ['assignments-upcoming', orgslug, ...courseUuids],
+    queryKey: ['assignments-upcoming', orgslug, uuidsKey],
     queryFn: async () => {
-      const results = await Promise.all(
-        courseUuids.map((uuid: string) => getAssignmentsFromACourse(uuid, token))
+      const results = await mapPool(
+        courseUuids,
+        ASSIGNMENT_CONCURRENCY,
+        async (uuid) => {
+          try {
+            return await getAssignmentsFromACourse(uuid, token)
+          } catch {
+            return { data: [] }
+          }
+        }
       )
-      // Tag each assignment with its course so we can show the course name
       return results.flatMap((res: any, idx: number) =>
         (res?.data ?? []).map((a: any) => ({ ...a, _courseUuid: courseUuids[idx] }))
       )
     },
     enabled: courseUuids.length > 0 && !!token,
-    staleTime: 60_000,
+    staleTime: 120_000,
   })
 
   const upcoming = useMemo(() => {
@@ -136,7 +182,7 @@ export default function EventsWidget() {
             {t('dashboard.home.no_upcoming_deadlines', 'No upcoming deadlines')}
           </p>
         ) : (
-          <Stagger className="space-y-1">
+          <Stagger className="space-y-1" staggerDelay={0.04}>
             {upcoming.map((a: any, i: number) => {
               const Icon = TILE_ICONS[i % TILE_ICONS.length]
               const courseName = courseNameByUuid[a._courseUuid] || ''

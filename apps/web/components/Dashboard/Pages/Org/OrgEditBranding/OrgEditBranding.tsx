@@ -149,6 +149,7 @@ export default function OrgEditBranding() {
         await uploadOrganizationLogo(org.id, file, access_token)
         await new Promise((r) => setTimeout(r, 1500))
         toast.success(t('dashboard.organization.images.toasts.logo_success'), { id: loadingToast })
+        await revalidateTags(['organizations'], org.slug)
         queryClient.invalidateQueries({ queryKey: queryKeys.org.detail(org.slug) })
         router.refresh()
       } catch (err) {

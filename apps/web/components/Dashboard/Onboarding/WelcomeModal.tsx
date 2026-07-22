@@ -15,6 +15,8 @@ import {
 import WelcomeGlobe from './WelcomeGlobe'
 import { useTranslation } from 'react-i18next'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
+import { useOrg } from '@components/Contexts/OrgContext'
+import OrgLogo from '@components/Dashboard/Shared/OrgLogo'
 
 const ease = [0.16, 1, 0.3, 1] as const
 
@@ -83,6 +85,7 @@ export default function WelcomeModal() {
   const { welcomeSeen, markWelcomeSeen, dismissed } = useOnboarding()
   const { t } = useTranslation()
   const { track } = useOmniLearnAnalytics('dashboard')
+  const org = useOrg() as any
   const [step, setStep] = useState<'welcome' | 'features'>('welcome')
   const [isMobile, setIsMobile] = useState(false)
 
@@ -126,15 +129,14 @@ export default function WelcomeModal() {
                   transition={{ duration: 0.3, ease }}
                 >
                   <div className="px-10 pt-10 pb-2 text-center">
-                    <motion.img
-                      src="/lrn-dash.svg"
-                      alt="OmniLearn"
-                      className="h-12 w-12 mx-auto mb-5"
-                      style={{ filter: 'brightness(0)' }}
+                    <motion.div
+                      className="mx-auto mb-5 flex justify-center"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2, duration: 0.5, ease }}
-                    />
+                    >
+                      <OrgLogo org={org} className="h-12 w-12" fallbackClassName="text-lg" />
+                    </motion.div>
                     <motion.h1
                       className="text-2xl font-bold text-gray-900 tracking-tight"
                       initial={{ opacity: 0, y: 10 }}

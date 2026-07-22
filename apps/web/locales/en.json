@@ -19,6 +19,8 @@
     "directory": "Directory",
     "categories": "Categories & Rates",
     "categories_desc": "Set an hourly rate per delivery language (e.g. English, Arabic)",
+    "currency_egp": "Egyptian Pound (EGP)",
+    "currency_usd": "US Dollar (USD)",
     "finance": "Finance",
     "finance_desc": "Log delivered hours — cost is Hours × Rate",
     "new_instructor": "New Instructor",
