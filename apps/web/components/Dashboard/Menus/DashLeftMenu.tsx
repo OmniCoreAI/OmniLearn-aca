@@ -47,6 +47,7 @@ import { usePathname } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import UserAvatar from '../../Objects/UserAvatar'
 import AdminAuthorization from '@components/Security/AdminAuthorization'
+import usePortalNavVisibility from '@components/Hooks/usePortalNavVisibility'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
 import { useTranslation } from 'react-i18next'
@@ -155,10 +156,31 @@ function DashLeftMenu() {
   const rf = org?.config?.config?.resolved_features
   const isEnabled = (feature: string) => rf?.[feature]?.enabled === true
 
-  const showLibrary = isEnabled('folders')
-  const showBoards = isEnabled('boards')
-  const showPlaygrounds = isEnabled('playgrounds')
-  const showPayments = isEnabled('payments')
+  const { isItemVisible } = usePortalNavVisibility()
+
+  const showHome = isItemVisible('home')
+  const showPostgraduate = isItemVisible('postgraduate')
+  const showTrainingPrograms = isItemVisible('training-programs')
+  const showInstructors = isItemVisible('instructors')
+  const showFinance = isItemVisible('finance')
+  const showCmsNews = isItemVisible('cms-news')
+  const showAssignments = isItemVisible('assignments')
+  const showLibrary = isEnabled('folders') && isItemVisible('library')
+  const showBoards = isEnabled('boards') && isItemVisible('boards')
+  const showPlaygrounds = isEnabled('playgrounds') && isItemVisible('playgrounds')
+  const showUsers = isItemVisible('users')
+  const showPayments = isEnabled('payments') && isItemVisible('payments')
+  const showOrganization = isItemVisible('organization')
+  const showAnalytics = isItemVisible('analytics')
+
+  const showAcademicSection = showPostgraduate || showTrainingPrograms || showInstructors || showFinance || showCmsNews
+  const showTeachingSection = showAssignments || showLibrary || showBoards || showPlaygrounds
+  const showManageSection = showUsers || showPayments || showOrganization || showAnalytics
+  // Feature-disabled-but-otherwise-visible items shown in the "Other" menu —
+  // still requires role visibility for that item.
+  const showOtherBoards = !isEnabled('boards') && isItemVisible('boards')
+  const showOtherPlaygrounds = !isEnabled('playgrounds') && isItemVisible('playgrounds')
+  const showOtherPayments = !isEnabled('payments') && isItemVisible('payments')
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -219,6 +241,7 @@ function DashLeftMenu() {
       <div className="flex-1 overflow-y-auto py-3 px-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <AdminAuthorization authorizationMode="component">
           <div className="space-y-4">
+            {showHome && (
             <NavSection label={t('dashboard.home.nav.overview', 'Overview')} isCollapsed={isCollapsed}>
               <MenuLink
                 href="/dash"
@@ -229,8 +252,11 @@ function DashLeftMenu() {
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'home' })}
               />
             </NavSection>
+            )}
 
+            {showAcademicSection && (
             <NavSection label={t('dashboard.home.nav.academic', 'Academic')} isCollapsed={isCollapsed}>
+              {showPostgraduate && (
               <MenuLink
                 href="/dash/postgraduate"
                 icon={<GraduationCap size={20} weight="fill" />}
@@ -239,6 +265,8 @@ function DashLeftMenu() {
                 active={isActivePath('/dash/postgraduate')}
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'postgraduate' })}
               />
+              )}
+              {showTrainingPrograms && (
               <MenuLink
                 href="/dash/training-programs"
                 icon={<Certificate size={20} weight="fill" />}
@@ -247,6 +275,8 @@ function DashLeftMenu() {
                 active={isActivePath('/dash/training-programs')}
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'training_programs' })}
               />
+              )}
+              {showInstructors && (
               <MenuLink
                 href="/dash/instructors"
                 icon={<ChalkboardTeacher size={20} weight="fill" />}
@@ -255,6 +285,8 @@ function DashLeftMenu() {
                 active={isActivePath('/dash/instructors')}
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'instructors' })}
               />
+              )}
+              {showFinance && (
               <MenuLink
                 href="/dash/finance"
                 icon={<CurrencyCircleDollar size={20} weight="fill" />}
@@ -263,6 +295,8 @@ function DashLeftMenu() {
                 active={isActivePath('/dash/finance')}
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'finance' })}
               />
+              )}
+              {showCmsNews && (
               <MenuLink
                 href="/dash/cms/news"
                 icon={<Newspaper size={20} weight="fill" />}
@@ -271,10 +305,14 @@ function DashLeftMenu() {
                 active={isActivePath('/dash/cms/news')}
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'cms_news' })}
               />
+              )}
             </NavSection>
+            )}
 
+            {showTeachingSection && (
             <NavSection label={t('dashboard.home.nav.teaching', 'Teaching')} isCollapsed={isCollapsed}>
             {/* Assignments with hover menu */}
+            {showAssignments && (
             <div onMouseEnter={fetchAssignments}>
             <HoverMenu
               content={
@@ -342,6 +380,7 @@ function DashLeftMenu() {
               })()}
             </HoverMenu>
             </div>
+            )}
             {showLibrary && (
               <MenuLink
                 href="/dash/library"
@@ -370,9 +409,12 @@ function DashLeftMenu() {
               />
             )}
             </NavSection>
+            )}
 
+            {showManageSection && (
             <NavSection label={t('dashboard.home.nav.manage', 'Manage')} isCollapsed={isCollapsed}>
             {/* Users with hover menu */}
+            {showUsers && (
             <HoverMenu
               content={
                 <HoverMenuContent className="w-64">
@@ -436,6 +478,7 @@ function DashLeftMenu() {
                 )
               })()}
             </HoverMenu>
+            )}
 
             {showPayments && (
               <MenuLink
@@ -448,6 +491,7 @@ function DashLeftMenu() {
             )}
 
             {/* Organization with hover menu */}
+            {showOrganization && (
             <HoverMenu
               content={
                 <HoverMenuContent className="w-64">
@@ -547,8 +591,10 @@ function DashLeftMenu() {
                 )
               })()}
             </HoverMenu>
+            )}
 
             {/* Analytics with hover menu */}
+            {showAnalytics && (
             <HoverMenu
               content={
                 <HoverMenuContent className="w-64">
@@ -600,9 +646,10 @@ function DashLeftMenu() {
                 )
               })()}
             </HoverMenu>
+            )}
 
             {/* Disabled features shown in an "Other" hover menu */}
-            {(!showBoards || !showPlaygrounds || !showPayments) && (
+            {(showOtherBoards || showOtherPlaygrounds || showOtherPayments) && (
               <HoverMenu
                 content={
                   <HoverMenuContent className="w-64">
@@ -613,7 +660,7 @@ function DashLeftMenu() {
                       </span>
                     </HoverMenuLabel>
                     <HoverMenuSeparator />
-                    {!showBoards && (
+                    {showOtherBoards && (
                       <HoverMenuItem asChild>
                         <Link href="/dash/boards" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-muted))]/70 hover:text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">
                           <ChalkboardSimple size={16} weight="fill" />
@@ -621,7 +668,7 @@ function DashLeftMenu() {
                         </Link>
                       </HoverMenuItem>
                     )}
-                    {!showPlaygrounds && (
+                    {showOtherPlaygrounds && (
                       <HoverMenuItem asChild>
                         <Link href="/dash/playgrounds" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-muted))]/70 hover:text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">
                           <Cube size={16} weight="fill" />
@@ -629,7 +676,7 @@ function DashLeftMenu() {
                         </Link>
                       </HoverMenuItem>
                     )}
-                    {!showPayments && (
+                    {showOtherPayments && (
                       <HoverMenuItem asChild>
                         <Link href="/dash/payments/overview" className="flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-muted))]/70 hover:text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] cursor-pointer transition-colors">
                           <CurrencyCircleDollar size={16} weight="fill" />
@@ -663,6 +710,7 @@ function DashLeftMenu() {
               </HoverMenu>
             )}
             </NavSection>
+            )}
           </div>
         </AdminAuthorization>
       </div>

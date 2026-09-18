@@ -7,7 +7,7 @@ from src.routers import health
 from src.routers import instance
 from src.routers import plans
 from src.routers import usergroups
-from src.routers import dev, trail, users, auth, orgs, roles, search
+from src.routers import dev, trail, users, auth, orgs, roles, search, portal_navigation
 from src.routers import monitoring
 from src.routers import stream
 from src.routers import api_tokens
@@ -101,6 +101,12 @@ v1_router.include_router(
     roles.router,
     prefix="/roles",
     tags=["roles"],
+    dependencies=[Depends(require_authenticated_user)]
+)
+v1_router.include_router(
+    portal_navigation.router,
+    prefix="/portal-navigation",
+    tags=["portal-navigation"],
     dependencies=[Depends(require_authenticated_user)]
 )
 v1_router.include_router(
