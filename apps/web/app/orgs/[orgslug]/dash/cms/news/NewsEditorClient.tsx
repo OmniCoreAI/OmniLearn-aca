@@ -16,7 +16,7 @@ import {
   AcademicPageShell,
   AcademicHeader,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
-import { Field, inputCls, SubmitRow } from '../../postgraduate/client'
+import { Field, inputCls, SubmitRow } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import HtmlRichTextEditor from '@components/Dashboard/CMS/HtmlRichTextEditor'
 import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import {

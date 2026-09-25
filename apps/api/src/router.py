@@ -25,6 +25,7 @@ from src.routers.academic import (
     semesters as semesters_router_module,
     training_programs as training_programs_router_module,
     course_profiles as course_profiles_router_module,
+    core as academic_core_router_module,
 )
 from src.routers.instructors import (
     instructors as instructors_router_module,
@@ -202,6 +203,14 @@ v1_router.include_router(
     training_programs_router_module.router,
     prefix="/training-programs",
     tags=["academic", "training-programs"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+# Academic core: calendar, course catalog, curricula, offerings, students.
+# Absolute paths (/academic-years, /terms, /academic-courses, /curricula,
+# /offerings, /cohorts/{uuid}/students, ...).
+v1_router.include_router(
+    academic_core_router_module.router,
+    tags=["academic"],
     dependencies=[Depends(require_authenticated_user)],
 )
 # Course academic profile (1:1 course extension) — reuses course RBAC.

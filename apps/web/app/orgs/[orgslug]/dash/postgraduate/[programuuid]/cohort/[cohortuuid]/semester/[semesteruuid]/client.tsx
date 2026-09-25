@@ -19,7 +19,7 @@ import {
   AcademicEmptyState,
   AcademicGridSkeleton,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
-import { Field, SubmitRow, inputCls } from '../../../../../client'
+import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import {
   getProgram,
   getCohort,

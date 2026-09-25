@@ -95,6 +95,7 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
         "stream",
         "api_tokens",
         "webhooks",
+        "portal_navigation",
     ]:
         install_router_module(f"src.routers.{name}", f"src.routers.{name}")
 
@@ -250,6 +251,8 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     sys.modules["src.routers.academic"].course_profiles = sys.modules[
         "src.routers.academic.course_profiles"
     ]
+    install_router_module("src.routers.academic.core", "src.routers.academic.core")
+    sys.modules["src.routers.academic"].core = sys.modules["src.routers.academic.core"]
 
     install_router_module(
         "src.routers.instructors.instructors", "src.routers.instructors.instructors"

@@ -19,7 +19,7 @@ import {
   AcademicCard,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
-import { Field, SubmitRow, inputCls } from '../postgraduate/client'
+import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import {
   getTrainingPrograms,
   createTrainingProgram,

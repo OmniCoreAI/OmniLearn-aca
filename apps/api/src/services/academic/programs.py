@@ -22,6 +22,7 @@ from src.services.academic.authors import (
     get_resource_authors,
     get_user_author,
 )
+from src.services.academic.common import normalize_code
 from src.services.academic.validation import (
     assert_program_code_unique,
     assert_status_transition,
@@ -67,6 +68,10 @@ async def create_program(
         raise HTTPException(status_code=404, detail="Organization not found")
 
     validate_program_payload(program_object.model_dump())
+    if program_object.code:
+        # Codes are normalised (upper-case, "[DEGREE]-[FIELD]" style) so the
+        # whole org shares one convention.
+        program_object.code = normalize_code(program_object.code, "Program")
     await assert_program_code_unique(db_session, org_id, program_object.code)
     coordinator_id = await resolve_coordinator(
         db_session, org_id, program_object.coordinator_uuid
@@ -166,6 +171,10 @@ async def update_program(
         )
 
     if "code" in update_data:
+        if update_data["code"]:
+            update_data["code"] = normalize_code(update_data["code"], "Program")
+        else:
+            update_data["code"] = None
         await assert_program_code_unique(
             db_session, program.org_id, update_data["code"], exclude_id=program.id
         )
@@ -205,6 +214,16 @@ async def delete_program(
     await check_resource_access(
         request, db_session, current_user, program.program_uuid, AccessAction.DELETE
     )
+
+    # Cohort/offering access groups are not FK-cascaded; remove them explicitly.
+    from src.db.academic.cohorts import Cohort
+    from src.services.academic.cohorts import delete_cohort_dependents
+
+    cohorts = (
+        await db_session.execute(select(Cohort).where(Cohort.program_id == program.id))
+    ).scalars().all()
+    for cohort in cohorts:
+        await delete_cohort_dependents(db_session, cohort)
 
     await db_session.delete(program)
     await db_session.commit()

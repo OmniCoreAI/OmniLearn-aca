@@ -20,7 +20,7 @@ import {
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
 import { InstructorTabs } from '@components/Dashboard/Pages/Instructors/InstructorTabs'
-import { Field, SubmitRow, inputCls } from '../postgraduate/client'
+import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import {
   getInstructors,
   createInstructor,

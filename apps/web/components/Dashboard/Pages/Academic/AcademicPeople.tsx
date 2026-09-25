@@ -29,12 +29,17 @@ export function CoordinatorPicker({
   value,
   selectedLabel,
   onChange,
+  onlyRoles,
+  placeholder,
 }: {
   orgId: number
   access_token: string
   value: string | null
   selectedLabel?: string
   onChange: (uuid: string | null, label?: string) => void
+  /** Restrict the list to members holding one of these role_uuids (e.g. trainees). */
+  onlyRoles?: string[]
+  placeholder?: string
 }) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
@@ -46,7 +51,9 @@ export function CoordinatorPicker({
     enabled: !!orgId && !!access_token && open,
     staleTime: 15_000,
   })
-  const items = (data?.items || []) as any[]
+  const items = ((data?.items || []) as any[]).filter(
+    (it) => !onlyRoles || onlyRoles.includes(it?.role?.role_uuid)
+  )
 
   if (value) {
     return (
@@ -70,7 +77,7 @@ export function CoordinatorPicker({
         <Search className="w-4 h-4 text-gray-400" />
         <input
           className="flex-1 text-sm focus:outline-none"
-          placeholder={t('academic.search_users')}
+          placeholder={placeholder || t('academic.search_users')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onFocus={() => setOpen(true)}

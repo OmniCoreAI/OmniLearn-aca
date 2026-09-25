@@ -30,6 +30,11 @@ class ProgramBase(SQLModel):
     code: Optional[str] = None
     program_level: ProgramLevel = Field(default=ProgramLevel.MASTERS)
     status: ProgramStatus = Field(default=ProgramStatus.DRAFT)
+    faculty: Optional[str] = None
+    department: Optional[str] = None
+    min_credits: Optional[float] = None
+    duration_months: Optional[int] = None
+    max_duration_months: Optional[int] = None
     capacity: Optional[int] = None
     is_paid: bool = Field(default=False)
     price: Optional[float] = None
@@ -87,6 +92,11 @@ class ProgramUpdate(SQLModel):
     code: Optional[str] = None
     program_level: Optional[ProgramLevel] = None
     status: Optional[ProgramStatus] = None
+    faculty: Optional[str] = None
+    department: Optional[str] = None
+    min_credits: Optional[float] = None
+    duration_months: Optional[int] = None
+    max_duration_months: Optional[int] = None
     capacity: Optional[int] = None
     is_paid: Optional[bool] = None
     price: Optional[float] = None

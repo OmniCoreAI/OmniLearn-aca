@@ -5,6 +5,7 @@ import { getUriWithOrg } from '@services/config/config'
 import { MoreVertical, Trash2, Pencil, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FadeIn } from '@components/Dashboard/Shared/DashMotion'
+import { useTranslation } from 'react-i18next'
 
 export function AcademicPageShell({ children }: { children: React.ReactNode }) {
   return (
@@ -118,6 +119,7 @@ export function AcademicCard({
   onEdit?: () => void
   onDelete?: () => void
 }) {
+  const { t } = useTranslation()
   const [menuOpen, setMenuOpen] = React.useState(false)
   const hasMenu = !!onEdit || !!onDelete
   const image = thumbnailUrl || '/empty_thumbnail.png'
@@ -138,7 +140,7 @@ export function AcademicCard({
               setMenuOpen((v) => !v)
             }}
             className="rounded-full bg-white/90 p-1.5 text-[hsl(var(--dash-ink))] shadow-md backdrop-blur-sm hover:bg-white"
-            aria-label="Program actions"
+            aria-label={t('academic.actions', 'Actions')}
           >
             <MoreVertical className="h-4 w-4" />
           </button>
@@ -154,7 +156,7 @@ export function AcademicCard({
                     }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-canvas))]"
                   >
-                    <Pencil className="h-3.5 w-3.5" /> Edit
+                    <Pencil className="h-3.5 w-3.5" /> {t('academic.edit', 'Edit')}
                   </button>
                 )}
                 {onDelete && (
@@ -165,7 +167,7 @@ export function AcademicCard({
                     }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                   >
-                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                    <Trash2 className="h-3.5 w-3.5" /> {t('academic.delete', 'Delete')}
                   </button>
                 )}
               </div>
@@ -196,7 +198,7 @@ export function AcademicCard({
         <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
         {badges && badges.length > 0 && (
           <div className="absolute bottom-2 left-2 flex max-w-[90%] flex-wrap gap-1">
-            {badges.slice(0, 3).map((b, i) => (
+            {badges.map((b, i) => (
               <span
                 key={i}
                 className={cn(
@@ -225,13 +227,13 @@ export function AcademicCard({
         ) : null}
         <div className="flex items-center justify-between border-t border-[hsl(var(--dash-border))] pt-1.5">
           <span className="text-[9px] font-bold uppercase tracking-widest text-[hsl(var(--dash-muted))]">
-            {footerLabel || 'Program'}
+            {footerLabel || t('academic.program', 'Program')}
           </span>
           <Link
             href={getUriWithOrg(orgslug, href)}
             className="text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-accent))]"
           >
-            Open →
+            {t('academic.open', 'Open')} →
           </Link>
         </div>
       </div>

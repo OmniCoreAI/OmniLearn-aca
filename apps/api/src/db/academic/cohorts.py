@@ -5,6 +5,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from src.db.users import UserReadAuthor
+# Imported for their tables so the curriculum/term foreign keys resolve.
+from src.db.academic import calendar as _calendar  # noqa: F401
+from src.db.academic import curricula as _curricula  # noqa: F401
 
 
 class CohortStatus(str, Enum):
@@ -50,6 +53,17 @@ class Cohort(CohortBase, table=True):
         default=None,
         sa_column=Column(Integer, ForeignKey("usergroup.id", ondelete="SET NULL"), nullable=True),
     )
+    # System-generated "<PROGRAM_CODE>-<YEAR>" (e.g. MSC-AI-2026).
+    code: Optional[str] = Field(default=None)
+    # The curriculum version this intake follows (frozen for the cohort).
+    curriculum_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("curriculum.id", ondelete="SET NULL"), nullable=True),
+    )
+    intake_term_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("academicterm.id", ondelete="SET NULL"), nullable=True),
+    )
     cohort_uuid: str = Field(default="", index=True)
     creation_date: str = ""
     update_date: str = ""
@@ -58,6 +72,8 @@ class Cohort(CohortBase, table=True):
 
 class CohortCreate(CohortBase):
     coordinator_uuid: Optional[str] = None
+    curriculum_uuid: Optional[str] = None
+    intake_term_uuid: Optional[str] = None
 
 
 class CohortUpdate(SQLModel):
@@ -69,6 +85,8 @@ class CohortUpdate(SQLModel):
     end_date: Optional[str] = None
     status: Optional[CohortStatus] = None
     coordinator_uuid: Optional[str] = None
+    curriculum_uuid: Optional[str] = None
+    intake_term_uuid: Optional[str] = None
     extra_metadata: Optional[dict] = None
 
 
@@ -79,6 +97,14 @@ class CohortRead(CohortBase):
     coordinator_id: Optional[int] = None
     coordinator: Optional[UserReadAuthor] = None
     usergroup_id: Optional[int] = None
+    code: Optional[str] = None
+    curriculum_id: Optional[int] = None
+    curriculum_uuid: Optional[str] = None
+    curriculum_version: Optional[str] = None
+    intake_term_id: Optional[int] = None
+    intake_term_uuid: Optional[str] = None
+    intake_term_code: Optional[str] = None
+    offering_count: int = 0
     enrolled_count: int = 0
     cohort_uuid: str
     creation_date: str

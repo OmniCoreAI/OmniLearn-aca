@@ -10,6 +10,7 @@ import AuthenticatedClientElement from '@components/Security/AuthenticatedClient
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
+import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import {
   AcademicPageShell,
   AcademicHeader,
@@ -27,6 +28,8 @@ import {
   uploadProgramImage,
 } from '@services/academic/academic'
 import { getProgramThumbnailMediaDirectory } from '@services/media/media'
+import { suggestProgramCode } from '@services/academic/core'
+import { PostgradTabs } from '@components/Dashboard/Pages/Academic/AcademicUI'
 
 const LEVELS = [
   { value: 'phd', labelKey: 'academic.level_phd' },
@@ -127,6 +130,8 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
         }
       />
 
+      <PostgradTabs orgslug={orgslug} />
+
       {isLoading && <AcademicGridSkeleton />}
       <AcademicGrid>
         {!isLoading && programs.length === 0 && (
@@ -138,7 +143,7 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
             orgslug={orgslug}
             href={`/dash/postgraduate/${p.program_uuid.replace('program_', '')}`}
             title={p.name}
-            subtitle={p.description}
+            subtitle={[p.code, p.department, p.description].filter(Boolean).join(' · ')}
             badges={badgesFor(p)}
             thumbnailUrl={
               p.thumbnail_image && org?.org_uuid
@@ -199,6 +204,15 @@ function ProgramForm({
   const [price, setPrice] = useState<string>(program?.price != null ? String(program.price) : '')
   const [currency, setCurrency] = useState(program?.currency || 'USD')
   const [inPlan, setInPlan] = useState(program?.in_plan ?? true)
+  const [faculty, setFaculty] = useState(program?.faculty || '')
+  const [department, setDepartment] = useState(program?.department || '')
+  const [minCredits, setMinCredits] = useState<string>(program?.min_credits != null ? String(program.min_credits) : '')
+  const [durationMonths, setDurationMonths] = useState<string>(
+    program?.duration_months != null ? String(program.duration_months) : ''
+  )
+  const [maxDurationMonths, setMaxDurationMonths] = useState<string>(
+    program?.max_duration_months != null ? String(program.max_duration_months) : ''
+  )
   const [startDate, setStartDate] = useState(program?.start_date || '')
   const [endDate, setEndDate] = useState(program?.end_date || '')
   const [published, setPublished] = useState(program?.published ?? false)
@@ -217,9 +231,14 @@ function ProgramForm({
       const payload = {
         name,
         description,
-        code,
+        code: code.trim() || null,
         program_level: level,
         status,
+        faculty: faculty || null,
+        department: department || null,
+        min_credits: minCredits === '' ? null : Number(minCredits),
+        duration_months: durationMonths === '' ? null : Number(durationMonths),
+        max_duration_months: maxDurationMonths === '' ? null : Number(maxDurationMonths),
         capacity: capacity === '' ? null : Number(capacity),
         is_paid: isPaid,
         price: isPaid && price !== '' ? Number(price) : null,
@@ -276,7 +295,45 @@ function ProgramForm({
           <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>
         <Field label={t('academic.code')}>
-          <input className={inputCls} value={code} onChange={(e) => setCode(e.target.value)} />
+          <input
+            className={inputCls}
+            value={code}
+            placeholder={suggestProgramCode(level, department || 'AI')}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+          />
+          <p className="mt-1 text-[11px] text-[hsl(var(--dash-muted))]">
+            {t('academic.program_code_hint', 'Format [DEGREE]-[FIELD], e.g. MSC-AI. Validated and unique.')}
+            {!code && department && (
+              <button
+                type="button"
+                className="ms-1 font-semibold text-[hsl(var(--dash-accent))]"
+                onClick={() => setCode(suggestProgramCode(level, department))}
+              >
+                {t('academic.use_suggestion', 'Use')} {suggestProgramCode(level, department)}
+              </button>
+            )}
+          </p>
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t('academic.faculty', 'Faculty / School')}>
+          <input className={inputCls} value={faculty} onChange={(e) => setFaculty(e.target.value)} />
+        </Field>
+        <Field label={t('academic.department', 'Department')}>
+          <input className={inputCls} value={department} onChange={(e) => setDepartment(e.target.value)} />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <Field label={t('academic.min_credits', 'Minimum credits')}>
+          <input type="number" min={0} step="0.5" className={inputCls} value={minCredits} onChange={(e) => setMinCredits(e.target.value)} />
+        </Field>
+        <Field label={t('academic.duration_months', 'Duration (months)')}>
+          <input type="number" min={1} className={inputCls} value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} />
+        </Field>
+        <Field label={t('academic.max_duration_months', 'Max duration (months)')}>
+          <input type="number" min={1} className={inputCls} value={maxDurationMonths} onChange={(e) => setMaxDurationMonths(e.target.value)} />
         </Field>
       </div>
 
@@ -398,33 +455,6 @@ function ImageField({ label, onFile }: { label: string; onFile: (_f?: File) => v
           onChange={(e) => onFile(e.target.files?.[0])}
         />
       </label>
-    </div>
-  )
-}
-
-export const inputCls =
-  'w-full px-3 py-2 bg-[hsl(var(--dash-surface))] border border-[hsl(var(--dash-border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]/30 focus:border-[hsl(var(--dash-accent))]/50'
-
-export function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <label className="block text-sm font-medium text-[hsl(var(--dash-ink))]">{label}</label>
-      {children}
-    </div>
-  )
-}
-
-export function SubmitRow({ saving }: { saving: boolean }) {
-  const { t } = useTranslation()
-  return (
-    <div className="flex justify-end pt-2">
-      <button
-        type="submit"
-        disabled={saving}
-        className="dash-lift rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-white shadow-[0_4px_12px_hsl(var(--dash-accent)/0.3)] hover:brightness-110 disabled:opacity-50"
-      >
-        {saving ? '…' : t('academic.save')}
-      </button>
     </div>
   )
 }
