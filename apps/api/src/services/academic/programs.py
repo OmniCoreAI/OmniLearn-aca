@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 from datetime import datetime
 from fastapi import HTTPException, Request
@@ -44,7 +44,29 @@ async def _to_read(db_session: AsyncSession, program: Program) -> ProgramRead:
     """Assemble a ProgramRead with authors + embedded coordinator projection."""
     authors = await get_resource_authors(db_session, program.program_uuid)
     coordinator = await get_user_author(db_session, program.coordinator_id)
-    return ProgramRead(**program.model_dump(), authors=authors, coordinator=coordinator)
+    scale_uuid = None
+    if program.grade_scale_id:
+        from src.db.academic.grading import GradeScale
+
+        scale = await db_session.get(GradeScale, program.grade_scale_id)
+        scale_uuid = scale.grade_scale_uuid if scale else None
+    return ProgramRead(
+        **program.model_dump(), authors=authors, coordinator=coordinator, grade_scale_uuid=scale_uuid
+    )
+
+
+async def _resolve_grade_scale(db_session: AsyncSession, org_id: int, grade_scale_uuid: Optional[str]) -> Optional[int]:
+    """Empty string / None -> org default (stored as NULL)."""
+    if not grade_scale_uuid:
+        return None
+    from src.db.academic.grading import GradeScale
+
+    scale = (
+        await db_session.execute(select(GradeScale).where(GradeScale.grade_scale_uuid == grade_scale_uuid))
+    ).scalars().first()
+    if not scale or scale.org_id != org_id:
+        raise HTTPException(status_code=400, detail="Grade scale not found")
+    return scale.id
 
 
 async def create_program(
@@ -80,6 +102,7 @@ async def create_program(
     program = Program.model_validate(program_object, update={"org_id": org_id})
     program.org_id = org_id
     program.coordinator_id = coordinator_id
+    program.grade_scale_id = await _resolve_grade_scale(db_session, org_id, program_object.grade_scale_uuid)
     program.program_uuid = f"program_{uuid4()}"
     program.creation_date = str(datetime.now())
     program.update_date = str(datetime.now())
@@ -187,6 +210,11 @@ async def update_program(
             db_session, program.org_id, coordinator_uuid
         )
         program.coordinator_id = new_coordinator_id
+
+    if "grade_scale_uuid" in update_data:
+        program.grade_scale_id = await _resolve_grade_scale(
+            db_session, program.org_id, update_data.pop("grade_scale_uuid")
+        )
 
     for key, value in update_data.items():
         setattr(program, key, value)

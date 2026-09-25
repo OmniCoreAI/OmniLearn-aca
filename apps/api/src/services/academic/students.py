@@ -323,6 +323,7 @@ class MyAcademicRecord(BaseModel):
     memberships: List[CohortMembershipRead]
     offerings: List[CourseOfferingRead]
     enrollment_status: dict[str, str]
+    transcripts: list = []
 
 
 async def get_my_record(org_id: int, current_user: Principal, db_session: AsyncSession) -> MyAcademicRecord:
@@ -346,8 +347,11 @@ async def get_my_record(org_id: int, current_user: Principal, db_session: AsyncS
         if offering:
             offerings.append(await offerings_svc.to_read(db_session, offering))
             status_map[offering.offering_uuid] = enrollment.status.value
+    from src.services.academic.grading import build_transcript
+
     return MyAcademicRecord(
         memberships=[await membership_read(db_session, m) for m in memberships],
         offerings=offerings,
         enrollment_status=status_map,
+        transcripts=[(await build_transcript(db_session, m)).model_dump() for m in memberships],
     )

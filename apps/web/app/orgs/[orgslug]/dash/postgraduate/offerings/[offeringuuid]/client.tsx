@@ -13,6 +13,7 @@ import { AcademicPageShell, AcademicHeader } from '@components/Dashboard/Pages/A
 import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
 import CreateCourseModal from '@components/Objects/Modals/Course/Create/CreateCourse'
+import { GradebookPanel } from '@components/Dashboard/Pages/Academic/GradebookPanel'
 import {
   DataTable,
   GhostButton,
@@ -229,6 +230,8 @@ function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuu
             ))}
           </DataTable>
         </Section>
+
+        {offering && <GradebookPanel offering={offering} />}
 
         <Section
           title={t('academic.roster', 'Roster')}

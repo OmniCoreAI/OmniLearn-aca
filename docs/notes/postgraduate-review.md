@@ -1,6 +1,6 @@
 # Postgraduate Studies — Review, Restructuring & Roadmap
 
-Status: Phase 1 (academic core) implemented on branch `feature/academy-eaca-migration`.
+Status: Phase 1 (academic core) and Phase 2 (assessment & results) implemented on branch `feature/academy-eaca-migration`.
 Scope reference: the "Postgraduate Studies Module — LMS Review, Restructuring & Best-Practice Specification" (§1–§44).
 
 ---
@@ -118,7 +118,7 @@ Legend: **A** Keep · **B** Modify · **C** Merge · **D** Remove · **E** Missi
 | 16 | Unified student academic record | **Partial** — record, status, current courses; GPA/credits in Phase 2 |
 | 40 | Navigation | **Partial** — Programs · Course Catalog · Course Offerings · Students · Academic Calendar |
 | 11, 13, 14 | Admissions, eligibility, entrance tests, interviews, decisions | Phase 3 |
-| 17–20 | Assessment components, gradebook, exams, results, GPA/CGPA, transcript | Phase 2 |
+| 17–20 | Assessment components, gradebook, results, GPA/CGPA, transcript | **Done** (Phase 2); exam scheduling/venues/invigilation still open |
 | 21, 30 | Progression rules / program requirements engine | Phase 4 |
 | 22–28 | Research & thesis: topics, supervisors, proposal, reviews, milestones, examiners, defense, outcomes | Phase 5 |
 | 29, 31 | Configurable per-program workflows | Phase 4–5 (workflow engine) |
@@ -179,3 +179,31 @@ See `docs/notes/academy-eaca-migration.md`. Relevant to this model:
 - Tests: `apps/api/src/tests/services/test_academic_core.py`.
 - UI: `apps/web/app/orgs/[orgslug]/dash/postgraduate/**`, `apps/web/services/academic/core.ts`,
   `apps/web/components/Dashboard/Pages/Academic/{AcademicUI,AcademicForm,OfferingsTable}.tsx`.
+
+---
+
+## 7. Phase 2 — Assessment & results (implemented)
+
+Defaults chosen (configurable): 4.0 scale with C/60 minimum pass; instructor submits, coordinator approves or
+returns; a retaken course replaces the earlier attempt in credits and CGPA (the earlier attempt stays listed).
+
+- **Grade scales** (`gradescale`): bands of letter / minimum score / points / passing. One org default (created
+  on first use as "Standard 4.0"); a program can select its own (`program.grade_scale_id`). Bands of a scale
+  with approved results cannot be changed.
+- **Assessment components** (`assessmentcomponent`) per offering: name, type, weight (total ≤ 100, must be 100
+  to submit), max score, due date, and linked LMS assignments of the content course.
+- **Scores** (`componentscore`): synced from GRADED assignment submissions (average percentage × max) or entered
+  manually; manual overrides survive re-syncs; every change is appended to `history` (who, when, from, to, note).
+- **Workflow** on `courseoffering.grade_status`: `open → submitted → approved`, or `submitted → returned → …`.
+  Scheme and scores lock while submitted/approved. Approval writes `final_score`, `letter_grade`,
+  `grade_points`, `result_passed` on each enrollment and sets it to completed/failed. Offerings with a scheme
+  no longer allow manual completed/failed.
+- **Transcript** (`GET /academic-students/{membership}/transcript`, also in `/academic-records/me`): per term
+  courses, term GPA, running CGPA, credits attempted/earned/remaining against the program minimum.
+- **UI**: offering page "Assessment & gradebook" (scheme, editable score grid, sync, submit/approve/return);
+  Settings tab (grade scales); program grade-scale selector; transcript modal from cohort and Students pages.
+- Migration `j8e9f0g1h2i3_academic_grading.py`; tests `tests/services/test_academic_grading.py`.
+
+Still open from the original Phase 2 list: removal of the legacy `semester*` tables and the `in_plan` /
+`published` vs `status` decision (both need a product decision), a student-facing results page (API ready via
+`/academic-records/me`), and exam scheduling (venue, invigilators, attendance).

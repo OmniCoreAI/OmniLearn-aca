@@ -71,6 +71,8 @@ class Program(ProgramBase, table=True):
         default=None,
         sa_column=Column(Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True, index=True),
     )
+    # Grade scale used for this program's results (org default when empty).
+    grade_scale_id: Optional[int] = Field(default=None)
     program_uuid: str = Field(default="", index=True)
     creation_date: str = ""
     update_date: str = ""
@@ -79,6 +81,7 @@ class Program(ProgramBase, table=True):
 
 class ProgramCreate(ProgramBase):
     org_id: int = Field(default=None, foreign_key="organization.id")
+    grade_scale_uuid: Optional[str] = None
     # The coordinator is addressed by its public user_uuid; the service resolves
     # it to coordinator_id after verifying same-org membership.
     coordinator_uuid: Optional[str] = None
@@ -107,6 +110,7 @@ class ProgramUpdate(SQLModel):
     thumbnail_image: Optional[str] = None
     banner_image: Optional[str] = None
     coordinator_uuid: Optional[str] = None
+    grade_scale_uuid: Optional[str] = None
     public: Optional[bool] = None
     published: Optional[bool] = None
     extra_metadata: Optional[dict] = None
@@ -118,6 +122,8 @@ class ProgramRead(ProgramBase):
     program_uuid: str
     coordinator_id: Optional[int] = None
     coordinator: Optional[UserReadAuthor] = None
+    grade_scale_id: Optional[int] = None
+    grade_scale_uuid: Optional[str] = None
     authors: List[AuthorWithRole]
     creation_date: str
     update_date: str

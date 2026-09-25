@@ -28,7 +28,7 @@ import {
   uploadProgramImage,
 } from '@services/academic/academic'
 import { getProgramThumbnailMediaDirectory } from '@services/media/media'
-import { suggestProgramCode } from '@services/academic/core'
+import { getGradeScales, suggestProgramCode } from '@services/academic/core'
 import { PostgradTabs } from '@components/Dashboard/Pages/Academic/AcademicUI'
 
 const LEVELS = [
@@ -96,9 +96,6 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
     const badges: { label: string; className?: string }[] = [
       { label: t(`academic.level_${p.program_level}`), className: LEVEL_BADGE[p.program_level] },
       { label: t(`academic.pstatus_${p.status || 'draft'}`), className: PROGRAM_STATUS_BADGE[p.status || 'draft'] },
-      p.is_paid
-        ? { label: t('academic.paid'), className: 'bg-[hsl(var(--dash-tile-lavender))] text-[hsl(var(--dash-tile-lavender-fg))]' }
-        : { label: t('academic.free'), className: 'bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]' },
     ]
     if (p.in_plan === false) badges.push({ label: t('academic.out_of_plan'), className: 'bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]' })
     return badges
@@ -200,10 +197,13 @@ function ProgramForm({
   const [level, setLevel] = useState(program?.program_level || 'masters')
   const [status, setStatus] = useState(program?.status || 'draft')
   const [capacity, setCapacity] = useState<string>(program?.capacity != null ? String(program.capacity) : '')
-  const [isPaid, setIsPaid] = useState(program?.is_paid ?? false)
-  const [price, setPrice] = useState<string>(program?.price != null ? String(program.price) : '')
-  const [currency, setCurrency] = useState(program?.currency || 'USD')
   const [inPlan, setInPlan] = useState(program?.in_plan ?? true)
+  const [gradeScale, setGradeScale] = useState<string>(program?.grade_scale_uuid || '')
+  const { data: gradeScales = [] } = useQuery({
+    queryKey: ['academic', 'grade-scales', orgId],
+    queryFn: () => getGradeScales(orgId, access_token),
+    enabled: !!orgId && !!access_token,
+  })
   const [faculty, setFaculty] = useState(program?.faculty || '')
   const [department, setDepartment] = useState(program?.department || '')
   const [minCredits, setMinCredits] = useState<string>(program?.min_credits != null ? String(program.min_credits) : '')
@@ -239,10 +239,8 @@ function ProgramForm({
         min_credits: minCredits === '' ? null : Number(minCredits),
         duration_months: durationMonths === '' ? null : Number(durationMonths),
         max_duration_months: maxDurationMonths === '' ? null : Number(maxDurationMonths),
+        grade_scale_uuid: gradeScale || '',
         capacity: capacity === '' ? null : Number(capacity),
-        is_paid: isPaid,
-        price: isPaid && price !== '' ? Number(price) : null,
-        currency: isPaid ? currency : null,
         in_plan: inPlan,
         start_date: startDate || null,
         end_date: endDate || null,
@@ -325,6 +323,17 @@ function ProgramForm({
         </Field>
       </div>
 
+      <Field label={t('academic.grade_scale', 'Grade scale')}>
+        <select className={inputCls} value={gradeScale} onChange={(e) => setGradeScale(e.target.value)}>
+          <option value="">{t('academic.org_default_scale', 'Organization default')}</option>
+          {(gradeScales as any[]).map((gs) => (
+            <option key={gs.grade_scale_uuid} value={gs.grade_scale_uuid}>
+              {gs.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+
       <div className="grid grid-cols-3 gap-3">
         <Field label={t('academic.min_credits', 'Minimum credits')}>
           <input type="number" min={0} step="0.5" className={inputCls} value={minCredits} onChange={(e) => setMinCredits(e.target.value)} />
@@ -371,24 +380,9 @@ function ProgramForm({
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={t('academic.capacity')}>
-          <input type="number" min={0} className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder={t('academic.unlimited')} />
-        </Field>
-        <Field label={t('academic.currency')}>
-          <input className={inputCls} value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!isPaid} />
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex items-center gap-2 text-sm text-[hsl(var(--dash-ink))]">
-          <input type="checkbox" checked={isPaid} onChange={(e) => setIsPaid(e.target.checked)} />
-          {t('academic.paid')}
-        </label>
-        <Field label={t('academic.price')}>
-          <input type="number" min={0} step="0.01" className={inputCls} value={price} onChange={(e) => setPrice(e.target.value)} disabled={!isPaid} />
-        </Field>
-      </div>
+      <Field label={t('academic.capacity')}>
+        <input type="number" min={0} className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder={t('academic.unlimited')} />
+      </Field>
 
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('academic.start_date')}>

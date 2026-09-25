@@ -1,7 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { GraduationCap, UserPlus, Wand2, Trash2 } from 'lucide-react'
+import { GraduationCap, UserPlus, Wand2, Trash2, FileText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -13,6 +13,7 @@ import { AcademicPageShell, AcademicHeader } from '@components/Dashboard/Pages/A
 import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
 import { OfferingsTable } from '@components/Dashboard/Pages/Academic/OfferingsTable'
+import { TranscriptView } from '@components/Dashboard/Pages/Academic/TranscriptView'
 import {
   DataTable,
   GhostButton,
@@ -63,6 +64,7 @@ function CohortDetail({
   const cohort_uuid = `cohort_${cohortuuid}`
   const [addOpen, setAddOpen] = useState(false)
   const [generateOpen, setGenerateOpen] = useState(false)
+  const [transcriptFor, setTranscriptFor] = useState<any>(null)
 
   const { data: program } = useQuery({
     queryKey: ['academic', 'program', program_uuid],
@@ -231,6 +233,9 @@ function CohortDetail({
                   <StatusPill status={s.status} />
                 </td>
                 <td className={`${tdCls} whitespace-nowrap text-right`}>
+                  <IconButton onClick={() => setTranscriptFor(s)} aria-label={t('academic.transcript', 'Transcript')}>
+                    <FileText className="h-4 w-4" />
+                  </IconButton>
                   {(MEMBERSHIP_NEXT[s.status] || []).length > 0 && (
                     <select
                       className={selectCls('py-1 text-xs')}
@@ -306,6 +311,13 @@ function CohortDetail({
             }}
           />
         }
+      />
+      <Modal
+        isDialogOpen={!!transcriptFor}
+        onOpenChange={(o: boolean) => !o && setTranscriptFor(null)}
+        minWidth="lg"
+        dialogTitle={t('academic.transcript', 'Transcript')}
+        dialogContent={transcriptFor && <TranscriptView membershipUuid={transcriptFor.membership_uuid} />}
       />
       <Modal
         isDialogOpen={generateOpen}

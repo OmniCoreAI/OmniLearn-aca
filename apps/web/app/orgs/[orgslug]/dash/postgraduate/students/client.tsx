@@ -1,7 +1,9 @@
 'use client'
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { GraduationCap, Search } from 'lucide-react'
+import { GraduationCap, Search, FileText } from 'lucide-react'
+import Modal from '@components/Objects/StyledElements/Modal/Modal'
+import { TranscriptView } from '@components/Dashboard/Pages/Academic/TranscriptView'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
@@ -9,6 +11,7 @@ import { getUriWithOrg } from '@services/config/config'
 import { AcademicPageShell, AcademicHeader } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import {
   DataTable,
+  IconButton,
   PostgradTabs,
   StatusPill,
   selectCls,
@@ -26,6 +29,7 @@ function StudentsDirectory({ orgslug }: { orgslug: string }) {
   const [program, setProgram] = useState('')
   const [status, setStatus] = useState('')
   const [query, setQuery] = useState('')
+  const [transcriptFor, setTranscriptFor] = useState<any>(null)
 
   const { data: programs = [] } = useQuery({
     queryKey: ['academic', 'programs', orgId],
@@ -97,6 +101,7 @@ function StudentsDirectory({ orgslug }: { orgslug: string }) {
             t('academic.current_courses', 'Current courses'),
             t('academic.admitted', 'Admitted'),
             t('academic.status'),
+            '',
           ]}
           empty={isLoading ? '…' : t('academic.no_students', 'No students yet. Add students from a cohort page.')}
         >
@@ -128,10 +133,22 @@ function StudentsDirectory({ orgslug }: { orgslug: string }) {
               <td className={tdCls}>
                 <StatusPill status={s.status} />
               </td>
+              <td className={`${tdCls} text-right`}>
+                <IconButton onClick={() => setTranscriptFor(s)} aria-label={t('academic.transcript', 'Transcript')}>
+                  <FileText className="h-4 w-4" />
+                </IconButton>
+              </td>
             </tr>
           ))}
         </DataTable>
       )}
+      <Modal
+        isDialogOpen={!!transcriptFor}
+        onOpenChange={(o: boolean) => !o && setTranscriptFor(null)}
+        minWidth="lg"
+        dialogTitle={t('academic.transcript', 'Transcript')}
+        dialogContent={transcriptFor && <TranscriptView membershipUuid={transcriptFor.membership_uuid} />}
+      />
     </AcademicPageShell>
   )
 }

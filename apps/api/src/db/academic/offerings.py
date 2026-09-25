@@ -88,6 +88,19 @@ class CourseOffering(CourseOfferingBase, table=True):
     creation_date: str = ""
     update_date: str = ""
     extra_metadata: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    # Grade workflow: open -> submitted (instructor) -> approved | returned (coordinator)
+    grade_status: str = Field(default="open")
+    grade_note: Optional[str] = None
+    grades_submitted_at: Optional[str] = None
+    grades_submitted_by_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
+    grades_approved_at: Optional[str] = None
+    grades_approved_by_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
 
 
 class CourseOfferingCreate(CourseOfferingBase):
@@ -131,6 +144,7 @@ class CourseOfferingRead(CourseOfferingBase):
     content_course_uuid: Optional[str] = None
     content_course_name: Optional[str] = None
     enrolled_count: int = 0
+    grade_status: str = "open"
     creation_date: str
     update_date: str
 
@@ -270,6 +284,12 @@ class Enrollment(SQLModel, table=True):
     registered_at: str = ""
     status_changed_at: str = ""
     enrollment_uuid: str = Field(default="", index=True)
+    # Official result, written when the offering's grades are approved.
+    final_score: Optional[float] = None
+    letter_grade: Optional[str] = None
+    grade_points: Optional[float] = None
+    result_passed: Optional[bool] = None
+    graded_at: Optional[str] = None
 
 
 class EnrollmentCreate(SQLModel):
@@ -289,3 +309,7 @@ class EnrollmentRead(SQLModel):
     student_number: Optional[str] = None
     offering_uuid: str
     offering_code: str
+    final_score: Optional[float] = None
+    letter_grade: Optional[str] = None
+    grade_points: Optional[float] = None
+    result_passed: Optional[bool] = None

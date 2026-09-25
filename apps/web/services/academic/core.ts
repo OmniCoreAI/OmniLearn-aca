@@ -171,3 +171,43 @@ export function displayName(u: any): string {
 /** LMS content courses of the org (used as catalog templates / offering content). */
 export const getOrgLmsCourses = (orgslug: string, token: string) =>
   call('GET', `courses/org_slug/${orgslug}/page/1/limit/500?include_unpublished=true`, token)
+
+// ----------------------------- Grading (Phase 2) -----------------------------
+
+export const getGradeScales = (org_id: number, token: string) =>
+  call('GET', `grade-scales${qs({ org_id })}`, token)
+export const createGradeScale = (org_id: number, data: any, token: string) =>
+  call('POST', `grade-scales${qs({ org_id })}`, token, data)
+export const updateGradeScale = (uuid: string, data: any, token: string) =>
+  call('PUT', `grade-scales/${uuid}`, token, data)
+export const deleteGradeScale = (uuid: string, token: string) => call('DELETE', `grade-scales/${uuid}`, token)
+
+export const createComponent = (offering_uuid: string, data: any, token: string) =>
+  call('POST', `offerings/${offering_uuid}/components`, token, data)
+export const updateComponent = (offering_uuid: string, component_uuid: string, data: any, token: string) =>
+  call('PUT', `offerings/${offering_uuid}/components/${component_uuid}`, token, data)
+export const deleteComponent = (offering_uuid: string, component_uuid: string, token: string) =>
+  call('DELETE', `offerings/${offering_uuid}/components/${component_uuid}`, token)
+
+export const getGradebook = (offering_uuid: string, token: string) =>
+  call('GET', `offerings/${offering_uuid}/gradebook`, token)
+export const syncGradebook = (offering_uuid: string, token: string) =>
+  call('POST', `offerings/${offering_uuid}/gradebook/sync`, token)
+export const setScores = (
+  offering_uuid: string,
+  updates: { enrollment_uuid: string; component_uuid: string; score: number | null; note?: string }[],
+  token: string
+) => call('PUT', `offerings/${offering_uuid}/gradebook/scores`, token, updates)
+export const gradeAction = (
+  offering_uuid: string,
+  action: 'submit' | 'approve' | 'return',
+  note: string | null,
+  token: string
+) => call('POST', `offerings/${offering_uuid}/grades/${action}`, token, { note })
+
+export const getStudentTranscript = (membership_uuid: string, token: string) =>
+  call('GET', `academic-students/${membership_uuid}/transcript`, token)
+
+/** Assignments (incl. quizzes/exams) of an LMS course, used as gradebook sources. */
+export const getCourseAssignments = (course_uuid: string, token: string) =>
+  call('GET', `assignments/course/${course_uuid}`, token)

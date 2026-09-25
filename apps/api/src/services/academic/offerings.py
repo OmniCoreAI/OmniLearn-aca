@@ -702,6 +702,10 @@ async def _enrollment_read(db_session: AsyncSession, enrollment: Enrollment, off
         student_number=membership.student_number if membership else None,
         offering_uuid=offering.offering_uuid,
         offering_code=offering.code,
+        final_score=enrollment.final_score,
+        letter_grade=enrollment.letter_grade,
+        grade_points=enrollment.grade_points,
+        result_passed=enrollment.result_passed,
     )
 
 
@@ -767,6 +771,16 @@ async def update_enrollment(
     )
     if enrollment.offering_id != offering.id:
         raise bad_request("Enrollment does not belong to this offering")
+    if status in (EnrollmentStatus.COMPLETED, EnrollmentStatus.FAILED):
+        from src.db.academic.grading import AssessmentComponent
+
+        has_scheme = (
+            await db_session.execute(
+                select(func.count()).select_from(AssessmentComponent).where(AssessmentComponent.offering_id == offering.id)
+            )
+        ).scalar() or 0
+        if has_scheme:
+            raise conflict("This offering has an assessment scheme; results come from gradebook approval")
     if status == EnrollmentStatus.REGISTERED and offering.capacity is not None:
         if await _enrolled_count(db_session, offering.id) >= offering.capacity:  # type: ignore[arg-type]
             raise conflict("This offering is at full capacity")

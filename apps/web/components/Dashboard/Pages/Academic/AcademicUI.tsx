@@ -28,11 +28,12 @@ export function PostgradTabs({ orgslug }: { orgslug: string }) {
     { href: `${base}/offerings`, label: t('academic.tab_offerings', 'Course Offerings') },
     { href: `${base}/students`, label: t('academic.tab_students', 'Students') },
     { href: `${base}/calendar`, label: t('academic.tab_calendar', 'Academic Calendar') },
+    { href: `${base}/settings`, label: t('academic.tab_settings', 'Settings') },
   ]
 
   function isProgramPath(p: string) {
     const rest = p.split(base)[1] || ''
-    return !['/courses', '/offerings', '/students', '/calendar'].some((s) => rest.startsWith(s))
+    return !['/courses', '/offerings', '/students', '/calendar', '/settings'].some((s) => rest.startsWith(s))
   }
 
   return (
@@ -80,6 +81,9 @@ const STATUS_TONES: Record<string, string> = {
   closed: 'bg-slate-200 text-slate-700',
   archived: 'bg-slate-200 text-slate-700',
   required: 'bg-sky-100 text-sky-800',
+  submitted: 'bg-sky-100 text-sky-800',
+  approved: 'bg-emerald-100 text-emerald-800',
+  returned: 'bg-orange-100 text-orange-800',
   elective: 'bg-violet-100 text-violet-800',
 }
 

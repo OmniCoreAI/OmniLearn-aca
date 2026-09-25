@@ -493,3 +493,160 @@ async def api_list_org_students(
 @router.get("/academic-records/me", response_model=students_svc.MyAcademicRecord, tags=["academic-students"])
 async def api_my_academic_record(org_id: int, db_session: AsyncSession = Session, current_user: PublicUser = User):
     return await students_svc.get_my_record(org_id, current_user, db_session)
+
+
+# ---------------------------------------------------------------------------
+# Assessment & results (Phase 2)
+# ---------------------------------------------------------------------------
+
+from src.db.academic.grading import (  # noqa: E402
+    AssessmentComponentCreate,
+    AssessmentComponentRead,
+    AssessmentComponentUpdate,
+    GradebookRead,
+    GradeDecision,
+    GradeScaleCreate,
+    GradeScaleRead,
+    GradeScaleUpdate,
+    ScoreUpdate,
+    Transcript,
+)
+from src.services.academic import grading as grading_svc  # noqa: E402
+
+
+@router.get("/grade-scales", response_model=List[GradeScaleRead], tags=["academic-grading"])
+async def api_list_grade_scales(org_id: int, db_session: AsyncSession = Session, current_user: PublicUser = User):
+    return await grading_svc.list_grade_scales(org_id, current_user, db_session)
+
+
+@router.post("/grade-scales", response_model=GradeScaleRead, tags=["academic-grading"])
+async def api_create_grade_scale(
+    org_id: int, data: GradeScaleCreate, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await grading_svc.create_grade_scale(org_id, data, current_user, db_session)
+
+
+@router.put("/grade-scales/{grade_scale_uuid}", response_model=GradeScaleRead, tags=["academic-grading"])
+async def api_update_grade_scale(
+    grade_scale_uuid: str, data: GradeScaleUpdate, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await grading_svc.update_grade_scale(grade_scale_uuid, data, current_user, db_session)
+
+
+@router.delete("/grade-scales/{grade_scale_uuid}", tags=["academic-grading"])
+async def api_delete_grade_scale(
+    grade_scale_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+) -> str:
+    return await grading_svc.delete_grade_scale(grade_scale_uuid, current_user, db_session)
+
+
+@router.get(
+    "/offerings/{offering_uuid}/components", response_model=List[AssessmentComponentRead], tags=["academic-grading"]
+)
+async def api_list_components(
+    request: Request, offering_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await grading_svc.list_components(request, offering_uuid, current_user, db_session)
+
+
+@router.post("/offerings/{offering_uuid}/components", response_model=AssessmentComponentRead, tags=["academic-grading"])
+async def api_create_component(
+    request: Request,
+    offering_uuid: str,
+    data: AssessmentComponentCreate,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await grading_svc.create_component(request, offering_uuid, data, current_user, db_session)
+
+
+@router.put(
+    "/offerings/{offering_uuid}/components/{component_uuid}",
+    response_model=AssessmentComponentRead,
+    tags=["academic-grading"],
+)
+async def api_update_component(
+    request: Request,
+    offering_uuid: str,
+    component_uuid: str,
+    data: AssessmentComponentUpdate,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await grading_svc.update_component(request, offering_uuid, component_uuid, data, current_user, db_session)
+
+
+@router.delete("/offerings/{offering_uuid}/components/{component_uuid}", tags=["academic-grading"])
+async def api_delete_component(
+    request: Request,
+    offering_uuid: str,
+    component_uuid: str,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+) -> str:
+    return await grading_svc.delete_component(request, offering_uuid, component_uuid, current_user, db_session)
+
+
+@router.get("/offerings/{offering_uuid}/gradebook", response_model=GradebookRead, tags=["academic-grading"])
+async def api_get_gradebook(
+    request: Request, offering_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await grading_svc.get_gradebook(request, offering_uuid, current_user, db_session)
+
+
+@router.post("/offerings/{offering_uuid}/gradebook/sync", response_model=GradebookRead, tags=["academic-grading"])
+async def api_sync_gradebook(
+    request: Request, offering_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await grading_svc.sync_scores(request, offering_uuid, current_user, db_session)
+
+
+@router.put("/offerings/{offering_uuid}/gradebook/scores", response_model=GradebookRead, tags=["academic-grading"])
+async def api_set_scores(
+    request: Request,
+    offering_uuid: str,
+    updates: List[ScoreUpdate],
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await grading_svc.set_scores(request, offering_uuid, updates, current_user, db_session)
+
+
+@router.post("/offerings/{offering_uuid}/grades/submit", response_model=GradebookRead, tags=["academic-grading"])
+async def api_submit_grades(
+    request: Request,
+    offering_uuid: str,
+    data: GradeDecision,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await grading_svc.submit_grades(request, offering_uuid, data.note, current_user, db_session)
+
+
+@router.post("/offerings/{offering_uuid}/grades/approve", response_model=GradebookRead, tags=["academic-grading"])
+async def api_approve_grades(
+    request: Request,
+    offering_uuid: str,
+    data: GradeDecision,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await grading_svc.approve_grades(request, offering_uuid, data.note, current_user, db_session)
+
+
+@router.post("/offerings/{offering_uuid}/grades/return", response_model=GradebookRead, tags=["academic-grading"])
+async def api_return_grades(
+    request: Request,
+    offering_uuid: str,
+    data: GradeDecision,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await grading_svc.return_grades(request, offering_uuid, data.note, current_user, db_session)
+
+
+@router.get("/academic-students/{membership_uuid}/transcript", response_model=Transcript, tags=["academic-grading"])
+async def api_student_transcript(
+    request: Request, membership_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await grading_svc.get_student_transcript(request, membership_uuid, current_user, db_session)
