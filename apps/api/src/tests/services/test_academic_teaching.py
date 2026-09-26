@@ -27,6 +27,8 @@ from src.db.academic.cohorts import CohortCreate, CohortUpdate
 from src.db.academic.offerings import CourseOfferingCreate
 from src.db.academic.programs import ProgramCreate, ProgramLevel
 from src.db.instructors.instructors import Instructor, InstructorStatus
+from src.db.user_organizations import UserOrganization
+from src.db.users import PublicUser, User
 from src.security.rbac.nav_items import DEFAULT_VISIBILITY_BY_ROLE_UUID, ROLE_UUID_INSTRUCTOR
 from src.services.academic import admissions as admissions_svc
 from src.services.academic import calendar as calendar_svc
@@ -115,6 +117,23 @@ class TestMyTeaching:
         assert not hasattr(staff[0], "hourly_rate")
 
 
+@pytest.fixture
+async def applicant(db, org, user_role):
+    """An ordinary org member applying to the program."""
+    now = str(datetime.now())
+    user = User(
+        id=30, username="applicant", first_name="App", last_name="Licant", email="applicant@test.com",
+        password="hashed_password", user_uuid="user_applicant", creation_date=now, update_date=now,
+    )
+    db.add(user)
+    db.add(UserOrganization(user_id=30, org_id=org.id, role_id=user_role.id, creation_date=now, update_date=now))
+    await db.commit()
+    return PublicUser(
+        id=30, username="applicant", first_name="App", last_name="Licant", email="applicant@test.com",
+        user_uuid="user_applicant",
+    )
+
+
 async def _application_in_review(db, org, admin_user, applicant, request):
     program = await programs_svc.create_program(
         request, org.id, ProgramCreate(name="MSc AI", code="MSC-AI", program_level=ProgramLevel.MASTERS), admin_user, db
@@ -134,10 +153,11 @@ async def _application_in_review(db, org, admin_user, applicant, request):
 class TestInterviewPanels:
     @pytest.mark.asyncio
     async def test_panel_member_lists_and_evaluates_their_interview(
-        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+        self, db, org, admin_user, regular_user, applicant, mock_request, bypass_program_rbac
     ):
-        # The admin applies (as a staff member taking a second degree); the lecturer sits on the panel.
-        app = await _application_in_review(db, org, admin_user, admin_user, mock_request)
+        # A learner applies and the lecturer sits on the panel. (The applicant is
+        # not staff: applicants never see panel scores/recommendations.)
+        app = await _application_in_review(db, org, admin_user, applicant, mock_request)
         app = await admissions_svc.schedule_interview(
             mock_request, app.application_uuid,
             InterviewCreate(scheduled_at="2026-10-01T10:00", location="Room 4", panel_uuids=[regular_user.user_uuid]),
@@ -157,6 +177,9 @@ class TestInterviewPanels:
         full = await admissions_svc.get_application(mock_request, app.application_uuid, admin_user, db)
         assert full.interviews[0].recommendation == InterviewRecommendation.ACCEPT
         assert full.events[-1].action == "interview_evaluated"
+        # ...while the applicant's own view hides the panel's evaluation.
+        own = await admissions_svc.get_application(mock_request, app.application_uuid, applicant, db)
+        assert own.interviews[0].recommendation is None and own.interviews[0].score is None
 
     @pytest.mark.asyncio
     async def test_only_panel_members_evaluate_and_only_while_in_review(
