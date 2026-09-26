@@ -318,3 +318,10 @@ export const DOCUMENT_TYPES = [
   'photo',
   'other',
 ]
+
+// ----------------------------- Student / applicant portal -----------------------------
+
+export const getOpenIntakes = (org_id: number, token: string) =>
+  call('GET', `admissions/intakes${qs({ org_id })}`, token)
+export const getMyApplications = (org_id: number, token: string) =>
+  call('GET', `admissions/my-applications${qs({ org_id })}`, token)

@@ -1,6 +1,7 @@
 import { useOrg } from '@components/Contexts/OrgContext'
+import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
-import { Books, FolderSimple, Cube, ShoppingBag } from '@phosphor-icons/react'
+import { Books, FolderSimple, Cube, ShoppingBag, GraduationCap } from '@phosphor-icons/react'
 import { menuIcon } from '@components/Objects/Menus/menuIcons'
 import Link from 'next/link'
 import React from 'react'
@@ -14,14 +15,18 @@ const BUILTIN: Record<string, Builtin> = {
   library: { feature: 'folders', link: '/library', labelKey: 'library.library', Icon: FolderSimple },
   playgrounds: { feature: 'playgrounds', link: '/playgrounds', labelKey: 'common.playgrounds', Icon: Cube },
   store: { feature: 'payments', link: '/store', labelKey: 'common.store', Icon: ShoppingBag },
+  // Postgraduate student/applicant portal; shown to signed-in users only.
+  academics: { feature: '', link: '/academics', labelKey: 'academic.my_academics', Icon: GraduationCap },
 }
 
 // Default order when an org has no custom menu config.
-const DEFAULT_ORDER = ['courses', 'library', 'playgrounds', 'store']
+const DEFAULT_ORDER = ['courses', 'library', 'playgrounds', 'store', 'academics']
 
 function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
   const { t } = useTranslation()
   const org = useOrg() as any
+  const session = useLHSession() as any
+  const signedIn = session?.status === 'authenticated' || !!session?.data?.tokens?.access_token
   const colors = getMenuColorClasses(props.primaryColor || '')
 
   const rf = org?.config?.config?.resolved_features
@@ -52,7 +57,7 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
       const meta = BUILTIN[item.type]
       if (!meta) return null
       if (!item.enabled) return null
-      if (!isEnabled(meta.feature)) return null // plan/feature gating
+      if (meta.feature ? !isEnabled(meta.feature) : !signedIn) return null // plan/feature (or sign-in) gating
       return {
         key: item.type,
         label: item.label || t(meta.labelKey),

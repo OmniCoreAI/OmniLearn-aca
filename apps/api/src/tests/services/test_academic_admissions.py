@@ -303,3 +303,24 @@ class TestAccessAndPrivacy:
         with pytest.raises(HTTPException) as exc:
             await _check_content_access("orgs/org_test/admissions/application_1/x_transcript.pdf", admin_user, db)
         assert exc.value.status_code == 403
+
+
+class TestApplicantView:
+    @pytest.mark.asyncio
+    async def test_applicant_does_not_see_panel_notes(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
+        _, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
+        app = await _apply(db, cohort, regular_user, mock_request)
+        await admissions_svc.start_review(mock_request, app.application_uuid, admin_user, db)
+        app = await admissions_svc.schedule_interview(
+            mock_request, app.application_uuid, InterviewCreate(panel_uuids=[admin_user.user_uuid]), admin_user, db
+        )
+        await admissions_svc.update_interview(
+            mock_request, app.application_uuid, app.interviews[0].interview_uuid,
+            InterviewUpdate(status="completed", recommendation="reject", score=30, notes="Weak research fit"), admin_user, db,
+        )
+        staff = await admissions_svc.get_application(mock_request, app.application_uuid, admin_user, db)
+        assert staff.interviews[0].notes == "Weak research fit"
+        own = await admissions_svc.get_application(mock_request, app.application_uuid, regular_user, db)
+        assert own.interviews[0].notes is None and own.interviews[0].score is None and own.interviews[0].panel == []
+        assert {e.action for e in own.events} <= admissions_svc.APPLICANT_EVENTS
+        assert all(e.actor is None for e in own.events)

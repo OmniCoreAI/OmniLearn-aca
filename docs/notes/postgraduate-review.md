@@ -234,8 +234,12 @@ Still open from the original Phase 2 list: removal of the legacy `semester*` tab
 - **UI**: Admissions tab (list with eligibility, filters, staff-created applications), application page
   (background, requirement checklist, documents, tests, interviews, decision, enroll, audit trail), and program
   page "Admission requirements" with entrance tests; cohort form admissions switch.
-- API for an applicant portal is ready (`/admissions/intakes`, `/admissions/my-applications`, create/submit/
-  upload/withdraw own application) — the applicant-facing screens are not built yet.
+- **Student & applicant portal** (learner side, top menu "My academics", signed-in users only):
+  `/academics` (programs with student number and status, current courses linking to their content course,
+  results & transcript, own applications) and `/admissions` (open intakes with requirements, apply, continue),
+  `/admissions/{id}` (status steps, background, requirement checklist, private document upload, tests and
+  interviews schedule, submit / withdraw). Applicants never see panel notes, interview scores or
+  recommendations, staff identities, or internal audit entries.
 - Migration `k9f0g1h2i3j4_academic_admissions.py`; tests `tests/services/test_academic_admissions.py`.
 
 ---

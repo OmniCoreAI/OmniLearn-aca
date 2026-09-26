@@ -655,8 +655,34 @@ async def get_application(
     request: Request, application_uuid: str, current_user: Principal, db_session: AsyncSession
 ) -> ApplicationRead:
     application = await _get(db_session, application_uuid)
-    await _require_applicant_or_staff(request, db_session, current_user, application, write=False)
-    return await _read(db_session, application)
+    staff = await _require_applicant_or_staff(request, db_session, current_user, application, write=False)
+    read = await _read(db_session, application)
+    return read if staff else _applicant_view(read)
+
+
+async def _read_for(db_session: AsyncSession, application: AdmissionApplication, staff: bool) -> ApplicationRead:
+    read = await _read(db_session, application)
+    return read if staff else _applicant_view(read)
+
+
+APPLICANT_EVENTS = {"created", "submitted", "review_started", "decision", "decision_override", "enrolled", "withdrawn"}
+
+
+def _applicant_view(read: ApplicationRead) -> ApplicationRead:
+    """What the applicant may see: no panel notes/scores/recommendations,
+    no staff identities, and only the milestones of the audit trail."""
+    for interview in read.interviews:
+        interview.notes = None
+        interview.score = None
+        interview.recommendation = None
+        interview.panel = []
+    read.events = [
+        e.model_copy(update={"actor": None, "note": None if e.action == "decision_override" else e.note,
+                             "action": "decision" if e.action == "decision_override" else e.action})
+        for e in read.events
+        if e.action in APPLICANT_EVENTS
+    ]
+    return read
 
 
 async def list_applications(
@@ -862,14 +888,14 @@ async def update_application(
         await _log(db_session, application, current_user, "profile_updated", note="Updated by staff")
     await db_session.commit()
     await db_session.refresh(application)
-    return await _read(db_session, application)
+    return await _read_for(db_session, application, staff)
 
 
 async def submit_application(
     request: Request, application_uuid: str, current_user: Principal, db_session: AsyncSession
 ) -> ApplicationRead:
     application = await _get(db_session, application_uuid)
-    await _require_applicant_or_staff(request, db_session, current_user, application, write=True)
+    staff = await _require_applicant_or_staff(request, db_session, current_user, application, write=True)
     if application.status != ApplicationStatus.DRAFT:
         raise conflict("Only draft applications can be submitted")
     profile = ApplicantProfile(**(application.profile or {}))
@@ -879,7 +905,7 @@ async def submit_application(
     await _set_status(db_session, application, current_user, ApplicationStatus.SUBMITTED, action="submitted")
     await db_session.commit()
     await db_session.refresh(application)
-    return await _read(db_session, application)
+    return await _read_for(db_session, application, staff)
 
 
 async def start_review(
@@ -1023,13 +1049,13 @@ async def withdraw_application(
     request: Request, application_uuid: str, note: Optional[str], current_user: Principal, db_session: AsyncSession
 ) -> ApplicationRead:
     application = await _get(db_session, application_uuid)
-    await _require_applicant_or_staff(request, db_session, current_user, application, write=True)
+    staff = await _require_applicant_or_staff(request, db_session, current_user, application, write=True)
     if application.status not in OPEN_STATES:
         raise conflict("This application is already closed")
     await _set_status(db_session, application, current_user, ApplicationStatus.WITHDRAWN, note=note, action="withdrawn")
     await db_session.commit()
     await db_session.refresh(application)
-    return await _read(db_session, application)
+    return await _read_for(db_session, application, staff)
 
 
 # ---------------------------------------------------------------------------
@@ -1047,7 +1073,7 @@ async def upload_document(
     from src.services.utils.upload_content import upload_file
 
     application = await _get(db_session, application_uuid)
-    await _require_applicant_or_staff(request, db_session, current_user, application, write=True)
+    staff = await _require_applicant_or_staff(request, db_session, current_user, application, write=True)
     if application.status not in OPEN_STATES - {ApplicationStatus.ACCEPTED}:
         raise conflict("Documents can no longer be added to this application")
     if document_type not in DOCUMENT_TYPES:
@@ -1077,7 +1103,7 @@ async def upload_document(
     db_session.add(document)
     await _log(db_session, application, current_user, "document_uploaded", note=f"{document_type}: {document.original_name}")
     await db_session.commit()
-    return await _read(db_session, application)
+    return await _read_for(db_session, application, staff)
 
 
 async def _get_document(db_session: AsyncSession, application: AdmissionApplication, document_uuid: str) -> ApplicationDocument:
