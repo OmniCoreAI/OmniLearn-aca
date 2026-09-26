@@ -152,11 +152,28 @@ async def get_home_overview(
             )
         ).all()
     )
+    member_month = func.substr(UserOrganization.creation_date, 1, 7)
+    members_by_month = dict(
+        (
+            await db_session.execute(
+                select(member_month, func.count())
+                .where(UserOrganization.org_id == org_id, UserOrganization.creation_date >= month_keys[0])
+                .group_by(member_month)
+            )
+        ).all()
+    )
+    courses_by_month: dict[str, int] = {}
+    for row in course_rows:
+        key = (row.creation_date or "")[:7]
+        courses_by_month[key] = courses_by_month.get(key, 0) + 1
+    # Per-month series behind the stat-card sparklines as well as the chart.
     enrollment_trend = [
         {
             "month": key,
             "enrollments": int(enroll_by_month.get(key, 0)),
             "completions": int(complete_by_month.get(key, 0)),
+            "members": int(members_by_month.get(key, 0)),
+            "courses": courses_by_month.get(key, 0),
         }
         for key in month_keys
     ]

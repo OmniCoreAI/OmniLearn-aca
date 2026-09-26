@@ -105,11 +105,15 @@ async def test_home_overview_aggregates_org_data(db, org, other_org, admin_user,
     assert totals["students"] == 2
     assert totals["enrollments_30d"] == 2
 
-    assert data["enrollment_trend"] == [
+    trend = data["enrollment_trend"]
+    assert [{k: r[k] for k in ("month", "enrollments", "completions")} for r in trend] == [
         {"month": "2026-07", "enrollments": 0, "completions": 0},
         {"month": "2026-08", "enrollments": 1, "completions": 0},
         {"month": "2026-09", "enrollments": 2, "completions": 1},
     ]
+    # Sparkline series ride along: the draft course was created 2026-09-15.
+    assert trend[2]["courses"] >= 1
+    assert all("members" in r for r in trend)
     assert data["activity_heatmap"] == [{"day": 2, "hour": 14, "count": 1}]
 
     top = data["top_courses"]
