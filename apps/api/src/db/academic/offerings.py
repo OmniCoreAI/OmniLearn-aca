@@ -145,8 +145,21 @@ class CourseOfferingRead(CourseOfferingBase):
     content_course_name: Optional[str] = None
     enrolled_count: int = 0
     grade_status: str = "open"
+    grade_note: Optional[str] = None
     creation_date: str
     update_date: str
+    # What the caller may do (set on single reads and on "my offerings"):
+    # manage = program/org staff; teaches = the offering's instructor or TA.
+    viewer_can_manage: bool = False
+    viewer_teaches: bool = False
+
+
+class TeachingStaffRead(SQLModel):
+    """An active lecturer from the instructor registry (no pay data)."""
+
+    user: UserReadAuthor
+    department: Optional[str] = None
+    category_name: Optional[str] = None
 
 
 class OfferingSessionBase(SQLModel):

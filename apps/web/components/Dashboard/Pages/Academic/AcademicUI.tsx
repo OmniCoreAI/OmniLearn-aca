@@ -34,7 +34,9 @@ export function PostgradTabs({ orgslug }: { orgslug: string }) {
 
   function isProgramPath(p: string) {
     const rest = p.split(base)[1] || ''
-    return !['/admissions', '/courses', '/offerings', '/students', '/calendar', '/settings'].some((s) => rest.startsWith(s))
+    return !['/admissions', '/courses', '/offerings', '/students', '/calendar', '/settings', '/teaching'].some((s) =>
+      rest.startsWith(s)
+    )
   }
 
   return (

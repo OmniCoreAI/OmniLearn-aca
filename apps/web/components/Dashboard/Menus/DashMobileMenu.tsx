@@ -13,6 +13,7 @@ import {
   Gear,
   SignOut,
   ChartBar,
+  Chalkboard,
   ChalkboardSimple,
   Cube,
   FolderSimple,
@@ -109,7 +110,7 @@ function DashMobileMenu() {
             />
           </Link>
           {/* Progressive reveal — more icons as viewport widens */}
-          {isItemVisible('postgraduate') && <PillLink href="/dash/postgraduate" icon={<GraduationCap size={18} weight="fill" />} active={isActive('/dash/postgraduate')} className="hidden min-[340px]:flex" />}
+          {isItemVisible('postgraduate') && <PillLink href="/dash/postgraduate" icon={<GraduationCap size={18} weight="fill" />} active={isActive('/dash/postgraduate') && !isActive('/dash/postgraduate/teaching')} className="hidden min-[340px]:flex" />}
           {isItemVisible('training-programs') && <PillLink href="/dash/training-programs" icon={<Certificate size={18} weight="fill" />} active={isActive('/dash/training-programs')} className="hidden min-[360px]:flex" />}
           {isItemVisible('assignments') && <PillLink href="/dash/assignments" icon={<Files size={18} weight="fill" />} active={isActive('/dash/assignments')} className="hidden min-[390px]:flex" />}
           {isItemVisible('users') && <PillLink href="/dash/users/settings/users" icon={<Users size={18} weight="fill" />} active={isActive('/dash/users')} className="hidden min-[430px]:flex" />}
@@ -205,12 +206,13 @@ function DashMobileMenu() {
               {/* Nav items */}
               <div className="py-2 px-2 max-h-[52vh] overflow-y-auto overscroll-contain space-y-px">
                 <PanelItem href="/dash" icon={<House size={15} weight="fill" />} label={t('common.home')} active={isActive('/dash')} onClick={close} />
-                {isItemVisible('postgraduate') && <PanelItem href="/dash/postgraduate" icon={<GraduationCap size={15} weight="fill" />} label={t('academic.postgraduate_studies', 'Postgraduate Studies')} active={isActive('/dash/postgraduate')} onClick={close} />}
+                {isItemVisible('postgraduate') && <PanelItem href="/dash/postgraduate" icon={<GraduationCap size={15} weight="fill" />} label={t('academic.postgraduate_studies', 'Postgraduate Studies')} active={isActive('/dash/postgraduate') && !isActive('/dash/postgraduate/teaching')} onClick={close} />}
                 {isItemVisible('training-programs') && <PanelItem href="/dash/training-programs" icon={<Certificate size={15} weight="fill" />} label={t('academic.training_programs', 'Training Programs')} active={isActive('/dash/training-programs')} onClick={close} />}
                 {isItemVisible('instructors') && <PanelItem href="/dash/instructors" icon={<ChalkboardTeacher size={15} weight="fill" />} label={t('instructors.title', 'Instructors')} active={isActive('/dash/instructors')} onClick={close} />}
                 {isItemVisible('finance') && <PanelItem href="/dash/finance" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.finance', 'Finance')} active={isActive('/dash/finance')} onClick={close} />}
                 {isItemVisible('cms-news') && <PanelItem href="/dash/cms/news" icon={<Newspaper size={15} weight="fill" />} label={t('cms.news.title', 'News')} active={isActive('/dash/cms/news')} onClick={close} />}
                 {isEnabled('folders') && isItemVisible('library') && <PanelItem href="/dash/library" icon={<FolderSimple size={15} weight="fill" />} label={t('library.library')} active={isActive('/dash/library')} onClick={close} />}
+                {isItemVisible('postgraduate-teaching') && <PanelItem href="/dash/postgraduate/teaching" icon={<Chalkboard size={15} weight="fill" />} label={t('academic.my_teaching', 'My Teaching')} active={isActive('/dash/postgraduate/teaching')} onClick={close} />}
                 {isItemVisible('assignments') && <PanelItem href="/dash/assignments" icon={<Files size={15} weight="fill" />} label={t('common.assignments')} active={isActive('/dash/assignments')} onClick={close} />}
                 {isItemVisible('users') && <PanelItem href="/dash/users/settings/users" icon={<Users size={15} weight="fill" />} label={t('common.users')} active={isActive('/dash/users')} onClick={close} />}
                 {isEnabled('boards') && isItemVisible('boards') && <PanelItem href="/dash/boards" icon={<ChalkboardSimple size={15} weight="fill" />} label="Boards" active={isActive('/dash/boards')} onClick={close} />}

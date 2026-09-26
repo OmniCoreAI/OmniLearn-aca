@@ -3,6 +3,7 @@ import { useOrg } from '@components/Contexts/OrgContext'
 import { signOut } from '@components/Contexts/AuthContext'
 import {
   House,
+  Chalkboard,
   Files,
   Users,
   UsersThree,
@@ -164,6 +165,7 @@ function DashLeftMenu() {
   const showInstructors = isItemVisible('instructors')
   const showFinance = isItemVisible('finance')
   const showCmsNews = isItemVisible('cms-news')
+  const showMyTeaching = isItemVisible('postgraduate-teaching')
   const showAssignments = isItemVisible('assignments')
   const showLibrary = isEnabled('folders') && isItemVisible('library')
   const showBoards = isEnabled('boards') && isItemVisible('boards')
@@ -174,7 +176,9 @@ function DashLeftMenu() {
   const showAnalytics = isItemVisible('analytics')
 
   const showAcademicSection = showPostgraduate || showTrainingPrograms || showInstructors || showFinance || showCmsNews
-  const showTeachingSection = showAssignments || showLibrary || showBoards || showPlaygrounds
+  const showTeachingSection = showMyTeaching || showAssignments || showLibrary || showBoards || showPlaygrounds
+  // "My Teaching" lives under /dash/postgraduate but is its own sidebar entry.
+  const inMyTeaching = isActivePath('/dash/postgraduate/teaching')
   const showManageSection = showUsers || showPayments || showOrganization || showAnalytics
   // Feature-disabled-but-otherwise-visible items shown in the "Other" menu —
   // still requires role visibility for that item.
@@ -262,7 +266,7 @@ function DashLeftMenu() {
                 icon={<GraduationCap size={20} weight="fill" />}
                 label={t('academic.postgraduate_studies', 'Postgraduate Studies')}
                 isCollapsed={isCollapsed}
-                active={isActivePath('/dash/postgraduate')}
+                active={isActivePath('/dash/postgraduate') && !inMyTeaching}
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'postgraduate' })}
               />
               )}
@@ -311,6 +315,16 @@ function DashLeftMenu() {
 
             {showTeachingSection && (
             <NavSection label={t('dashboard.home.nav.teaching', 'Teaching')} isCollapsed={isCollapsed}>
+            {showMyTeaching && (
+              <MenuLink
+                href="/dash/postgraduate/teaching"
+                icon={<Chalkboard size={20} weight="fill" />}
+                label={t('academic.my_teaching', 'My Teaching')}
+                isCollapsed={isCollapsed}
+                active={inMyTeaching}
+                onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'my_teaching' })}
+              />
+            )}
             {/* Assignments with hover menu */}
             {showAssignments && (
             <div onMouseEnter={fetchAssignments}>

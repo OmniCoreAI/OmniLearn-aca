@@ -10,6 +10,7 @@ import {
   enrollUserInCohort,
   unenrollUserFromCohort,
 } from '@services/academic/academic'
+import { getTeachingStaff } from '@services/academic/core'
 
 const inputCls =
   'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]'
@@ -100,6 +101,109 @@ export function CoordinatorPicker({
             >
               {displayName(it.user)}
               <span className="text-gray-400 text-xs"> · @{it.user.username}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Staff roles offered when the instructor registry is still empty (never trainees).
+const STAFF_ROLES = ['role_global_admin', 'role_global_maintainer', 'role_global_instructor']
+
+/**
+ * Pick the lecturer (or teaching assistant) of an offering from the active
+ * instructor registry, so teaching assignments line up with instructor
+ * records and work logs. While the registry is empty it falls back to
+ * organization staff (admins, coordinators, instructors), never trainees.
+ */
+export function LecturerPicker({
+  orgId,
+  access_token,
+  value,
+  selectedLabel,
+  onChange,
+}: {
+  orgId: number
+  access_token: string
+  value: string | null
+  selectedLabel?: string
+  onChange: (_uuid: string | null, _label?: string) => void
+}) {
+  const { t } = useTranslation()
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+  const { data: staff, isLoading } = useQuery({
+    queryKey: ['academic', 'teaching-staff', orgId],
+    queryFn: () => getTeachingStaff(orgId, access_token),
+    enabled: !!orgId && !!access_token,
+    staleTime: 60_000,
+  })
+
+  if (value) {
+    return (
+      <CoordinatorPicker orgId={orgId} access_token={access_token} value={value} selectedLabel={selectedLabel} onChange={onChange} />
+    )
+  }
+  if (isLoading) return <div className={`${inputCls} text-gray-400`}>…</div>
+
+  const list = (staff || []) as any[]
+  if (list.length === 0) {
+    return (
+      <div className="space-y-1">
+        <CoordinatorPicker
+          orgId={orgId}
+          access_token={access_token}
+          value={value}
+          selectedLabel={selectedLabel}
+          onChange={onChange}
+          onlyRoles={STAFF_ROLES}
+          placeholder={t('academic.search_staff', 'Search staff…')}
+        />
+        <p className="text-[11px] text-gray-500">
+          {t(
+            'academic.lecturer_registry_empty',
+            'No lecturers in the Instructors registry yet; showing organization staff. Add lecturers under Instructors to link teaching to their records.'
+          )}
+        </p>
+      </div>
+    )
+  }
+
+  const q = search.trim().toLowerCase()
+  const items = list.filter((s) =>
+    !q || `${displayName(s.user)} ${s.user.username} ${s.department || ''}`.toLowerCase().includes(q)
+  )
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg">
+        <Search className="w-4 h-4 text-gray-400" />
+        <input
+          className="flex-1 text-sm focus:outline-none"
+          placeholder={t('academic.search_lecturers', 'Search lecturers…')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onFocus={() => setOpen(true)}
+        />
+      </div>
+      {open && (
+        <div className="absolute z-30 mt-1 w-full max-h-56 overflow-auto bg-white rounded-lg nice-shadow border border-gray-100 py-1">
+          {items.length === 0 && <div className="px-3 py-2 text-xs text-gray-400">{t('academic.no_users_found')}</div>}
+          {items.map((s) => (
+            <button
+              key={s.user.user_uuid}
+              type="button"
+              onClick={() => {
+                onChange(s.user.user_uuid, displayName(s.user))
+                setOpen(false)
+              }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              {displayName(s.user)}
+              {(s.department || s.category_name) && (
+                <span className="text-gray-400 text-xs"> · {[s.department, s.category_name].filter(Boolean).join(' · ')}</span>
+              )}
             </button>
           ))}
         </div>

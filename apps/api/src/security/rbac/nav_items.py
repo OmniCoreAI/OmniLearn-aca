@@ -34,6 +34,8 @@ NAV_ITEMS: tuple[NavItem, ...] = (
     NavItem("instructors", "academic"),
     NavItem("finance", "academic"),
     NavItem("cms-news", "academic"),
+    # Lecturer workspace: offerings they teach, gradebooks, interview panels.
+    NavItem("postgraduate-teaching", "teaching"),
     NavItem("assignments", "teaching"),
     NavItem("library", "teaching"),
     NavItem("boards", "teaching"),
@@ -53,6 +55,7 @@ _ALL_ITEM_IDS = tuple(item.id for item in NAV_ITEMS)
 _INSTRUCTOR_DEFAULT_ITEM_IDS = (
     "home",
     "training-programs",
+    "postgraduate-teaching",
     "assignments",
     "library",
     "boards",

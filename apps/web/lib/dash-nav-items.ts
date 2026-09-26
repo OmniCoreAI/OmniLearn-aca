@@ -24,6 +24,7 @@ export const DASH_NAV_ITEMS: DashNavItemDef[] = [
   { id: 'instructors', section: 'academic', labelKey: 'instructors.title', fallbackLabel: 'Instructors', pathPrefixes: ['/dash/instructors'] },
   { id: 'finance', section: 'academic', labelKey: 'common.finance', fallbackLabel: 'Finance', pathPrefixes: ['/dash/finance'] },
   { id: 'cms-news', section: 'academic', labelKey: 'cms.news.title', fallbackLabel: 'News', pathPrefixes: ['/dash/cms/news'] },
+  { id: 'postgraduate-teaching', section: 'teaching', labelKey: 'academic.my_teaching', fallbackLabel: 'My Teaching', pathPrefixes: ['/dash/postgraduate/teaching'] },
   { id: 'assignments', section: 'teaching', labelKey: 'common.assignments', fallbackLabel: 'Assignments', pathPrefixes: ['/dash/assignments'] },
   { id: 'library', section: 'teaching', labelKey: 'library.library', fallbackLabel: 'Library', pathPrefixes: ['/dash/library'] },
   { id: 'boards', section: 'teaching', labelKey: 'boards.boards', fallbackLabel: 'Boards', pathPrefixes: ['/dash/boards'] },

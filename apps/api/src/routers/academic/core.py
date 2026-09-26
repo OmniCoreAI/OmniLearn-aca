@@ -43,6 +43,7 @@ from src.db.academic.offerings import (
     OfferingSessionCreate,
     OfferingSessionRead,
     OfferingSessionUpdate,
+    TeachingStaffRead,
 )
 from src.db.users import PublicUser
 from src.security.auth import get_current_user
@@ -288,6 +289,18 @@ async def api_list_offerings(
     )
 
 
+@router.get("/offerings/mine", response_model=List[CourseOfferingRead], tags=["academic-offerings"])
+async def api_my_offerings(org_id: int, db_session: AsyncSession = Session, current_user: PublicUser = User):
+    """Offerings the caller teaches as instructor or teaching assistant."""
+    return await offerings_svc.list_my_offerings(org_id, current_user, db_session)
+
+
+@router.get("/academic-staff", response_model=List[TeachingStaffRead], tags=["academic-offerings"])
+async def api_teaching_staff(org_id: int, db_session: AsyncSession = Session, current_user: PublicUser = User):
+    """Active lecturers from the instructor registry (for assigning offerings)."""
+    return await offerings_svc.list_teaching_staff(org_id, current_user, db_session)
+
+
 @router.post("/offerings", response_model=CourseOfferingRead, tags=["academic-offerings"])
 async def api_create_offering(
     request: Request,
@@ -300,8 +313,10 @@ async def api_create_offering(
 
 
 @router.get("/offerings/{offering_uuid}", response_model=CourseOfferingRead, tags=["academic-offerings"])
-async def api_get_offering(offering_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User):
-    return await offerings_svc.get_offering(offering_uuid, current_user, db_session)
+async def api_get_offering(
+    request: Request, offering_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await offerings_svc.get_offering(request, offering_uuid, current_user, db_session)
 
 
 @router.put("/offerings/{offering_uuid}", response_model=CourseOfferingRead, tags=["academic-offerings"])
@@ -674,7 +689,9 @@ from src.db.academic.admissions import (  # noqa: E402
     EntranceTestRead,
     EntranceTestUpdate,
     InterviewCreate,
+    InterviewEvaluation,
     InterviewUpdate,
+    PanelInterviewRead,
     TestAttemptCreate,
     TestAttemptResult,
 )
@@ -788,6 +805,24 @@ async def api_list_applications(
     return await admissions_svc.list_applications(
         request, org_id, current_user, db_session, program_uuid, cohort_uuid, status, q
     )
+
+
+@router.get("/admissions/my-interviews", response_model=List[PanelInterviewRead], tags=["academic-admissions"])
+async def api_my_interviews(org_id: int, db_session: AsyncSession = Session, current_user: PublicUser = User):
+    """Interviews the caller sits on the panel of."""
+    return await admissions_svc.list_my_interviews(org_id, current_user, db_session)
+
+
+@router.put(
+    "/admissions/interviews/{interview_uuid}/evaluation",
+    response_model=PanelInterviewRead,
+    tags=["academic-admissions"],
+)
+async def api_evaluate_interview(
+    interview_uuid: str, data: InterviewEvaluation, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    """A panel member records their evaluation (completes the interview)."""
+    return await admissions_svc.evaluate_interview(interview_uuid, data, current_user, db_session)
 
 
 @router.get("/admissions/my-applications", response_model=List[ApplicationSummary], tags=["academic-admissions"])

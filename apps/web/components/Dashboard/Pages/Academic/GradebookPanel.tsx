@@ -87,6 +87,8 @@ export function GradebookPanel({ offering }: { offering: any }) {
 
   const status: string = book.grade_status
   const locked = status === 'submitted' || status === 'approved'
+  // Approval is for the program office, never for the offering's own teaching staff.
+  const canApprove = !!offering.viewer_can_manage && !offering.viewer_teaches
   const weightOk = Math.abs(book.total_weight - 100) < 1e-6
 
   return (
@@ -121,7 +123,7 @@ export function GradebookPanel({ offering }: { offering: any }) {
                 </GhostButton>
               </>
             )}
-            {status === 'submitted' && (
+            {status === 'submitted' && canApprove && (
               <>
                 <GhostButton
                   onClick={() =>
@@ -145,11 +147,17 @@ export function GradebookPanel({ offering }: { offering: any }) {
           </>
         }
       >
-        {book.grade_note && (
-          <div className="mb-3 rounded-lg bg-[hsl(var(--dash-canvas))] px-3 py-2 text-xs text-[hsl(var(--dash-muted))]">
-            {t('academic.note', 'Note')}: {book.grade_note}
-          </div>
-        )}
+        {book.grade_note &&
+          (status === 'returned' ? (
+            <div className="mb-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
+              <span className="font-semibold">{t('academic.returned_for_changes', 'Returned for changes')}:</span>{' '}
+              {book.grade_note}
+            </div>
+          ) : (
+            <div className="mb-3 rounded-lg bg-[hsl(var(--dash-canvas))] px-3 py-2 text-xs text-[hsl(var(--dash-muted))]">
+              {t('academic.note', 'Note')}: {book.grade_note}
+            </div>
+          ))}
         {locked && (
           <div className="mb-3 flex items-center gap-2 text-xs text-[hsl(var(--dash-muted))]">
             <Lock className="h-3.5 w-3.5" />
@@ -179,7 +187,10 @@ export function GradebookPanel({ offering }: { offering: any }) {
               t('academic.linked_assignments', 'Linked assignments'),
               '',
             ]}
-            empty={t('academic.no_components', 'No assessment components yet.')}
+            empty={t(
+              'academic.no_components_hint',
+              'No assessment components yet. For a single final grade, add one component weighted 100%.'
+            )}
           >
             {book.components.map((c: any) => (
               <tr key={c.component_uuid}>

@@ -94,6 +94,10 @@ export const getOfferings = (
   filters: { term_uuid?: string; cohort_uuid?: string; academic_course_uuid?: string } = {}
 ) => call('GET', `offerings${qs({ org_id, ...filters })}`, token)
 export const getOffering = (uuid: string, token: string) => call('GET', `offerings/${uuid}`, token)
+/** Offerings the signed-in user teaches (instructor or teaching assistant). */
+export const getMyOfferings = (org_id: number, token: string) => call('GET', `offerings/mine${qs({ org_id })}`, token)
+/** Active lecturers from the instructor registry (names and departments only). */
+export const getTeachingStaff = (org_id: number, token: string) => call('GET', `academic-staff${qs({ org_id })}`, token)
 export const createOffering = (org_id: number, data: any, token: string) =>
   call('POST', `offerings${qs({ org_id })}`, token, data)
 export const updateOffering = (uuid: string, data: any, token: string) =>
@@ -272,6 +276,11 @@ export const scheduleInterview = (uuid: string, data: any, token: string) =>
   call('POST', `admissions/applications/${uuid}/interviews`, token, data)
 export const updateInterview = (uuid: string, interview_uuid: string, data: any, token: string) =>
   call('PUT', `admissions/applications/${uuid}/interviews/${interview_uuid}`, token, data)
+/** Interviews the signed-in user sits on the panel of. */
+export const getMyInterviews = (org_id: number, token: string) =>
+  call('GET', `admissions/my-interviews${qs({ org_id })}`, token)
+export const evaluateInterview = (interview_uuid: string, data: any, token: string) =>
+  call('PUT', `admissions/interviews/${interview_uuid}/evaluation`, token, data)
 
 export async function uploadApplicationDocument(uuid: string, document_type: string, file: File, token: string) {
   const form = new FormData()

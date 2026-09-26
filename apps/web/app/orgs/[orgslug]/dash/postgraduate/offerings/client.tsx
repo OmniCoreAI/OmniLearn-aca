@@ -9,7 +9,7 @@ import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import { getUriWithOrg } from '@services/config/config'
 import { AcademicPageShell, AcademicHeader, AcademicPrimaryButton } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
-import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
+import { LecturerPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
 import { PostgradTabs, selectCls, useAcademicContext } from '@components/Dashboard/Pages/Academic/AcademicUI'
 import { getPrograms, getProgramCohorts } from '@services/academic/academic'
 import { OfferingsTable } from '@components/Dashboard/Pages/Academic/OfferingsTable'
@@ -211,7 +211,7 @@ function OfferingCreateForm({ terms, defaultTerm, onDone }: { terms: any[]; defa
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('academic.instructor', 'Instructor')}>
-          <CoordinatorPicker
+          <LecturerPicker
             orgId={orgId}
             access_token={access_token}
             value={instructor}

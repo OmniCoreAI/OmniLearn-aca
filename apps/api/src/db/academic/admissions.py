@@ -372,6 +372,37 @@ class InterviewRead(SQLModel):
     notes: Optional[str] = None
 
 
+class InterviewEvaluation(SQLModel):
+    """A panel member's evaluation; completes the interview."""
+
+    score: Optional[float] = None
+    recommendation: InterviewRecommendation
+    notes: Optional[str] = None
+
+
+class PanelInterviewRead(SQLModel):
+    """An interview as seen by a panel member: the applicant's declared
+    background, never their documents or the committee's checks."""
+
+    interview_uuid: str
+    scheduled_at: Optional[str] = None
+    location: Optional[str] = None
+    status: InterviewStatus
+    score: Optional[float] = None
+    recommendation: Optional[InterviewRecommendation] = None
+    notes: Optional[str] = None
+    panel: List[UserReadAuthor] = []
+    application_uuid: str
+    application_number: str
+    application_status: str
+    applicant: UserReadAuthor
+    program_name: str
+    cohort_code: Optional[str] = None
+    cohort_name: str
+    profile: ApplicantProfile
+    can_evaluate: bool = False
+
+
 class ApplicationEvent(SQLModel, table=True):
     """Audit trail: every status change, check override and decision."""
 

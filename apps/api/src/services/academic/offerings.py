@@ -31,6 +31,7 @@ from src.db.academic.offerings import (
     OfferingSessionRead,
     OfferingSessionUpdate,
     OfferingStatus,
+    TeachingStaffRead,
 )
 from src.db.academic.programs import Program
 from src.db.courses.courses import Course
@@ -361,10 +362,77 @@ async def get_offering_or_404(db_session: AsyncSession, offering_uuid: str) -> C
     return await get_by_uuid_or_404(db_session, CourseOffering, CourseOffering.offering_uuid, offering_uuid, "Offering")
 
 
-async def get_offering(offering_uuid: str, current_user: Principal, db_session: AsyncSession) -> CourseOfferingRead:
+async def viewer_permissions(
+    request: Request, db_session: AsyncSession, current_user: Principal, offering: CourseOffering
+) -> tuple[bool, bool]:
+    """(can manage, teaches) for the caller, so screens only offer what works."""
+    user_id = resolve_acting_user_id(current_user)
+    teaches = bool(user_id) and user_id in (offering.instructor_id, offering.teaching_assistant_id)
+    try:
+        await require_offering_manager(request, db_session, current_user, offering)
+        manages = True
+    except HTTPException:
+        manages = False
+    return manages, teaches
+
+
+async def get_offering(
+    request: Request, offering_uuid: str, current_user: Principal, db_session: AsyncSession
+) -> CourseOfferingRead:
     offering = await get_offering_or_404(db_session, offering_uuid)
     await require_academic_member(current_user, offering.org_id, db_session)
-    return await to_read(db_session, offering)
+    read = await to_read(db_session, offering)
+    read.viewer_can_manage, read.viewer_teaches = await viewer_permissions(request, db_session, current_user, offering)
+    return read
+
+
+async def list_my_offerings(org_id: int, current_user: Principal, db_session: AsyncSession) -> List[CourseOfferingRead]:
+    """Offerings the caller teaches (instructor or teaching assistant)."""
+    await require_academic_member(current_user, org_id, db_session)
+    user_id = resolve_acting_user_id(current_user)
+    if not user_id:
+        return []
+    rows = (
+        await db_session.execute(
+            select(CourseOffering)
+            .where(
+                CourseOffering.org_id == org_id,
+                (CourseOffering.instructor_id == user_id) | (CourseOffering.teaching_assistant_id == user_id),
+            )
+            .order_by(CourseOffering.code)  # type: ignore
+        )
+    ).scalars().all()
+    result = []
+    for offering in rows:
+        read = await to_read(db_session, offering)
+        read.viewer_teaches = True
+        result.append(read)
+    return result
+
+
+async def list_teaching_staff(org_id: int, current_user: Principal, db_session: AsyncSession) -> List[TeachingStaffRead]:
+    """Active lecturers from the instructor registry, for assigning offerings.
+    Exposes names and departments only (rates stay with instructor management)."""
+    from src.db.instructors.instructors import Instructor, InstructorCategory, InstructorStatus
+
+    await require_academic_member(current_user, org_id, db_session)
+    rows = (
+        await db_session.execute(
+            select(Instructor, User, InstructorCategory)
+            .join(User, User.id == Instructor.user_id)  # type: ignore
+            .outerjoin(InstructorCategory, InstructorCategory.id == Instructor.category_id)  # type: ignore
+            .where(Instructor.org_id == org_id, Instructor.status == InstructorStatus.ACTIVE)
+        )
+    ).all()
+    staff = [
+        TeachingStaffRead(
+            user=UserReadAuthor.model_validate(user),
+            department=instructor.department,
+            category_name=category.name if category else None,
+        )
+        for instructor, user, category in rows
+    ]
+    return sorted(staff, key=lambda s: (f"{s.user.first_name or ''} {s.user.last_name or ''}".strip() or s.user.username).lower())
 
 
 # ---------------------------------------------------------------------------

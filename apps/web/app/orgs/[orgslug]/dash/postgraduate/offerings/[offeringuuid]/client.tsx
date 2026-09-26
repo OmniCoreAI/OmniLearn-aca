@@ -11,7 +11,7 @@ import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import { getUriWithOrg } from '@services/config/config'
 import { AcademicPageShell, AcademicHeader } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
-import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
+import { CoordinatorPicker, LecturerPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
 import CreateCourseModal from '@components/Objects/Modals/Course/Create/CreateCourse'
 import { GradebookPanel } from '@components/Dashboard/Pages/Academic/GradebookPanel'
 import {
@@ -65,7 +65,20 @@ const STATUS_CONFIRM: Record<string, string> = {
 }
 const SESSION_TYPES = ['lecture', 'seminar', 'lab', 'tutorial', 'workshop', 'exam', 'other']
 
-function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuuid: string }) {
+/**
+ * One course offering. ``workspace="office"`` is the Graduate Studies Office
+ * view (section tabs); ``"teaching"`` is the lecturer's view from My Teaching.
+ * Controls follow what the API says the viewer may do, in both workspaces.
+ */
+function OfferingDetail({
+  orgslug,
+  offeringuuid,
+  workspace = 'office',
+}: {
+  orgslug: string
+  offeringuuid: string
+  workspace?: 'office' | 'teaching'
+}) {
   const { t } = useTranslation()
   const router = useRouter()
   const { access_token } = useAcademicContext()
@@ -109,6 +122,14 @@ function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuu
     }
   }
 
+  const canManage = !!offering?.viewer_can_manage
+  const isStaff = canManage || !!offering?.viewer_teaches
+  const contentHref = offering?.content_course_uuid
+    ? canManage
+      ? getUriWithOrg(orgslug, `/dash/courses/course/${offering.content_course_uuid.replace('course_', '')}/general`)
+      : getUriWithOrg(orgslug, `/course/${offering.content_course_uuid.replace('course_', '')}`)
+    : null
+
   const remove = async () => {
     if (!window.confirm(t('academic.confirm_delete'))) return
     try {
@@ -123,17 +144,25 @@ function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuu
   return (
     <AcademicPageShell>
       <Breadcrumbs
-        items={[
-          { label: t('academic.postgraduate_studies'), href: getUriWithOrg(orgslug, '/dash/postgraduate'), icon: <GraduationCap size={14} /> },
-          { label: t('academic.tab_offerings', 'Course Offerings'), href: getUriWithOrg(orgslug, '/dash/postgraduate/offerings') },
-          { label: offering?.code || '…' },
-        ]}
+        items={
+          workspace === 'teaching'
+            ? [
+                { label: t('academic.my_teaching', 'My Teaching'), href: getUriWithOrg(orgslug, '/dash/postgraduate/teaching'), icon: <GraduationCap size={14} /> },
+                { label: offering?.code || '…' },
+              ]
+            : [
+                { label: t('academic.postgraduate_studies'), href: getUriWithOrg(orgslug, '/dash/postgraduate'), icon: <GraduationCap size={14} /> },
+                { label: t('academic.tab_offerings', 'Course Offerings'), href: getUriWithOrg(orgslug, '/dash/postgraduate/offerings') },
+                { label: offering?.code || '…' },
+              ]
+        }
       />
       <AcademicHeader
         title={offering ? `${offering.course_code} · ${offering.course_name}` : '…'}
         subtitle={offering?.code}
         action={
-          offering && (
+          offering &&
+          canManage && (
             <>
               {(OFFERING_NEXT[offering.status] || []).map((s) => (
                 <GhostButton
@@ -156,7 +185,15 @@ function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuu
           )
         }
       />
-      <PostgradTabs orgslug={orgslug} />
+      {workspace === 'office' && <PostgradTabs orgslug={orgslug} />}
+      {offering?.viewer_teaches && !canManage && (
+        <p className="mb-4 max-w-3xl text-sm text-[hsl(var(--dash-muted))]">
+          {t(
+            'academic.teaching_scope_hint',
+            'You teach this offering. You manage its schedule and gradebook; registrations and the offering itself are handled by the program office.'
+          )}
+        </p>
+      )}
 
       <div className="space-y-6">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
@@ -180,14 +217,14 @@ function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuu
             'Term-specific lectures, assignments and exams live in this offering’s content course. Registered students get access automatically.'
           )}
         >
-          {offering?.content_course_uuid ? (
+          {contentHref ? (
             <Link
-              href={getUriWithOrg(orgslug, `/dash/courses/course/${offering.content_course_uuid.replace('course_', '')}/general`)}
+              href={contentHref}
               className="inline-flex items-center gap-2 text-sm font-semibold text-[hsl(var(--dash-accent))]"
             >
               <ExternalLink className="h-4 w-4" /> {offering.content_course_name}
             </Link>
-          ) : (
+          ) : canManage ? (
             <div className="flex flex-wrap items-center gap-3">
               <p className="text-sm text-[hsl(var(--dash-muted))]">
                 {t('academic.no_content_course', 'No content course linked yet — choose one via Edit.')}
@@ -196,15 +233,24 @@ function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuu
                 <Plus className="h-3.5 w-3.5" /> {t('academic.create_content_course', 'Create content course')}
               </GhostButton>
             </div>
+          ) : (
+            <p className="text-sm text-[hsl(var(--dash-muted))]">
+              {t(
+                'academic.no_content_course_staff',
+                'No course materials are linked yet. Ask the program office to link or create the content course.'
+              )}
+            </p>
           )}
         </Section>
 
         <Section
           title={t('academic.schedule', 'Schedule')}
           action={
-            <GhostButton onClick={() => setSessionModal({})}>
-              <Plus className="h-3.5 w-3.5" /> {t('academic.add_session', 'Add session')}
-            </GhostButton>
+            isStaff && (
+              <GhostButton onClick={() => setSessionModal({})}>
+                <Plus className="h-3.5 w-3.5" /> {t('academic.add_session', 'Add session')}
+              </GhostButton>
+            )
           }
         >
           <DataTable
@@ -226,19 +272,23 @@ function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuu
                 <td className={`${tdCls} text-xs`}>{s.end_datetime?.replace('T', ' ') || '—'}</td>
                 <td className={`${tdCls} text-xs`}>{s.location || '—'}</td>
                 <td className={`${tdCls} whitespace-nowrap text-right`}>
-                  <IconButton onClick={() => setSessionModal({ session: s })} aria-label={t('academic.edit', 'Edit')}>
-                    <Pencil className="h-4 w-4" />
-                  </IconButton>
-                  <IconButton
-                    tone="danger"
-                    onClick={() =>
-                      window.confirm(t('academic.confirm_delete')) &&
-                      act(() => deleteOfferingSession(offering_uuid, s.session_uuid, access_token), t('academic.deleted'))
-                    }
-                    aria-label={t('academic.delete', 'Delete')}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </IconButton>
+                  {isStaff && (
+                    <>
+                      <IconButton onClick={() => setSessionModal({ session: s })} aria-label={t('academic.edit', 'Edit')}>
+                        <Pencil className="h-4 w-4" />
+                      </IconButton>
+                      <IconButton
+                        tone="danger"
+                        onClick={() =>
+                          window.confirm(t('academic.confirm_delete')) &&
+                          act(() => deleteOfferingSession(offering_uuid, s.session_uuid, access_token), t('academic.deleted'))
+                        }
+                        aria-label={t('academic.delete', 'Delete')}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </IconButton>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
@@ -254,9 +304,11 @@ function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuu
             'Registrations for this offering. Dropping or withdrawing a student removes their access to the course materials.'
           )}
           action={
-            <GhostButton onClick={() => setEnrollOpen(true)}>
-              <UserPlus className="h-3.5 w-3.5" /> {t('academic.register_student', 'Register student')}
-            </GhostButton>
+            canManage && (
+              <GhostButton onClick={() => setEnrollOpen(true)}>
+                <UserPlus className="h-3.5 w-3.5" /> {t('academic.register_student', 'Register student')}
+              </GhostButton>
+            )
           }
         >
           {rosterError ? (
@@ -284,7 +336,7 @@ function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuu
                     <StatusPill status={e.status} />
                   </td>
                   <td className={`${tdCls} text-right`}>
-                    {(ENROLLMENT_NEXT[e.status] || []).length > 0 && (
+                    {canManage && (ENROLLMENT_NEXT[e.status] || []).length > 0 && (
                       <select
                         className={selectCls('py-1 text-xs')}
                         value=""
@@ -450,7 +502,7 @@ function OfferingEditForm({ orgslug, offering, onDone }: { orgslug: string; offe
         </Field>
       </div>
       <Field label={t('academic.instructor', 'Instructor')}>
-        <CoordinatorPicker
+        <LecturerPicker
           orgId={orgId}
           access_token={access_token}
           value={instructor}
@@ -462,7 +514,7 @@ function OfferingEditForm({ orgslug, offering, onDone }: { orgslug: string; offe
         />
       </Field>
       <Field label={t('academic.teaching_assistant', 'Teaching assistant')}>
-        <CoordinatorPicker
+        <LecturerPicker
           orgId={orgId}
           access_token={access_token}
           value={ta}

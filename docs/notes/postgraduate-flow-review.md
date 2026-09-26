@@ -34,14 +34,14 @@ missing from the transcript but still unlocked prerequisites), and deleting a pr
 
 | # | Sev | Finding | Status |
 |---|---|---|---|
-| X1 | P0 | Lecturers cannot reach any postgraduate page: `postgraduate` is not in the Instructor default nav (`security/rbac/nav_items.py`), and `AdminAuthorization` redirects. The gradebook API allows instructors, but the UI never gets them there. | Phase 1 |
+| X1 | P0 | Lecturers cannot reach any postgraduate page: `postgraduate` is not in the Instructor default nav (`security/rbac/nav_items.py`), and `AdminAuthorization` redirects. The gradebook API allows instructors, but the UI never gets them there. | **Fixed** (Phase 1) |
 | X2 | P0 | Trainees have no student view: Trainee nav defaults to nothing, and `getMyAcademicRecord` is never called. | Phase 2 |
 | X3 | P0 | Deleting a program or cohort cascaded to memberships, registrations with **approved grades**, applications and their audit trail, behind one confirm. Offerings, catalog courses and terms were already protected, so the rules were inconsistent. | **Fixed** |
 | X4 | P1 | Deleting a user account (`user.id ON DELETE CASCADE`) deletes their academic records too. Transcripts normally outlive accounts. | Needs a data-retention decision |
-| X5 | P1 | The UI ignores roles. Approve/Return, offering status buttons, delete icons and status selects are shown to everyone, so a lecturer sees "Approve" and gets a 403. | Phase 1 |
+| X5 | P1 | The UI ignores roles. Approve/Return, offering status buttons, delete icons and status selects are shown to everyone, so a lecturer sees "Approve" and gets a 403. | **Partly fixed** (offering page and gradebook follow the viewer's rights) |
 | X6 | P1 | No notifications: decisions, grades submitted/returned/approved, instructor assignment and results all happen silently. | Phase 4 |
 | X7 | P2 | 19 native `window.confirm/prompt` dialogs, including for reasons stored in the audit trail. | Partly fixed (student status); Phase 4 |
-| X8 | P2 | Pickers are inconsistent. Students are limited to the Trainee role in the UI only, instructors can be *any* user, and the Instructor registry (categories, rates, work logs) is not used for offerings. | Phase 1 |
+| X8 | P2 | Pickers are inconsistent. Students are limited to the Trainee role in the UI only, instructors can be *any* user, and the Instructor registry (categories, rates, work logs) is not used for offerings. | **Fixed** (Phase 1) |
 
 ### 2.2 Admin / coordinator
 
@@ -65,11 +65,11 @@ missing from the transcript but still unlocked prerequisites), and deleting a pr
 
 | # | Sev | Finding | Status |
 |---|---|---|---|
-| L1 | P0 | No "My teaching" view (my offerings, rosters, schedule, grading to do). | Phase 1 |
+| L1 | P0 | No "My teaching" view (my offerings, rosters, schedule, grading to do). | **Fixed** (Phase 1) |
 | L2 | P1 | Two ways to finish a course. Without a scheme, staff could set completed/failed directly, skipping approval. Those rows had no grade, so they were **missing from the transcript and CGPA but still counted as a passed prerequisite**. | **Fixed** |
 | L3 | P1 | Students could be registered after grades were submitted or approved and would never be graded. There's no amend/appeal flow for approved grades. | **Fixed** (registration closes); amend flow → Phase 4 |
 | L4 | P1 | No separation of duties: an instructor with program rights could approve their own grades. | **Fixed** |
-| L5 | P1 | Interview panel members (usually doctors) cannot record their own evaluation. | Phase 1 |
+| L5 | P1 | Interview panel members (usually doctors) cannot record their own evaluation. | **Fixed** (Phase 1) |
 | L6 | P2 | No attendance and no room/lecturer clash detection. Session hours don't feed instructor work logs. | Phase 4 |
 | L7 | P2 | The approve error said "Scores changed since submission" when it meant "incomplete". | **Fixed** |
 
@@ -115,6 +115,19 @@ missing from the transcript but still unlocked prerequisites), and deleting a pr
 
 Tests: `tests/services/test_academic_{core,grading,admissions}.py` (+17 tests for the rules above).
 
+### Phase 1 — Lecturer workspace (delivered)
+
+| Area | What lecturers get now | Where |
+|---|---|---|
+| Navigation | A **My Teaching** sidebar entry (nav item `postgraduate-teaching`), on by default for the Instructor role. The admin module stays hidden. Roles with a saved sidebar override need it switched on in Portal access. | `security/rbac/nav_items.py`, `lib/dash-nav-items.ts`, `Menus/*` |
+| My Teaching | Counts (teaching now, students, grades to submit, interviews to evaluate), a "needs your attention" list (returned gradebooks with the coordinator's note, interviews to evaluate), current and past offerings, interview panels. | `dash/postgraduate/teaching` |
+| Offering page | The lecturer opens the same offering page from My Teaching. The API reports `viewer_can_manage` / `viewer_teaches`, so status buttons, edit, delete, registration and roster changes only show to the program office. Lecturers manage sessions and the gradebook. Course materials open on the learner-side course page. | `GET /offerings/{uuid}`, `offerings/[offeringuuid]/client.tsx` |
+| Gradebook | Approve/Return only show to a coordinator who doesn't teach the offering. Returned grades show the coordinator's note as a callout. Empty schemes suggest a single 100% component. | `GradebookPanel.tsx` |
+| Assigning lecturers | Instructor and TA pickers list active lecturers from the Instructors registry (names, department, category; no pay data) via `GET /academic-staff`. While the registry is empty they fall back to org staff, never trainees. | `LecturerPicker` |
+| Interview panels | `GET /admissions/my-interviews` lists a lecturer's panels with the applicant's declared background (no documents). `PUT /admissions/interviews/{uuid}/evaluation` records score, recommendation and notes, completes the interview and adds an audit event. Only panel members can evaluate, and only while the application is in review. | `admissions.list_my_interviews`, `evaluate_interview` |
+
+Tests: `tests/services/test_academic_teaching.py`.
+
 ---
 
 ## 4. Target experience and roadmap
@@ -130,10 +143,8 @@ Tests: `tests/services/test_academic_{core,grading,admissions}.py` (+17 tests fo
 
 **Phases:**
 
-1. **Phase 1 — Role-aware UI and My Teaching.** A `postgraduate-teaching` nav item on by default for
-   Instructors. `GET /offerings/mine`. `can_manage` on offering reads, so admin-only controls hide. The instructor
-   picker uses the Instructor registry. Panel members record their own interviews. Program coordinators can use the
-   Students tab.
+1. **Phase 1 — Role-aware UI and My Teaching.** Delivered (see §3). Still open from this phase: program
+   coordinators using the org Students tab (AD13), and role-aware controls on the remaining office pages.
 2. **Phase 2 — My Studies.** A learner-side page using `/academic-records/me` and the transcript. Elective
    self-registration gated by the term's registration window. Drop until add/drop ends, then withdraw. Results
    release date.

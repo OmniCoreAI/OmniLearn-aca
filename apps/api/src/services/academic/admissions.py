@@ -46,10 +46,12 @@ from src.db.academic.admissions import (
     EntranceTestRead,
     EntranceTestUpdate,
     InterviewCreate,
+    InterviewEvaluation,
     InterviewRead,
     InterviewRecommendation,
     InterviewStatus,
     InterviewUpdate,
+    PanelInterviewRead,
     RequirementCheck,
     RequirementType,
     TestAttemptCreate,
@@ -1319,3 +1321,98 @@ async def update_interview(
         )
     await db_session.commit()
     return await _read(db_session, application)
+
+
+# ---------------------------------------------------------------------------
+# Interview panels (lecturers evaluate the applicants they interview)
+# ---------------------------------------------------------------------------
+
+# Applications a panel can still evaluate.
+PANEL_OPEN_STATES = {ApplicationStatus.SUBMITTED, ApplicationStatus.UNDER_REVIEW, ApplicationStatus.WAITLISTED}
+
+
+async def _panel_read(
+    db_session: AsyncSession, interview: AdmissionInterview, application: AdmissionApplication, user_id: Optional[int]
+) -> PanelInterviewRead:
+    program = await db_session.get(Program, application.program_id)
+    cohort = await db_session.get(Cohort, application.cohort_id)
+    applicant = await db_session.get(User, application.applicant_id)
+    panel = []
+    for uid in interview.panel or []:
+        member = await db_session.get(User, uid)
+        if member:
+            panel.append(UserReadAuthor.model_validate(member))
+    return PanelInterviewRead(
+        interview_uuid=interview.interview_uuid,
+        scheduled_at=interview.scheduled_at,
+        location=interview.location,
+        status=interview.status,
+        score=interview.score,
+        recommendation=interview.recommendation,
+        notes=interview.notes,
+        panel=panel,
+        application_uuid=application.application_uuid,
+        application_number=application.application_number,
+        application_status=application.status.value,
+        applicant=UserReadAuthor.model_validate(applicant),
+        program_name=program.name if program else "",
+        cohort_code=cohort.code if cohort else None,
+        cohort_name=cohort.name if cohort else "",
+        profile=ApplicantProfile(**(application.profile or {})),
+        can_evaluate=bool(user_id)
+        and user_id in (interview.panel or [])
+        and interview.status in (InterviewStatus.SCHEDULED, InterviewStatus.COMPLETED)
+        and application.status in PANEL_OPEN_STATES,
+    )
+
+
+async def list_my_interviews(org_id: int, current_user: Principal, db_session: AsyncSession) -> List[PanelInterviewRead]:
+    """Interviews the caller sits on the panel of, soonest first."""
+    await require_academic_member(current_user, org_id, db_session)
+    user_id = resolve_acting_user_id(current_user)
+    if not user_id:
+        return []
+    rows = (
+        await db_session.execute(
+            select(AdmissionInterview, AdmissionApplication)
+            .join(AdmissionApplication, AdmissionApplication.id == AdmissionInterview.application_id)  # type: ignore
+            .where(AdmissionInterview.org_id == org_id)
+        )
+    ).all()
+    mine = [(i, a) for i, a in rows if user_id in (i.panel or [])]
+    mine.sort(key=lambda r: (r[0].status != InterviewStatus.SCHEDULED, r[0].scheduled_at or ""))
+    return [await _panel_read(db_session, i, a, user_id) for i, a in mine]
+
+
+async def evaluate_interview(
+    interview_uuid: str, data: InterviewEvaluation, current_user: Principal, db_session: AsyncSession
+) -> PanelInterviewRead:
+    """A panel member records the score, recommendation and notes. The
+    committee still takes the decision on the application."""
+    interview = await get_by_uuid_or_404(
+        db_session, AdmissionInterview, AdmissionInterview.interview_uuid, interview_uuid, "Interview"
+    )
+    application = await db_session.get(AdmissionApplication, interview.application_id)
+    user_id = resolve_acting_user_id(current_user)
+    if not user_id or user_id not in (interview.panel or []):
+        raise HTTPException(status_code=403, detail="Only members of this interview panel can evaluate it")
+    await require_academic_member(current_user, interview.org_id, db_session)
+    if application is None or application.status not in PANEL_OPEN_STATES:
+        raise conflict("The application is no longer under review; the interview can't be changed")
+    if interview.status not in (InterviewStatus.SCHEDULED, InterviewStatus.COMPLETED):
+        raise conflict(f"This interview is {interview.status.value}")
+    if data.score is not None and not (0 <= data.score <= 100):
+        raise bad_request("Interview score must be between 0 and 100")
+    interview.score = data.score
+    interview.recommendation = data.recommendation
+    interview.notes = data.notes
+    interview.status = InterviewStatus.COMPLETED
+    interview.update_date = now()
+    db_session.add(interview)
+    await _log(
+        db_session, application, current_user, "interview_evaluated",
+        note=f"{data.recommendation.value}" + (f", score {data.score:g}" if data.score is not None else ""),
+    )
+    await db_session.commit()
+    await db_session.refresh(interview)
+    return await _panel_read(db_session, interview, application, user_id)
