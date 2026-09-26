@@ -332,7 +332,7 @@ function DashLeftMenu() {
             {showMyTeaching && (
               <MenuLink
                 href="/dash/postgraduate/teaching"
-                icon={<Chalkboard size={20} weight="fill" />}
+                icon={<Chalkboard size={20} />}
                 label={t('academic.my_teaching', 'My Teaching')}
                 isCollapsed={isCollapsed}
                 active={inMyTeaching}
