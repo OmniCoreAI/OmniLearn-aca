@@ -52,7 +52,7 @@ function Stepper({ status }: { status: string }) {
             <span
               className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
                 done
-                  ? 'bg-[hsl(var(--dash-accent))] text-white'
+                  ? 'bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))]'
                   : active
                     ? 'border-2 border-[hsl(var(--dash-accent))] text-[hsl(var(--dash-accent))]'
                     : 'border border-[hsl(var(--dash-border))] text-[hsl(var(--dash-muted))]'
@@ -124,7 +124,7 @@ function MyApplication({ orgslug, applicationuuid }: { orgslug: string; applicat
             {draft && (
               <button
                 onClick={() => act(() => applicationAction(uuid, 'submit', access_token), t('academic.app_submitted_ok', 'Application submitted'))}
-                className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-white"
+                className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-[hsl(var(--dash-ink))]"
               >
                 {t('academic.submit_application_long', 'Submit application')}
               </button>

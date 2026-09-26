@@ -48,7 +48,7 @@ function MyAcademics({ orgslug }: { orgslug: string }) {
         action={
           <Link
             href={getUriWithOrg(orgslug, '/admissions')}
-            className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-white"
+            className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-[hsl(var(--dash-ink))]"
           >
             {t('academic.apply_to_program', 'Apply to a program')} <ArrowRight className="h-4 w-4" />
           </Link>

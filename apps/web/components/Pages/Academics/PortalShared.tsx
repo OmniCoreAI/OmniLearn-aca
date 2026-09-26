@@ -14,7 +14,7 @@ export function SignInPrompt({ orgslug }: { orgslug: string }) {
       <p className="mb-4 text-sm text-[hsl(var(--dash-muted))]">
         {t('academic.portal_sign_in', 'Sign in to see your programs, courses and applications.')}
       </p>
-      <Link href={getUriWithOrg(orgslug, '/login')} className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-white">
+      <Link href={getUriWithOrg(orgslug, '/login')} className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-[hsl(var(--dash-ink))]">
         {t('auth.login', 'Log in')}
       </Link>
     </div>

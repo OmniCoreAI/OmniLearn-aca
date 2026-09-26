@@ -137,6 +137,12 @@ export function formatTimeRange(e: CalendarEvent, locale: string, t: TFunction) 
     return t('calendar.all_day', 'All day')
   }
   const time = (d: Date) => d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })
+  if (e.end && !sameDay(eventStart(e), eventEnd(e))) {
+    // Timed but spanning days: the times alone ("7:56 PM – 7:56 PM") hide the span.
+    const stamp = (d: Date) =>
+      d.toLocaleString(locale, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+    return `${stamp(eventStart(e))} – ${stamp(eventEnd(e))}`
+  }
   return e.end ? `${time(eventStart(e))} – ${time(eventEnd(e))}` : time(eventStart(e))
 }
 

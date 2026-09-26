@@ -63,7 +63,7 @@ function AttachCourseModal({ orgslug, access_token, linkedCourseUuids, onLink, o
         onClick={() => setMode('create')}
         className="flex flex-col items-start gap-2 p-5 rounded-xl border border-gray-200 hover:border-[hsl(var(--dash-ink))] hover:shadow-sm transition-all text-left"
       >
-        <div className="p-2 rounded-lg bg-[hsl(var(--dash-accent))] text-white">
+        <div className="p-2 rounded-lg bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))]">
           <Plus className="w-5 h-5" />
         </div>
         <span className="font-semibold text-gray-900">{t('academic.create_and_attach_course')}</span>
@@ -156,7 +156,7 @@ function ExistingCoursePicker({
             <button
               onClick={() => handleLink(c.course_uuid)}
               disabled={linking === c.course_uuid}
-              className="shrink-0 px-3 py-1.5 bg-[hsl(var(--dash-accent))] text-white text-xs font-bold rounded-lg disabled:opacity-50"
+              className="shrink-0 px-3 py-1.5 bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))] text-xs font-bold rounded-lg disabled:opacity-50"
             >
               {t('academic.add_course')}
             </button>

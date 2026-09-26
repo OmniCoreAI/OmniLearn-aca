@@ -3,15 +3,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation, type UseTranslationOptions } from 'react-i18next'
 import type { Locale } from 'date-fns'
-import { CalendarBlank } from '@phosphor-icons/react'
+import { CalendarBlank, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import {
   EventCalendar,
+  useEventCalendarNavigation,
   type EventCalendarApi,
+  type EventCalendarClassNames,
   type EventCalendarRenderEventProps,
 } from '@/components/ui/reui-event-calendar'
 import { EventCalendarContent } from '@/components/ui/reui-event-calendar-utils/event-calendar-content'
-import { EventCalendarNav } from '@/components/ui/reui-event-calendar-utils/event-calendar-nav'
 import type { EventCalendarI18nOverrides } from '@/components/ui/reui-event-calendar-utils/event-calendar-i18n'
 import type {
   CalendarView,
@@ -30,6 +31,7 @@ import {
   eventStart,
   eventsByDay,
   formatTimeRange,
+  kindLabel,
   sameDay,
   startOfDay,
   typeLabel,
@@ -37,6 +39,114 @@ import {
 } from './calendarUtils'
 
 const VIEWS: CalendarView[] = ['month', 'week', 'day', 'agenda']
+
+/**
+ * Brand theme for the vendored calendar: its primitives read the shadcn
+ * `--color-*` tokens, so re-pointing them here recolors today, selection and
+ * focus in EACA gold without touching the vendored code.
+ */
+const CALENDAR_THEME = [
+  '[--color-primary:hsl(var(--dash-accent))]',
+  '[--color-primary-foreground:hsl(var(--dash-ink))]',
+  '[--color-foreground:hsl(var(--dash-ink))]',
+  '[--color-muted-foreground:hsl(var(--dash-muted))]',
+  '[--color-border:hsl(var(--dash-border)/0.8)]',
+  '[--ec-month-bar-h:1.5rem]',
+].join(' ')
+
+const TODAY_CLASS = 'bg-[hsl(var(--dash-accent-soft))]/45 border-b-0'
+
+/**
+ * Month cells show the day number at the top (the upstream default puts it at
+ * the bottom, Notion-style): the cell stacks in reverse, the number row gets a
+ * fixed 1.75rem, and the bar overlay starts below it (1.75rem + the content's
+ * 0.125rem top padding) so multi-day bars line up with the reserved lanes.
+ */
+const CALENDAR_CLASSES: EventCalendarClassNames = {
+  monthHeader: 'bg-[hsl(var(--dash-canvas))]/60',
+  monthDayHeader: 'px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wide',
+  monthCell: 'flex-col-reverse transition-colors hover:bg-[hsl(var(--dash-canvas))]/70',
+  monthCellFooter: 'h-7 shrink-0 justify-start px-2 pb-0 pt-1.5',
+  monthCellContent: 'pt-0.5',
+  monthBarOverlay: 'pt-[1.875rem]',
+  monthDayNumber: 'size-6 text-[12.5px] font-medium tabular-nums',
+  event: 'rounded-md text-[11.5px]',
+  moreIndicator: 'text-[11px] font-medium text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]',
+  timeGridHeader: 'bg-[hsl(var(--dash-canvas))]/60',
+  timeGutterLabel: 'text-[11px] tabular-nums',
+  agendaDayHeader: 'bg-[hsl(var(--dash-canvas))]/60 text-[13px]',
+  agendaItem: 'py-1',
+}
+
+/** Toolbar rendered inside the calendar so it can read the live title/range. */
+function CalendarToolbar({
+  view,
+  views,
+  viewNames,
+  onView,
+}: {
+  view: CalendarView
+  views: CalendarView[]
+  viewNames: Partial<Record<CalendarView, string>>
+  onView: (_view: CalendarView) => void
+}) {
+  const { t } = useTranslation()
+  const nav = useEventCalendarNavigation()
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[hsl(var(--dash-border))]/70 px-3 py-2.5">
+      <div className="flex min-w-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={nav.today}
+          disabled={nav.isToday}
+          className="rounded-full border border-[hsl(var(--dash-border))] px-3.5 py-1.5 text-xs font-medium text-[hsl(var(--dash-ink))] transition-colors hover:bg-[hsl(var(--dash-canvas))] disabled:opacity-50"
+        >
+          {t('calendar.today', 'Today')}
+        </button>
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={nav.prev}
+            aria-label={t('calendar.previous', 'Previous')}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[hsl(var(--dash-muted))] transition-colors hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]"
+          >
+            <CaretLeft size={15} weight="bold" className="rtl:rotate-180" />
+          </button>
+          <button
+            type="button"
+            onClick={nav.next}
+            aria-label={t('calendar.next', 'Next')}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[hsl(var(--dash-muted))] transition-colors hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]"
+          >
+            <CaretRight size={15} weight="bold" className="rtl:rotate-180" />
+          </button>
+        </div>
+        <h2 className="truncate text-base font-semibold tracking-tight text-[hsl(var(--dash-ink))]" aria-live="polite">
+          {nav.title}
+        </h2>
+      </div>
+      <div className="flex rounded-full bg-[hsl(var(--dash-canvas))] p-0.5" role="tablist" aria-label={t('calendar.select_view', 'Select view')}>
+        {views.map((v) => (
+          <button
+            key={v}
+            type="button"
+            role="tab"
+            aria-selected={view === v}
+            onClick={() => onView(v)}
+            className={cn(
+              'rounded-full px-3.5 py-1.5 text-xs font-medium transition-all',
+              view === v
+                ? 'bg-[hsl(var(--dash-surface))] text-[hsl(var(--dash-ink))] shadow-[0_1px_3px_hsl(0_0%_8%/0.12)]'
+                : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]'
+            )}
+          >
+            {viewNames[v]}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 // Events are edited on their own pages; the calendar only navigates to them.
 const READ_ONLY = { drag: false, resize: false, selectSlot: false }
 // Below `sm` a month cell fits about one event row, so phones open on the list.
@@ -183,15 +293,30 @@ export default function EventsCalendar({
   // List rows show the feed's own time label, so a collapsed multi-day event
   // reads "3 Jan – 14 Jan" rather than "All day".
   const renderAgendaEvent = useCallback(
-    ({ occurrence }: EventCalendarRenderEventProps<CalendarEvent>) => (
-      <>
-        <span className="w-28 shrink-0 truncate tabular-nums text-muted-foreground sm:w-40">
-          {occurrence.event.data ? formatTimeRange(occurrence.event.data, i18n.language, t) : null}
-        </span>
-        <span aria-hidden className="size-2 shrink-0 rounded-full bg-(--ec-event-color)" />
-        <span className="truncate text-sm">{occurrence.event.title}</span>
-      </>
-    ),
+    ({ occurrence }: EventCalendarRenderEventProps<CalendarEvent>) => {
+      const e = occurrence.event.data
+      if (!e) return <span className="truncate text-sm">{occurrence.event.title}</span>
+      const style = EVENT_STYLES[e.type]
+      const detail = [e.subtitle, e.location].filter(Boolean).join(' · ')
+      return (
+        <>
+          <span className="w-28 shrink-0 truncate text-xs tabular-nums text-muted-foreground sm:w-44">
+            {formatTimeRange(e, i18n.language, t)}
+          </span>
+          <span
+            className="hidden shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-semibold sm:inline-flex"
+            style={{ background: style.bg, color: style.fg }}
+          >
+            <span aria-hidden className="size-1.5 rounded-full" style={{ background: style.dot }} />
+            {kindLabel(t, e)}
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-medium text-[hsl(var(--dash-ink))]">{occurrence.event.title}</span>
+            {detail && <span className="truncate text-[11px] text-muted-foreground">{detail}</span>}
+          </span>
+        </>
+      )
+    },
     [i18n.language, t]
   )
   const dayClassName = useCallback(
@@ -218,56 +343,73 @@ export default function EventsCalendar({
         ? t('calendar.scope.teaching', 'Your teaching schedule — sessions, deadlines and interviews you run')
         : t('calendar.scope.learning', 'Your lectures, exams and upcoming deadlines')
 
+  const viewNames = useMemo<Partial<Record<CalendarView, string>>>(
+    () => ({
+      month: t('calendar.view_month', 'Month'),
+      week: t('calendar.view_week', 'Week'),
+      day: t('calendar.view_day', 'Day'),
+      agenda: t('calendar.view_list', 'List'),
+    }),
+    [t]
+  )
+
   return (
     <div className={cn('flex min-h-0 flex-col gap-4', className)}>
-      {/* Header */}
-      <header className="flex min-w-0 items-center gap-3">
-        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]">
-          <CalendarBlank size={22} weight="duotone" />
-        </span>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))]">
-            {t('calendar.title', 'Calendar')}
-          </h1>
-          <p className="truncate text-xs text-[hsl(var(--dash-muted))]">{data ? scopeText : ' '}</p>
+      {/* Header: title + scope on the left, type filters on the right */}
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]">
+            <CalendarBlank size={22} weight="duotone" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))]">
+              {t('calendar.title', 'Calendar')}
+            </h1>
+            <p className="truncate text-xs text-[hsl(var(--dash-muted))]">{data ? scopeText : ' '}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('calendar.filters', 'Filter by type')}>
+          {EVENT_TYPES.filter((type) => counts[type]).map((type) => {
+            const off = hidden.has(type)
+            const style = EVENT_STYLES[type]
+            return (
+              <button
+                key={type}
+                type="button"
+                aria-pressed={!off}
+                onClick={() => toggleType(type)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all',
+                  off
+                    ? 'border-dashed border-[hsl(var(--dash-border))] text-[hsl(var(--dash-muted))] opacity-60 hover:opacity-100'
+                    : 'border-transparent hover:brightness-95'
+                )}
+                style={off ? undefined : { background: style.bg, color: style.fg }}
+              >
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{
+                    background: off ? 'transparent' : style.dot,
+                    boxShadow: off ? `inset 0 0 0 1.5px ${style.dot}` : undefined,
+                  }}
+                />
+                {typeLabel(t, type)}
+                <span className="tabular-nums opacity-60">{counts[type]}</span>
+              </button>
+            )
+          })}
+          {isError && (
+            <span className="text-xs text-[hsl(var(--dash-warn))]">
+              {t('calendar.load_error', 'Could not load the calendar. Try again later.')}
+            </span>
+          )}
         </div>
       </header>
 
-      {/* Type filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        {EVENT_TYPES.filter((type) => counts[type]).map((type) => {
-          const off = hidden.has(type)
-          const style = EVENT_STYLES[type]
-          return (
-            <button
-              key={type}
-              type="button"
-              aria-pressed={!off}
-              onClick={() => toggleType(type)}
-              className={cn(
-                'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-all',
-                off
-                  ? 'border-dashed border-[hsl(var(--dash-border))] text-[hsl(var(--dash-muted))] opacity-60'
-                  : 'border-transparent'
-              )}
-              style={off ? undefined : { background: style.bg, color: style.fg }}
-            >
-              <span className="h-2 w-2 rounded-full" style={{ background: off ? 'transparent' : style.dot, boxShadow: off ? `inset 0 0 0 1.5px ${style.dot}` : undefined }} />
-              {typeLabel(t, type)}
-              <span className="tabular-nums opacity-70">{counts[type]}</span>
-            </button>
-          )
-        })}
-        {isError && (
-          <span className="text-xs text-[hsl(var(--dash-warn))]">
-            {t('calendar.load_error', 'Could not load the calendar. Try again later.')}
-          </span>
-        )}
-      </div>
-
       {/* Body */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="relative flex min-h-0 flex-col overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] p-2 shadow-[0_1px_2px_hsl(0_0%_8%/0.04),0_0_0_1px_hsl(var(--dash-border)/0.6)]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <section className="relative flex min-h-0 flex-col overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] shadow-[0_1px_2px_hsl(0_0%_8%/0.04),0_0_0_1px_hsl(var(--dash-border)/0.6)]">
           <EventCalendar<CalendarEvent>
             events={gridEvents}
             views={VIEWS}
@@ -279,6 +421,9 @@ export default function EventsCalendar({
             i18n={calendarI18n}
             renderAgendaEvent={renderAgendaEvent}
             dayClassName={dayClassName}
+            todayClassName={TODAY_CLASS}
+            classNames={CALENDAR_CLASSES}
+            scrollToHour={8}
             apiRef={apiRef}
             onRangeChange={(info) => setRange(info.range)}
             onEventClick={(occurrence) => {
@@ -288,9 +433,9 @@ export default function EventsCalendar({
               setSelectedDay(startOfDay(slot.date))
               setSelectedEvent(null)
             }}
-            className="min-h-[560px] flex-1"
+            className={cn('min-h-[520px] flex-1', CALENDAR_THEME)}
           >
-            <EventCalendarNav />
+            <CalendarToolbar view={view} views={VIEWS} viewNames={viewNames} onView={setView} />
             <EventCalendarContent />
           </EventCalendar>
         </section>

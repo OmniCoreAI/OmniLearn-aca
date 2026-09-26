@@ -229,7 +229,7 @@ function ProgramDetail({ orgslug, programuuid }: { orgslug: string; programuuid:
                   setEditing(null)
                   setModalOpen(true)
                 }}
-                className="flex items-center gap-2 rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white transition-all hover:brightness-110"
+                className="flex items-center gap-2 rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] transition-all hover:brightness-110"
               >
                 <Plus className="h-4 w-4" /> {t('academic.new_cohort')}
               </button>

@@ -271,7 +271,7 @@ export default function BoardListClient({ org_id, orgslug }: BoardListClientProp
                   />
                 }
                 dialogTrigger={
-                  <button className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all">
+                  <button className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] flex items-center gap-2 hover:brightness-110 transition-all">
                     <div>{t('boards.new_board')}</div>
                     <div className="text-md bg-neutral-800 px-1 rounded-full">+</div>
                   </button>
@@ -435,7 +435,7 @@ export default function BoardListClient({ org_id, orgslug }: BoardListClientProp
                       onClick={() => goToPage(page as number)}
                       className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                         currentPage === page
-                          ? 'bg-[hsl(var(--dash-accent))] text-white'
+                          ? 'bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))]'
                           : 'bg-white text-gray-600 nice-shadow hover:bg-gray-50'
                       }`}
                     >

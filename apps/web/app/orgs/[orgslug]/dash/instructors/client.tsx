@@ -2,6 +2,8 @@
 import React, { useState } from 'react'
 import { Users as ChalkboardTeacher, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import { ChalkboardTeacher as ChalkboardTeacherIcon, CheckCircle, Pause, Tag } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
@@ -82,6 +84,12 @@ function InstructorsHome({ orgslug }: { orgslug: string }) {
     return badges
   }
 
+  const stats = {
+    active: instructors.filter((i: any) => i.status === 'active').length,
+    onLeave: instructors.filter((i: any) => i.status === 'on_leave').length,
+    categories: new Set(instructors.map((i: any) => i.category?.name).filter(Boolean)).size,
+  }
+
   return (
     <AcademicPageShell>
       <Breadcrumbs
@@ -103,12 +111,23 @@ function InstructorsHome({ orgslug }: { orgslug: string }) {
                 setEditing(null)
                 setModalOpen(true)
               }}
-              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] flex items-center gap-2 hover:brightness-110 transition-all"
             >
               <Plus className="w-4 h-4" /> {t('instructors.new_instructor', 'New Instructor')}
             </button>
           </AuthenticatedClientElement>
         }
+      />
+
+      <DashStatCards
+        className="mb-6"
+        loading={isLoading}
+        stats={[
+          { key: 'total', label: t('instructors.stats.total', 'Instructors'), value: instructors.length, icon: ChalkboardTeacherIcon, tone: 'rose' },
+          { key: 'active', label: t('instructors.stats.active', 'Active'), value: stats.active, icon: CheckCircle, tone: 'stone' },
+          { key: 'leave', label: t('instructors.stats.on_leave', 'On leave'), value: stats.onLeave, icon: Pause, tone: 'gold' },
+          { key: 'categories', label: t('instructors.stats.categories', 'Categories'), value: stats.categories, icon: Tag, tone: 'sand', href: '/dash/instructors/categories' },
+        ]}
       />
 
       <InstructorTabs orgslug={orgslug} />

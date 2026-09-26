@@ -314,7 +314,7 @@ const LoginClient = (props: LoginClientProps) => {
                         type="email"
                         autoComplete="email"
                         placeholder="name@institution.gov"
-                        className="auth-input !h-11 !rounded-[0.625rem] !bg-white !px-10 !text-[hsl(var(--auth-ink))] !shadow-none placeholder:!text-[hsl(var(--auth-muted)/0.55)]"
+                        className="auth-input !h-11 !rounded-[0.625rem] !bg-white !px-10 !text-[hsl(var(--auth-ink))] placeholder:!text-[hsl(var(--auth-muted)/0.55)]"
                       />
                     </Form.Control>
                   </div>
@@ -334,7 +334,7 @@ const LoginClient = (props: LoginClientProps) => {
                         value={formik.values.password}
                         type="password"
                         autoComplete="current-password"
-                        className="auth-input !h-11 !rounded-[0.625rem] !bg-white !px-10 !text-[hsl(var(--auth-ink))] !shadow-none placeholder:!text-[hsl(var(--auth-muted)/0.55)]"
+                        className="auth-input !h-11 !rounded-[0.625rem] !bg-white !px-10 !text-[hsl(var(--auth-ink))] placeholder:!text-[hsl(var(--auth-muted)/0.55)]"
                       />
                     </Form.Control>
                   </div>

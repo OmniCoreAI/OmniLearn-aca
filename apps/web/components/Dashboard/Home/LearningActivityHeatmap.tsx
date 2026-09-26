@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CardMenuLink, EmptyState, HomeCard } from './HomeCard'
+import { cn } from '@/lib/utils'
+import { CardMenuLink, EmptyState, HomeCard, POP_SURFACE } from './HomeCard'
 import { HOME_COLORS, useHomeOverview } from './homeData'
 
 const BUCKET_HOURS = 4
@@ -12,9 +13,12 @@ const BUCKETS = Array.from({ length: 24 / BUCKET_HOURS }, (_, i) => i * BUCKET_H
 const COLUMNS = [6, 0, 1, 2, 3, 4, 5]
 const LEVEL_COLORS = [HOME_COLORS.stoneSoft, HOME_COLORS.roseFaint, HOME_COLORS.rose, 'hsl(351 62% 72%)', HOME_COLORS.gold]
 
+type HoverCell = { day: number; hour: number; count: number; x: number; y: number }
+
 export default function LearningActivityHeatmap() {
   const { t, i18n } = useTranslation()
   const { data, isLoading } = useHomeOverview()
+  const [hover, setHover] = useState<HoverCell | null>(null)
 
   const { grid, max } = useMemo(() => {
     const g: Record<string, number> = {}
@@ -67,7 +71,8 @@ export default function LearningActivityHeatmap() {
         </EmptyState>
       ) : (
         <div
-          className="grid gap-1.5 fit:min-h-0 fit:flex-1"
+          className="relative grid gap-1.5 fit:min-h-0 fit:flex-1"
+          onMouseLeave={() => setHover(null)}
           style={{
             gridTemplateColumns: 'auto repeat(7, minmax(0, 1fr))',
             gridTemplateRows: `repeat(${BUCKETS.length}, minmax(0, 1fr)) auto`,
@@ -82,12 +87,21 @@ export default function LearningActivityHeatmap() {
               </span>
               {COLUMNS.map((day) => {
                 const count = grid[`${day}:${hour}`] ?? 0
+                const show = (el: HTMLElement) =>
+                  setHover({ day, hour, count, x: el.offsetLeft + el.offsetWidth / 2, y: el.offsetTop })
+                const active = hover?.day === day && hover?.hour === hour
                 return (
                   <span
                     key={day}
                     role="cell"
-                    title={`${dayName(day)} ${hourName(hour)} · ${count}`}
-                    className="h-7 rounded-md transition-transform hover:scale-110 fit:h-auto fit:min-h-2"
+                    tabIndex={0}
+                    aria-label={`${dayName(day)} ${hourName(hour)}: ${count}`}
+                    onMouseEnter={(e) => show(e.currentTarget)}
+                    onFocus={(e) => show(e.currentTarget)}
+                    onBlur={() => setHover(null)}
+                    className={`h-7 rounded-md outline-none transition-all focus-visible:ring-2 focus-visible:ring-[hsl(var(--dash-ink))]/40 fit:h-auto fit:min-h-2 ${
+                      active ? 'scale-110 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.35)]' : ''
+                    }`}
                     style={{ background: LEVEL_COLORS[level(count)] }}
                   />
                 )
@@ -100,6 +114,23 @@ export default function LearningActivityHeatmap() {
               {dayName(day)}
             </span>
           ))}
+          {hover ? (
+            <div
+              role="tooltip"
+              className={cn(
+                POP_SURFACE,
+                'pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-xl px-2.5 py-1.5 text-[11px]'
+              )}
+              style={{ left: hover.x, top: hover.y - 6 }}
+            >
+              <span className="font-semibold text-[hsl(var(--dash-ink))]">
+                {dayName(hover.day)}, {hourName(hover.hour)}–{hourName((hover.hour + BUCKET_HOURS) % 24)}
+              </span>
+              <span className="ms-1.5 text-[hsl(var(--dash-muted))]">
+                {t('dashboard.home.learning_activity.count', '{{count}} activities', { count: hover.count })}
+              </span>
+            </div>
+          ) : null}
         </div>
       )}
     </HomeCard>

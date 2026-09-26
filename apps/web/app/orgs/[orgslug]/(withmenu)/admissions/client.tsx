@@ -160,7 +160,7 @@ function ApplyPortal({ orgslug }: { orgslug: string }) {
                   <button
                     disabled={busy === intake.cohort_uuid}
                     onClick={() => apply(intake.cohort_uuid)}
-                    className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-[hsl(var(--dash-ink))] disabled:opacity-50"
                   >
                     {busy === intake.cohort_uuid ? '…' : t('academic.apply_now', 'Apply now')}
                   </button>

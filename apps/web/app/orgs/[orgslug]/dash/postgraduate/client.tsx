@@ -2,6 +2,8 @@
 import React, { useState } from 'react'
 import { GraduationCap, Plus, Image as ImageIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import { GraduationCap as GraduationCapIcon, CheckCircle, Books, Certificate } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
@@ -109,6 +111,14 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
     return badges
   }
 
+  const stats = {
+    active: programs.filter((p: any) => p.status === 'active').length,
+    drafts: programs.filter((p: any) => (p.status || 'draft') === 'draft').length,
+    phd: programs.filter((p: any) => p.program_level === 'phd').length,
+    graduate: programs.filter((p: any) => p.program_level === 'phd' || p.program_level === 'masters').length,
+    diploma: programs.filter((p: any) => p.program_level === 'diploma').length,
+  }
+
   return (
     <AcademicPageShell>
       <Breadcrumbs
@@ -127,12 +137,23 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
           <AuthenticatedClientElement checkMethod="roles" action="create" ressourceType="programs" orgId={orgId!}>
             <button
               onClick={openCreate}
-              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] flex items-center gap-2 hover:brightness-110 transition-all"
             >
               <Plus className="w-4 h-4" /> {t('academic.new_program')}
             </button>
           </AuthenticatedClientElement>
         }
+      />
+
+      <DashStatCards
+        className="mb-6"
+        loading={isLoading}
+        stats={[
+          { key: 'total', label: t('academic.stats.programs', 'Programs'), value: programs.length, icon: GraduationCapIcon, tone: 'rose' },
+          { key: 'active', label: t('academic.stats.active', 'Active'), value: stats.active, hint: t('academic.stats.drafts_hint', '{{count}} drafts', { count: stats.drafts }), icon: CheckCircle, tone: 'stone' },
+          { key: 'graduate', label: t('academic.stats.masters_phd', "Master's & PhD"), value: stats.graduate, hint: t('academic.stats.phd_hint', '{{count}} PhD', { count: stats.phd }), icon: Books, tone: 'gold' },
+          { key: 'diploma', label: t('academic.stats.diplomas', 'Diplomas'), value: stats.diploma, icon: Certificate, tone: 'sand' },
+        ]}
       />
 
       <PostgradTabs orgslug={orgslug} />

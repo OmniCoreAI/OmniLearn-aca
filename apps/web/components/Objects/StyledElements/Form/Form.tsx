@@ -23,7 +23,7 @@ export const FormLabelAndMessage = (props: {
   <div className="flex items-center space-x-3">
     <FormLabel className="grow text-sm">{props.label}</FormLabel>
     {(props.message && (
-      <div className="text-red-700 text-sm items-center  rounded-md flex  space-x-1">
+      <div className="flex items-center space-x-1 rounded-md text-xs font-medium text-[hsl(var(--dash-warn))]">
         <Info size={10} />
         <div>{props.message}</div>
       </div>
@@ -70,7 +70,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
   ({ className, ...props }, ref) => (
     <input
       ref={ref}
-      className={`box-border w-full inline-flex items-center justify-center rounded h-[35px] leading-none px-2.5 text-[15px] text-[#7c7c7c] bg-[#fbfdff] shadow-[0_0_0_1px_#edeeef] hover:shadow-[0_0_0_1px_#edeeef] focus:shadow-[0_0_0_2px_#edeeef] selection:bg-black selection:text-white border-none outline-none ${className || ''}`}
+      className={`box-border w-full inline-flex items-center justify-center rounded-lg h-[38px] leading-none px-3 text-sm text-[hsl(var(--dash-ink))] bg-white shadow-[inset_0_0_0_1px_hsl(var(--dash-border))] transition-shadow placeholder:text-[hsl(var(--dash-muted))]/60 hover:shadow-[inset_0_0_0_1px_hsl(40_18%_75%)] focus:shadow-[inset_0_0_0_1.5px_hsl(var(--dash-accent)),0_0_0_4px_hsl(var(--dash-accent)/0.14)] selection:bg-black selection:text-white border-none outline-none ${className || ''}`}
       {...props}
     />
   )
@@ -81,7 +81,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
   ({ className, ...props }, ref) => (
     <textarea
       ref={ref}
-      className={`box-border w-full inline-flex items-center justify-center rounded resize-none p-2.5 text-[15px] text-[#7c7c7c] bg-[#fbfdff] shadow-[0_0_0_1px_#edeeef] hover:shadow-[0_0_0_1px_#edeeef] focus:shadow-[0_0_0_2px_#edeeef] selection:bg-black selection:text-white border-none outline-none ${className || ''}`}
+      className={`box-border w-full inline-flex items-center justify-center rounded-lg resize-none p-3 text-sm text-[hsl(var(--dash-ink))] bg-white shadow-[inset_0_0_0_1px_hsl(var(--dash-border))] transition-shadow placeholder:text-[hsl(var(--dash-muted))]/60 hover:shadow-[inset_0_0_0_1px_hsl(40_18%_75%)] focus:shadow-[inset_0_0_0_1.5px_hsl(var(--dash-accent)),0_0_0_4px_hsl(var(--dash-accent)/0.14)] selection:bg-black selection:text-white border-none outline-none ${className || ''}`}
       {...props}
     />
   )

@@ -85,7 +85,7 @@ function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: s
           <AuthenticatedClientElement checkMethod="roles" action="update" ressourceType="training_programs" orgId={orgId!}>
             <button
               onClick={() => setModalOpen(true)}
-              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] flex items-center gap-2 hover:brightness-110 transition-all"
             >
               <Plus className="w-4 h-4" /> {t('academic.add_course')}
             </button>

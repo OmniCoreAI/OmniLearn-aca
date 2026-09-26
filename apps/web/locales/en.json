@@ -69,7 +69,13 @@
     "rate_error": "Could not resolve a rate",
     "source_category_language": "Category (language rate)",
     "source_category_base": "Category (base rate)",
-    "source_instructor": "Instructor rate"
+    "source_instructor": "Instructor rate",
+    "stats": {
+      "total": "Instructors",
+      "active": "Active",
+      "on_leave": "On leave",
+      "categories": "Categories"
+    }
   },
   "cms": {
     "news": {
@@ -147,7 +153,14 @@
         "page_of": "Page {{current}} of {{total}}"
       },
       "open": "Open",
-      "card_actions": "Article actions"
+      "card_actions": "Article actions",
+      "stats": {
+        "total": "Articles",
+        "published": "Published",
+        "drafts": "Drafts",
+        "recent": "Last 30 days",
+        "recent_hint": "Published recently"
+      }
     }
   },
   "academic": {
@@ -789,7 +802,20 @@
     "step_submitted": "Submitted",
     "step_under_review": "Under review",
     "step_decision": "Decision",
-    "step_enrolled": "Enrolled"
+    "step_enrolled": "Enrolled",
+    "stats": {
+      "programs": "Programs",
+      "published": "Published",
+      "drafts_hint": "{{count}} drafts",
+      "upcoming": "Upcoming",
+      "upcoming_hint": "Starting from today",
+      "paid": "Paid",
+      "free_hint": "{{count}} free",
+      "active": "Active",
+      "masters_phd": "Master's & PhD",
+      "phd_hint": "{{count}} PhD",
+      "diplomas": "Diplomas"
+    }
   },
   "common": {
     "hello": "Hello",
@@ -2672,24 +2698,32 @@
         "total_enrollments": "Total Enrollments",
         "members_hint": "{{count}} members in total",
         "published_hint": "{{count}} published",
-        "last_30_days_hint": "+{{count}} in the last 30 days"
+        "last_30_days_hint": "+{{count}} in the last 30 days",
+        "this_month": "+{{count}} this month"
       },
       "revenue": {
         "title": "Revenue",
         "income": "Income",
         "expense": "Expense",
         "empty": "No income or expenses recorded in this period yet.",
-        "unavailable": "Revenue is unavailable for your role."
+        "unavailable": "Revenue is unavailable for your role.",
+        "summary": "{{income}} in · {{net}} net",
+        "net": "Net"
       },
       "enrollment_trends": {
         "title": "Enrollment Trends",
         "enrollments": "Enrollments",
         "completions": "Completions",
-        "empty": "Enrollments will appear here as learners join courses."
+        "empty": "Enrollments will appear here as learners join courses.",
+        "this_month": "{{count}} this month",
+        "metric": "Metric",
+        "new_members": "New members"
       },
       "learning_activity": {
         "title": "Learning Activity",
-        "empty": "When learners complete lessons, their busiest days and hours show up here."
+        "empty": "When learners complete lessons, their busiest days and hours show up here.",
+        "count": "{{count}} activities",
+        "count_one": "{{count}} activity"
       },
       "new_courses": {
         "title": "New Courses",
@@ -2709,7 +2743,10 @@
         "title": "Top Courses",
         "students": "{{count}} students",
         "students_one": "{{count}} student",
-        "empty": "Your most popular courses will be ranked here."
+        "empty": "Your most popular courses will be ranked here.",
+        "others": "Other courses",
+        "subtitle": "Share of {{count}} enrollments",
+        "all": "All enrollments"
       },
       "rail": {
         "admin": "Admin",
@@ -2735,7 +2772,8 @@
         "completion_body": "{{user}} completed \"{{course}}\".",
         "member_joined": "New Member",
         "member_joined_body": "{{user}} joined the academy."
-      }
+      },
+      "last_n_months_short": "{{count}}M"
     },
     "courses": {
       "title": "Courses",
@@ -3503,6 +3541,13 @@
             "scorm": "SCORM-compliant learning package"
           }
         }
+      },
+      "stats": {
+        "total": "Courses",
+        "published": "Published",
+        "drafts": "Drafts",
+        "public": "Public",
+        "public_hint": "Visible to visitors"
       }
     },
     "organization": {
@@ -4739,6 +4784,13 @@
           "delete_success": "Deleted role",
           "delete_error": "Error deleting role"
         }
+      },
+      "stats": {
+        "members": "Members",
+        "new": "New this month",
+        "new_hint": "Joined in the last 30 days",
+        "learners": "Enrolled learners",
+        "learners_hint": "In at least one course"
       }
     },
     "assignments": {
@@ -5313,6 +5365,9 @@
         "course_body": "Build lessons, assignments and exams in minutes.",
         "course_cta": "Create course"
       }
+    },
+    "stats": {
+      "load_error": "Couldn't load"
     }
   },
   "editor": {
@@ -6303,6 +6358,44 @@
       "scheduled": "Scheduled",
       "completed": "Completed",
       "cancelled": "Cancelled"
+    },
+    "filters": "Filter by type"
+  },
+  "learner": {
+    "home": {
+      "official_portal": "Official learning portal",
+      "welcome_to": "Welcome to {{org}}",
+      "guest_subtitle": "Explore our courses and programs, and track your progress in one place.",
+      "browse_courses": "Browse courses",
+      "welcome_back": "Welcome back, {{name}}",
+      "subtitle_progress": "Pick up where you left off — you have {{count}} courses in progress.",
+      "subtitle_progress_one": "Pick up where you left off — you have {{count}} course in progress.",
+      "subtitle_start": "Find a course and start learning today.",
+      "continue": "Continue learning",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "this_week": "This week",
+      "view_progress": "View progress",
+      "no_progress": "Courses you start will appear here with your progress.",
+      "lessons_done": "{{done}} of {{total}} lessons · {{pct}}%",
+      "coming_up": "Coming up",
+      "nothing_upcoming": "Nothing scheduled in the next 30 days.",
+      "explore": "Explore courses",
+      "explore_count": "{{count}} courses available",
+      "explore_count_one": "{{count}} course available"
+    }
+  },
+  "finance": {
+    "stats": {
+      "revenue": "Revenue",
+      "expenses": "Expenses",
+      "entries": "{{count}} entries",
+      "instructor_cost": "Instructor cost",
+      "from_work_logs": "From work logs",
+      "profit": "Est. profit",
+      "profit_hint": "Revenue − expenses − instructors",
+      "margin": "Margin",
+      "of_revenue": "Of revenue"
     }
   }
 }

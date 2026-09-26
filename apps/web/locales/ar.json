@@ -75,7 +75,14 @@
         "page_of": "صفحة {{current}} من {{total}}"
       },
       "open": "فتح",
-      "card_actions": "إجراءات المقال"
+      "card_actions": "إجراءات المقال",
+      "stats": {
+        "total": "المقالات",
+        "published": "منشورة",
+        "drafts": "مسودات",
+        "recent": "آخر 30 يومًا",
+        "recent_hint": "نُشرت مؤخرًا"
+      }
     }
   },
   "common": {
@@ -1525,24 +1532,31 @@
         "total_enrollments": "إجمالي التسجيلات",
         "members_hint": "{{count}} عضوًا إجمالًا",
         "published_hint": "{{count}} منشور",
-        "last_30_days_hint": "+{{count}} خلال آخر 30 يومًا"
+        "last_30_days_hint": "+{{count}} خلال آخر 30 يومًا",
+        "this_month": "+{{count}} هذا الشهر"
       },
       "revenue": {
         "title": "الإيرادات",
         "income": "الدخل",
         "expense": "المصروفات",
         "empty": "لم تُسجَّل أي إيرادات أو مصروفات في هذه الفترة بعد.",
-        "unavailable": "الإيرادات غير متاحة لدورك."
+        "unavailable": "الإيرادات غير متاحة لدورك.",
+        "summary": "{{income}} دخل · {{net}} صافي",
+        "net": "الصافي"
       },
       "enrollment_trends": {
         "title": "اتجاهات التسجيل",
         "enrollments": "التسجيلات",
         "completions": "الإتمامات",
-        "empty": "ستظهر التسجيلات هنا عندما ينضم المتعلمون إلى المقررات."
+        "empty": "ستظهر التسجيلات هنا عندما ينضم المتعلمون إلى المقررات.",
+        "this_month": "{{count}} هذا الشهر",
+        "metric": "المقياس",
+        "new_members": "أعضاء جدد"
       },
       "learning_activity": {
         "title": "نشاط التعلّم",
-        "empty": "عندما يُكمل المتعلمون الدروس، تظهر هنا أكثر الأيام والساعات نشاطًا."
+        "empty": "عندما يُكمل المتعلمون الدروس، تظهر هنا أكثر الأيام والساعات نشاطًا.",
+        "count": "{{count}} نشاط"
       },
       "new_courses": {
         "title": "مقررات جديدة",
@@ -1560,7 +1574,10 @@
       "top_courses": {
         "title": "المقررات الأكثر شعبية",
         "students": "{{count}} طالب",
-        "empty": "سيتم ترتيب مقرراتك الأكثر شعبية هنا."
+        "empty": "سيتم ترتيب مقرراتك الأكثر شعبية هنا.",
+        "others": "مقررات أخرى",
+        "subtitle": "الحصة من {{count}} تسجيل",
+        "all": "كل التسجيلات"
       },
       "rail": {
         "admin": "مسؤول",
@@ -1586,7 +1603,8 @@
         "completion_body": "أكمل {{user}} «{{course}}».",
         "member_joined": "عضو جديد",
         "member_joined_body": "انضم {{user}} إلى الأكاديمية."
-      }
+      },
+      "last_n_months_short": "{{count}} أشهر"
     },
     "courses": {
       "title": "الدورات",
@@ -2354,7 +2372,14 @@
           "twitter_title_max_length": "يجب أن يكون عنوان تويتر 70 حرفاً أو أقل"
         }
       },
-      "limit_reached": "تم الوصول إلى حد الدورات ({{limit}})"
+      "limit_reached": "تم الوصول إلى حد الدورات ({{limit}})",
+      "stats": {
+        "total": "المقررات",
+        "published": "منشورة",
+        "drafts": "مسودات",
+        "public": "عامة",
+        "public_hint": "ظاهرة للزوار"
+      }
     },
     "organization": {
       "settings": {
@@ -3585,6 +3610,13 @@
             "users": "المستخدمون"
           }
         }
+      },
+      "stats": {
+        "members": "الأعضاء",
+        "new": "جدد هذا الشهر",
+        "new_hint": "انضموا خلال آخر 30 يومًا",
+        "learners": "المتعلمون المسجلون",
+        "learners_hint": "في مقرر واحد على الأقل"
       }
     },
     "assignments": {
@@ -4150,6 +4182,9 @@
         "course_body": "أنشئ الدروس والواجبات والاختبارات في دقائق.",
         "course_cta": "إنشاء مقرر"
       }
+    },
+    "stats": {
+      "load_error": "تعذّر التحميل"
     }
   },
   "editor": {
@@ -6122,7 +6157,20 @@
     "step_submitted": "مقدَّم",
     "step_under_review": "قيد المراجعة",
     "step_decision": "القرار",
-    "step_enrolled": "التسجيل"
+    "step_enrolled": "التسجيل",
+    "stats": {
+      "programs": "البرامج",
+      "published": "منشورة",
+      "drafts_hint": "{{count}} مسودة",
+      "upcoming": "قادمة",
+      "upcoming_hint": "تبدأ من اليوم",
+      "paid": "مدفوعة",
+      "free_hint": "{{count}} مجانية",
+      "active": "نشطة",
+      "masters_phd": "الماجستير والدكتوراه",
+      "phd_hint": "{{count}} دكتوراه",
+      "diplomas": "الدبلومات"
+    }
   },
   "instructors": {
     "title": "المحاضرون",
@@ -6180,7 +6228,13 @@
     "rate_error": "تعذر تحديد السعر",
     "source_category_language": "الفئة (سعر اللغة)",
     "source_category_base": "الفئة (الأجر الأساسي)",
-    "source_instructor": "سعر المحاضر"
+    "source_instructor": "سعر المحاضر",
+    "stats": {
+      "total": "المحاضرون",
+      "active": "نشطون",
+      "on_leave": "في إجازة",
+      "categories": "الفئات"
+    }
   },
   "calendar": {
     "title": "التقويم",
@@ -6252,6 +6306,42 @@
       "scheduled": "مجدول",
       "completed": "مكتمل",
       "cancelled": "ملغى"
+    },
+    "filters": "التصفية حسب النوع"
+  },
+  "learner": {
+    "home": {
+      "official_portal": "بوابة التعلّم الرسمية",
+      "welcome_to": "مرحبًا بك في {{org}}",
+      "guest_subtitle": "استكشف مقرراتنا وبرامجنا، وتابع تقدّمك في مكان واحد.",
+      "browse_courses": "تصفّح المقررات",
+      "welcome_back": "أهلًا بعودتك، {{name}}",
+      "subtitle_progress": "تابع من حيث توقفت — لديك {{count}} مقررات قيد التقدّم.",
+      "subtitle_start": "اختر مقررًا وابدأ التعلّم اليوم.",
+      "continue": "تابع التعلّم",
+      "in_progress": "قيد التقدّم",
+      "completed": "مكتمل",
+      "this_week": "هذا الأسبوع",
+      "view_progress": "عرض التقدّم",
+      "no_progress": "ستظهر هنا المقررات التي تبدؤها مع تقدّمك.",
+      "lessons_done": "{{done}} من {{total}} درس · {{pct}}٪",
+      "coming_up": "القادم",
+      "nothing_upcoming": "لا يوجد شيء مجدول خلال الثلاثين يومًا القادمة.",
+      "explore": "استكشف المقررات",
+      "explore_count": "{{count}} مقرر متاح"
+    }
+  },
+  "finance": {
+    "stats": {
+      "revenue": "الإيرادات",
+      "expenses": "المصروفات",
+      "entries": "{{count}} قيد",
+      "instructor_cost": "تكلفة المحاضرين",
+      "from_work_logs": "من سجلات العمل",
+      "profit": "الربح التقديري",
+      "profit_hint": "الإيرادات − المصروفات − المحاضرون",
+      "margin": "الهامش",
+      "of_revenue": "من الإيرادات"
     }
   }
 }

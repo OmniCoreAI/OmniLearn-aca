@@ -144,7 +144,7 @@ function DashMobileMenu() {
             aria-expanded={menuOpen}
             className={cn(
               'p-2.5 rounded-full transition-all duration-200 overflow-hidden',
-              menuOpen ? 'bg-[hsl(var(--dash-accent))] text-white' : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]'
+              menuOpen ? 'bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))]' : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]'
             )}
           >
             <AnimatePresence mode="wait" initial={false}>

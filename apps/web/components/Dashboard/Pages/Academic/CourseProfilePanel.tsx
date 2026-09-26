@@ -251,7 +251,7 @@ export function CourseProfilePanel({
       <button
         onClick={save}
         disabled={saving}
-        className="w-full py-2 bg-[hsl(var(--dash-accent))] text-white rounded-lg text-sm font-bold disabled:opacity-40"
+        className="w-full py-2 bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))] rounded-lg text-sm font-bold disabled:opacity-40"
       >
         {saving ? t('academic.saving') : t('academic.save_profile')}
       </button>

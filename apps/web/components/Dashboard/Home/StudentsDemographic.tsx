@@ -37,6 +37,7 @@ export default function StudentsDemographic() {
   const { t, i18n } = useTranslation()
   const [days, setDays] = useState('30')
   const { data, isLoading, isError } = useAnalyticsPipe('visitors_by_country', { days })
+  const [activeCode, setActiveCode] = useState<string | null>(null)
 
   const regionNames = useMemo(() => {
     try {
@@ -93,20 +94,38 @@ export default function StudentsDemographic() {
       ) : (
         <div className="grid items-center gap-5 sm:grid-cols-[1.4fr_1fr] fit:min-h-0 fit:flex-1">
           <DotMap
+            active={activeCode}
+            onActive={setActiveCode}
             pins={top
               .filter((r) => CENTROIDS[r.code])
-              .map((r) => ({ code: r.code, color: r.color, coords: CENTROIDS[r.code]! }))}
+              .map((r) => ({
+                code: r.code,
+                color: r.color,
+                coords: CENTROIDS[r.code]!,
+                label: `${regionNames?.of(r.code) ?? r.code} · ${r.pct}%`,
+              }))}
           />
-          <ul className="space-y-3 fit:space-y-1 fit:text-xs">
+          <ul className="space-y-1 fit:space-y-0 fit:text-xs">
             {top.map((r) => (
-              <li key={r.code} className="flex items-center gap-2.5 text-sm">
-                <span className="text-lg leading-none" aria-hidden="true">
-                  {flagEmoji(r.code)}
-                </span>
-                <span className="min-w-0 flex-1 truncate font-medium text-[hsl(var(--dash-ink))]">
-                  {regionNames?.of(r.code) ?? r.code}
-                </span>
-                <span className="text-xs text-[hsl(var(--dash-muted))]">({r.pct}%)</span>
+              <li key={r.code}>
+                <button
+                  type="button"
+                  onMouseEnter={() => setActiveCode(r.code)}
+                  onMouseLeave={() => setActiveCode(null)}
+                  onFocus={() => setActiveCode(r.code)}
+                  onBlur={() => setActiveCode(null)}
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1 text-start text-sm transition-colors ${
+                    activeCode === r.code ? 'bg-white/70' : 'hover:bg-white/50'
+                  }`}
+                >
+                  <span className="text-lg leading-none" aria-hidden="true">
+                    {flagEmoji(r.code)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-medium text-[hsl(var(--dash-ink))]">
+                    {regionNames?.of(r.code) ?? r.code}
+                  </span>
+                  <span className="text-xs tabular-nums text-[hsl(var(--dash-muted))]">{r.pct}%</span>
+                </button>
               </li>
             ))}
             {othersPct > 0 && (
@@ -125,7 +144,17 @@ export default function StudentsDemographic() {
   )
 }
 
-function DotMap({ pins }: { pins: { code: string; color: string; coords: [number, number] }[] }) {
+type Pin = { code: string; color: string; coords: [number, number]; label?: string }
+
+function DotMap({
+  pins,
+  active = null,
+  onActive,
+}: {
+  pins: Pin[]
+  active?: string | null
+  onActive?: (_code: string | null) => void
+}) {
   return (
     <svg
       viewBox={`0 0 ${WORLD_COLS} ${WORLD_ROWS}`}
@@ -136,12 +165,27 @@ function DotMap({ pins }: { pins: { code: string; color: string; coords: [number
       {WORLD_LAND_CELLS.map(([c, r]) => (
         <circle key={`${c}-${r}`} cx={c + 0.5} cy={r + 0.5} r={0.36} fill="hsl(43 40% 78%)" />
       ))}
-      {pins.map(({ code, color, coords }) => {
+      {pins.map(({ code, color, coords, label }) => {
         const [x, y] = projectToGrid(coords[0], coords[1])
+        const on = active === code
         return (
-          <g key={code} transform={`translate(${x + 0.5} ${y + 0.5})`}>
-            <circle r={1.9} fill={color} opacity={0.18} />
-            <circle r={1.05} fill={color} stroke="#fff" strokeWidth={0.35} />
+          <g
+            key={code}
+            transform={`translate(${x + 0.5} ${y + 0.5})`}
+            onMouseEnter={() => onActive?.(code)}
+            onMouseLeave={() => onActive?.(null)}
+            style={{ cursor: 'pointer' }}
+          >
+            <circle r={on ? 3.2 : 1.9} fill={color} opacity={on ? 0.28 : 0.18} style={{ transition: 'r 180ms ease' }} />
+            <circle r={on ? 1.5 : 1.05} fill={color} stroke="#fff" strokeWidth={0.35} />
+            {on && label ? (
+              <g transform="translate(0 -4.2)">
+                <rect x={-label.length * 0.62 - 1.6} y={-2.6} width={label.length * 1.24 + 3.2} height={3.6} rx={1.8} fill="hsl(0 0% 8% / 0.85)" />
+                <text textAnchor="middle" y={0.1} fontSize={2.1} fontWeight={600} fill="#fff">
+                  {label}
+                </text>
+              </g>
+            ) : null}
           </g>
         )
       })}

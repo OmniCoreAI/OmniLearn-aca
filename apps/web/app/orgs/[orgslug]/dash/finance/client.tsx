@@ -3,6 +3,9 @@
 import React, { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import { TrendUp, TrendDown, UsersThree, Wallet as WalletIcon, Percent as PercentIcon } from '@phosphor-icons/react'
 import {
   Bar,
   BarChart,
@@ -23,10 +26,6 @@ import {
   Plus,
   Trash2,
   Wallet,
-  TrendingUp,
-  TrendingDown,
-  Percent,
-  Users,
   Activity,
 } from 'lucide-react'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
@@ -118,34 +117,6 @@ const BRAND = {
   tick: '#6b6b6b',
 } as const
 
-function MetricCard({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  color,
-}: {
-  label: string
-  value: string
-  sub?: string
-  icon: any
-  color: string
-}) {
-  return (
-    <div className="dash-lift dash-glass flex items-center gap-4 rounded-[var(--dash-radius)] px-5 py-4">
-      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ring-black/5 ${color}`}>
-        <Icon size={18} />
-      </div>
-      <div className="min-w-0">
-        <div className="truncate text-xl font-bold tracking-tight text-[hsl(var(--dash-ink))]">{value}</div>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[hsl(var(--dash-muted))]">
-          {label}
-        </div>
-        {sub && <div className="mt-0.5 text-xs text-[hsl(var(--dash-muted))]/75">{sub}</div>}
-      </div>
-    </div>
-  )
-}
 
 function ChartCard({
   title,
@@ -432,6 +403,7 @@ function EntryForm({
 }
 
 export default function FinanceClient({ orgslug }: { orgslug: string }) {
+  const { t } = useTranslation()
   const org = useOrg() as any
   const orgId = org?.id as number | undefined
   const session = useLHSession() as any
@@ -725,47 +697,16 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
           />
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-          <MetricCard
-            label="Revenue"
-            value={fmt(summary?.total_revenue || 0, currency)}
-            sub={`${summary?.revenue_count || 0} entries`}
-            icon={TrendingUp}
-            color="bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]"
-          />
-          <MetricCard
-            label="Expenses"
-            value={fmt(summary?.total_expenses || 0, currency)}
-            sub={`${summary?.expense_count || 0} entries`}
-            icon={TrendingDown}
-            color="bg-[hsl(var(--dash-tile-rose))] text-[hsl(var(--dash-tile-rose-fg))]"
-          />
-          <MetricCard
-            label="Instructor cost"
-            value={fmt(summary?.instructor_cost || 0, currency)}
-            sub="From work logs"
-            icon={Users}
-            color="bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]"
-          />
-          <MetricCard
-            label="Est. profit"
-            value={fmt(summary?.estimated_profit || 0, currency)}
-            sub="Revenue − expenses − instructors"
-            icon={Wallet}
-            color={
-              (summary?.estimated_profit || 0) >= 0
-                ? 'bg-[hsl(var(--dash-tile-lavender))] text-[hsl(var(--dash-tile-lavender-fg))]'
-                : 'bg-[hsl(var(--dash-tile-rose))] text-[hsl(var(--dash-tile-rose-fg))]'
-            }
-          />
-          <MetricCard
-            label="Margin"
-            value={`${(summary?.estimated_margin || 0).toFixed(0)}%`}
-            sub="Of revenue"
-            icon={Percent}
-            color="bg-[hsl(var(--dash-tile-sky))] text-[hsl(var(--dash-tile-sky-fg))]"
-          />
-        </div>
+        <DashStatCards
+          loading={!summary}
+          stats={[
+            { key: 'revenue', label: t('finance.stats.revenue', 'Revenue'), value: fmt(summary?.total_revenue || 0, currency), hint: t('finance.stats.entries', '{{count}} entries', { count: summary?.revenue_count || 0 }), icon: TrendUp, tone: 'gold' },
+            { key: 'expenses', label: t('finance.stats.expenses', 'Expenses'), value: fmt(summary?.total_expenses || 0, currency), hint: t('finance.stats.entries', '{{count}} entries', { count: summary?.expense_count || 0 }), icon: TrendDown, tone: 'rose' },
+            { key: 'instructors', label: t('finance.stats.instructor_cost', 'Instructor cost'), value: fmt(summary?.instructor_cost || 0, currency), hint: t('finance.stats.from_work_logs', 'From work logs'), icon: UsersThree, tone: 'stone' },
+            { key: 'profit', label: t('finance.stats.profit', 'Est. profit'), value: fmt(summary?.estimated_profit || 0, currency), hint: t('finance.stats.profit_hint', 'Revenue − expenses − instructors'), icon: WalletIcon, tone: (summary?.estimated_profit || 0) >= 0 ? 'sand' : 'rose' },
+            { key: 'margin', label: t('finance.stats.margin', 'Margin'), value: `${(summary?.estimated_margin || 0).toFixed(0)}%`, hint: t('finance.stats.of_revenue', 'Of revenue'), icon: PercentIcon, tone: 'stone' },
+          ]}
+        />
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <div className="xl:col-span-2">

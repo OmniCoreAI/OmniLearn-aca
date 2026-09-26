@@ -7,24 +7,8 @@ import { apiFetch } from '@services/utils/ts/requests'
 import { getAPIUrl } from '@services/config/config'
 import { getUserAvatarMediaDirectory } from '@services/media/media'
 
-/**
- * EACA palette for the dashboard home. Literal colors (not CSS vars) because
- * Recharts writes them into SVG presentation attributes, where var() does not resolve.
- */
-export const HOME_COLORS = {
-  gold: 'hsl(43 80% 56%)',
-  goldDeep: 'hsl(43 72% 45%)',
-  goldSoft: 'hsl(43 78% 88%)',
-  rose: 'hsl(351 70% 84%)',
-  roseSoft: 'hsl(351 72% 93%)',
-  roseFaint: 'hsl(351 70% 97%)',
-  red: 'hsl(351 84% 44%)',
-  stone: 'hsl(40 12% 88%)',
-  stoneSoft: 'hsl(40 16% 94%)',
-  ink: 'hsl(0 0% 8%)',
-  muted: 'hsl(0 0% 45%)',
-  grid: 'hsl(40 14% 90%)',
-} as const
+/** Palette lives in the shared dashboard theme; re-exported under the home's name. */
+export { DASH_COLORS as HOME_COLORS } from '@components/Dashboard/Shared/dashPalette'
 
 export type HomeUser = {
   user_uuid: string
@@ -65,7 +49,7 @@ export type HomeOverview = {
     enrollments_30d: number
     completions: number
   }
-  enrollment_trend: { month: string; enrollments: number; completions: number }[]
+  enrollment_trend: { month: string; enrollments: number; completions: number; members: number; courses: number }[]
   activity_heatmap: { day: number; hour: number; count: number }[]
   top_courses: HomeCourse[]
   recent_courses: HomeCourse[]

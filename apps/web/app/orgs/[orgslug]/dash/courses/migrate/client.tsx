@@ -254,9 +254,9 @@ export default function MigrationClient({ orgslug }: MigrationClientProps) {
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     index < currentStepIndex
-                      ? 'bg-green-500 text-white'
+                      ? 'bg-green-500 text-[hsl(var(--dash-ink))]'
                       : index === currentStepIndex
-                        ? 'bg-[hsl(var(--dash-accent))] text-white'
+                        ? 'bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))]'
                         : 'bg-gray-200 text-gray-500'
                   }`}
                 >

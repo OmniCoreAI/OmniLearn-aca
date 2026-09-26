@@ -42,16 +42,20 @@ function Cell({ className, children }: { className: string; children: React.Reac
  * right rail scrolls internally — while smaller screens keep a scrolling stack.
  */
 export default function DashboardHome() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const session = useLHSession() as any
   const firstName = session?.data?.user?.first_name || session?.data?.user?.username || ''
+  const todayLabel = new Date().toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
-    <div className="flex min-h-full w-full flex-col bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))] min-[1280px]:flex-row fit:h-dvh fit:min-h-0 fit:overflow-hidden">
+    <div className="dash-ambient flex min-h-full w-full flex-col text-[hsl(var(--dash-ink))] min-[1280px]:flex-row fit:h-dvh fit:min-h-0 fit:overflow-hidden">
       <main className="@container flex min-w-0 flex-1 flex-col gap-5 px-4 py-6 sm:px-8 sm:py-8 fit:min-h-0 fit:gap-3 fit:px-6 fit:py-3.5">
         <FadeIn>
           <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--dash-accent))]">
+                {todayLabel}
+              </p>
               <h1 className="text-[1.75rem] font-semibold tracking-tight text-[hsl(var(--dash-ink))] fit:text-2xl">
                 {t('dashboard.home.title', 'Dashboard')}
               </h1>
@@ -94,8 +98,10 @@ export default function DashboardHome() {
       </main>
 
       <AdminAuthorization authorizationMode="component">
-        <aside className="border-t border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-4 py-6 sm:px-8 min-[1280px]:w-[300px] min-[1280px]:shrink-0 min-[1280px]:border-s min-[1280px]:border-t-0 min-[1280px]:px-5 fit:flex fit:h-dvh fit:flex-col fit:py-4">
-          <HomeRightRail />
+        <aside className="px-4 pb-6 sm:px-8 min-[1280px]:w-[318px] min-[1280px]:shrink-0 min-[1280px]:px-0 min-[1280px]:py-3 min-[1280px]:pe-3 fit:flex fit:h-dvh fit:flex-col">
+          <div className="dash-glass flex flex-col rounded-[1.75rem] p-4 fit:min-h-0 fit:flex-1">
+            <HomeRightRail />
+          </div>
         </aside>
       </AdminAuthorization>
     </div>

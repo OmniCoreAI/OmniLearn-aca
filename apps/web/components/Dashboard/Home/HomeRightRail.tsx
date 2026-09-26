@@ -3,7 +3,17 @@
 import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { ArrowUpRight, CaretLeft, CaretRight, CheckCircle, Gear, PlusSquare, UserPlus, UserSwitch } from '@phosphor-icons/react'
+import type { TFunction } from 'i18next'
+import {
+  ArrowUpRight,
+  CaretLeft,
+  CaretRight,
+  CheckCircle,
+  Gear,
+  PlusSquare,
+  UserPlus,
+  UserSwitch,
+} from '@phosphor-icons/react'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { useOrg } from '@components/Contexts/OrgContext'
 import UserAvatar from '@components/Objects/UserAvatar'
@@ -24,16 +34,42 @@ import {
   useCalendarEvents,
 } from '@components/Calendar/calendarUtils'
 
+/* ------------------------------------------------------------------ helpers */
+
+const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 365 * 24 * 3600],
+  ['month', 30 * 24 * 3600],
+  ['week', 7 * 24 * 3600],
+  ['day', 24 * 3600],
+  ['hour', 3600],
+  ['minute', 60],
+]
+
+/** "2 hours ago" / "in 3 days" in the UI language. */
+function relativeTime(date: Date, locale: string) {
+  const seconds = (date.getTime() - Date.now()) / 1000
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  for (const [unit, size] of RELATIVE_STEPS) {
+    if (Math.abs(seconds) >= size) return rtf.format(Math.round(seconds / size), unit)
+  }
+  return rtf.format(0, 'minute')
+}
+
 function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="mb-2.5 flex items-center justify-between gap-2">
-      <h3 className="text-[15px] font-semibold text-[hsl(var(--dash-ink))]">{children}</h3>
+      <h3 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[hsl(var(--dash-muted))]">{children}</h3>
       {action}
     </div>
   )
 }
 
-function ProfileHeader() {
+const iconButton =
+  'inline-flex items-center justify-center border border-white/70 bg-white/60 text-[hsl(var(--dash-ink))] backdrop-blur transition-colors hover:bg-white'
+
+/* ------------------------------------------------------------------ profile */
+
+function ProfileCard() {
   const { t } = useTranslation()
   const session = useLHSession() as any
   const org = useOrg() as any
@@ -42,27 +78,35 @@ function ProfileHeader() {
   const role = (session?.data?.roles ?? []).find((r: any) => r.org?.id === org?.id)?.role?.name
 
   return (
-    <div className="flex items-center gap-3">
-      <UserAvatar width={42} rounded="rounded-xl" shadow="shadow-none" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-[hsl(var(--dash-ink))]">{name}</p>
-        <p className="truncate text-xs text-[hsl(var(--dash-muted))]">
-          {role || t('dashboard.home.rail.admin', 'Admin')}
-        </p>
+    <div className="relative overflow-hidden rounded-2xl bg-[linear-gradient(135deg,hsl(0_0%_12%),hsl(0_0%_5%))] p-3 text-white">
+      <span aria-hidden="true" className="absolute -end-8 -top-10 h-28 w-28 rounded-full bg-[hsl(var(--dash-accent))] opacity-30 blur-2xl" />
+      <div className="relative flex items-center gap-3">
+        <div className="rounded-xl ring-2 ring-[hsl(43_80%_60%)]/70">
+          <UserAvatar width={40} rounded="rounded-xl" shadow="shadow-none" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{name}</p>
+          <span className="mt-0.5 inline-flex max-w-full items-center truncate rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-[hsl(43_80%_70%)]">
+            {role || t('dashboard.home.rail.admin', 'Admin')}
+          </span>
+        </div>
+        <div className="flex gap-1.5">
+          <Link
+            href="/account/general"
+            aria-label={t('common.settings', 'Settings')}
+            title={t('common.settings', 'Settings')}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 transition-colors hover:bg-white/20"
+          >
+            <Gear size={16} />
+          </Link>
+        </div>
       </div>
-      <Link
-        href="/account/general"
-        aria-label={t('common.settings', 'Settings')}
-        title={t('common.settings', 'Settings')}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--dash-border))] text-[hsl(var(--dash-ink))] transition-colors hover:bg-[hsl(var(--dash-canvas))]"
-      >
-        <Gear size={18} />
-      </Link>
     </div>
   )
 }
 
-/** Month picker with per-type event dots. Days are buttons; the selected day drives the agenda below. */
+/* ----------------------------------------------------------------- calendar */
+
 function MiniCalendar({
   month,
   onMonth,
@@ -80,42 +124,37 @@ function MiniCalendar({
   const today = startOfDay(new Date())
   const days = useMemo(() => monthGrid(month), [month])
   const weekdayNames = useMemo(
-    () =>
-      Array.from({ length: 7 }, (_, i) =>
-        new Date(2024, 0, 7 + i).toLocaleDateString(i18n.language, { weekday: 'narrow' })
-      ),
+    () => Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 7 + i).toLocaleDateString(i18n.language, { weekday: 'narrow' })),
     [i18n.language]
   )
   const viewingThisMonth = month.getFullYear() === today.getFullYear() && month.getMonth() === today.getMonth()
   const shift = (delta: number) => onMonth(new Date(month.getFullYear(), month.getMonth() + delta, 1))
 
   return (
-    <section className="rounded-2xl bg-[linear-gradient(160deg,hsl(var(--dash-accent-soft)),hsl(var(--dash-surface))_70%)] p-3 shadow-[inset_0_0_0_1px_hsl(var(--dash-border)/0.7)]">
+    <section className="rounded-2xl border border-white/70 bg-white/55 p-3 shadow-[0_1px_0_white_inset] backdrop-blur">
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
-        <div className="min-w-0">
-          <p className="text-[15px] font-semibold leading-tight text-[hsl(var(--dash-ink))]">
-            {month.toLocaleDateString(i18n.language, { month: 'long' })}
-            <span className="ms-1.5 font-normal text-[hsl(var(--dash-muted))]">{month.getFullYear()}</span>
-          </p>
-        </div>
+        <p className="text-[15px] font-semibold tracking-tight text-[hsl(var(--dash-ink))]">
+          {month.toLocaleDateString(i18n.language, { month: 'long' })}
+          <span className="ms-1.5 font-normal text-[hsl(var(--dash-muted))]">{month.getFullYear()}</span>
+        </p>
         <div className="flex items-center gap-1">
-          {!viewingThisMonth && (
+          {!viewingThisMonth ? (
             <button
               type="button"
               onClick={() => {
                 onMonth(new Date(today.getFullYear(), today.getMonth(), 1))
                 onSelect(today)
               }}
-              className="rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-medium text-[hsl(var(--dash-ink))] shadow-sm hover:bg-white"
+              className="rounded-full bg-[hsl(var(--dash-ink))] px-2.5 py-0.5 text-[11px] font-medium text-white"
             >
               {t('dashboard.home.rail.today', 'Today')}
             </button>
-          )}
+          ) : null}
           <button
             type="button"
             onClick={() => shift(-1)}
             aria-label={t('dashboard.home.rail.previous_month', 'Previous month')}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/70 text-[hsl(var(--dash-ink))] shadow-sm hover:bg-white"
+            className={cn(iconButton, 'h-7 w-7 rounded-full')}
           >
             <CaretLeft size={12} weight="bold" className="rtl:rotate-180" />
           </button>
@@ -123,7 +162,7 @@ function MiniCalendar({
             type="button"
             onClick={() => shift(1)}
             aria-label={t('dashboard.home.rail.next_month', 'Next month')}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/70 text-[hsl(var(--dash-ink))] shadow-sm hover:bg-white"
+            className={cn(iconButton, 'h-7 w-7 rounded-full')}
           >
             <CaretRight size={12} weight="bold" className="rtl:rotate-180" />
           </button>
@@ -149,14 +188,15 @@ function MiniCalendar({
               aria-selected={isSelected}
               aria-label={day.toLocaleDateString(i18n.language, { dateStyle: 'full' })}
               onClick={() => onSelect(day)}
-              className="group flex h-[34px] flex-col items-center justify-center"
+              className="group flex h-[34px] flex-col items-center justify-center outline-none"
             >
               <span
                 className={cn(
-                  'inline-flex h-7 w-7 items-center justify-center rounded-full text-[12.5px] tabular-nums transition-all',
+                  'inline-flex h-7 w-7 items-center justify-center rounded-full text-[12.5px] tabular-nums transition-all group-focus-visible:ring-2 group-focus-visible:ring-[hsl(var(--dash-accent))]/50',
                   inMonth ? 'text-[hsl(var(--dash-ink))]' : 'text-[hsl(var(--dash-muted))]/35',
                   !isToday && !isSelected && 'group-hover:bg-white group-hover:shadow-sm',
-                  isToday && 'bg-[hsl(var(--dash-accent))] font-semibold text-white shadow-[0_4px_10px_hsl(var(--dash-accent)/0.4)]',
+                  isToday &&
+                    'bg-[linear-gradient(145deg,hsl(43_85%_62%),hsl(38_78%_46%))] font-semibold text-[hsl(var(--dash-ink))] shadow-[0_6px_14px_-6px_hsl(43_80%_40%/0.8)]',
                   isSelected && !isToday && 'bg-[hsl(var(--dash-ink))] font-semibold text-white'
                 )}
               >
@@ -179,7 +219,8 @@ function MiniCalendar({
   )
 }
 
-/** Agenda for the selected day; falls back to what's next when the day is empty. */
+/* ------------------------------------------------------------------- agenda */
+
 function DayAgenda({
   selected,
   byDay,
@@ -203,7 +244,7 @@ function DayAgenda({
         action={
           <Link
             href="/dash/calendar"
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-[hsl(var(--dash-muted))] hover:bg-white/60 hover:text-[hsl(var(--dash-ink))]"
           >
             {t('dashboard.home.rail.open_calendar', 'Calendar')}
             <ArrowUpRight size={12} className="rtl:-scale-x-100" />
@@ -223,7 +264,7 @@ function DayAgenda({
           ))}
         </div>
       ) : list.length === 0 ? (
-        <p className="rounded-2xl bg-[hsl(var(--dash-canvas))] px-4 py-4 text-center text-xs text-[hsl(var(--dash-muted))]">
+        <p className="rounded-2xl border border-dashed border-[hsl(var(--dash-border))] bg-white/40 px-4 py-4 text-center text-xs text-[hsl(var(--dash-muted))]">
           {t('dashboard.home.rail.nothing_scheduled', 'Nothing scheduled')}
         </p>
       ) : (
@@ -234,26 +275,22 @@ function DayAgenda({
             return (
               <li key={e.id}>
                 <Link
-                  href={`/dash/calendar`}
-                  className="flex items-center gap-3 rounded-2xl bg-[hsl(var(--dash-canvas))] p-2.5 transition-colors hover:bg-[hsl(var(--dash-accent-soft))]"
+                  href="/dash/calendar"
+                  className="flex items-stretch gap-3 rounded-2xl border border-white/70 bg-white/55 p-2.5 backdrop-blur transition-all hover:-translate-y-px hover:bg-white/80"
                 >
-                  <span
-                    className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl"
-                    style={{ background: style.bg, color: style.fg }}
-                  >
-                    <span className="text-base font-semibold leading-none">{start.getDate()}</span>
-                    <span className="mt-0.5 text-[9px] uppercase">
-                      {start.toLocaleDateString(i18n.language, { weekday: 'short' })}
+                  <span className="w-1 shrink-0 rounded-full" style={{ background: style.dot }} />
+                  <span className="flex w-10 shrink-0 flex-col items-center justify-center">
+                    <span className="text-base font-semibold leading-none text-[hsl(var(--dash-ink))]">{start.getDate()}</span>
+                    <span className="mt-0.5 text-[9px] uppercase text-[hsl(var(--dash-muted))]">
+                      {start.toLocaleDateString(i18n.language, { month: 'short' })}
                     </span>
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[10px] font-semibold" style={{ color: style.fg }}>
+                    <span className="block text-[10px] font-semibold uppercase tracking-wide" style={{ color: style.fg }}>
                       {kindLabel(t, e)}
                     </span>
-                    <span className="block truncate text-[13px] font-medium text-[hsl(var(--dash-ink))]">
-                      {e.title}
-                    </span>
-                    <span className="block truncate text-[10px] text-[hsl(var(--dash-muted))]">
+                    <span className="block truncate text-[13px] font-medium text-[hsl(var(--dash-ink))]">{e.title}</span>
+                    <span className="block truncate text-[10.5px] text-[hsl(var(--dash-muted))]">
                       {formatTimeRange(e, i18n.language, t)}
                       {e.location ? ` · ${e.location}` : e.subtitle ? ` · ${e.subtitle}` : ''}
                     </span>
@@ -268,50 +305,46 @@ function DayAgenda({
   )
 }
 
-const ACTIVITY_META: Record<HomeActivity['type'], { icon: React.ElementType; bg: string; fg: string }> = {
-  course_created: { icon: PlusSquare, bg: HOME_COLORS.stoneSoft, fg: HOME_COLORS.ink },
-  enrollment: { icon: UserSwitch, bg: HOME_COLORS.roseSoft, fg: HOME_COLORS.red },
-  completion: { icon: CheckCircle, bg: HOME_COLORS.goldSoft, fg: HOME_COLORS.goldDeep },
-  member_joined: { icon: UserPlus, bg: HOME_COLORS.stoneSoft, fg: HOME_COLORS.ink },
+/* --------------------------------------------------------- recent activity */
+
+const ACTIVITY_META: Record<HomeActivity['type'], { icon: React.ElementType; color: string }> = {
+  course_created: { icon: PlusSquare, color: HOME_COLORS.ink },
+  enrollment: { icon: UserSwitch, color: HOME_COLORS.red },
+  completion: { icon: CheckCircle, color: HOME_COLORS.goldDeep },
+  member_joined: { icon: UserPlus, color: 'hsl(222 38% 50%)' },
+}
+
+function describeActivity(a: HomeActivity, t: TFunction) {
+  const user = userDisplayName(a.user) || t('dashboard.home.activity_feed.someone', 'Someone')
+  const course = a.course?.name ?? ''
+  switch (a.type) {
+    case 'course_created':
+      return {
+        title: t('dashboard.home.activity_feed.course_created', 'New Course Added'),
+        body: t('dashboard.home.activity_feed.course_created_body', '"{{course}}" was created.', { course }),
+      }
+    case 'enrollment':
+      return {
+        title: t('dashboard.home.activity_feed.enrollment', 'New Enrollment'),
+        body: t('dashboard.home.activity_feed.enrollment_body', '{{user}} enrolled in "{{course}}".', { user, course }),
+      }
+    case 'completion':
+      return {
+        title: t('dashboard.home.activity_feed.completion', 'Course Completed'),
+        body: t('dashboard.home.activity_feed.completion_body', '{{user}} completed "{{course}}".', { user, course }),
+      }
+    case 'member_joined':
+      return {
+        title: t('dashboard.home.activity_feed.member_joined', 'New Member'),
+        body: t('dashboard.home.activity_feed.member_joined_body', '{{user}} joined the academy.', { user }),
+      }
+  }
 }
 
 function RecentActivities() {
   const { t, i18n } = useTranslation()
   const { data, isLoading } = useHomeOverview()
   const items = data?.recent_activity ?? []
-
-  const describe = (a: HomeActivity) => {
-    const user = userDisplayName(a.user) || t('dashboard.home.activity_feed.someone', 'Someone')
-    const course = a.course?.name ?? ''
-    switch (a.type) {
-      case 'course_created':
-        return {
-          title: t('dashboard.home.activity_feed.course_created', 'New Course Added'),
-          body: t('dashboard.home.activity_feed.course_created_body', '"{{course}}" was created.', { course }),
-        }
-      case 'enrollment':
-        return {
-          title: t('dashboard.home.activity_feed.enrollment', 'New Enrollment'),
-          body: t('dashboard.home.activity_feed.enrollment_body', '{{user}} enrolled in "{{course}}".', {
-            user,
-            course,
-          }),
-        }
-      case 'completion':
-        return {
-          title: t('dashboard.home.activity_feed.completion', 'Course Completed'),
-          body: t('dashboard.home.activity_feed.completion_body', '{{user}} completed "{{course}}".', {
-            user,
-            course,
-          }),
-        }
-      case 'member_joined':
-        return {
-          title: t('dashboard.home.activity_feed.member_joined', 'New Member'),
-          body: t('dashboard.home.activity_feed.member_joined_body', '{{user}} joined the academy.', { user }),
-        }
-    }
-  }
 
   return (
     <section className="flex min-h-0 flex-col fit:flex-1">
@@ -323,42 +356,43 @@ function RecentActivities() {
           ))}
         </div>
       ) : items.length === 0 ? (
-        <p className="rounded-2xl bg-[hsl(var(--dash-canvas))] px-4 py-4 text-center text-xs text-[hsl(var(--dash-muted))]">
+        <p className="rounded-2xl border border-dashed border-[hsl(var(--dash-border))] bg-white/40 px-4 py-4 text-center text-xs text-[hsl(var(--dash-muted))]">
           {t('dashboard.home.activity_feed.empty', 'Nothing has happened yet.')}
         </p>
       ) : (
-        // In fit mode this list is the only thing that scrolls in the rail.
-        <ol className="space-y-3 fit:-me-2 fit:min-h-0 fit:flex-1 fit:overflow-y-auto fit:pe-2 [scrollbar-width:thin]">
+        // In fit mode this timeline is the only thing that scrolls in the rail.
+        <ol className="relative fit:-me-2 fit:min-h-0 fit:flex-1 fit:overflow-y-auto fit:pe-2 [scrollbar-width:thin]">
+          <span
+            aria-hidden="true"
+            className="absolute bottom-3 start-[15px] top-3 w-px bg-[linear-gradient(to_bottom,hsl(var(--dash-border)),transparent)]"
+          />
           {items.map((a, i) => {
             const meta = ACTIVITY_META[a.type]
             const Icon = meta.icon
-            const text = describe(a)
+            const text = describeActivity(a, t)
             const when = parseTimestamp(a.timestamp)
             return (
-              <li key={`${a.type}-${a.timestamp}-${i}`} className="flex gap-3">
+              <li key={`${a.type}-${a.timestamp}-${i}`} className="relative flex gap-3 pb-3.5 last:pb-0">
                 <span
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: meta.bg, color: meta.fg }}
+                  className="relative z-[1] inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white bg-white/90 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.15)]"
+                  style={{ color: meta.color }}
                 >
-                  <Icon size={16} />
+                  <Icon size={15} weight="duotone" />
                 </span>
-                <div className="min-w-0 text-xs leading-relaxed">
-                  {when && (
-                    <p className="text-[10px] text-[hsl(var(--dash-muted))]">
-                      {when.toLocaleString(i18n.language, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  )}
-                  <p className="text-[hsl(var(--dash-ink))]/80">
-                    <span className="font-semibold text-[hsl(var(--dash-ink))]">{text.title}</span>
-                    {' – '}
-                    {text.body}
+                <div className="min-w-0 flex-1 pt-0.5 text-xs leading-relaxed">
+                  <p className="flex items-baseline justify-between gap-2">
+                    <span className="truncate font-semibold text-[hsl(var(--dash-ink))]">{text.title}</span>
+                    {when ? (
+                      <time
+                        dateTime={when.toISOString()}
+                        title={when.toLocaleString(i18n.language)}
+                        className="shrink-0 text-[10px] text-[hsl(var(--dash-muted))]"
+                      >
+                        {relativeTime(when, i18n.language)}
+                      </time>
+                    ) : null}
                   </p>
+                  <p className="line-clamp-2 text-[hsl(var(--dash-ink))]/70">{text.body}</p>
                 </div>
               </li>
             )
@@ -368,6 +402,8 @@ function RecentActivities() {
     </section>
   )
 }
+
+/* --------------------------------------------------------------------- rail */
 
 export default function HomeRightRail() {
   const today = useMemo(() => startOfDay(new Date()), [])
@@ -386,10 +422,16 @@ export default function HomeRightRail() {
   )
 
   return (
-    <div className="flex flex-col gap-6 fit:min-h-0 fit:flex-1 fit:gap-4">
-      <ProfileHeader />
-      <div className="grid gap-6 md:max-[1279px]:grid-cols-2 fit:gap-4">
-        <MiniCalendar month={month} onMonth={setMonth} selected={selected} onSelect={(d) => setSelected(startOfDay(d))} byDay={byDay} />
+    <div className="flex flex-col gap-5 fit:min-h-0 fit:flex-1 fit:gap-3.5">
+      <ProfileCard />
+      <div className="grid gap-5 md:max-[1279px]:grid-cols-2 fit:gap-3.5">
+        <MiniCalendar
+          month={month}
+          onMonth={setMonth}
+          selected={selected}
+          onSelect={(d) => setSelected(startOfDay(d))}
+          byDay={byDay}
+        />
         <DayAgenda selected={selected} byDay={byDay} upcoming={upcoming} isLoading={isLoading} />
       </div>
       <RecentActivities />

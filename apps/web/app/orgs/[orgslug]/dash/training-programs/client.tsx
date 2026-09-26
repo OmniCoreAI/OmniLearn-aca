@@ -2,6 +2,8 @@
 import React, { useState } from 'react'
 import { Award, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import { Certificate, CheckCircle, CalendarCheck, CurrencyCircleDollar } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
@@ -83,6 +85,13 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
     return badges
   }
 
+  const today = new Date().toISOString().slice(0, 10)
+  const stats = {
+    published: programs.filter((p: any) => p.published).length,
+    upcoming: programs.filter((p: any) => p.start_date && String(p.start_date).slice(0, 10) >= today).length,
+    paid: programs.filter((p: any) => p.is_paid).length,
+  }
+
   return (
     <AcademicPageShell>
       <Breadcrumbs
@@ -103,12 +112,23 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
                 setEditing(null)
                 setModalOpen(true)
               }}
-              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] flex items-center gap-2 hover:brightness-110 transition-all"
             >
               <Plus className="w-4 h-4" /> {t('academic.new_training_program')}
             </button>
           </AuthenticatedClientElement>
         }
+      />
+
+      <DashStatCards
+        className="mb-6"
+        loading={isLoading}
+        stats={[
+          { key: 'total', label: t('academic.stats.programs', 'Programs'), value: programs.length, icon: Certificate, tone: 'rose' },
+          { key: 'published', label: t('academic.stats.published', 'Published'), value: stats.published, hint: t('academic.stats.drafts_hint', '{{count}} drafts', { count: programs.length - stats.published }), icon: CheckCircle, tone: 'stone' },
+          { key: 'upcoming', label: t('academic.stats.upcoming', 'Upcoming'), value: stats.upcoming, hint: t('academic.stats.upcoming_hint', 'Starting from today'), icon: CalendarCheck, tone: 'gold', href: '/dash/calendar' },
+          { key: 'paid', label: t('academic.stats.paid', 'Paid'), value: stats.paid, hint: t('academic.stats.free_hint', '{{count}} free', { count: programs.length - stats.paid }), icon: CurrencyCircleDollar, tone: 'sand' },
+        ]}
       />
 
       {isLoading && <AcademicGridSkeleton />}

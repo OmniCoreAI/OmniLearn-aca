@@ -239,7 +239,7 @@ export default function HtmlRichTextEditor({
               <button
                 type="button"
                 onClick={applyLink}
-                className="rounded-lg bg-[hsl(var(--dash-accent))] px-4 py-2 text-sm font-bold text-white"
+                className="rounded-lg bg-[hsl(var(--dash-accent))] px-4 py-2 text-sm font-bold text-[hsl(var(--dash-ink))]"
               >
                 {t('cms.news.link_apply', 'Apply')}
               </button>

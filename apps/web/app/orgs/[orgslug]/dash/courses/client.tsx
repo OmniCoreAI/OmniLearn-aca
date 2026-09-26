@@ -18,6 +18,8 @@ import { getAPIUrl, getUriWithOrg } from '@services/config/config'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { Download, Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import { BookOpen, CheckCircle, PencilSimple, Globe } from '@phosphor-icons/react'
 import { OrgUsageResponse, orgUsageFetcher } from '@services/orgs/usage'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { deleteCourseFromBackend, cloneCourse } from '@services/courses/courses'
@@ -75,6 +77,10 @@ function CoursesHome(params: CourseProps) {
   const mutateCourses = () => queryClient.invalidateQueries({ queryKey: queryKeys.courses.list(orgslug) })
 
   const allCourses = coursesData ?? []
+  const courseStats = {
+    published: allCourses.filter((c: any) => c.published).length,
+    public: allCourses.filter((c: any) => c.public).length,
+  }
 
   // Fetch usage limits from backend
   const { data: usageData } = useQuery<OrgUsageResponse>({
@@ -534,6 +540,17 @@ function CoursesHome(params: CourseProps) {
         </div>
       </div>
 
+      <DashStatCards
+        className="mb-6"
+        loading={isCoursesLoading}
+        stats={[
+          { key: 'total', label: t('dashboard.courses.stats.total', 'Courses'), value: allCourses.length, icon: BookOpen, tone: 'rose' },
+          { key: 'published', label: t('dashboard.courses.stats.published', 'Published'), value: courseStats.published, icon: CheckCircle, tone: 'stone' },
+          { key: 'drafts', label: t('dashboard.courses.stats.drafts', 'Drafts'), value: allCourses.length - courseStats.published, icon: PencilSimple, tone: 'gold' },
+          { key: 'public', label: t('dashboard.courses.stats.public', 'Public'), value: courseStats.public, hint: t('dashboard.courses.stats.public_hint', 'Visible to visitors'), icon: Globe, tone: 'sand' },
+        ]}
+      />
+
       {/* Search, Usergroup Filter, and Selection Controls */}
       {allCourses.length > 0 && (
         <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -754,7 +771,7 @@ function CoursesHome(params: CourseProps) {
                     onClick={() => goToPage(page as number)}
                     className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                       currentPage === page
-                        ? 'bg-[hsl(var(--dash-accent))] text-white'
+                        ? 'bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))]'
                         : 'bg-[hsl(var(--dash-surface))] text-[hsl(var(--dash-muted))] nice-shadow hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))]'
                     }`}
                   >

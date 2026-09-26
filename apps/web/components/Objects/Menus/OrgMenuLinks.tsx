@@ -4,6 +4,7 @@ import { getUriWithOrg } from '@services/config/config'
 import { Books, FolderSimple, Cube, ShoppingBag, GraduationCap, CalendarBlank } from '@phosphor-icons/react'
 import { menuIcon } from '@components/Objects/Menus/menuIcons'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { getMenuColorClasses } from '@services/utils/ts/colorUtils'
@@ -30,6 +31,8 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
   const session = useLHSession() as any
   const signedIn = session?.status === 'authenticated' || !!session?.data?.tokens?.access_token
   const colors = getMenuColorClasses(props.primaryColor || '')
+  const branded = !!props.primaryColor
+  const pathname = usePathname() || ''
 
   const rf = org?.config?.config?.resolved_features
   const isEnabled = (feature: string) => rf?.[feature]?.enabled === true
@@ -70,13 +73,34 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
     })
     .filter(Boolean) as any[]
 
+  const isActive = (href: string) => {
+    const path = href.replace(/^https?:\/\/[^/]+/, '')
+    return path !== '/' && (pathname === path || pathname.startsWith(path + '/'))
+  }
+
   return (
-    <div className="pl-1">
-      <ul className="flex space-x-5">
+    <div className="ps-1">
+      <ul className="flex items-center gap-1">
         {rendered.map((it) => {
+          const active = !it.external && isActive(it.href)
           const content = (
-            <li className={`flex space-x-2 items-center ${colors.text} font-semibold`}>
-              <it.Icon size={20} weight="fill" /> <span>{it.label}</span>
+            <li
+              className={
+                branded
+                  ? `flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${colors.text} ${colors.hoverBg} ${active ? 'bg-black/10' : ''}`
+                  : `flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-ink))]'
+                        : 'text-[hsl(var(--dash-ink))]/70 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]'
+                    }`
+              }
+            >
+              <it.Icon
+                size={18}
+                weight={active ? 'fill' : 'regular'}
+                className={!branded && active ? 'text-[hsl(var(--dash-accent))]' : undefined}
+              />
+              <span>{it.label}</span>
             </li>
           )
           return it.external ? (

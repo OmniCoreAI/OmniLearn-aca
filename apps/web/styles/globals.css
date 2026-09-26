@@ -300,14 +300,14 @@
     border-radius: 0.625rem;
     background: hsl(var(--auth-surface));
     color: hsl(var(--auth-ink));
-    box-shadow: inset 0 0 0 1px hsl(var(--auth-border));
+    box-shadow: inset 0 0 0 1px hsl(var(--auth-border)) !important;
     transition: box-shadow 160ms ease, background 160ms ease;
   }
   .auth-input:hover {
-    box-shadow: inset 0 0 0 1px hsl(40 18% 75%);
+    box-shadow: inset 0 0 0 1px hsl(40 18% 75%) !important;
   }
   .auth-input:focus {
-    box-shadow: inset 0 0 0 1.5px hsl(var(--auth-focus)), 0 0 0 4px hsl(var(--auth-focus) / 0.14);
+    box-shadow: inset 0 0 0 1.5px hsl(var(--auth-focus)), 0 0 0 4px hsl(var(--auth-focus) / 0.14) !important;
   }
 
   .auth-btn-primary {
@@ -338,6 +338,16 @@
       0 1px 0 hsl(0 0% 100% / 0.8) inset,
       0 10px 36px hsl(0 0% 0% / 0.06),
       0 0 0 1px hsl(var(--dash-border) / 0.55);
+  }
+
+  /* Warm ambient backdrop behind glass cards: layered radial gradients in the
+     brand gold/red over the canvas (no blur filters, so it costs nothing). */
+  .dash-ambient {
+    background:
+      radial-gradient(60rem 36rem at 6% -8%, hsl(43 85% 62% / 0.20), transparent 60%),
+      radial-gradient(44rem 30rem at 96% 4%, hsl(351 80% 60% / 0.09), transparent 60%),
+      radial-gradient(56rem 34rem at 55% 110%, hsl(38 80% 55% / 0.12), transparent 62%),
+      hsl(var(--dash-canvas));
   }
 
   .dash-glass-dark {
@@ -494,31 +504,34 @@
 
 @layer base {
   :root {
+    /* shadcn base tokens, tuned to the EACA palette: warm neutrals, ink
+       primary (white-on-gold fails contrast at small sizes, so gold is the
+       accent/focus colour), brand red for destructive actions. */
     --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --foreground: 0 0% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 0 0% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
+    --popover-foreground: 0 0% 8%;
     --primary: 0 0% 9%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
+    --secondary: 40 16% 95%;
+    --secondary-foreground: 0 0% 12%;
+    --muted: 40 18% 96%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 43 55% 94%;
+    --accent-foreground: 38 70% 26%;
+    --destructive: 351 84% 44%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --border: 40 14% 88%;
+    --input: 40 14% 86%;
+    --ring: 43 72% 45%;
+    --chart-1: 43 80% 50%;
+    --chart-2: 351 70% 55%;
+    --chart-3: 0 0% 15%;
+    --chart-4: 28 70% 52%;
+    --chart-5: 40 10% 58%;
+    --radius: 0.75rem;
 
     /* EACA brand — gold primary + Egyptian flag (red / white / black) */
     --dash-canvas: 40 18% 96%;

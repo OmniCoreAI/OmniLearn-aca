@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Plus } from '@phosphor-icons/react'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { getCourseThumbnailMediaDirectory } from '@services/media/media'
+import CourseCover from '@components/Objects/Thumbnails/CourseCover'
 import { Stagger, StaggerItem } from '@components/Dashboard/Shared/DashMotion'
 import { EmptyState, HomeCard } from './HomeCard'
 import { HOME_COLORS, HomeUser, useHomeOverview, userAvatarUrl, userDisplayName } from './homeData'
@@ -83,15 +84,18 @@ export default function NewCoursesWidget() {
           {courses.map((course) => {
             const thumb = course.thumbnail_image
               ? getCourseThumbnailMediaDirectory(org?.org_uuid, course.course_uuid, course.thumbnail_image)
-              : '/empty_thumbnail.png'
+              : null
             const id = course.course_uuid.replace('course_', '')
             return (
               <StaggerItem key={course.course_uuid} className="fit:min-h-0">
                 <Link href={`/dash/courses/course/${id}/general`} className="group flex h-full min-h-0 flex-col">
                   <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-[hsl(var(--dash-canvas))] fit:aspect-auto fit:min-h-[36px] fit:flex-1 fit:rounded-xl">
-                    <div
-                      className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                      style={{ backgroundImage: `url(${thumb})` }}
+                    <CourseCover
+                      name={course.name}
+                      seed={course.course_uuid}
+                      src={thumb}
+                      size="sm"
+                      className="absolute inset-0 transition-transform duration-500 group-hover:scale-105"
                     />
                     <span className="absolute start-2.5 top-2.5 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-medium text-[hsl(var(--dash-ink))] backdrop-blur">
                       {course.published

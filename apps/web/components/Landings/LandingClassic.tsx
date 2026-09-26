@@ -2,7 +2,6 @@
 
 import React from 'react'
 import GeneralWrapperStyled from '@components/Objects/StyledElements/Wrappers/GeneralWrapper'
-import TypeOfContentTitle from '@components/Objects/StyledElements/Titles/TypeOfContentTitle'
 import CourseThumbnail from '@components/Objects/Thumbnails/CourseThumbnail'
 import AuthenticatedClientElement from '@components/Security/AuthenticatedClientElement'
 import NewCourseButton from '@components/Objects/StyledElements/Buttons/NewCourseButton'
@@ -11,6 +10,8 @@ import Link from 'next/link'
 import { getUriWithOrg } from '@services/config/config'
 import { useTranslation } from 'react-i18next'
 import { BookCopy } from 'lucide-react'
+import { useLHSession } from '@components/Contexts/LHSessionContext'
+import LearnerHome, { GuestHero } from '@components/Landings/LearnerHome'
 
 interface LandingClassicProps {
   courses: any[]
@@ -20,6 +21,8 @@ interface LandingClassicProps {
 
 function LandingClassic({ courses, orgslug, org_id }: LandingClassicProps) {
   const { t } = useTranslation()
+  const session = useLHSession() as any
+  const signedIn = !!session?.data?.tokens?.access_token
 
   // Limit to 12 courses (4x3 grid) for the home page
   const displayedCourses = courses.slice(0, 12)
@@ -28,10 +31,19 @@ function LandingClassic({ courses, orgslug, org_id }: LandingClassicProps) {
   return (
     <div className="w-full">
       <GeneralWrapperStyled>
+        <div className="mb-10">{signedIn ? <LearnerHome orgslug={orgslug} /> : <GuestHero orgslug={orgslug} />}</div>
+
         {/* Courses */}
-        <div className="flex flex-col space-y-2">
+        <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between">
-            <TypeOfContentTitle title={t('courses.courses')} type="cou" />
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-[hsl(var(--dash-ink))]">
+                {t('learner.home.explore', 'Explore courses')}
+              </h2>
+              <p className="text-xs text-[hsl(var(--dash-muted))]">
+                {t('learner.home.explore_count', '{{count}} courses available', { count: courses.length })}
+              </p>
+            </div>
             <AuthenticatedClientElement
               ressourceType="courses"
               action="create"
