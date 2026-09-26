@@ -19,6 +19,7 @@ export interface DashNavItemDef {
 
 export const DASH_NAV_ITEMS: DashNavItemDef[] = [
   { id: 'home', section: 'overview', labelKey: 'common.home', fallbackLabel: 'Home', pathPrefixes: ['/dash'] },
+  { id: 'calendar', section: 'overview', labelKey: 'calendar.title', fallbackLabel: 'Calendar', pathPrefixes: ['/dash/calendar'] },
   { id: 'postgraduate', section: 'academic', labelKey: 'academic.postgraduate_studies', fallbackLabel: 'Postgraduate Studies', pathPrefixes: ['/dash/postgraduate'] },
   { id: 'training-programs', section: 'academic', labelKey: 'academic.training_programs', fallbackLabel: 'Training Programs', pathPrefixes: ['/dash/training-programs'] },
   { id: 'instructors', section: 'academic', labelKey: 'instructors.title', fallbackLabel: 'Instructors', pathPrefixes: ['/dash/instructors'] },

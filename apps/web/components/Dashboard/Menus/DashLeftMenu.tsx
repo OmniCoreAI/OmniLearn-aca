@@ -40,6 +40,7 @@ import {
   Certificate,
   ChalkboardTeacher,
   Newspaper,
+  CalendarBlank,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import CommandPaletteTrigger from '@components/Dashboard/CommandPalette/CommandPaletteTrigger'
@@ -72,7 +73,7 @@ import { cn } from '@/lib/utils'
 import OrgLogo from '@components/Dashboard/Shared/OrgLogo'
 import { getAssignmentsFromACourse } from '@services/courses/assignments'
 import { getOrgCourses } from '@services/courses/courses'
-import { getDeploymentMode } from '@services/config/config'
+import { getDeploymentMode, getUpgradeUrl } from '@services/config/config'
 import PlanBadge from '@components/Dashboard/Shared/PlanRestricted/PlanBadge'
 import { usePlan } from '@components/Hooks/usePlan'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
@@ -160,6 +161,7 @@ function DashLeftMenu() {
   const { isItemVisible } = usePortalNavVisibility()
 
   const showHome = isItemVisible('home')
+  const showCalendar = isItemVisible('calendar')
   const showPostgraduate = isItemVisible('postgraduate')
   const showTrainingPrograms = isItemVisible('training-programs')
   const showInstructors = isItemVisible('instructors')
@@ -191,23 +193,23 @@ function DashLeftMenu() {
     <nav
       aria-label="Dashboard sidebar navigation"
       className={cn(
-        "flex flex-col h-screen sticky top-0 shrink-0 self-start z-overlay border-e border-[hsl(var(--dash-border))]/80 bg-[hsl(var(--dash-sidebar))] text-[hsl(var(--dash-ink))] transition-all duration-300",
-        isCollapsed ? "w-[72px]" : "w-64"
+        "flex flex-col h-screen sticky top-0 shrink-0 self-start z-overlay border-e border-[hsl(var(--dash-border))]/60 bg-[hsl(var(--dash-sidebar))] text-[hsl(var(--dash-ink))] transition-all duration-300",
+        isCollapsed ? "w-[76px]" : "w-[264px]"
       )}
     >
       {/* Header with Logo and Toggle */}
       <div className={cn(
-        "flex items-center h-16 border-b border-[hsl(var(--dash-border))] px-4 shrink-0",
-        isCollapsed ? "justify-center" : "justify-between"
+        "flex items-center h-20 px-5 shrink-0",
+        isCollapsed ? "justify-center px-3" : "justify-between"
       )}>
         <Link
-          className={cn("flex items-center transition-opacity hover:opacity-70", isCollapsed ? "" : "space-x-3")}
+          className={cn("flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80")}
           href={'/'}
         >
-          <OrgLogo org={org} className="h-9 w-9" fallbackClassName="text-sm" />
+          <OrgLogo org={org} className="h-10 w-10" fallbackClassName="text-sm" />
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-sm text-[hsl(var(--dash-ink))] truncate">
+              <span className="truncate text-[17px] font-semibold tracking-tight text-[hsl(var(--dash-ink))]">
                 {org?.name}
               </span>
               <span className={cn(
@@ -245,16 +247,28 @@ function DashLeftMenu() {
       <div className="flex-1 overflow-y-auto py-3 px-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <AdminAuthorization authorizationMode="component">
           <div className="space-y-4">
-            {showHome && (
+            {(showHome || showCalendar) && (
             <NavSection label={t('dashboard.home.nav.overview', 'Overview')} isCollapsed={isCollapsed}>
+              {showHome && (
               <MenuLink
                 href="/dash"
-                icon={<House size={20} weight="fill" />}
+                icon={<House size={20} />}
                 label={t('common.home')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash')}
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'home' })}
               />
+              )}
+              {showCalendar && (
+              <MenuLink
+                href="/dash/calendar"
+                icon={<CalendarBlank size={20} />}
+                label={t('calendar.title', 'Calendar')}
+                isCollapsed={isCollapsed}
+                active={isActivePath('/dash/calendar')}
+                onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'calendar' })}
+              />
+              )}
             </NavSection>
             )}
 
@@ -263,7 +277,7 @@ function DashLeftMenu() {
               {showPostgraduate && (
               <MenuLink
                 href="/dash/postgraduate"
-                icon={<GraduationCap size={20} weight="fill" />}
+                icon={<GraduationCap size={20} />}
                 label={t('academic.postgraduate_studies', 'Postgraduate Studies')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/postgraduate') && !inMyTeaching}
@@ -273,7 +287,7 @@ function DashLeftMenu() {
               {showTrainingPrograms && (
               <MenuLink
                 href="/dash/training-programs"
-                icon={<Certificate size={20} weight="fill" />}
+                icon={<Certificate size={20} />}
                 label={t('academic.training_programs', 'Training Programs')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/training-programs')}
@@ -283,7 +297,7 @@ function DashLeftMenu() {
               {showInstructors && (
               <MenuLink
                 href="/dash/instructors"
-                icon={<ChalkboardTeacher size={20} weight="fill" />}
+                icon={<ChalkboardTeacher size={20} />}
                 label={t('instructors.title', 'Instructors')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/instructors')}
@@ -293,7 +307,7 @@ function DashLeftMenu() {
               {showFinance && (
               <MenuLink
                 href="/dash/finance"
-                icon={<CurrencyCircleDollar size={20} weight="fill" />}
+                icon={<CurrencyCircleDollar size={20} />}
                 label={t('common.finance', 'Finance')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/finance')}
@@ -303,7 +317,7 @@ function DashLeftMenu() {
               {showCmsNews && (
               <MenuLink
                 href="/dash/cms/news"
-                icon={<Newspaper size={20} weight="fill" />}
+                icon={<Newspaper size={20} />}
                 label={t('cms.news.title', 'News')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/cms/news')}
@@ -370,15 +384,15 @@ function DashLeftMenu() {
                     aria-label="Open assignments menu"
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      "relative flex items-center w-full rounded-lg transition-all",
+                      "relative flex items-center w-full rounded-xl transition-all duration-200",
                       active
-                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
-                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
-                      isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
+                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-ink))] shadow-[inset_0_0_0_1px_hsl(var(--dash-accent)/0.18)]"
+                        : "text-[hsl(var(--dash-ink))]/70 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]",
+                      isCollapsed ? "justify-center h-11" : "px-3.5 py-2.5 gap-3"
                     )}
                   >
                                         <span className="relative flex items-center justify-center">
-                      <Files size={20} weight="fill" />
+                      <Files size={20} />
                       {isCollapsed && (
                         <CaretDown aria-hidden="true" size={8} weight="bold" className={cn("absolute -right-2.5", active ? "text-[hsl(var(--dash-muted))]" : "text-[hsl(var(--dash-muted))]/70")} />
                       )}
@@ -386,7 +400,7 @@ function DashLeftMenu() {
                     {!isCollapsed && (
                       <>
                         <span className="text-sm font-medium flex-1 text-left">{t('common.assignments')}</span>
-                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-accent))]/70" : "text-[hsl(var(--dash-muted))]"} />
+                        <CaretDown aria-hidden="true" size={14} weight="bold" className="text-[hsl(var(--dash-muted))]" />
                       </>
                     )}
                   </Link>
@@ -398,7 +412,7 @@ function DashLeftMenu() {
             {showLibrary && (
               <MenuLink
                 href="/dash/library"
-                icon={<FolderSimple size={20} weight="fill" />}
+                icon={<FolderSimple size={20} />}
                 label={t('library.library')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/library')}
@@ -407,7 +421,7 @@ function DashLeftMenu() {
             {showBoards && (
               <MenuLink
                 href="/dash/boards"
-                icon={<ChalkboardSimple size={20} weight="fill" />}
+                icon={<ChalkboardSimple size={20} />}
                 label={t('boards.boards')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/boards')}
@@ -416,7 +430,7 @@ function DashLeftMenu() {
             {showPlaygrounds && (
               <MenuLink
                 href="/dash/playgrounds"
-                icon={<Cube size={20} weight="fill" />}
+                icon={<Cube size={20} />}
                 label={t('common.playgrounds')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/playgrounds')}
@@ -469,15 +483,15 @@ function DashLeftMenu() {
                     aria-label="Open users menu"
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      "relative flex items-center w-full rounded-lg transition-all",
+                      "relative flex items-center w-full rounded-xl transition-all duration-200",
                       active
-                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
-                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
-                      isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
+                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-ink))] shadow-[inset_0_0_0_1px_hsl(var(--dash-accent)/0.18)]"
+                        : "text-[hsl(var(--dash-ink))]/70 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]",
+                      isCollapsed ? "justify-center h-11" : "px-3.5 py-2.5 gap-3"
                     )}
                   >
                                         <span className="relative flex items-center justify-center">
-                      <Users size={20} weight="fill" />
+                      <Users size={20} />
                       {isCollapsed && (
                         <CaretDown aria-hidden="true" size={8} weight="bold" className={cn("absolute -right-2.5", active ? "text-[hsl(var(--dash-muted))]" : "text-[hsl(var(--dash-muted))]/70")} />
                       )}
@@ -485,7 +499,7 @@ function DashLeftMenu() {
                     {!isCollapsed && (
                       <>
                         <span className="text-sm font-medium flex-1 text-left">{t('common.users')}</span>
-                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-accent))]/70" : "text-[hsl(var(--dash-muted))]"} />
+                        <CaretDown aria-hidden="true" size={14} weight="bold" className="text-[hsl(var(--dash-muted))]" />
                       </>
                     )}
                   </Link>
@@ -497,7 +511,7 @@ function DashLeftMenu() {
             {showPayments && (
               <MenuLink
                 href="/dash/payments/overview"
-                icon={<CurrencyCircleDollar size={20} weight="fill" />}
+                icon={<CurrencyCircleDollar size={20} />}
                 label={t('common.payments')}
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/payments')}
@@ -582,15 +596,15 @@ function DashLeftMenu() {
                     aria-label="Open organization menu"
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      "relative flex items-center w-full rounded-lg transition-all",
+                      "relative flex items-center w-full rounded-xl transition-all duration-200",
                       active
-                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
-                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
-                      isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
+                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-ink))] shadow-[inset_0_0_0_1px_hsl(var(--dash-accent)/0.18)]"
+                        : "text-[hsl(var(--dash-ink))]/70 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]",
+                      isCollapsed ? "justify-center h-11" : "px-3.5 py-2.5 gap-3"
                     )}
                   >
                                         <span className="relative flex items-center justify-center">
-                      <Buildings size={20} weight="fill" />
+                      <Buildings size={20} />
                       {isCollapsed && (
                         <CaretDown aria-hidden="true" size={8} weight="bold" className={cn("absolute -right-2.5", active ? "text-[hsl(var(--dash-muted))]" : "text-[hsl(var(--dash-muted))]/70")} />
                       )}
@@ -598,7 +612,7 @@ function DashLeftMenu() {
                     {!isCollapsed && (
                       <>
                         <span className="text-sm font-medium flex-1 text-left">{t('common.organization')}</span>
-                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-accent))]/70" : "text-[hsl(var(--dash-muted))]"} />
+                        <CaretDown aria-hidden="true" size={14} weight="bold" className="text-[hsl(var(--dash-muted))]" />
                       </>
                     )}
                   </Link>
@@ -637,15 +651,15 @@ function DashLeftMenu() {
                     aria-label="Analytics"
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      "relative flex items-center w-full rounded-lg transition-all",
+                      "relative flex items-center w-full rounded-xl transition-all duration-200",
                       active
-                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
-                        : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
-                      isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
+                        ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-ink))] shadow-[inset_0_0_0_1px_hsl(var(--dash-accent)/0.18)]"
+                        : "text-[hsl(var(--dash-ink))]/70 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]",
+                      isCollapsed ? "justify-center h-11" : "px-3.5 py-2.5 gap-3"
                     )}
                   >
                                         <span className="relative flex items-center justify-center">
-                      <ChartBar size={20} weight="fill" />
+                      <ChartBar size={20} />
                       {isCollapsed && (
                         <CaretDown aria-hidden="true" size={8} weight="bold" className={cn("absolute -right-2.5", active ? "text-[hsl(var(--dash-muted))]" : "text-[hsl(var(--dash-muted))]/70")} />
                       )}
@@ -653,7 +667,7 @@ function DashLeftMenu() {
                     {!isCollapsed && (
                       <>
                         <span className="text-sm font-medium flex-1 text-left">{t('common.analytics')}</span>
-                        <CaretDown aria-hidden="true" size={14} weight="bold" className={active ? "text-[hsl(var(--dash-accent))]/70" : "text-[hsl(var(--dash-muted))]"} />
+                        <CaretDown aria-hidden="true" size={14} weight="bold" className="text-[hsl(var(--dash-muted))]" />
                       </>
                     )}
                   </Link>
@@ -705,7 +719,7 @@ function DashLeftMenu() {
                   aria-label="Other"
                   className={cn(
                     "flex items-center w-full rounded-lg text-[hsl(var(--dash-muted))]/70 hover:text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] transition-all",
-                    isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
+                    isCollapsed ? "justify-center h-11" : "px-3.5 py-2.5 gap-3"
                   )}
                 >
                   <span className="relative flex items-center justify-center">
@@ -730,8 +744,9 @@ function DashLeftMenu() {
       </div>
 
       {/* Bottom Section */}
-      <div className="border-t border-[hsl(var(--dash-border))] py-3 px-3 shrink-0">
-        <div className="space-y-1">
+      <div className="shrink-0 space-y-3 px-3 pb-4 pt-2">
+        {!isCollapsed && <SidebarPromoCard plan={plan} orgSlug={org?.slug} />}
+        <div className={cn(isCollapsed ? "space-y-1" : "flex items-center gap-1 rounded-2xl bg-[hsl(var(--dash-canvas))] p-1.5")}>
           {/* Expand button when collapsed */}
           {isCollapsed && (
             <Tooltip>
@@ -741,7 +756,7 @@ function DashLeftMenu() {
                   onClick={toggleCollapse}
                   className="flex items-center justify-center w-full h-10 rounded-lg text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))] transition-all"
                 >
-                  <SidebarSimple size={20} weight="fill" />
+                  <SidebarSimple size={20} />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right" className="z-tooltip border-transparent bg-[hsl(var(--dash-ink))] px-2 py-1 text-xs text-white shadow-lg">
@@ -778,14 +793,11 @@ function DashLeftMenu() {
               </HoverMenuContent>
             }
           >
-            <button aria-label="Open language menu" className={cn(
-              "flex items-center w-full rounded-lg text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))] transition-all group",
-              isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
+            <button aria-label="Open language menu" title={t('common.language')} className={cn(
+              "flex items-center justify-center rounded-xl text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-surface))] transition-all",
+              isCollapsed ? "w-full h-11" : "h-9 w-9 shrink-0"
             )}>
-              <Globe size={20} weight="fill" />
-              {!isCollapsed && (
-                <span className="text-sm font-medium">{t('common.language')}</span>
-              )}
+              <Globe size={isCollapsed ? 20 : 18} />
             </button>
           </HoverMenu>
 
@@ -843,18 +855,16 @@ function DashLeftMenu() {
               </HoverMenuContent>
             }
           >
-            <button aria-label="Open help menu" className={cn(
-              "flex items-center w-full rounded-lg text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))] transition-all group",
-              isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
+            <button aria-label="Open help menu" title={t('common.help')} className={cn(
+              "flex items-center justify-center rounded-xl text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-surface))] transition-all",
+              isCollapsed ? "w-full h-11" : "h-9 w-9 shrink-0"
             )}>
-              <Question size={20} weight="fill" />
-              {!isCollapsed && (
-                <span className="text-sm font-medium">{t('common.help')}</span>
-              )}
+              <Question size={isCollapsed ? 20 : 18} />
             </button>
           </HoverMenu>
 
-          {/* User Menu with hover menu */}
+          {/* User Menu with hover menu — first in the expanded row */}
+          <div className={cn(!isCollapsed && "order-first min-w-0 flex-1")}>
           <HoverMenu
             align="end"
             content={
@@ -888,19 +898,48 @@ function DashLeftMenu() {
             }
           >
             <button className={cn(
-              "flex items-center w-full rounded-lg text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))] transition-all group",
-              isCollapsed ? "justify-center h-10" : "px-3 py-2 gap-3"
+              "flex items-center w-full rounded-xl text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-surface))] transition-all",
+              isCollapsed ? "justify-center h-11" : "px-2 py-1.5 gap-2.5"
             )}>
-              <UserAvatar width={24} rounded="rounded-full" shadow="shadow-none" />
+              <UserAvatar width={28} rounded="rounded-full" shadow="shadow-none" />
               {!isCollapsed && (
-                <div className="flex flex-col min-w-0 flex-1 text-left">
-                  <span className="text-sm font-medium truncate text-[hsl(var(--dash-ink))]">{session?.data?.user?.username}</span>
-                  <span className="text-xs text-[hsl(var(--dash-muted))] truncate">{session?.data?.user?.email}</span>
+                <div className="flex flex-col min-w-0 flex-1 text-start">
+                  <span className="text-[13px] font-medium truncate text-[hsl(var(--dash-ink))]">{session?.data?.user?.username}</span>
+                  <span className="text-[11px] text-[hsl(var(--dash-muted))] truncate">{session?.data?.user?.email}</span>
                 </div>
               )}
             </button>
           </HoverMenu>
+          </div>
         </div>
+
+        {/* Sign out */}
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={t('user.sign_out')}
+                onClick={() => logOutUI()}
+                className="flex h-11 w-full items-center justify-center rounded-xl text-[hsl(var(--dash-ink))]/70 transition-all hover:bg-[hsl(var(--dash-warn-soft))] hover:text-[hsl(var(--dash-warn))]"
+              >
+                <SignOut size={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="z-tooltip border-transparent bg-[hsl(var(--dash-ink))] px-2 py-1 text-xs text-white shadow-lg">
+              {t('user.sign_out')}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            type="button"
+            onClick={() => logOutUI()}
+            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-[hsl(var(--dash-ink))]/70 transition-all hover:bg-[hsl(var(--dash-warn-soft))] hover:text-[hsl(var(--dash-warn))]"
+          >
+            <SignOut size={20} className="rtl:rotate-180" />
+            <span>{t('user.sign_out')}</span>
+          </button>
+        )}
       </div>
     </nav>
 
@@ -930,19 +969,12 @@ const MenuLink = ({ href, icon, label, isCollapsed, isExternal, active, onClick 
       className={cn(
         "relative flex w-full items-center rounded-xl transition-all duration-200",
         active
-          ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-accent))]"
-          : "text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))]/60 hover:text-[hsl(var(--dash-accent))]",
-        isCollapsed ? "h-10 justify-center" : "gap-3 px-3 py-2.5"
+          ? "bg-[hsl(var(--dash-accent-soft))] font-medium text-[hsl(var(--dash-ink))] shadow-[inset_0_0_0_1px_hsl(var(--dash-accent)/0.18)]"
+          : "text-[hsl(var(--dash-ink))]/70 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]",
+        isCollapsed ? "h-11 justify-center" : "gap-3 px-3.5 py-2.5"
       )}
     >
-      {/* Active indicator bar */}
-      {active && !isCollapsed && (
-        <span
-          aria-hidden="true"
-          className="absolute start-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-e-full bg-[hsl(var(--dash-accent))]"
-        />
-      )}
-      {icon}
+      <span className={cn("flex items-center", active ? "text-[hsl(var(--dash-accent))]" : "")}>{icon}</span>
       {!isCollapsed && (
         <span className="text-sm">{label}</span>
       )}
@@ -996,6 +1028,54 @@ function NavSection({
         <div className="mx-auto my-1 h-px w-6 bg-[hsl(var(--dash-border))]" aria-hidden="true" />
       )}
       {children}
+    </div>
+  )
+}
+
+/**
+ * Gold call-to-action card above the account row. Free SaaS orgs get the
+ * upgrade prompt; everyone else gets a shortcut to start a new course.
+ */
+function SidebarPromoCard({ plan, orgSlug }: { plan: string; orgSlug?: string }) {
+  const { t } = useTranslation()
+  const upgradeUrl = plan === 'free' ? getUpgradeUrl(orgSlug || 'default') : null
+
+  const title = upgradeUrl
+    ? t('dashboard.sidebar.promo.upgrade_title', 'Upgrade your plan')
+    : t('dashboard.sidebar.promo.course_title', 'Launch a new course')
+  const body = upgradeUrl
+    ? t('dashboard.sidebar.promo.upgrade_body', 'Unlock premium features and grow your academy.')
+    : t('dashboard.sidebar.promo.course_body', 'Build lessons, assignments and exams in minutes.')
+  const cta = upgradeUrl
+    ? t('dashboard.sidebar.promo.upgrade_cta', 'Upgrade now')
+    : t('dashboard.sidebar.promo.course_cta', 'Create course')
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl [@media(max-height:859px)]:hidden bg-[linear-gradient(145deg,hsl(var(--dash-gradient-from)),hsl(var(--dash-gradient-via)))] p-4 text-center text-[hsl(var(--dash-ink))]">
+      <span aria-hidden="true" className="pointer-events-none absolute -end-6 -top-6 h-20 w-20 rounded-full bg-white/25" />
+      <span aria-hidden="true" className="pointer-events-none absolute -bottom-8 -start-4 h-16 w-16 rounded-full bg-[hsl(var(--dash-warn))]/20" />
+      <span className="relative mx-auto mb-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/90 text-[hsl(var(--dash-ink))] shadow-sm">
+        {upgradeUrl ? <Rocket size={22} weight="duotone" /> : <GraduationCap size={22} weight="duotone" />}
+      </span>
+      <p className="relative text-sm font-semibold">{title}</p>
+      <p className="relative mt-1 text-[11px] leading-relaxed text-[hsl(var(--dash-ink))]/75">{body}</p>
+      {upgradeUrl ? (
+        <a
+          href={upgradeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative mt-3 block rounded-xl bg-white py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] shadow-sm transition-transform hover:-translate-y-0.5"
+        >
+          {cta}
+        </a>
+      ) : (
+        <Link
+          href="/dash/courses?new=true"
+          className="relative mt-3 block rounded-xl bg-white py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] shadow-sm transition-transform hover:-translate-y-0.5"
+        >
+          {cta}
+        </Link>
+      )}
     </div>
   )
 }

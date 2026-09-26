@@ -29,6 +29,7 @@ class NavItem(NamedTuple):
 
 NAV_ITEMS: tuple[NavItem, ...] = (
     NavItem("home", "overview"),
+    NavItem("calendar", "overview"),
     NavItem("postgraduate", "academic"),
     NavItem("training-programs", "academic"),
     NavItem("instructors", "academic"),
@@ -54,6 +55,7 @@ _ALL_ITEM_IDS = tuple(item.id for item in NAV_ITEMS)
 # users/org-settings, no cross-org analytics.
 _INSTRUCTOR_DEFAULT_ITEM_IDS = (
     "home",
+    "calendar",
     "training-programs",
     "postgraduate-teaching",
     "assignments",

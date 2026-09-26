@@ -1511,6 +1511,81 @@
         "academic": "أكاديمي",
         "teaching": "التدريس",
         "manage": "إدارة"
+      },
+      "title": "لوحة التحكم",
+      "welcome_name": "مرحبًا {{name}}، أهلًا بعودتك!",
+      "there": "بك",
+      "range": "النطاق",
+      "last_n_months": "آخر {{count}} أشهر",
+      "this_week": "هذا الأسبوع",
+      "last_90_days": "آخر 90 يومًا",
+      "stats": {
+        "total_students": "إجمالي الطلاب",
+        "total_courses": "إجمالي المقررات",
+        "total_enrollments": "إجمالي التسجيلات",
+        "members_hint": "{{count}} عضوًا إجمالًا",
+        "published_hint": "{{count}} منشور",
+        "last_30_days_hint": "+{{count}} خلال آخر 30 يومًا"
+      },
+      "revenue": {
+        "title": "الإيرادات",
+        "income": "الدخل",
+        "expense": "المصروفات",
+        "empty": "لم تُسجَّل أي إيرادات أو مصروفات في هذه الفترة بعد.",
+        "unavailable": "الإيرادات غير متاحة لدورك."
+      },
+      "enrollment_trends": {
+        "title": "اتجاهات التسجيل",
+        "enrollments": "التسجيلات",
+        "completions": "الإتمامات",
+        "empty": "ستظهر التسجيلات هنا عندما ينضم المتعلمون إلى المقررات."
+      },
+      "learning_activity": {
+        "title": "نشاط التعلّم",
+        "empty": "عندما يُكمل المتعلمون الدروس، تظهر هنا أكثر الأيام والساعات نشاطًا."
+      },
+      "new_courses": {
+        "title": "مقررات جديدة",
+        "lessons": "{{count}} درس",
+        "completed": "{{count}} أكملوا",
+        "enrolled": "مسجّل",
+        "no_learners": "لا يوجد متعلمون بعد"
+      },
+      "demographic": {
+        "title": "التوزيع الجغرافي للطلاب",
+        "others": "أخرى",
+        "empty": "لم تُسجَّل مواقع زوار في هذه الفترة.",
+        "unavailable": "تظهر مواقع المتعلمين بعد ربط تحليلات الموقع."
+      },
+      "top_courses": {
+        "title": "المقررات الأكثر شعبية",
+        "students": "{{count}} طالب",
+        "empty": "سيتم ترتيب مقرراتك الأكثر شعبية هنا."
+      },
+      "rail": {
+        "admin": "مسؤول",
+        "schedule": "الجدول",
+        "previous_month": "الشهر السابق",
+        "next_month": "الشهر التالي",
+        "today": "اليوم",
+        "from_date": "من {{date}}",
+        "open_calendar": "التقويم",
+        "today_schedule": "جدول اليوم",
+        "up_next": "القادم",
+        "nothing_scheduled": "لا يوجد شيء مجدول"
+      },
+      "activity_feed": {
+        "title": "الأنشطة الأخيرة",
+        "empty": "لا يوجد نشاط بعد.",
+        "someone": "أحدهم",
+        "course_created": "تمت إضافة مقرر جديد",
+        "course_created_body": "تم إنشاء «{{course}}».",
+        "enrollment": "تسجيل جديد",
+        "enrollment_body": "سجّل {{user}} في «{{course}}».",
+        "completion": "اكتمال مقرر",
+        "completion_body": "أكمل {{user}} «{{course}}».",
+        "member_joined": "عضو جديد",
+        "member_joined_body": "انضم {{user}} إلى الأكاديمية."
       }
     },
     "courses": {
@@ -4065,6 +4140,16 @@
         }
       },
       "global_placeholder": "ابحث حسب الموضوع أو العنوان أو الاسم..."
+    },
+    "sidebar": {
+      "promo": {
+        "upgrade_title": "رقِّ خطتك",
+        "upgrade_body": "افتح الميزات المميزة وطوّر أكاديميتك.",
+        "upgrade_cta": "رقِّ الآن",
+        "course_title": "أطلق مقررًا جديدًا",
+        "course_body": "أنشئ الدروس والواجبات والاختبارات في دقائق.",
+        "course_cta": "إنشاء مقرر"
+      }
     }
   },
   "editor": {
@@ -6096,5 +6181,70 @@
     "source_category_language": "الفئة (سعر اللغة)",
     "source_category_base": "الفئة (الأجر الأساسي)",
     "source_instructor": "سعر المحاضر"
+  },
+  "calendar": {
+    "title": "التقويم",
+    "my_calendar": "تقويمي",
+    "today": "اليوم",
+    "selected_day": "اليوم المحدد",
+    "up_next": "القادم",
+    "view_month": "شهر",
+    "view_list": "قائمة",
+    "month_view": "عرض الشهر",
+    "more": "+{{count}} أخرى",
+    "all_day": "طوال اليوم",
+    "open": "فتح",
+    "back_to_day": "العودة إلى اليوم",
+    "instructor": "المحاضر",
+    "coordinator": "المنسق",
+    "empty_day": "لا يوجد شيء مجدول في هذا اليوم.",
+    "empty_month": "لا يوجد شيء مجدول هذا الشهر.",
+    "empty_upcoming": "لا توجد أحداث قادمة.",
+    "load_error": "تعذر تحميل التقويم. حاول مرة أخرى لاحقًا.",
+    "scope": {
+      "all": "كل ما هو مجدول في الأكاديمية",
+      "teaching": "جدولك التدريسي — الجلسات والمواعيد النهائية والمقابلات التي تديرها",
+      "learning": "محاضراتك واختباراتك ومواعيدك النهائية القادمة"
+    },
+    "types": {
+      "lecture": "المحاضرات",
+      "class": "الجلسات الدراسية",
+      "exam": "الاختبارات",
+      "deadline": "المواعيد النهائية",
+      "term": "التواريخ الأكاديمية",
+      "program": "البرامج",
+      "interview": "القبول"
+    },
+    "kinds": {
+      "lecture": "محاضرة",
+      "seminar": "حلقة نقاش",
+      "lab": "معمل",
+      "tutorial": "درس تطبيقي",
+      "exam": "اختبار",
+      "class": "جلسة دراسية",
+      "assignment": "موعد تسليم واجب",
+      "term_start": "بداية الفصل",
+      "term_end": "نهاية الفصل",
+      "registration_start": "فتح التسجيل",
+      "registration_end": "إغلاق التسجيل",
+      "add_drop_end": "نهاية الحذف والإضافة",
+      "grade_deadline": "موعد رصد الدرجات",
+      "exam_period": "فترة الاختبارات",
+      "interview": "مقابلة قبول",
+      "entrance_test": "اختبار قبول",
+      "program": "برنامج تدريبي"
+    },
+    "status": {
+      "submitted": "تم التسليم",
+      "graded": "تم التقييم",
+      "late": "متأخر",
+      "pending": "قيد التنفيذ",
+      "not_submitted": "لم يُسلَّم",
+      "published": "منشور",
+      "draft": "مسودة",
+      "scheduled": "مجدول",
+      "completed": "مكتمل",
+      "cancelled": "ملغى"
+    }
   }
 }

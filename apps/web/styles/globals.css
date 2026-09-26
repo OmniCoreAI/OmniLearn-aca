@@ -7,6 +7,12 @@
 
 
 @custom-variant dark (&:is(.dark *));
+/* Viewports big enough to show the whole dashboard home without scrolling */
+@custom-variant fit {
+  @media (min-width: 1280px) and (min-height: 640px) {
+    @slot;
+  }
+}
 
 /* Root layout fade-in (replaces framer-motion) */
 @keyframes fadeIn {

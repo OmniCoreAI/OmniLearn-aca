@@ -1,7 +1,7 @@
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
-import { Books, FolderSimple, Cube, ShoppingBag, GraduationCap } from '@phosphor-icons/react'
+import { Books, FolderSimple, Cube, ShoppingBag, GraduationCap, CalendarBlank } from '@phosphor-icons/react'
 import { menuIcon } from '@components/Objects/Menus/menuIcons'
 import Link from 'next/link'
 import React from 'react'
@@ -17,10 +17,12 @@ const BUILTIN: Record<string, Builtin> = {
   store: { feature: 'payments', link: '/store', labelKey: 'common.store', Icon: ShoppingBag },
   // Postgraduate student/applicant portal; shown to signed-in users only.
   academics: { feature: '', link: '/academics', labelKey: 'academic.my_academics', Icon: GraduationCap },
+  // Role-aware events calendar (lectures, deadlines, exams); signed-in users only.
+  calendar: { feature: '', link: '/calendar', labelKey: 'calendar.my_calendar', Icon: CalendarBlank },
 }
 
 // Default order when an org has no custom menu config.
-const DEFAULT_ORDER = ['courses', 'library', 'playgrounds', 'store', 'academics']
+const DEFAULT_ORDER = ['courses', 'library', 'playgrounds', 'store', 'academics', 'calendar']
 
 function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
   const { t } = useTranslation()

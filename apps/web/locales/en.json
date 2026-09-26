@@ -2659,7 +2659,83 @@
       "last_30_days": "Last 30 days",
       "no_data_yet": "No data yet",
       "active_users": "Active users",
-      "course": "Course"
+      "course": "Course",
+      "title": "Dashboard",
+      "welcome_name": "Hello {{name}}, welcome back!",
+      "range": "Range",
+      "last_n_months": "Last {{count}} months",
+      "this_week": "This week",
+      "last_90_days": "Last 90 days",
+      "stats": {
+        "total_students": "Total Students",
+        "total_courses": "Total Courses",
+        "total_enrollments": "Total Enrollments",
+        "members_hint": "{{count}} members in total",
+        "published_hint": "{{count}} published",
+        "last_30_days_hint": "+{{count}} in the last 30 days"
+      },
+      "revenue": {
+        "title": "Revenue",
+        "income": "Income",
+        "expense": "Expense",
+        "empty": "No income or expenses recorded in this period yet.",
+        "unavailable": "Revenue is unavailable for your role."
+      },
+      "enrollment_trends": {
+        "title": "Enrollment Trends",
+        "enrollments": "Enrollments",
+        "completions": "Completions",
+        "empty": "Enrollments will appear here as learners join courses."
+      },
+      "learning_activity": {
+        "title": "Learning Activity",
+        "empty": "When learners complete lessons, their busiest days and hours show up here."
+      },
+      "new_courses": {
+        "title": "New Courses",
+        "lessons": "{{count}} lessons",
+        "lessons_one": "{{count}} lesson",
+        "completed": "{{count}} completed",
+        "enrolled": "enrolled",
+        "no_learners": "No learners yet"
+      },
+      "demographic": {
+        "title": "Students Demographic",
+        "others": "Others",
+        "empty": "No visitor locations recorded in this period.",
+        "unavailable": "Learner locations appear once website analytics is connected."
+      },
+      "top_courses": {
+        "title": "Top Courses",
+        "students": "{{count}} students",
+        "students_one": "{{count}} student",
+        "empty": "Your most popular courses will be ranked here."
+      },
+      "rail": {
+        "admin": "Admin",
+        "schedule": "Schedule",
+        "previous_month": "Previous month",
+        "next_month": "Next month",
+        "today": "Today",
+        "from_date": "from {{date}}",
+        "open_calendar": "Calendar",
+        "today_schedule": "Today's schedule",
+        "up_next": "Up next",
+        "nothing_scheduled": "Nothing scheduled"
+      },
+      "activity_feed": {
+        "title": "Recent Activities",
+        "empty": "Nothing has happened yet.",
+        "someone": "Someone",
+        "course_created": "New Course Added",
+        "course_created_body": "\"{{course}}\" was created.",
+        "enrollment": "New Enrollment",
+        "enrollment_body": "{{user}} enrolled in \"{{course}}\".",
+        "completion": "Course Completed",
+        "completion_body": "{{user}} completed \"{{course}}\".",
+        "member_joined": "New Member",
+        "member_joined_body": "{{user}} joined the academy."
+      }
     },
     "courses": {
       "title": "Courses",
@@ -5227,6 +5303,16 @@
         }
       },
       "global_placeholder": "Search by topic, title, or name..."
+    },
+    "sidebar": {
+      "promo": {
+        "upgrade_title": "Upgrade your plan",
+        "upgrade_body": "Unlock premium features and grow your academy.",
+        "upgrade_cta": "Upgrade now",
+        "course_title": "Launch a new course",
+        "course_body": "Build lessons, assignments and exams in minutes.",
+        "course_cta": "Create course"
+      }
     }
   },
   "editor": {
@@ -6145,6 +6231,71 @@
       "reactions": "Reactions",
       "exit_fullscreen": "Exit",
       "fullscreen": "Fullscreen"
+    }
+  },
+  "calendar": {
+    "title": "Calendar",
+    "my_calendar": "My calendar",
+    "today": "Today",
+    "selected_day": "Selected day",
+    "up_next": "Up next",
+    "view_month": "Month",
+    "view_list": "List",
+    "month_view": "Month view",
+    "more": "+{{count}} more",
+    "all_day": "All day",
+    "open": "Open",
+    "back_to_day": "Back to day",
+    "instructor": "Instructor",
+    "coordinator": "Coordinator",
+    "empty_day": "Nothing scheduled for this day.",
+    "empty_month": "Nothing scheduled this month.",
+    "empty_upcoming": "No upcoming events.",
+    "load_error": "Could not load the calendar. Try again later.",
+    "scope": {
+      "all": "Everything scheduled across the academy",
+      "teaching": "Your teaching schedule — sessions, deadlines and interviews you run",
+      "learning": "Your lectures, exams and upcoming deadlines"
+    },
+    "types": {
+      "lecture": "Lectures",
+      "class": "Class sessions",
+      "exam": "Exams",
+      "deadline": "Deadlines",
+      "term": "Academic dates",
+      "program": "Programs",
+      "interview": "Admissions"
+    },
+    "kinds": {
+      "lecture": "Lecture",
+      "seminar": "Seminar",
+      "lab": "Lab",
+      "tutorial": "Tutorial",
+      "exam": "Exam",
+      "class": "Class session",
+      "assignment": "Assignment due",
+      "term_start": "Term starts",
+      "term_end": "Term ends",
+      "registration_start": "Registration opens",
+      "registration_end": "Registration closes",
+      "add_drop_end": "Add/drop ends",
+      "grade_deadline": "Grades due",
+      "exam_period": "Exam period",
+      "interview": "Admission interview",
+      "entrance_test": "Entrance test",
+      "program": "Training program"
+    },
+    "status": {
+      "submitted": "Submitted",
+      "graded": "Graded",
+      "late": "Late",
+      "pending": "In progress",
+      "not_submitted": "Not submitted",
+      "published": "Published",
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
     }
   }
 }

@@ -96,6 +96,7 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
         "api_tokens",
         "webhooks",
         "portal_navigation",
+        "calendar",
     ]:
         install_router_module(f"src.routers.{name}", f"src.routers.{name}")
 
