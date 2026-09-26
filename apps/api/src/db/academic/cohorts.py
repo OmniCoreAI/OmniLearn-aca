@@ -25,6 +25,8 @@ class CohortBase(SQLModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     status: CohortStatus = Field(default=CohortStatus.UPCOMING)
+    # Whether the intake accepts admission applications ("open" | "closed").
+    admission_status: str = Field(default="closed")
 
 
 class Cohort(CohortBase, table=True):
@@ -84,6 +86,7 @@ class CohortUpdate(SQLModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     status: Optional[CohortStatus] = None
+    admission_status: Optional[str] = None
     coordinator_uuid: Optional[str] = None
     curriculum_uuid: Optional[str] = None
     intake_term_uuid: Optional[str] = None

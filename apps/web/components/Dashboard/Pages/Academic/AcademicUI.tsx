@@ -24,6 +24,7 @@ export function PostgradTabs({ orgslug }: { orgslug: string }) {
   const base = '/dash/postgraduate'
   const tabs = [
     { href: base, label: t('academic.tab_programs', 'Programs'), match: (p: string) => isProgramPath(p) },
+    { href: `${base}/admissions`, label: t('academic.tab_admissions', 'Admissions') },
     { href: `${base}/courses`, label: t('academic.tab_catalog', 'Course Catalog') },
     { href: `${base}/offerings`, label: t('academic.tab_offerings', 'Course Offerings') },
     { href: `${base}/students`, label: t('academic.tab_students', 'Students') },
@@ -33,7 +34,7 @@ export function PostgradTabs({ orgslug }: { orgslug: string }) {
 
   function isProgramPath(p: string) {
     const rest = p.split(base)[1] || ''
-    return !['/courses', '/offerings', '/students', '/calendar', '/settings'].some((s) => rest.startsWith(s))
+    return !['/admissions', '/courses', '/offerings', '/students', '/calendar', '/settings'].some((s) => rest.startsWith(s))
   }
 
   return (
@@ -84,6 +85,20 @@ const STATUS_TONES: Record<string, string> = {
   submitted: 'bg-sky-100 text-sky-800',
   approved: 'bg-emerald-100 text-emerald-800',
   returned: 'bg-orange-100 text-orange-800',
+  accepted: 'bg-emerald-100 text-emerald-800',
+  rejected: 'bg-red-100 text-red-800',
+  waitlisted: 'bg-amber-100 text-amber-800',
+  enrolled: 'bg-violet-100 text-violet-800',
+  under_review: 'bg-sky-100 text-sky-800',
+  met: 'bg-emerald-100 text-emerald-800',
+  not_met: 'bg-red-100 text-red-800',
+  pending: 'bg-amber-100 text-amber-800',
+  verified: 'bg-emerald-100 text-emerald-800',
+  passed: 'bg-emerald-100 text-emerald-800',
+  pending_review: 'bg-amber-100 text-amber-800',
+  absent: 'bg-red-100 text-red-800',
+  scheduled: 'bg-sky-100 text-sky-800',
+  no_show: 'bg-red-100 text-red-800',
   elective: 'bg-violet-100 text-violet-800',
 }
 

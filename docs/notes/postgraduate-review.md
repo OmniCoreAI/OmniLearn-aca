@@ -117,7 +117,7 @@ Legend: **A** Keep · **B** Modify · **C** Merge · **D** Remove · **E** Missi
 | 15 | Semester/term calendar with periods | **Done** (registration, add/drop, exams, grade deadline) |
 | 16 | Unified student academic record | **Partial** — record, status, current courses; GPA/credits in Phase 2 |
 | 40 | Navigation | **Partial** — Programs · Course Catalog · Course Offerings · Students · Academic Calendar |
-| 11, 13, 14 | Admissions, eligibility, entrance tests, interviews, decisions | Phase 3 |
+| 11, 13, 14 | Admissions, eligibility, entrance tests, interviews, decisions | **Done** (Phase 3) |
 | 17–20 | Assessment components, gradebook, results, GPA/CGPA, transcript | **Done** (Phase 2); exam scheduling/venues/invigilation still open |
 | 21, 30 | Progression rules / program requirements engine | Phase 4 |
 | 22–28 | Research & thesis: topics, supervisors, proposal, reviews, milestones, examiners, defense, outcomes | Phase 5 |
@@ -207,3 +207,33 @@ returns; a retaken course replaces the earlier attempt in credits and CGPA (the 
 Still open from the original Phase 2 list: removal of the legacy `semester*` tables and the `in_plan` /
 `published` vs `status` decision (both need a product decision), a student-facing results page (API ready via
 `/academic-records/me`), and exam scheduling (venue, invigilators, attendance).
+
+---
+
+## 8. Phase 3 — Admissions (implemented)
+
+- **Admission requirements** per program (`admissionrequirement`), separate from course prerequisites:
+  degree level, minimum GPA (normalised to 4.0), language test score, years of experience, required document,
+  entrance test, interview, or other (staff-checked). Each is mandatory or optional.
+- **Entrance tests** (`entrancetest`): code, passing/max score, duration, attempt limit, optional linked LMS
+  assignment for online tests (score pulled from the graded submission).
+- **Intakes**: `cohort.admission_status` (open / closed). Applicants can only apply to open intakes; staff can
+  create applications on behalf of an applicant at any time.
+- **Applications** (`admissionapplication`, number `APP-<COHORT>-0001`): draft → submitted → under review →
+  accepted / waitlisted / rejected → enrolled, or withdrawn. One application per applicant per intake.
+- **Eligibility engine**: every requirement is evaluated automatically (met / not met / pending with a reason);
+  staff can set a result manually, which requires a reason. Accepting requires all mandatory requirements met,
+  or an explicit exception with a reason (recorded as `decision_override`). Rejecting requires a reason.
+- **Documents** (`applicationdocument`): stored under `orgs/{org}/admissions/{application}/`, which both content
+  routers now refuse to serve; files are only streamed by the authenticated admissions endpoint to the applicant
+  or program staff. Staff verify or reject (with reason).
+- **Entrance test attempts**, **interviews** (panel, score, recommendation) and a full **audit trail**
+  (`applicationevent`: who, when, from/to status, note).
+- **Enrollment**: an accepted application becomes a cohort student record through the existing admission
+  service (student number, auto-registration in required offerings).
+- **UI**: Admissions tab (list with eligibility, filters, staff-created applications), application page
+  (background, requirement checklist, documents, tests, interviews, decision, enroll, audit trail), and program
+  page "Admission requirements" with entrance tests; cohort form admissions switch.
+- API for an applicant portal is ready (`/admissions/intakes`, `/admissions/my-applications`, create/submit/
+  upload/withdraw own application) — the applicant-facing screens are not built yet.
+- Migration `k9f0g1h2i3j4_academic_admissions.py`; tests `tests/services/test_academic_admissions.py`.

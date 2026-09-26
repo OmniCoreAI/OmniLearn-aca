@@ -1,5 +1,9 @@
 import { getAPIUrl } from '@services/config/config'
-import { RequestBodyWithAuthHeader, errorHandling } from '@services/utils/ts/requests'
+import {
+  RequestBodyFormWithAuthHeader,
+  RequestBodyWithAuthHeader,
+  errorHandling,
+} from '@services/utils/ts/requests'
 
 /*
   Academic core: calendar (years/terms), course catalog, versioned curricula,
@@ -211,3 +215,92 @@ export const getStudentTranscript = (membership_uuid: string, token: string) =>
 /** Assignments (incl. quizzes/exams) of an LMS course, used as gradebook sources. */
 export const getCourseAssignments = (course_uuid: string, token: string) =>
   call('GET', `assignments/course/${course_uuid}`, token)
+
+// ----------------------------- Admissions (Phase 3) -----------------------------
+
+export const getAdmissionRequirements = (program_uuid: string, token: string) =>
+  call('GET', `programs/${program_uuid}/admission-requirements`, token)
+export const createAdmissionRequirement = (program_uuid: string, data: any, token: string) =>
+  call('POST', `programs/${program_uuid}/admission-requirements`, token, data)
+export const updateAdmissionRequirement = (uuid: string, data: any, token: string) =>
+  call('PUT', `admission-requirements/${uuid}`, token, data)
+export const deleteAdmissionRequirement = (uuid: string, token: string) =>
+  call('DELETE', `admission-requirements/${uuid}`, token)
+
+export const getEntranceTests = (program_uuid: string, token: string) =>
+  call('GET', `programs/${program_uuid}/entrance-tests`, token)
+export const createEntranceTest = (program_uuid: string, data: any, token: string) =>
+  call('POST', `programs/${program_uuid}/entrance-tests`, token, data)
+export const updateEntranceTest = (uuid: string, data: any, token: string) =>
+  call('PUT', `entrance-tests/${uuid}`, token, data)
+export const deleteEntranceTest = (uuid: string, token: string) => call('DELETE', `entrance-tests/${uuid}`, token)
+
+export const getApplications = (
+  org_id: number,
+  token: string,
+  filters: { program_uuid?: string; cohort_uuid?: string; status?: string; q?: string } = {}
+) => call('GET', `admissions/applications${qs({ org_id, ...filters })}`, token)
+export const getApplication = (uuid: string, token: string) => call('GET', `admissions/applications/${uuid}`, token)
+export const createApplication = (data: any, token: string) => call('POST', 'admissions/applications', token, data)
+export const updateApplication = (uuid: string, profile: any, token: string) =>
+  call('PUT', `admissions/applications/${uuid}`, token, { profile })
+export const applicationAction = (
+  uuid: string,
+  action: 'submit' | 'review' | 'enroll' | 'withdraw',
+  token: string,
+  body: any = null
+) => call('POST', `admissions/applications/${uuid}/${action}`, token, body ?? (action === 'withdraw' ? {} : null))
+export const decideApplication = (
+  uuid: string,
+  data: { decision: string; note?: string | null; override_requirements?: boolean },
+  token: string
+) => call('POST', `admissions/applications/${uuid}/decision`, token, data)
+export const overrideCheck = (uuid: string, requirement_uuid: string, data: any, token: string) =>
+  call('PUT', `admissions/applications/${uuid}/checks/${requirement_uuid}`, token, data)
+export const reviewDocument = (uuid: string, document_uuid: string, data: any, token: string) =>
+  call('PUT', `admissions/applications/${uuid}/documents/${document_uuid}`, token, data)
+export const scheduleEntranceTest = (uuid: string, data: any, token: string) =>
+  call('POST', `admissions/applications/${uuid}/tests`, token, data)
+export const recordEntranceTest = (uuid: string, attempt_uuid: string, data: any, token: string) =>
+  call('PUT', `admissions/applications/${uuid}/tests/${attempt_uuid}`, token, data)
+export const scheduleInterview = (uuid: string, data: any, token: string) =>
+  call('POST', `admissions/applications/${uuid}/interviews`, token, data)
+export const updateInterview = (uuid: string, interview_uuid: string, data: any, token: string) =>
+  call('PUT', `admissions/applications/${uuid}/interviews/${interview_uuid}`, token, data)
+
+export async function uploadApplicationDocument(uuid: string, document_type: string, file: File, token: string) {
+  const form = new FormData()
+  form.append('document_type', document_type)
+  form.append('file', file)
+  const result = await fetch(
+    `${getAPIUrl()}admissions/applications/${uuid}/documents`,
+    RequestBodyFormWithAuthHeader('POST', form, null, token)
+  )
+  return errorHandling(result)
+}
+
+/** Documents are private: fetch with the session token and open as a blob. */
+export async function openApplicationDocument(uuid: string, document_uuid: string, token: string) {
+  const result = await fetch(`${getAPIUrl()}admissions/applications/${uuid}/documents/${document_uuid}/file`, {
+    headers: { Authorization: `Bearer ${token}` },
+    credentials: 'include',
+  })
+  if (!result.ok) throw new Error('Could not open the document')
+  const url = URL.createObjectURL(await result.blob())
+  window.open(url, '_blank', 'noopener')
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+export const DOCUMENT_TYPES = [
+  'degree_certificate',
+  'transcript',
+  'national_id',
+  'passport',
+  'language_certificate',
+  'cv',
+  'recommendation_letter',
+  'statement_of_purpose',
+  'experience_letter',
+  'photo',
+  'other',
+]

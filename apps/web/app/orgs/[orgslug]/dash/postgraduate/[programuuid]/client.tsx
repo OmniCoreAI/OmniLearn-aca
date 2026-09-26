@@ -19,6 +19,7 @@ import {
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
+import { AdmissionSettings } from '@components/Dashboard/Pages/Academic/AdmissionSettings'
 import {
   DataTable,
   GhostButton,
@@ -208,6 +209,8 @@ function ProgramDetail({ orgslug, programuuid }: { orgslug: string; programuuid:
           </DataTable>
         </Section>
 
+        <AdmissionSettings programUuid={program_uuid} />
+
         <Section
           title={t('academic.cohorts')}
           description={t('academic.cohorts_desc', 'Intakes of this program. Each cohort follows one curriculum version.')}
@@ -245,6 +248,9 @@ function ProgramDetail({ orgslug, programuuid }: { orgslug: string; programuuid:
                   .join(' · ')}
                 badges={[
                   { label: t(`academic.status_${c.status}`), className: STATUS_BADGE[c.status] },
+                  ...(c.admission_status === 'open'
+                    ? [{ label: t('academic.admissions_open', 'Admissions open'), className: 'bg-emerald-100 text-emerald-800' }]
+                    : []),
                   ...(c.academic_year
                     ? [{ label: c.academic_year, className: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]' }]
                     : []),
@@ -388,6 +394,7 @@ function CohortForm({
   const [name, setName] = useState(cohort?.name || '')
   const [description, setDescription] = useState(cohort?.description || '')
   const [status, setStatus] = useState(cohort?.status || 'upcoming')
+  const [admissionStatus, setAdmissionStatus] = useState(cohort?.admission_status || 'closed')
   const [intakeTerm, setIntakeTerm] = useState<string>(cohort?.intake_term_uuid || '')
   const [curriculum, setCurriculum] = useState<string>(
     cohort?.curriculum_uuid || curricula.find((c) => c.status === 'active')?.curriculum_uuid || ''
@@ -427,6 +434,7 @@ function CohortForm({
         end_date: endDate || null,
         coordinator_uuid: coordinatorUuid || '',
         intake_term_uuid: intakeTerm || null,
+        admission_status: admissionStatus,
       }
       if (!cohort || curriculum !== (cohort?.curriculum_uuid || '')) payload.curriculum_uuid = curriculum || null
       if (cohort) {
@@ -506,6 +514,12 @@ function CohortForm({
           />
         </Field>
       </div>
+      <Field label={t('academic.admission_status', 'Admissions')}>
+        <select className={inputCls} value={admissionStatus} onChange={(e) => setAdmissionStatus(e.target.value)}>
+          <option value="closed">{t('academic.admissions_closed_opt', 'Closed — not accepting applications')}</option>
+          <option value="open">{t('academic.admissions_open_opt', 'Open — accepting applications')}</option>
+        </select>
+      </Field>
       <Field label={t('academic.coordinator')}>
         <CoordinatorPicker
           orgId={orgId!}

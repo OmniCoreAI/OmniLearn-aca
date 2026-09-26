@@ -650,3 +650,349 @@ async def api_student_transcript(
     request: Request, membership_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
 ):
     return await grading_svc.get_student_transcript(request, membership_uuid, current_user, db_session)
+
+
+# ---------------------------------------------------------------------------
+# Admissions (Phase 3)
+# ---------------------------------------------------------------------------
+
+from fastapi import File, Form, UploadFile  # noqa: E402
+
+from src.db.academic.admissions import (  # noqa: E402
+    AdmissionRequirementCreate,
+    AdmissionRequirementRead,
+    AdmissionRequirementUpdate,
+    ApplicationCreate,
+    ApplicationRead,
+    ApplicationStatus,
+    ApplicationSummary,
+    ApplicationUpdate,
+    CheckOverride,
+    DecisionRequest,
+    DocumentReview,
+    EntranceTestCreate,
+    EntranceTestRead,
+    EntranceTestUpdate,
+    InterviewCreate,
+    InterviewUpdate,
+    TestAttemptCreate,
+    TestAttemptResult,
+)
+from src.services.academic import admissions as admissions_svc  # noqa: E402
+
+
+class NoteRequest(BaseModel):
+    note: Optional[str] = None
+
+
+@router.get(
+    "/programs/{program_uuid}/admission-requirements",
+    response_model=List[AdmissionRequirementRead],
+    tags=["academic-admissions"],
+)
+async def api_list_requirements(
+    request: Request, program_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await admissions_svc.list_requirements(request, program_uuid, current_user, db_session)
+
+
+@router.post(
+    "/programs/{program_uuid}/admission-requirements",
+    response_model=AdmissionRequirementRead,
+    tags=["academic-admissions"],
+)
+async def api_create_requirement(
+    request: Request,
+    program_uuid: str,
+    data: AdmissionRequirementCreate,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.create_requirement(request, program_uuid, data, current_user, db_session)
+
+
+@router.put(
+    "/admission-requirements/{requirement_uuid}", response_model=AdmissionRequirementRead, tags=["academic-admissions"]
+)
+async def api_update_requirement(
+    request: Request,
+    requirement_uuid: str,
+    data: AdmissionRequirementUpdate,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.update_requirement(request, requirement_uuid, data, current_user, db_session)
+
+
+@router.delete("/admission-requirements/{requirement_uuid}", tags=["academic-admissions"])
+async def api_delete_requirement(
+    request: Request, requirement_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+) -> str:
+    return await admissions_svc.delete_requirement(request, requirement_uuid, current_user, db_session)
+
+
+@router.get(
+    "/programs/{program_uuid}/entrance-tests", response_model=List[EntranceTestRead], tags=["academic-admissions"]
+)
+async def api_list_tests(
+    request: Request, program_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await admissions_svc.list_tests(request, program_uuid, current_user, db_session)
+
+
+@router.post("/programs/{program_uuid}/entrance-tests", response_model=EntranceTestRead, tags=["academic-admissions"])
+async def api_create_test(
+    request: Request,
+    program_uuid: str,
+    data: EntranceTestCreate,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.create_test(request, program_uuid, data, current_user, db_session)
+
+
+@router.put("/entrance-tests/{test_uuid}", response_model=EntranceTestRead, tags=["academic-admissions"])
+async def api_update_test(
+    request: Request,
+    test_uuid: str,
+    data: EntranceTestUpdate,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.update_test(request, test_uuid, data, current_user, db_session)
+
+
+@router.delete("/entrance-tests/{test_uuid}", tags=["academic-admissions"])
+async def api_delete_test(
+    request: Request, test_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+) -> str:
+    return await admissions_svc.delete_test(request, test_uuid, current_user, db_session)
+
+
+@router.get("/admissions/intakes", tags=["academic-admissions"])
+async def api_open_intakes(org_id: int, db_session: AsyncSession = Session, current_user: PublicUser = User):
+    return await admissions_svc.list_open_intakes(org_id, current_user, db_session)
+
+
+@router.get("/admissions/applications", response_model=List[ApplicationSummary], tags=["academic-admissions"])
+async def api_list_applications(
+    request: Request,
+    org_id: int,
+    program_uuid: Optional[str] = None,
+    cohort_uuid: Optional[str] = None,
+    status: Optional[ApplicationStatus] = None,
+    q: Optional[str] = None,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.list_applications(
+        request, org_id, current_user, db_session, program_uuid, cohort_uuid, status, q
+    )
+
+
+@router.get("/admissions/my-applications", response_model=List[ApplicationSummary], tags=["academic-admissions"])
+async def api_my_applications(org_id: int, db_session: AsyncSession = Session, current_user: PublicUser = User):
+    return await admissions_svc.list_my_applications(org_id, current_user, db_session)
+
+
+@router.post("/admissions/applications", response_model=ApplicationRead, tags=["academic-admissions"])
+async def api_create_application(
+    request: Request, data: ApplicationCreate, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await admissions_svc.create_application(request, data, current_user, db_session)
+
+
+@router.get("/admissions/applications/{application_uuid}", response_model=ApplicationRead, tags=["academic-admissions"])
+async def api_get_application(
+    request: Request, application_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await admissions_svc.get_application(request, application_uuid, current_user, db_session)
+
+
+@router.put("/admissions/applications/{application_uuid}", response_model=ApplicationRead, tags=["academic-admissions"])
+async def api_update_application(
+    request: Request,
+    application_uuid: str,
+    data: ApplicationUpdate,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.update_application(request, application_uuid, data, current_user, db_session)
+
+
+@router.post(
+    "/admissions/applications/{application_uuid}/submit", response_model=ApplicationRead, tags=["academic-admissions"]
+)
+async def api_submit_application(
+    request: Request, application_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await admissions_svc.submit_application(request, application_uuid, current_user, db_session)
+
+
+@router.post(
+    "/admissions/applications/{application_uuid}/review", response_model=ApplicationRead, tags=["academic-admissions"]
+)
+async def api_start_review(
+    request: Request, application_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await admissions_svc.start_review(request, application_uuid, current_user, db_session)
+
+
+@router.put(
+    "/admissions/applications/{application_uuid}/checks/{requirement_uuid}",
+    response_model=ApplicationRead,
+    tags=["academic-admissions"],
+)
+async def api_override_check(
+    request: Request,
+    application_uuid: str,
+    requirement_uuid: str,
+    data: CheckOverride,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.override_check(
+        request, application_uuid, requirement_uuid, data, current_user, db_session
+    )
+
+
+@router.post(
+    "/admissions/applications/{application_uuid}/decision",
+    response_model=ApplicationRead,
+    tags=["academic-admissions"],
+)
+async def api_decide(
+    request: Request,
+    application_uuid: str,
+    data: DecisionRequest,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.decide(request, application_uuid, data, current_user, db_session)
+
+
+@router.post(
+    "/admissions/applications/{application_uuid}/enroll", response_model=ApplicationRead, tags=["academic-admissions"]
+)
+async def api_enroll_applicant(
+    request: Request, application_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User
+):
+    return await admissions_svc.enroll_applicant(request, application_uuid, current_user, db_session)
+
+
+@router.post(
+    "/admissions/applications/{application_uuid}/withdraw", response_model=ApplicationRead, tags=["academic-admissions"]
+)
+async def api_withdraw_application(
+    request: Request,
+    application_uuid: str,
+    data: NoteRequest,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.withdraw_application(request, application_uuid, data.note, current_user, db_session)
+
+
+@router.post(
+    "/admissions/applications/{application_uuid}/documents",
+    response_model=ApplicationRead,
+    tags=["academic-admissions"],
+)
+async def api_upload_document(
+    request: Request,
+    application_uuid: str,
+    document_type: str = Form(...),
+    file: UploadFile = File(...),
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.upload_document(request, application_uuid, document_type, file, current_user, db_session)
+
+
+@router.get("/admissions/applications/{application_uuid}/documents/{document_uuid}/file", tags=["academic-admissions"])
+async def api_serve_document(
+    request: Request,
+    application_uuid: str,
+    document_uuid: str,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.serve_document(request, application_uuid, document_uuid, current_user, db_session)
+
+
+@router.put(
+    "/admissions/applications/{application_uuid}/documents/{document_uuid}",
+    response_model=ApplicationRead,
+    tags=["academic-admissions"],
+)
+async def api_review_document(
+    request: Request,
+    application_uuid: str,
+    document_uuid: str,
+    data: DocumentReview,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.review_document(request, application_uuid, document_uuid, data, current_user, db_session)
+
+
+@router.post(
+    "/admissions/applications/{application_uuid}/tests",
+    response_model=ApplicationRead,
+    tags=["academic-admissions"],
+)
+async def api_schedule_test(
+    request: Request,
+    application_uuid: str,
+    data: TestAttemptCreate,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.schedule_test(request, application_uuid, data, current_user, db_session)
+
+
+@router.put(
+    "/admissions/applications/{application_uuid}/tests/{attempt_uuid}",
+    response_model=ApplicationRead,
+    tags=["academic-admissions"],
+)
+async def api_record_test_result(
+    request: Request,
+    application_uuid: str,
+    attempt_uuid: str,
+    data: TestAttemptResult,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.record_test_result(request, application_uuid, attempt_uuid, data, current_user, db_session)
+
+
+@router.post(
+    "/admissions/applications/{application_uuid}/interviews",
+    response_model=ApplicationRead,
+    tags=["academic-admissions"],
+)
+async def api_schedule_interview(
+    request: Request,
+    application_uuid: str,
+    data: InterviewCreate,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.schedule_interview(request, application_uuid, data, current_user, db_session)
+
+
+@router.put(
+    "/admissions/applications/{application_uuid}/interviews/{interview_uuid}",
+    response_model=ApplicationRead,
+    tags=["academic-admissions"],
+)
+async def api_update_interview(
+    request: Request,
+    application_uuid: str,
+    interview_uuid: str,
+    data: InterviewUpdate,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await admissions_svc.update_interview(request, application_uuid, interview_uuid, data, current_user, db_session)
