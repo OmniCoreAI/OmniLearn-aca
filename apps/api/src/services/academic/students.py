@@ -7,7 +7,7 @@ drives automatic registration in the cohort's required offerings.
 from typing import List, Optional
 from uuid import uuid4
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -29,6 +29,7 @@ from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic import offerings as offerings_svc
 from src.services.academic.common import (
     Principal,
+    bad_request,
     conflict,
     get_by_uuid_or_404,
     get_user_by_uuid_or_400,
@@ -50,8 +51,11 @@ MEMBERSHIP_STATUS_TRANSITIONS = {
     MembershipStatus.WITHDRAWN: set(),
     MembershipStatus.GRADUATED: set(),
 }
-# Leaving these states withdraws the student's current registrations.
+# Entering these states withdraws the student's current registrations and
+# removes program access; a reason is required.
 INACTIVE_STATES = {MembershipStatus.DEFERRED, MembershipStatus.SUSPENDED, MembershipStatus.WITHDRAWN}
+# Temporary states: returning to active restores the registrations they withdrew.
+PAUSED_STATES = {MembershipStatus.DEFERRED, MembershipStatus.SUSPENDED}
 
 
 async def _cohort_and_program(db_session: AsyncSession, cohort_uuid: str) -> tuple[Cohort, Program]:
@@ -121,6 +125,7 @@ async def membership_read(db_session: AsyncSession, membership: CohortMembership
         status=membership.status,
         admitted_at=membership.admitted_at,
         status_changed_at=membership.status_changed_at,
+        status_reason=membership.status_reason,
         user=UserReadAuthor.model_validate(user),
         cohort_uuid=cohort.cohort_uuid if cohort else "",
         cohort_code=cohort.code if cohort else None,
@@ -129,6 +134,21 @@ async def membership_read(db_session: AsyncSession, membership: CohortMembership
         program_uuid=program.program_uuid if program else None,
         enrolled_offerings=int(enrolled),
     )
+
+
+async def _assert_capacity(db_session: AsyncSession, cohort: Cohort) -> None:
+    if cohort.capacity is None:
+        return
+    active = (
+        await db_session.execute(
+            select(func.count()).select_from(CohortMembership).where(
+                CohortMembership.cohort_id == cohort.id,
+                CohortMembership.status == MembershipStatus.ACTIVE,
+            )
+        )
+    ).scalar() or 0
+    if active >= cohort.capacity:
+        raise conflict("Cohort is at full capacity")
 
 
 async def admit_user(db_session: AsyncSession, cohort: Cohort, user_id: int) -> CohortMembership:
@@ -142,18 +162,13 @@ async def admit_user(db_session: AsyncSession, cohort: Cohort, user_id: int) -> 
         )
     ).scalars().first()
     if membership:
-        return membership
-    if cohort.capacity is not None:
-        active = (
-            await db_session.execute(
-                select(func.count()).select_from(CohortMembership).where(
-                    CohortMembership.cohort_id == cohort.id,
-                    CohortMembership.status == MembershipStatus.ACTIVE,
-                )
-            )
-        ).scalar() or 0
-        if active >= cohort.capacity:
-            raise conflict("Cohort is at full capacity")
+        if membership.status == MembershipStatus.ACTIVE:
+            return membership
+        raise conflict(
+            f"The student already has a {membership.status.value} record in this cohort "
+            f"({membership.student_number}); change its status instead of admitting again"
+        )
+    await _assert_capacity(db_session, cohort)
     membership = CohortMembership(
         cohort_id=cohort.id,
         user_id=user_id,
@@ -200,7 +215,7 @@ async def list_cohort_students(
     return [await membership_read(db_session, m) for m in rows]
 
 
-async def _withdraw_registrations(db_session: AsyncSession, membership: CohortMembership) -> None:
+async def _withdraw_registrations(db_session: AsyncSession, membership: CohortMembership) -> List[str]:
     rows = (
         await db_session.execute(
             select(Enrollment).where(
@@ -208,22 +223,72 @@ async def _withdraw_registrations(db_session: AsyncSession, membership: CohortMe
             )
         )
     ).scalars().all()
+    withdrawn: List[str] = []
     for enrollment in rows:
         offering = await db_session.get(CourseOffering, enrollment.offering_id)
         await offerings_svc.set_enrollment_status(db_session, offering, enrollment, EnrollmentStatus.WITHDRAWN)  # type: ignore[arg-type]
+        withdrawn.append(enrollment.enrollment_uuid)
+    return withdrawn
+
+
+async def _restore_registrations(db_session: AsyncSession, membership: CohortMembership) -> List[str]:
+    """Re-register the student in the still-running offerings their last
+    deferral/suspension withdrew them from. Full offerings are skipped."""
+    last = next(
+        (h for h in reversed(membership.status_history or []) if h.get("to") in {s.value for s in PAUSED_STATES}),
+        None,
+    )
+    restored: List[str] = []
+    for enrollment_uuid in (last or {}).get("withdrawn_enrollments") or []:
+        enrollment = (
+            await db_session.execute(select(Enrollment).where(Enrollment.enrollment_uuid == enrollment_uuid))
+        ).scalars().first()
+        if not enrollment or enrollment.status != EnrollmentStatus.WITHDRAWN:
+            continue
+        offering = await db_session.get(CourseOffering, enrollment.offering_id)
+        if not offering or offering.status not in offerings_svc.ACTIVE_OFFERING_STATES:
+            continue
+        try:
+            await offerings_svc.enroll_user(
+                db_session, offering, enrollment.user_id, membership=membership, check_prerequisites=False
+            )
+        except HTTPException:
+            continue
+        restored.append(enrollment_uuid)
+    return restored
 
 
 async def change_membership_status(
-    db_session: AsyncSession, cohort: Cohort, membership: CohortMembership, status: MembershipStatus
+    db_session: AsyncSession,
+    cohort: Cohort,
+    membership: CohortMembership,
+    status: MembershipStatus,
+    reason: Optional[str] = None,
+    actor_id: Optional[int] = None,
 ) -> None:
     assert_status_transition(membership.status, status, MEMBERSHIP_STATUS_TRANSITIONS)
+    reason = (reason or "").strip() or None
+    if status in INACTIVE_STATES and not reason:
+        raise bad_request(f"Give a reason for setting the student to {status.value}")
     previous = membership.status
+    entry: dict = {"at": now(), "by": actor_id, "from": previous.value, "to": status.value, "reason": reason}
+    if status == MembershipStatus.ACTIVE and previous != MembershipStatus.ACTIVE:
+        await _assert_capacity(db_session, cohort)
     membership.status = status
     membership.status_changed_at = now()
-    db_session.add(membership)
+    membership.status_reason = reason
     if status in INACTIVE_STATES and previous not in INACTIVE_STATES:
-        await _withdraw_registrations(db_session, membership)
-    await _set_cohort_group_member(db_session, cohort, membership.user_id, status != MembershipStatus.WITHDRAWN)
+        entry["withdrawn_enrollments"] = await _withdraw_registrations(db_session, membership)
+    if status == MembershipStatus.ACTIVE and previous in PAUSED_STATES:
+        entry["restored_enrollments"] = await _restore_registrations(db_session, membership)
+    membership.status_history = [*(membership.status_history or []), entry]
+    db_session.add(membership)
+    if status == MembershipStatus.ACTIVE:
+        # Register the returning student in required offerings created meanwhile.
+        await db_session.flush()
+        await offerings_svc.auto_enroll_member(db_session, cohort, membership)
+    # Deferred, suspended and withdrawn students lose program access.
+    await _set_cohort_group_member(db_session, cohort, membership.user_id, status not in INACTIVE_STATES)
 
 
 async def update_student_status(
@@ -233,6 +298,7 @@ async def update_student_status(
     status: MembershipStatus,
     current_user: Principal,
     db_session: AsyncSession,
+    reason: Optional[str] = None,
 ) -> CohortMembershipRead:
     cohort, program = await _cohort_and_program(db_session, cohort_uuid)
     await check_resource_access(request, db_session, current_user, program.program_uuid, AccessAction.UPDATE)
@@ -241,7 +307,9 @@ async def update_student_status(
     )
     if membership.cohort_id != cohort.id:
         raise conflict("Student does not belong to this cohort")
-    await change_membership_status(db_session, cohort, membership, status)
+    await change_membership_status(
+        db_session, cohort, membership, status, reason, resolve_acting_user_id(current_user) or None
+    )
     await db_session.commit()
     await db_session.refresh(membership)
     return await membership_read(db_session, membership)

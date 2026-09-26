@@ -236,6 +236,52 @@ class TestDecisions:
             await admissions_svc.withdraw_application(mock_request, app.application_uuid, None, regular_user, db)
 
 
+    @pytest.mark.asyncio
+    async def test_withdrawn_application_can_be_reopened(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
+        _, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
+        app = await _apply(db, cohort, regular_user, mock_request)
+        await admissions_svc.withdraw_application(mock_request, app.application_uuid, "By mistake", regular_user, db)
+        again = await admissions_svc.create_application(
+            mock_request, ApplicationCreate(cohort_uuid=cohort.cohort_uuid, profile=GOOD_PROFILE), regular_user, db
+        )
+        assert again.application_uuid == app.application_uuid
+        assert again.application_number == app.application_number
+        assert again.status == ApplicationStatus.DRAFT
+        assert again.events[-1].action == "reopened"
+
+    @pytest.mark.asyncio
+    async def test_rejected_application_stays_final_for_the_intake(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        _, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
+        app = await _apply(db, cohort, regular_user, mock_request)
+        await admissions_svc.start_review(mock_request, app.application_uuid, admin_user, db)
+        await admissions_svc.decide(
+            mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.REJECTED, note="GPA"), admin_user, db
+        )
+        with pytest.raises(HTTPException) as exc:
+            await admissions_svc.create_application(mock_request, ApplicationCreate(cohort_uuid=cohort.cohort_uuid), regular_user, db)
+        assert exc.value.status_code == 409 and "rejected" in exc.value.detail
+
+    @pytest.mark.asyncio
+    async def test_accepting_respects_cohort_capacity(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
+        _, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
+        await cohorts_svc.update_cohort(mock_request, cohort.cohort_uuid, CohortUpdate(capacity=1), admin_user, db)
+        # The only seat is already taken by an admitted student.
+        await students_svc.add_student(mock_request, cohort.cohort_uuid, admin_user.user_uuid, admin_user, db)
+        app = await _apply(db, cohort, regular_user, mock_request)
+        await admissions_svc.start_review(mock_request, app.application_uuid, admin_user, db)
+        with pytest.raises(HTTPException) as exc:
+            await admissions_svc.decide(
+                mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.ACCEPTED), admin_user, db
+            )
+        assert exc.value.status_code == 409 and "waitlist" in exc.value.detail
+        app = await admissions_svc.decide(
+            mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.WAITLISTED, note="Full"), admin_user, db
+        )
+        assert app.status == ApplicationStatus.WAITLISTED
+
+
 class TestAccessAndPrivacy:
     @pytest.mark.asyncio
     async def test_applicant_cannot_act_as_staff(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):

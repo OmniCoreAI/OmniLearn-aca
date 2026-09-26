@@ -225,6 +225,52 @@ class TestGradebookWorkflow:
         assert transcript.cgpa == 4.0 and transcript.credits_attempted == 3 and transcript.credits_earned == 3
 
 
+    @pytest.mark.asyncio
+    async def test_instructor_cannot_approve_own_grades(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
+        *_, offering, _, _ = await _setup(db, org, admin_user, regular_user, mock_request)
+        await offerings_svc.update_offering(
+            mock_request, offering.offering_uuid, CourseOfferingUpdate(instructor_uuid=admin_user.user_uuid), admin_user, db
+        )
+        components = await _scheme(mock_request, offering.offering_uuid, admin_user, db)
+        await _grade(mock_request, offering.offering_uuid, components, [80, 75], admin_user, db)
+        await grading_svc.submit_grades(mock_request, offering.offering_uuid, None, admin_user, db)
+        with pytest.raises(HTTPException) as exc:
+            await grading_svc.approve_grades(mock_request, offering.offering_uuid, None, admin_user, db)
+        assert exc.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_registration_closes_once_grades_are_submitted(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        *_, offering, _, _ = await _setup(db, org, admin_user, regular_user, mock_request)
+        components = await _scheme(mock_request, offering.offering_uuid, admin_user, db)
+        await _grade(mock_request, offering.offering_uuid, components, [80, 75], admin_user, db)
+        await grading_svc.submit_grades(mock_request, offering.offering_uuid, None, admin_user, db)
+        with pytest.raises(HTTPException) as exc:
+            await offerings_svc.create_enrollment(mock_request, offering.offering_uuid, admin_user.user_uuid, admin_user, db)
+        assert exc.value.status_code == 409 and "registration is closed" in exc.value.detail
+
+    @pytest.mark.asyncio
+    async def test_ungraded_legacy_result_counts_credits_not_gpa(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        """Results recorded before the gradebook was mandatory (no letter
+        grade) stay on the transcript as pass/fail credits, outside the GPA."""
+        from sqlmodel import select as sql_select
+
+        from src.db.academic.offerings import Enrollment
+
+        *_, student, offering, _, _ = await _setup(db, org, admin_user, regular_user, mock_request)
+        enrollment = (await db.execute(sql_select(Enrollment))).scalars().first()
+        enrollment.status = EnrollmentStatus.COMPLETED
+        db.add(enrollment)
+        await db.commit()
+        transcript = await grading_svc.get_student_transcript(mock_request, student.membership_uuid, admin_user, db)
+        course = transcript.terms[0].courses[0]
+        assert course.ungraded is True and course.counted_in_gpa is False
+        assert transcript.credits_earned == 3 and transcript.cgpa is None
+
+
 class TestSyncFromAssignments:
     @pytest.mark.asyncio
     async def test_sync_uses_graded_submissions_and_keeps_overrides(

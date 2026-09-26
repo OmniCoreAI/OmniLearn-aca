@@ -40,7 +40,11 @@ from src.db.usergroups import UserGroup
 from src.db.users import User, UserReadAuthor
 from src.security.auth import resolve_acting_user_id
 from src.security.rbac import AccessAction, check_resource_access
-from src.services.academic.authors import ensure_coordinator_authorship, get_user_author
+from src.services.academic.authors import (
+    ensure_coordinator_authorship,
+    get_user_author,
+    revoke_maintainer_authorship,
+)
 from src.services.academic.common import (
     Principal,
     bad_request,
@@ -183,6 +187,75 @@ async def _sync_content_course(db_session: AsyncSession, offering: CourseOfferin
     if offering.status in (OfferingStatus.OPEN, OfferingStatus.IN_PROGRESS) and not course.published:
         course.published = True
         db_session.add(course)
+
+
+async def _release_staff_authorship(
+    db_session: AsyncSession, offering: CourseOffering, course_id: Optional[int], user_id: Optional[int]
+) -> None:
+    """A replaced instructor/TA loses the maintainer rights their role gave them
+    on a content course, unless they still teach an offering using it."""
+    if not user_id or not course_id:
+        return
+    if course_id == offering.content_course_id and user_id in (offering.instructor_id, offering.teaching_assistant_id):
+        return
+    other = (
+        await db_session.execute(
+            select(CourseOffering).where(
+                CourseOffering.content_course_id == course_id,
+                CourseOffering.id != offering.id,
+                (CourseOffering.instructor_id == user_id) | (CourseOffering.teaching_assistant_id == user_id),
+            )
+        )
+    ).scalars().first()
+    if other:
+        return
+    course = await db_session.get(Course, course_id)
+    if course:
+        await revoke_maintainer_authorship(db_session, course.course_uuid, user_id)
+
+
+async def _cancel_offering(db_session: AsyncSession, offering: CourseOffering) -> None:
+    """Cancelling withdraws current registrations (revoking content access)
+    and hides the content course unless another live offering uses it."""
+    rows = (
+        await db_session.execute(
+            select(Enrollment).where(
+                Enrollment.offering_id == offering.id, Enrollment.status == EnrollmentStatus.REGISTERED
+            )
+        )
+    ).scalars().all()
+    for enrollment in rows:
+        await set_enrollment_status(db_session, offering, enrollment, EnrollmentStatus.WITHDRAWN)
+    if not offering.content_course_id:
+        return
+    shared = (
+        await db_session.execute(
+            select(CourseOffering).where(
+                CourseOffering.content_course_id == offering.content_course_id,
+                CourseOffering.id != offering.id,
+                CourseOffering.status.in_([OfferingStatus.OPEN, OfferingStatus.IN_PROGRESS]),  # type: ignore[attr-defined]
+            )
+        )
+    ).scalars().first()
+    course = await db_session.get(Course, offering.content_course_id)
+    if course and course.published and not shared:
+        course.published = False
+        db_session.add(course)
+
+
+async def _assert_can_change_status(db_session: AsyncSession, offering: CourseOffering, status: OfferingStatus) -> None:
+    from src.db.academic.grading import GradeStatus
+
+    approved = offering.grade_status == GradeStatus.APPROVED.value
+    if status == OfferingStatus.COMPLETED and not approved:
+        registered = await _enrolled_count(db_session, offering.id)  # type: ignore[arg-type]
+        if registered:
+            raise conflict(
+                f"{registered} student(s) are still registered without an approved result; "
+                "submit and approve the grades before completing the offering"
+            )
+    if status == OfferingStatus.CANCELLED and approved:
+        raise conflict("Results for this offering are approved; complete it instead of cancelling")
 
 
 async def _set_roster_member(db_session: AsyncSession, offering: CourseOffering, user_id: int, present: bool) -> None:
@@ -464,8 +537,12 @@ async def update_offering(
     update = data.model_dump(exclude_unset=True)
     if update.get("capacity") is not None and update["capacity"] < 0:
         raise bad_request("Capacity cannot be negative")
-    if update.get("status") is not None:
-        assert_status_transition(offering.status, update["status"], OFFERING_STATUS_TRANSITIONS)
+    new_status = update.get("status")
+    if new_status is not None and new_status != offering.status:
+        assert_status_transition(offering.status, new_status, OFFERING_STATUS_TRANSITIONS)
+        await _assert_can_change_status(db_session, offering, OfferingStatus(new_status))
+    previous_staff = [offering.instructor_id, offering.teaching_assistant_id]
+    previous_content_id = offering.content_course_id
     if "instructor_uuid" in update:
         offering.instructor_id = await resolve_org_user(
             db_session, offering.org_id, update.pop("instructor_uuid"), label="Instructor"
@@ -480,18 +557,37 @@ async def update_offering(
             db_session, offering.org_id, update.pop("content_course_uuid")
         )
         content_changed = True
-    if "section" in update and update["section"] and update["section"].upper() != offering.section:
+    if "section" in update and update["section"] and update["section"].strip().upper()[:8] != offering.section:
+        update["section"] = update["section"].strip().upper()[:8]
+        clash = (
+            await db_session.execute(
+                select(CourseOffering).where(
+                    CourseOffering.academic_course_id == offering.academic_course_id,
+                    CourseOffering.term_id == offering.term_id,
+                    CourseOffering.cohort_id == offering.cohort_id,
+                    CourseOffering.section == update["section"],
+                    CourseOffering.id != offering.id,
+                )
+            )
+        ).scalars().first()
+        if clash:
+            raise conflict(f"Section {update['section']} already exists for this course in this term ({clash.code})")
         course = await db_session.get(AcademicCourse, offering.academic_course_id)
         term = await db_session.get(AcademicTerm, offering.term_id)
         cohort = await db_session.get(Cohort, offering.cohort_id) if offering.cohort_id else None
-        update["section"] = update["section"].strip().upper()[:8]
         offering.code = build_offering_code(course, term, cohort, update["section"])  # type: ignore[arg-type]
     for key, value in update.items():
         setattr(offering, key, value)
     offering.update_date = now()
     db_session.add(offering)
+    # Staff rights follow the current assignment: release the replaced
+    # instructor/TA (and everyone's rights on a swapped-out content course).
+    for user_id in previous_staff:
+        await _release_staff_authorship(db_session, offering, previous_content_id, user_id)
     if content_changed:
         await _sync_content_access(db_session, offering)
+    if new_status == OfferingStatus.CANCELLED:
+        await _cancel_offering(db_session, offering)
     await _sync_content_course(db_session, offering)
     await db_session.commit()
     await db_session.refresh(offering)
@@ -601,19 +697,20 @@ async def delete_session(
 # ---------------------------------------------------------------------------
 
 async def missing_prerequisites(db_session: AsyncSession, course_id: int, user_id: int) -> List[str]:
-    """Codes of prerequisite courses the student has not completed."""
+    """Prerequisite courses the student has not completed (with the required
+    minimum grade, when the prerequisite sets one)."""
     prereqs = (
         await db_session.execute(
-            select(AcademicCourse)
+            select(AcademicCourse, CoursePrerequisite.min_grade)
             .join(CoursePrerequisite, CoursePrerequisite.prerequisite_id == AcademicCourse.id)  # type: ignore
             .where(CoursePrerequisite.academic_course_id == course_id)
         )
-    ).scalars().all()
+    ).all()
     missing = []
-    for prereq in prereqs:
-        done = (
+    for prereq, min_grade in prereqs:
+        attempts = (
             await db_session.execute(
-                select(Enrollment)
+                select(Enrollment, CourseOffering)
                 .join(CourseOffering, CourseOffering.id == Enrollment.offering_id)  # type: ignore
                 .where(
                     CourseOffering.academic_course_id == prereq.id,
@@ -621,10 +718,40 @@ async def missing_prerequisites(db_session: AsyncSession, course_id: int, user_i
                     Enrollment.status == EnrollmentStatus.COMPLETED,
                 )
             )
-        ).scalars().first()
-        if not done:
-            missing.append(prereq.code)
+        ).all()
+        satisfied = False
+        for enrollment, taken in attempts:
+            if await _meets_min_grade(db_session, taken, enrollment, min_grade):
+                satisfied = True
+                break
+        if not satisfied:
+            missing.append(f"{prereq.code} (min {min_grade})" if min_grade and attempts else prereq.code)
     return missing
+
+
+async def _meets_min_grade(
+    db_session: AsyncSession, offering: CourseOffering, enrollment: Enrollment, min_grade: Optional[str]
+) -> bool:
+    """Whether a completed attempt reaches ``min_grade`` on the scale it was graded with."""
+    if not (min_grade or "").strip():
+        return True
+    from src.services.academic.grading import resolve_scale
+
+    scale = await resolve_scale(db_session, offering)
+    band = next((b for b in scale.bands or [] if str(b.get("letter")).upper() == min_grade.strip().upper()), None)
+    if band is None:
+        # The minimum is not a letter of this scale: a passing result is enough.
+        return enrollment.result_passed is not False
+    if enrollment.final_score is None:
+        return False
+    return enrollment.final_score >= float(band["min_score"])
+
+
+def _assert_grades_open(offering: CourseOffering) -> None:
+    """Students cannot join once grades are submitted or approved — they would
+    never be graded (the gradebook is locked)."""
+    if offering.grade_status in ("submitted", "approved"):
+        raise conflict(f"Grades for this offering are {offering.grade_status}; registration is closed")
 
 
 async def enroll_user(
@@ -647,6 +774,7 @@ async def enroll_user(
     ).scalars().first()
     if enrollment and enrollment.status in (EnrollmentStatus.REGISTERED, EnrollmentStatus.COMPLETED, EnrollmentStatus.FAILED):
         return enrollment
+    _assert_grades_open(offering)
     if check_capacity and offering.capacity is not None:
         if await _enrolled_count(db_session, offering.id) >= offering.capacity:  # type: ignore[arg-type]
             raise conflict("This offering is at full capacity")
@@ -761,26 +889,27 @@ async def update_enrollment(
     db_session: AsyncSession,
 ) -> EnrollmentRead:
     offering = await get_offering_or_404(db_session, offering_uuid)
-    # Instructors record completion/failure; drops and withdrawals are administrative.
+    await require_offering_manager(request, db_session, current_user, offering)
+    # Results have a single source: the gradebook (instructor submits, a
+    # coordinator approves). A bare completed/failed status would carry no
+    # grade, never reach the transcript and still unlock prerequisites.
     if status in (EnrollmentStatus.COMPLETED, EnrollmentStatus.FAILED):
-        await require_offering_staff(request, db_session, current_user, offering)
-    else:
-        await require_offering_manager(request, db_session, current_user, offering)
+        raise conflict(
+            "Results come from the gradebook: add an assessment component (e.g. a single 100% final grade), "
+            "enter the scores, then submit and approve them"
+        )
     enrollment = await get_by_uuid_or_404(
         db_session, Enrollment, Enrollment.enrollment_uuid, enrollment_uuid, "Enrollment"
     )
     if enrollment.offering_id != offering.id:
         raise bad_request("Enrollment does not belong to this offering")
-    if status in (EnrollmentStatus.COMPLETED, EnrollmentStatus.FAILED):
-        from src.db.academic.grading import AssessmentComponent
-
-        has_scheme = (
-            await db_session.execute(
-                select(func.count()).select_from(AssessmentComponent).where(AssessmentComponent.offering_id == offering.id)
-            )
-        ).scalar() or 0
-        if has_scheme:
-            raise conflict("This offering has an assessment scheme; results come from gradebook approval")
+    if status == EnrollmentStatus.REGISTERED and enrollment.status != EnrollmentStatus.REGISTERED:
+        if offering.status not in ACTIVE_OFFERING_STATES:
+            raise conflict("This offering is not open for registration")
+        _assert_grades_open(offering)
+        membership = await db_session.get(CohortMembership, enrollment.membership_id) if enrollment.membership_id else None
+        if membership and membership.status != MembershipStatus.ACTIVE:
+            raise conflict("The student's cohort membership is not active")
     if status == EnrollmentStatus.REGISTERED and offering.capacity is not None:
         if await _enrolled_count(db_session, offering.id) >= offering.capacity:  # type: ignore[arg-type]
             raise conflict("This offering is at full capacity")
@@ -795,7 +924,10 @@ async def update_enrollment(
 # ---------------------------------------------------------------------------
 
 async def auto_enroll_member(db_session: AsyncSession, cohort: Cohort, membership: CohortMembership) -> int:
-    """Register an active cohort member in the cohort's current required offerings."""
+    """Register an active cohort member in the cohort's current required offerings.
+
+    Offerings the student already has a registration in are left alone, so a
+    registration staff dropped or withdrew is never silently revived."""
     offerings = (
         await db_session.execute(
             select(CourseOffering).where(
@@ -808,6 +940,15 @@ async def auto_enroll_member(db_session: AsyncSession, cohort: Cohort, membershi
     for offering in offerings:
         item = await db_session.get(CurriculumItem, offering.curriculum_item_id) if offering.curriculum_item_id else None
         if item is not None and item.requirement != CurriculumRequirement.REQUIRED:
+            continue
+        existing = (
+            await db_session.execute(
+                select(Enrollment.id).where(
+                    Enrollment.offering_id == offering.id, Enrollment.user_id == membership.user_id
+                )
+            )
+        ).first()
+        if existing:
             continue
         await enroll_user(
             db_session, offering, membership.user_id, membership=membership,

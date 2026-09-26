@@ -319,10 +319,57 @@ async def delete_cohort(
     await check_resource_access(
         request, db_session, current_user, cohort.cohort_uuid, AccessAction.DELETE
     )
+    await assert_cohort_deletable(db_session, cohort)
     await delete_cohort_dependents(db_session, cohort)
     await db_session.delete(cohort)
     await db_session.commit()
     return "Cohort deleted"
+
+
+async def assert_cohort_deletable(db_session: AsyncSession, cohort: Cohort, label: str = "cohort") -> None:
+    """Deleting a cohort cascades to its student records, registrations and
+    applications. Once official results or admission decisions exist that
+    history must be kept, so the cohort is archived instead."""
+    from src.db.academic.admissions import AdmissionApplication, ApplicationStatus
+    from src.db.academic.offerings import Enrollment, EnrollmentStatus
+
+    member_ids = select(CohortMembership.id).where(CohortMembership.cohort_id == cohort.id)
+    offering_ids = select(CourseOffering.id).where(CourseOffering.cohort_id == cohort.id)
+    results = (
+        await db_session.execute(
+            select(func.count()).select_from(Enrollment).where(
+                Enrollment.status.in_([EnrollmentStatus.COMPLETED, EnrollmentStatus.FAILED]),  # type: ignore[attr-defined]
+                Enrollment.membership_id.in_(member_ids) | Enrollment.offering_id.in_(offering_ids),  # type: ignore[union-attr,attr-defined]
+            )
+        )
+    ).scalar() or 0
+    decided = (
+        await db_session.execute(
+            select(func.count()).select_from(AdmissionApplication).where(
+                AdmissionApplication.cohort_id == cohort.id,
+                AdmissionApplication.status.in_(  # type: ignore[attr-defined]
+                    [
+                        ApplicationStatus.ACCEPTED,
+                        ApplicationStatus.WAITLISTED,
+                        ApplicationStatus.REJECTED,
+                        ApplicationStatus.ENROLLED,
+                    ]
+                ),
+            )
+        )
+    ).scalar() or 0
+    if results or decided:
+        parts = []
+        if results:
+            parts.append(f"{results} official course result(s)")
+        if decided:
+            parts.append(f"{decided} admission decision(s)")
+        advice = "archive the program" if label == "program" else "archive the cohort"
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cohort {cohort.code or cohort.name} has {' and '.join(parts)}; "
+            f"these records must be kept, so {advice} instead of deleting it",
+        )
 
 
 async def delete_cohort_dependents(db_session: AsyncSession, cohort: Cohort) -> None:

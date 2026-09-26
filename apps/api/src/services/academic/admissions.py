@@ -785,8 +785,10 @@ async def create_application(
             )
         )
     ).scalars().first()
-    if existing:
-        raise conflict(f"An application already exists for this intake ({existing.application_number})")
+    if existing and existing.status != ApplicationStatus.WITHDRAWN:
+        raise conflict(
+            f"An application already exists for this intake ({existing.application_number}, {existing.status.value})"
+        )
     already_student = (
         await db_session.execute(
             select(CohortMembership).where(
@@ -796,6 +798,23 @@ async def create_application(
     ).scalars().first()
     if already_student:
         raise conflict("The applicant is already a student of this cohort")
+
+    if existing:
+        # A withdrawn application is reopened as a draft (same number, full
+        # history kept) instead of blocking the applicant from this intake.
+        existing.profile = data.profile.model_dump()
+        existing.checks = {}
+        existing.decision_note = None
+        existing.decided_at = None
+        existing.decided_by_id = None
+        existing.submitted_at = None
+        await _set_status(
+            db_session, existing, current_user, ApplicationStatus.DRAFT, action="reopened",
+            note="Reopened by staff" if on_behalf else "Reopened by the applicant",
+        )
+        await db_session.commit()
+        await db_session.refresh(existing)
+        return await _read(db_session, existing)
 
     application = AdmissionApplication(
         application_number=await _next_number(db_session, cohort),
@@ -915,6 +934,35 @@ async def override_check(
     return await _read(db_session, application)
 
 
+async def _assert_offer_capacity(db_session: AsyncSession, application: AdmissionApplication) -> None:
+    """Accepting is an offer of a seat: active students plus outstanding
+    (accepted, not yet enrolled) offers must stay within the cohort capacity."""
+    cohort = await db_session.get(Cohort, application.cohort_id)
+    if cohort is None or cohort.capacity is None:
+        return
+    students = (
+        await db_session.execute(
+            select(func.count()).select_from(CohortMembership).where(
+                CohortMembership.cohort_id == cohort.id, CohortMembership.status == MembershipStatus.ACTIVE
+            )
+        )
+    ).scalar() or 0
+    offers = (
+        await db_session.execute(
+            select(func.count()).select_from(AdmissionApplication).where(
+                AdmissionApplication.cohort_id == cohort.id,
+                AdmissionApplication.status == ApplicationStatus.ACCEPTED,
+                AdmissionApplication.id != application.id,
+            )
+        )
+    ).scalar() or 0
+    if students + offers >= cohort.capacity:
+        raise conflict(
+            f"The intake is full ({students} students and {offers} accepted offers for {cohort.capacity} seats); "
+            "waitlist the applicant or increase the cohort capacity"
+        )
+
+
 async def decide(
     request: Request, application_uuid: str, data: DecisionRequest, current_user: Principal, db_session: AsyncSession
 ) -> ApplicationRead:
@@ -927,6 +975,7 @@ async def decide(
     if data.decision == application.status:
         raise conflict(f"The application is already {data.decision.value}")
     if data.decision == ApplicationStatus.ACCEPTED:
+        await _assert_offer_capacity(db_session, application)
         eligible, _ = _eligibility(await evaluate_checks(db_session, application))
         if eligible is not True:
             if not data.override_requirements:
@@ -956,9 +1005,8 @@ async def enroll_applicant(
     if application.status != ApplicationStatus.ACCEPTED:
         raise conflict("Only accepted applicants can be enrolled")
     cohort = await db_session.get(Cohort, application.cohort_id)
+    # Refuses (409) when the applicant already has an inactive record here.
     membership = await students_svc.admit_user(db_session, cohort, application.applicant_id)  # type: ignore[arg-type]
-    if membership.status != MembershipStatus.ACTIVE:
-        raise conflict("The applicant already has an inactive record in this cohort")
     application.membership_id = membership.id
     await _set_status(
         db_session, application, current_user, ApplicationStatus.ENROLLED, action="enrolled",

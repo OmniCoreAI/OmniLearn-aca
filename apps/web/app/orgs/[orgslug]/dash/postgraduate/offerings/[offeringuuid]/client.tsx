@@ -48,12 +48,20 @@ const OFFERING_NEXT: Record<string, string[]> = {
   completed: [],
   cancelled: [],
 }
+// Completed/failed are never set by hand: they come from gradebook approval.
 const ENROLLMENT_NEXT: Record<string, string[]> = {
-  registered: ['completed', 'failed', 'dropped', 'withdrawn'],
+  registered: ['dropped', 'withdrawn'],
   dropped: ['registered'],
   withdrawn: ['registered'],
   completed: [],
   failed: [],
+}
+// Irreversible offering transitions, confirmed with their consequences.
+const STATUS_CONFIRM: Record<string, string> = {
+  cancelled:
+    'Cancel this offering? Every registered student is withdrawn and loses access to the course content. This cannot be undone.',
+  completed:
+    'Mark this offering completed? This needs approved grades for every registered student and cannot be undone.',
 }
 const SESSION_TYPES = ['lecture', 'seminar', 'lab', 'tutorial', 'workshop', 'exam', 'other']
 
@@ -128,7 +136,13 @@ function OfferingDetail({ orgslug, offeringuuid }: { orgslug: string; offeringuu
           offering && (
             <>
               {(OFFERING_NEXT[offering.status] || []).map((s) => (
-                <GhostButton key={s} onClick={() => act(() => updateOffering(offering_uuid, { status: s }, access_token))}>
+                <GhostButton
+                  key={s}
+                  onClick={() =>
+                    (!STATUS_CONFIRM[s] || window.confirm(t(`academic.confirm_offering_${s}`, STATUS_CONFIRM[s]))) &&
+                    act(() => updateOffering(offering_uuid, { status: s }, access_token))
+                  }
+                >
                   {t(`academic.to_${s}`, `Mark ${s.replace('_', ' ')}`)}
                 </GhostButton>
               ))}

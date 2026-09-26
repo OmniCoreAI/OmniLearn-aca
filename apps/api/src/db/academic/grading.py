@@ -238,6 +238,9 @@ class TranscriptCourse(SQLModel):
     grade_points: Optional[float] = None
     status: str
     counted_in_gpa: bool = True  # False when superseded by a later attempt
+    # Result recorded without a grade (before results came only from the
+    # gradebook): counts in credits as pass/fail, never in the GPA.
+    ungraded: bool = False
 
 
 class TranscriptTerm(SQLModel):

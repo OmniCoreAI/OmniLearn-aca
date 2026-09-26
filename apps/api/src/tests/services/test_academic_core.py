@@ -39,6 +39,7 @@ from src.services.academic import calendar as calendar_svc
 from src.services.academic import catalog as catalog_svc
 from src.services.academic import cohorts as cohorts_svc
 from src.services.academic import curricula as curricula_svc
+from src.services.academic import grading as grading_svc
 from src.services.academic import offerings as offerings_svc
 from src.services.academic import programs as programs_svc
 from src.services.academic import students as students_svc
@@ -47,7 +48,7 @@ from src.services.academic import students as students_svc
 @pytest.fixture
 def bypass_program_rbac():
     with ExitStack() as stack:
-        for mod in (programs_svc, cohorts_svc, curricula_svc, offerings_svc, students_svc):
+        for mod in (programs_svc, cohorts_svc, curricula_svc, offerings_svc, students_svc, grading_svc):
             stack.enter_context(patch.object(mod, "check_resource_access", new=AsyncMock()))
         yield
 
@@ -61,6 +62,26 @@ async def _calendar(db, org, user):
         org.id, AcademicTermCreate(academic_year_uuid=year.academic_year_uuid, term_type=TermType.SPRING), user, db
     )
     return year, fall, spring
+
+
+async def _pass_through_gradebook(request, offering_uuid, user, db, score=80.0):
+    """Record an official result the only supported way: a 100% component,
+    scores, submission and approval."""
+    from src.db.academic.grading import AssessmentComponentCreate, ScoreUpdate
+
+    component = await grading_svc.create_component(
+        request, offering_uuid, AssessmentComponentCreate(name="Final", weight=100, max_score=100), user, db
+    )
+    book = await grading_svc.get_gradebook(request, offering_uuid, user, db)
+    await grading_svc.set_scores(
+        request,
+        offering_uuid,
+        [ScoreUpdate(enrollment_uuid=r.enrollment_uuid, component_uuid=component.component_uuid, score=score) for r in book.rows],
+        user,
+        db,
+    )
+    await grading_svc.submit_grades(request, offering_uuid, None, user, db)
+    return await grading_svc.approve_grades(request, offering_uuid, None, user, db)
 
 
 async def _program_with_curriculum(db, org, user, request):
@@ -262,21 +283,27 @@ class TestOfferingsAndStudents:
             return row is not None
 
         assert await on_roster()
-        # Suspension withdraws current registrations and revokes content access.
-        await students_svc.update_student_status(
-            mock_request, cohort.cohort_uuid, student.membership_uuid, MembershipStatus.SUSPENDED, admin_user, db
+        # Suspension needs a reason, withdraws current registrations and revokes content access.
+        with pytest.raises(HTTPException) as exc:
+            await students_svc.update_student_status(
+                mock_request, cohort.cohort_uuid, student.membership_uuid, MembershipStatus.SUSPENDED, admin_user, db
+            )
+        assert exc.value.status_code == 400
+        suspended = await students_svc.update_student_status(
+            mock_request, cohort.cohort_uuid, student.membership_uuid, MembershipStatus.SUSPENDED, admin_user, db,
+            reason="Unpaid fees",
         )
+        assert suspended.status_reason == "Unpaid fees"
         assert not await on_roster()
         roster = await offerings_svc.list_enrollments(mock_request, ml_offering.offering_uuid, admin_user, db)
         assert roster[0].status == EnrollmentStatus.WITHDRAWN
 
-        # Re-registering restores access.
+        # Returning to active restores the registrations the suspension withdrew.
         await students_svc.update_student_status(
             mock_request, cohort.cohort_uuid, student.membership_uuid, MembershipStatus.ACTIVE, admin_user, db
         )
-        await offerings_svc.update_enrollment(
-            mock_request, ml_offering.offering_uuid, roster[0].enrollment_uuid, EnrollmentStatus.REGISTERED, admin_user, db
-        )
+        roster = await offerings_svc.list_enrollments(mock_request, ml_offering.offering_uuid, admin_user, db)
+        assert roster[0].status == EnrollmentStatus.REGISTERED
         assert await on_roster()
 
     @pytest.mark.asyncio
@@ -300,12 +327,10 @@ class TestOfferingsAndStudents:
         assert exc.value.status_code == 409
         assert "ST-101" in exc.value.detail
 
-        enrollment = await offerings_svc.create_enrollment(
+        await offerings_svc.create_enrollment(
             mock_request, stats_off.offering_uuid, regular_user.user_uuid, admin_user, db
         )
-        await offerings_svc.update_enrollment(
-            mock_request, stats_off.offering_uuid, enrollment.enrollment_uuid, EnrollmentStatus.COMPLETED, admin_user, db
-        )
+        await _pass_through_gradebook(mock_request, stats_off.offering_uuid, admin_user, db)
         ok = await offerings_svc.create_enrollment(mock_request, ml_off.offering_uuid, regular_user.user_uuid, admin_user, db)
         assert ok.status == EnrollmentStatus.REGISTERED
 
@@ -390,3 +415,251 @@ class TestContentCourseReuse:
         program_uuid, _, program_type = await _course_program(db, org.id, course.course_uuid)
         assert program_type == "postgraduate"
         assert program_uuid == program.program_uuid
+
+
+async def _intake(db, org, admin_user, request):
+    """Program + cohort + generated fall offerings (ML required, elective)."""
+    program, _, ml, nlp, _ = await _program_with_curriculum(db, org, admin_user, request)
+    _, fall, spring = await _calendar(db, org, admin_user)
+    cohort = await cohorts_svc.create_cohort(
+        request, program.program_uuid, CohortCreate(name="Intake", intake_term_uuid=fall.term_uuid), admin_user, db
+    )
+    offerings = await offerings_svc.generate_cohort_offerings(
+        request, cohort.cohort_uuid, fall.term_uuid, 1, 1, admin_user, db
+    )
+    ml_offering = next(o for o in offerings if o.course_code == "AI-501")
+    return program, cohort, ml_offering, fall, spring
+
+
+async def _second_user(db, org, user_role):
+    from datetime import datetime
+
+    from src.db.user_organizations import UserOrganization
+    from src.db.users import PublicUser, User
+
+    u = User(
+        id=3, username="second", first_name="Second", last_name="Trainee", email="second@test.com",
+        password="x", user_uuid="user_second", creation_date=str(datetime.now()), update_date=str(datetime.now()),
+    )
+    db.add(u)
+    await db.commit()
+    db.add(UserOrganization(
+        user_id=u.id, org_id=org.id, role_id=user_role.id,
+        creation_date=str(datetime.now()), update_date=str(datetime.now()),
+    ))
+    await db.commit()
+    return PublicUser(id=u.id, username=u.username, first_name=u.first_name, last_name=u.last_name,
+                      email=u.email, user_uuid=u.user_uuid)
+
+
+class TestFlowIntegrity:
+    """Phase 0 fixes from the postgraduate flow review."""
+
+    @pytest.mark.asyncio
+    async def test_generation_never_revives_a_dropped_registration(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        _, cohort, ml_offering, fall, spring = await _intake(db, org, admin_user, mock_request)
+        await students_svc.add_student(mock_request, cohort.cohort_uuid, regular_user.user_uuid, admin_user, db)
+        roster = await offerings_svc.list_enrollments(mock_request, ml_offering.offering_uuid, admin_user, db)
+        await offerings_svc.update_enrollment(
+            mock_request, ml_offering.offering_uuid, roster[0].enrollment_uuid, EnrollmentStatus.DROPPED, admin_user, db
+        )
+        # Generating the next term's offerings registers the cohort there...
+        spring_offerings = await offerings_svc.generate_cohort_offerings(
+            mock_request, cohort.cohort_uuid, spring.term_uuid, 1, 2, admin_user, db
+        )
+        spring_roster = await offerings_svc.list_enrollments(mock_request, spring_offerings[0].offering_uuid, admin_user, db)
+        assert [e.status for e in spring_roster] == [EnrollmentStatus.REGISTERED]
+        # ...but the dropped fall registration stays dropped.
+        roster = await offerings_svc.list_enrollments(mock_request, ml_offering.offering_uuid, admin_user, db)
+        assert roster[0].status == EnrollmentStatus.DROPPED
+
+    @pytest.mark.asyncio
+    async def test_readmitting_an_inactive_record_is_refused(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        _, cohort, _, _, _ = await _intake(db, org, admin_user, mock_request)
+        student = await students_svc.add_student(mock_request, cohort.cohort_uuid, regular_user.user_uuid, admin_user, db)
+        await students_svc.update_student_status(
+            mock_request, cohort.cohort_uuid, student.membership_uuid, MembershipStatus.WITHDRAWN, admin_user, db,
+            reason="Left the program",
+        )
+        with pytest.raises(HTTPException) as exc:
+            await students_svc.add_student(mock_request, cohort.cohort_uuid, regular_user.user_uuid, admin_user, db)
+        assert exc.value.status_code == 409 and "withdrawn" in exc.value.detail
+
+    @pytest.mark.asyncio
+    async def test_reactivation_respects_cohort_capacity(
+        self, db, org, admin_user, regular_user, user_role, mock_request, bypass_program_rbac
+    ):
+        from src.db.academic.cohorts import CohortUpdate
+
+        _, cohort, _, _, _ = await _intake(db, org, admin_user, mock_request)
+        await cohorts_svc.update_cohort(mock_request, cohort.cohort_uuid, CohortUpdate(capacity=1), admin_user, db)
+        first = await students_svc.add_student(mock_request, cohort.cohort_uuid, regular_user.user_uuid, admin_user, db)
+        await students_svc.update_student_status(
+            mock_request, cohort.cohort_uuid, first.membership_uuid, MembershipStatus.DEFERRED, admin_user, db,
+            reason="Medical leave",
+        )
+        second = await _second_user(db, org, user_role)
+        await students_svc.add_student(mock_request, cohort.cohort_uuid, second.user_uuid, admin_user, db)
+        with pytest.raises(HTTPException) as exc:
+            await students_svc.update_student_status(
+                mock_request, cohort.cohort_uuid, first.membership_uuid, MembershipStatus.ACTIVE, admin_user, db
+            )
+        assert exc.value.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_results_only_come_from_the_gradebook(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        _, cohort, ml_offering, _, _ = await _intake(db, org, admin_user, mock_request)
+        await students_svc.add_student(mock_request, cohort.cohort_uuid, regular_user.user_uuid, admin_user, db)
+        roster = await offerings_svc.list_enrollments(mock_request, ml_offering.offering_uuid, admin_user, db)
+        for status in (EnrollmentStatus.COMPLETED, EnrollmentStatus.FAILED):
+            with pytest.raises(HTTPException) as exc:
+                await offerings_svc.update_enrollment(
+                    mock_request, ml_offering.offering_uuid, roster[0].enrollment_uuid, status, admin_user, db
+                )
+            assert exc.value.status_code == 409 and "gradebook" in exc.value.detail
+
+    @pytest.mark.asyncio
+    async def test_completing_requires_approved_grades_and_cancelling_revokes_access(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        from src.db.academic.offerings import CourseOfferingUpdate
+
+        _, cohort, ml_offering, _, _ = await _intake(db, org, admin_user, mock_request)
+        await students_svc.add_student(mock_request, cohort.cohort_uuid, regular_user.user_uuid, admin_user, db)
+        uuid = ml_offering.offering_uuid
+        for status in ("open", "in_progress"):
+            await offerings_svc.update_offering(mock_request, uuid, CourseOfferingUpdate(status=status), admin_user, db)
+        with pytest.raises(HTTPException) as exc:
+            await offerings_svc.update_offering(mock_request, uuid, CourseOfferingUpdate(status="completed"), admin_user, db)
+        assert exc.value.status_code == 409 and "approve" in exc.value.detail
+
+        await offerings_svc.update_offering(mock_request, uuid, CourseOfferingUpdate(status="cancelled"), admin_user, db)
+        roster = await offerings_svc.list_enrollments(mock_request, uuid, admin_user, db)
+        assert roster[0].status == EnrollmentStatus.WITHDRAWN
+        offering = (await db.execute(select(CourseOffering).where(CourseOffering.offering_uuid == uuid))).scalars().first()
+        member = (
+            await db.execute(select(UserGroupUser).where(UserGroupUser.usergroup_id == offering.usergroup_id))
+        ).scalars().first()
+        assert member is None
+
+    @pytest.mark.asyncio
+    async def test_completing_after_approval_is_allowed(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        from src.db.academic.offerings import CourseOfferingUpdate
+
+        _, cohort, ml_offering, _, _ = await _intake(db, org, admin_user, mock_request)
+        await students_svc.add_student(mock_request, cohort.cohort_uuid, regular_user.user_uuid, admin_user, db)
+        uuid = ml_offering.offering_uuid
+        for status in ("open", "in_progress"):
+            await offerings_svc.update_offering(mock_request, uuid, CourseOfferingUpdate(status=status), admin_user, db)
+        await _pass_through_gradebook(mock_request, uuid, admin_user, db)
+        with pytest.raises(HTTPException) as exc:
+            await offerings_svc.update_offering(mock_request, uuid, CourseOfferingUpdate(status="cancelled"), admin_user, db)
+        assert exc.value.status_code == 409
+        done = await offerings_svc.update_offering(mock_request, uuid, CourseOfferingUpdate(status="completed"), admin_user, db)
+        assert done.status == "completed"
+
+    @pytest.mark.asyncio
+    async def test_prerequisite_minimum_grade_is_enforced(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        _, fall, spring = await _calendar(db, org, admin_user)
+        stats = await catalog_svc.create_academic_course(org.id, AcademicCourseCreate(code="ST-101", name="Stats"), admin_user, db)
+        ml = await catalog_svc.create_academic_course(org.id, AcademicCourseCreate(code="ML-201", name="ML"), admin_user, db)
+        await catalog_svc.set_prerequisites(
+            ml.academic_course_uuid,
+            [PrerequisiteSet(prerequisite_uuid=stats.academic_course_uuid, min_grade="B")],
+            admin_user,
+            db,
+        )
+        stats_off = await offerings_svc.create_offering(
+            mock_request, org.id, CourseOfferingCreate(academic_course_uuid=stats.academic_course_uuid, term_uuid=fall.term_uuid), admin_user, db
+        )
+        ml_off = await offerings_svc.create_offering(
+            mock_request, org.id, CourseOfferingCreate(academic_course_uuid=ml.academic_course_uuid, term_uuid=spring.term_uuid), admin_user, db
+        )
+        await offerings_svc.create_enrollment(mock_request, stats_off.offering_uuid, regular_user.user_uuid, admin_user, db)
+        await _pass_through_gradebook(mock_request, stats_off.offering_uuid, admin_user, db, score=65)  # C+: passed, below B
+        with pytest.raises(HTTPException) as exc:
+            await offerings_svc.create_enrollment(mock_request, ml_off.offering_uuid, regular_user.user_uuid, admin_user, db)
+        assert exc.value.status_code == 409 and "ST-101 (min B)" in exc.value.detail
+
+    @pytest.mark.asyncio
+    async def test_replaced_instructor_loses_course_rights(
+        self, db, org, course, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        from src.db.academic.offerings import CourseOfferingUpdate
+        from src.db.resource_authors import ResourceAuthor
+
+        _, fall, _ = await _calendar(db, org, admin_user)
+        catalog = await catalog_svc.create_academic_course(org.id, AcademicCourseCreate(code="X-100", name="Xray"), admin_user, db)
+        offering = await offerings_svc.create_offering(
+            mock_request, org.id,
+            CourseOfferingCreate(
+                academic_course_uuid=catalog.academic_course_uuid, term_uuid=fall.term_uuid,
+                content_course_uuid=course.course_uuid, instructor_uuid=regular_user.user_uuid,
+            ),
+            admin_user, db,
+        )
+
+        async def is_author() -> bool:
+            row = (
+                await db.execute(
+                    select(ResourceAuthor).where(
+                        ResourceAuthor.resource_uuid == course.course_uuid, ResourceAuthor.user_id == regular_user.id
+                    )
+                )
+            ).scalars().first()
+            return row is not None
+
+        assert await is_author()
+        await offerings_svc.update_offering(
+            mock_request, offering.offering_uuid, CourseOfferingUpdate(instructor_uuid=admin_user.user_uuid), admin_user, db
+        )
+        assert not await is_author()
+
+    @pytest.mark.asyncio
+    async def test_section_change_cannot_duplicate_an_offering(
+        self, db, org, admin_user, mock_request, bypass_program_rbac
+    ):
+        from src.db.academic.offerings import CourseOfferingUpdate
+
+        _, fall, _ = await _calendar(db, org, admin_user)
+        catalog = await catalog_svc.create_academic_course(org.id, AcademicCourseCreate(code="X-100", name="Xray"), admin_user, db)
+        create = CourseOfferingCreate(academic_course_uuid=catalog.academic_course_uuid, term_uuid=fall.term_uuid)
+        await offerings_svc.create_offering(mock_request, org.id, create, admin_user, db)
+        b = await offerings_svc.create_offering(
+            mock_request, org.id, create.model_copy(update={"section": "B"}), admin_user, db
+        )
+        with pytest.raises(HTTPException) as exc:
+            await offerings_svc.update_offering(mock_request, b.offering_uuid, CourseOfferingUpdate(section="a"), admin_user, db)
+        assert exc.value.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_cohort_and_program_with_results_cannot_be_deleted(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        program, cohort, ml_offering, _, _ = await _intake(db, org, admin_user, mock_request)
+        await students_svc.add_student(mock_request, cohort.cohort_uuid, regular_user.user_uuid, admin_user, db)
+        await _pass_through_gradebook(mock_request, ml_offering.offering_uuid, admin_user, db)
+        with pytest.raises(HTTPException) as exc:
+            await cohorts_svc.delete_cohort(mock_request, cohort.cohort_uuid, admin_user, db)
+        assert exc.value.status_code == 409 and "archive the cohort" in exc.value.detail
+        with pytest.raises(HTTPException) as exc:
+            await programs_svc.delete_program(mock_request, program.program_uuid, admin_user, db)
+        assert exc.value.status_code == 409 and "archive the program" in exc.value.detail
+
+    @pytest.mark.asyncio
+    async def test_cohort_without_history_can_still_be_deleted(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac
+    ):
+        _, cohort, _, _, _ = await _intake(db, org, admin_user, mock_request)
+        await students_svc.add_student(mock_request, cohort.cohort_uuid, regular_user.user_uuid, admin_user, db)
+        assert await cohorts_svc.delete_cohort(mock_request, cohort.cohort_uuid, admin_user, db) == "Cohort deleted"

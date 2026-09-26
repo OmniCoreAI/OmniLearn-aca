@@ -82,13 +82,21 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
   }
 
   const handleDelete = async (p: any) => {
-    if (!window.confirm(t('academic.confirm_delete'))) return
+    if (
+      !window.confirm(
+        t(
+          'academic.confirm_delete_program',
+          'Delete this program? Deletion is only possible while none of its cohorts has official results or admission decisions; otherwise archive it.'
+        )
+      )
+    )
+      return
     try {
       await deleteProgram(p.program_uuid, access_token)
       toast.success(t('academic.deleted'))
       refresh()
-    } catch {
-      toast.error(t('academic.delete_failed'))
+    } catch (err: any) {
+      toast.error(err?.message || t('academic.delete_failed'))
     }
   }
 

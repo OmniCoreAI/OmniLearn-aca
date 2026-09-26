@@ -463,7 +463,7 @@ async def api_update_cohort_student(
     current_user: PublicUser = User,
 ):
     return await students_svc.update_student_status(
-        request, cohort_uuid, membership_uuid, data.status, current_user, db_session
+        request, cohort_uuid, membership_uuid, data.status, current_user, db_session, reason=data.reason
     )
 
 

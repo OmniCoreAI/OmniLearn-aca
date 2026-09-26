@@ -224,6 +224,11 @@ class CohortMembership(SQLModel, table=True):
     )
     admitted_at: str = ""
     status_changed_at: str = ""
+    # Why the current status was set (required for deferral, suspension and
+    # withdrawal) and every earlier change: who, when, from, to, reason, and
+    # the registrations a deferral/suspension withdrew (restored on return).
+    status_reason: Optional[str] = None
+    status_history: Optional[list] = Field(default=None, sa_column=Column(JSONB, nullable=True))
     membership_uuid: str = Field(default="", index=True)
 
 
@@ -233,6 +238,7 @@ class CohortMembershipCreate(SQLModel):
 
 class CohortMembershipUpdate(SQLModel):
     status: MembershipStatus
+    reason: Optional[str] = None
 
 
 class CohortMembershipRead(SQLModel):
@@ -241,6 +247,7 @@ class CohortMembershipRead(SQLModel):
     status: MembershipStatus
     admitted_at: str
     status_changed_at: str
+    status_reason: Optional[str] = None
     user: UserReadAuthor
     cohort_uuid: str
     cohort_code: Optional[str] = None

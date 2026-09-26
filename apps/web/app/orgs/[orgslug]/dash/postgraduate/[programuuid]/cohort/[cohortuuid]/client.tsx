@@ -39,6 +39,9 @@ import {
   updateCohortStudent,
 } from '@services/academic/core'
 
+// Statuses that withdraw current registrations and need a recorded reason.
+const REASON_REQUIRED = ['deferred', 'suspended', 'withdrawn']
+
 const MEMBERSHIP_NEXT: Record<string, string[]> = {
   active: ['deferred', 'suspended', 'withdrawn', 'completed'],
   deferred: ['active', 'withdrawn'],
@@ -65,6 +68,7 @@ function CohortDetail({
   const [addOpen, setAddOpen] = useState(false)
   const [generateOpen, setGenerateOpen] = useState(false)
   const [transcriptFor, setTranscriptFor] = useState<any>(null)
+  const [statusChange, setStatusChange] = useState<{ student: any; status: string } | null>(null)
 
   const { data: program } = useQuery({
     queryKey: ['academic', 'program', program_uuid],
@@ -231,6 +235,11 @@ function CohortDetail({
                 <td className={`${tdCls} text-xs`}>{s.admitted_at?.slice(0, 10)}</td>
                 <td className={tdCls}>
                   <StatusPill status={s.status} />
+                  {s.status_reason && (
+                    <div className="mt-1 max-w-[14rem] truncate text-[11px] text-[hsl(var(--dash-muted))]" title={s.status_reason}>
+                      {s.status_reason}
+                    </div>
+                  )}
                 </td>
                 <td className={`${tdCls} whitespace-nowrap text-right`}>
                   <IconButton onClick={() => setTranscriptFor(s)} aria-label={t('academic.transcript', 'Transcript')}>
@@ -240,10 +249,7 @@ function CohortDetail({
                     <select
                       className={selectCls('py-1 text-xs')}
                       value=""
-                      onChange={(e) =>
-                        e.target.value &&
-                        act(() => updateCohortStudent(cohort_uuid, s.membership_uuid, e.target.value, access_token))
-                      }
+                      onChange={(e) => e.target.value && setStatusChange({ student: s, status: e.target.value })}
                     >
                       <option value="">{t('academic.change_status', 'Change status…')}</option>
                       {MEMBERSHIP_NEXT[s.status].map((st) => (
@@ -313,6 +319,25 @@ function CohortDetail({
         }
       />
       <Modal
+        isDialogOpen={!!statusChange}
+        onOpenChange={(o: boolean) => !o && setStatusChange(null)}
+        minWidth="sm"
+        dialogTitle={t('academic.change_student_status', 'Change student status')}
+        dialogContent={
+          statusChange && (
+            <StatusChangeForm
+              cohortUuid={cohort_uuid}
+              student={statusChange.student}
+              status={statusChange.status}
+              onDone={() => {
+                setStatusChange(null)
+                refresh()
+              }}
+            />
+          )
+        }
+      />
+      <Modal
         isDialogOpen={!!transcriptFor}
         onOpenChange={(o: boolean) => !o && setTranscriptFor(null)}
         minWidth="lg"
@@ -338,6 +363,87 @@ function CohortDetail({
         }
       />
     </AcademicPageShell>
+  )
+}
+
+function StatusChangeForm({
+  cohortUuid,
+  student,
+  status,
+  onDone,
+}: {
+  cohortUuid: string
+  student: any
+  status: string
+  onDone: () => void
+}) {
+  const { t } = useTranslation()
+  const { access_token } = useAcademicContext()
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const needsReason = REASON_REQUIRED.includes(status)
+
+  const consequence: Record<string, string> = {
+    deferred: t(
+      'academic.status_effect_paused',
+      'Current course registrations are withdrawn and program access is removed. They are restored when the student returns to active.'
+    ),
+    suspended: t(
+      'academic.status_effect_paused',
+      'Current course registrations are withdrawn and program access is removed. They are restored when the student returns to active.'
+    ),
+    withdrawn: t(
+      'academic.status_effect_withdrawn',
+      'This is final: current course registrations are withdrawn and program access is removed. Results already approved stay on the transcript.'
+    ),
+    active: t(
+      'academic.status_effect_active',
+      'Registrations withdrawn by the last deferral or suspension are restored, and the student is registered in any new required offerings. The cohort capacity applies.'
+    ),
+  }
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (needsReason && !reason.trim()) return
+    setSaving(true)
+    try {
+      await updateCohortStudent(cohortUuid, student.membership_uuid, status, access_token, reason.trim() || null)
+      toast.success(t('academic.updated'))
+      onDone()
+    } catch (err: any) {
+      toast.error(err?.message || t('academic.update_failed'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="font-mono text-xs font-semibold">{student.student_number}</span>
+        <span>{displayName(student.user)}</span>
+      </div>
+      <div className="flex items-center gap-2 text-sm">
+        <StatusPill status={student.status} />
+        <span aria-hidden>→</span>
+        <StatusPill status={status} />
+      </div>
+      {consequence[status] && (
+        <p className="rounded-lg bg-[hsl(var(--dash-canvas))] px-3 py-2 text-xs text-[hsl(var(--dash-muted))]">
+          {consequence[status]}
+        </p>
+      )}
+      <Field label={needsReason ? t('academic.status_reason', 'Reason') : t('academic.status_reason_optional', 'Reason (optional)')}>
+        <textarea
+          className={inputCls}
+          rows={3}
+          value={reason}
+          required={needsReason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+      </Field>
+      <SubmitRow saving={saving} />
+    </form>
   )
 }
 

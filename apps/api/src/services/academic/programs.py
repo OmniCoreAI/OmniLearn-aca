@@ -245,11 +245,14 @@ async def delete_program(
 
     # Cohort/offering access groups are not FK-cascaded; remove them explicitly.
     from src.db.academic.cohorts import Cohort
-    from src.services.academic.cohorts import delete_cohort_dependents
+    from src.services.academic.cohorts import assert_cohort_deletable, delete_cohort_dependents
 
     cohorts = (
         await db_session.execute(select(Cohort).where(Cohort.program_id == program.id))
     ).scalars().all()
+    # Refuse before touching anything once official history exists.
+    for cohort in cohorts:
+        await assert_cohort_deletable(db_session, cohort, label="program")
     for cohort in cohorts:
         await delete_cohort_dependents(db_session, cohort)
 

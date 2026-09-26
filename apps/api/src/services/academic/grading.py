@@ -718,14 +718,29 @@ async def approve_grades(
     await offerings_svc.require_offering_manager(request, db_session, current_user, offering)
     if offering.grade_status != GradeStatus.SUBMITTED.value:
         raise conflict("Grades must be submitted by the instructor before approval")
+    # Separation of duties: whoever teaches the offering cannot make its
+    # results official, even when they also manage the program.
+    approver = resolve_acting_user_id(current_user)
+    if approver and approver in (offering.instructor_id, offering.teaching_assistant_id):
+        raise HTTPException(
+            status_code=403, detail="The offering's instructor or teaching assistant cannot approve its grades"
+        )
     book = await get_gradebook(request, offering_uuid, current_user, db_session)
     rows = {r.enrollment_uuid: r for r in book.rows}
+    incomplete = [
+        r.student_number or r.name
+        for r in book.rows
+        if r.enrollment_status == EnrollmentStatus.REGISTERED.value and not r.complete
+    ]
+    if incomplete:
+        raise conflict(
+            f"Scores are incomplete for: {', '.join(incomplete[:5])}{'…' if len(incomplete) > 5 else ''}; "
+            "return the grades to the instructor"
+        )
     for enrollment in await _graded_enrollments(db_session, offering):
         if enrollment.status != EnrollmentStatus.REGISTERED:
             continue
         row = rows[enrollment.enrollment_uuid]
-        if not row.complete:
-            raise conflict("Scores changed since submission; return the grades to the instructor")
         enrollment.final_score = row.weighted_total
         enrollment.letter_grade = row.letter_grade
         enrollment.grade_points = row.grade_points
@@ -756,7 +771,7 @@ def _gpa(entries: List[Tuple[float, float]]) -> Optional[float]:
 
 
 async def build_transcript(db_session: AsyncSession, membership: CohortMembership) -> Transcript:
-    """Approved results for a student record, by term (term start order).
+    """Official results for a student record, by term (term start order).
 
     Retake rule: when a course is attempted more than once, only the latest
     graded attempt counts in credits and CGPA (earlier ones stay listed)."""
@@ -770,7 +785,6 @@ async def build_transcript(db_session: AsyncSession, membership: CohortMembershi
                 Enrollment.user_id == membership.user_id,
                 Enrollment.org_id == membership.org_id,
                 Enrollment.status.in_(list(RESULT_STATES)),  # type: ignore[attr-defined]
-                Enrollment.letter_grade.is_not(None),  # type: ignore[union-attr]
             )
         )
     ).scalars().all()
@@ -813,6 +827,12 @@ async def build_transcript(db_session: AsyncSession, membership: CohortMembershi
         for term, course, offering, enrollment in items:
             counted = latest_attempt.get(course.id) == enrollment.id
             credits = float(course.credits or 0)
+            graded = enrollment.grade_points is not None
+            passed = (
+                enrollment.result_passed
+                if enrollment.result_passed is not None
+                else enrollment.status == EnrollmentStatus.COMPLETED
+            )
             courses.append(
                 TranscriptCourse(
                     offering_uuid=offering.offering_uuid,
@@ -823,16 +843,19 @@ async def build_transcript(db_session: AsyncSession, membership: CohortMembershi
                     letter_grade=enrollment.letter_grade,
                     grade_points=enrollment.grade_points,
                     status=enrollment.status.value,
-                    counted_in_gpa=counted,
+                    counted_in_gpa=counted and graded,
+                    ungraded=not graded,
                 )
             )
-            term_entries.append((enrollment.grade_points or 0.0, credits))
+            if graded:
+                term_entries.append((enrollment.grade_points, credits))  # type: ignore[arg-type]
             attempted += credits
-            earned += credits if enrollment.result_passed else 0.0
+            earned += credits if passed else 0.0
             if counted:
-                cumulative.append((enrollment.grade_points or 0.0, credits))
+                if graded:
+                    cumulative.append((enrollment.grade_points, credits))  # type: ignore[arg-type]
                 total_attempted += credits
-                total_earned += credits if enrollment.result_passed else 0.0
+                total_earned += credits if passed else 0.0
         term = items[0][0]
         terms.append(
             TranscriptTerm(

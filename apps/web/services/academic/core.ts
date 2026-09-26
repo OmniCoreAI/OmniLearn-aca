@@ -132,8 +132,13 @@ export const getCohortStudents = (cohort_uuid: string, token: string) =>
   call('GET', `cohorts/${cohort_uuid}/students`, token)
 export const addCohortStudent = (cohort_uuid: string, user_uuid: string, token: string) =>
   call('POST', `cohorts/${cohort_uuid}/students`, token, { user_uuid })
-export const updateCohortStudent = (cohort_uuid: string, membership_uuid: string, status: string, token: string) =>
-  call('PUT', `cohorts/${cohort_uuid}/students/${membership_uuid}`, token, { status })
+export const updateCohortStudent = (
+  cohort_uuid: string,
+  membership_uuid: string,
+  status: string,
+  token: string,
+  reason: string | null = null
+) => call('PUT', `cohorts/${cohort_uuid}/students/${membership_uuid}`, token, { status, reason })
 export const removeCohortStudent = (cohort_uuid: string, membership_uuid: string, token: string) =>
   call('DELETE', `cohorts/${cohort_uuid}/students/${membership_uuid}`, token)
 export const getOrgStudents = (

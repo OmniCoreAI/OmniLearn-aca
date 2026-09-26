@@ -89,7 +89,15 @@ function ProgramDetail({ orgslug, programuuid }: { orgslug: string; programuuid:
   }
 
   const handleDelete = async (c: any) => {
-    if (!window.confirm(t('academic.confirm_delete'))) return
+    if (
+      !window.confirm(
+        t(
+          'academic.confirm_delete_cohort',
+          'Delete this cohort? Deletion is only possible while it has no official results or admission decisions; otherwise archive it.'
+        )
+      )
+    )
+      return
     try {
       await deleteCohort(c.cohort_uuid, access_token)
       toast.success(t('academic.deleted'))

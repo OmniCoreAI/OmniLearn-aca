@@ -80,14 +80,14 @@ export function TranscriptView({ membershipUuid }: { membershipUuid: string }) {
                   {c.course_name}
                   {!c.counted_in_gpa && (
                     <span className="ms-2 text-[10px] font-semibold uppercase text-[hsl(var(--dash-muted))]">
-                      {t('academic.superseded', 'retaken')}
+                      {c.ungraded ? t('academic.ungraded_result', 'no grade · not in GPA') : t('academic.superseded', 'retaken')}
                     </span>
                   )}
                 </td>
                 <td className={tdCls}>{c.credits}</td>
                 <td className={tdCls}>{c.final_score ?? '—'}</td>
-                <td className={`${tdCls} font-semibold`}>{c.letter_grade}</td>
-                <td className={tdCls}>{c.grade_points}</td>
+                <td className={`${tdCls} font-semibold`}>{c.letter_grade ?? '—'}</td>
+                <td className={tdCls}>{c.grade_points ?? '—'}</td>
                 <td className={tdCls}>
                   <StatusPill status={c.status} />
                 </td>

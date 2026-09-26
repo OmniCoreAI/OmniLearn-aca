@@ -237,3 +237,11 @@ Still open from the original Phase 2 list: removal of the legacy `semester*` tab
 - API for an applicant portal is ready (`/admissions/intakes`, `/admissions/my-applications`, create/submit/
   upload/withdraw own application) — the applicant-facing screens are not built yet.
 - Migration `k9f0g1h2i3j4_academic_admissions.py`; tests `tests/services/test_academic_admissions.py`.
+
+---
+
+## 9. Flow & UX review (Phase 0 fixes)
+
+A persona-by-persona review (admin, lecturer, trainee, applicant) with the integrity fixes it produced and the
+role-workspace roadmap is in `docs/notes/postgraduate-flow-review.md`. Migration
+`l0g1h2i3j4k5_membership_status_history.py` adds the student status reason and history.
