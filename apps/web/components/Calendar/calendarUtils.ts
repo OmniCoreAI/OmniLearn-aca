@@ -168,7 +168,7 @@ export function eventHref(e: CalendarEvent, context: 'dash' | 'portal', orgslug:
 /* ---------------------------------------------------------------- data */
 
 /** Events for [start, end). Keyed by range so month navigation caches per month. */
-export function useCalendarEvents(start: Date, end: Date) {
+export function useCalendarEvents(start: Date, end: Date, enabled = true) {
   const org = useOrg() as any
   const session = useLHSession() as any
   const token = session?.data?.tokens?.access_token
@@ -176,7 +176,7 @@ export function useCalendarEvents(start: Date, end: Date) {
   return useQuery({
     queryKey: ['calendar-events', orgId, dayKey(start), dayKey(end)],
     queryFn: () => getCalendarEvents(orgId, token, start, end),
-    enabled: !!token && !!orgId,
+    enabled: enabled && !!token && !!orgId,
     staleTime: 60_000,
     placeholderData: (prev) => prev,
   })

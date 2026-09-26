@@ -1,27 +1,110 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { CalendarBlank, CaretLeft, CaretRight, ListBullets, SquaresFour } from '@phosphor-icons/react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation, type UseTranslationOptions } from 'react-i18next'
+import type { Locale } from 'date-fns'
+import { CalendarBlank } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import {
+  EventCalendar,
+  type EventCalendarApi,
+  type EventCalendarRenderEventProps,
+} from '@/components/ui/reui-event-calendar'
+import { EventCalendarContent } from '@/components/ui/reui-event-calendar-utils/event-calendar-content'
+import { EventCalendarNav } from '@/components/ui/reui-event-calendar-utils/event-calendar-nav'
+import type { EventCalendarI18nOverrides } from '@/components/ui/reui-event-calendar-utils/event-calendar-i18n'
+import type {
+  CalendarView,
+  EventCalendarDateRange,
+  CalendarEvent as GridEvent,
+} from '@/components/ui/reui-event-calendar-utils/event-calendar-types'
 import type { CalendarEvent, CalendarEventType } from '@services/calendar/calendar'
-import CalendarMonthGrid from './CalendarMonthGrid'
 import { CalendarEventDetail, CalendarEventRow } from './CalendarEventCard'
 import {
   EVENT_STYLES,
   EVENT_TYPES,
   addDays,
   dayKey,
+  eventEnd,
+  eventHeadline,
   eventStart,
   eventsByDay,
-  monthGrid,
+  formatTimeRange,
   sameDay,
   startOfDay,
   typeLabel,
   useCalendarEvents,
 } from './calendarUtils'
 
-type View = 'month' | 'list'
+const VIEWS: CalendarView[] = ['month', 'week', 'day', 'agenda']
+// Events are edited on their own pages; the calendar only navigates to them.
+const READ_ONLY = { drag: false, resize: false, selectSlot: false }
+// Below `sm` a month cell fits about one event row, so phones open on the list.
+const NARROW_QUERY = '(max-width: 639px)'
+// Non-English bundles load lazily; binding the store's "added" event gives `t`
+// a new identity when one arrives, so memos over translated text refresh.
+// Supported at runtime, though missing from react-i18next's option type.
+const I18N_OPTIONS = { bindI18nStore: 'added' } as UseTranslationOptions<undefined>
+
+/** date-fns locales for the app's languages, loaded on demand (English is built in). */
+const DATE_LOCALES: Record<string, () => Promise<Locale>> = {
+  ar: () => import('date-fns/locale/ar').then((m) => m.ar),
+  bn: () => import('date-fns/locale/bn').then((m) => m.bn),
+  de: () => import('date-fns/locale/de').then((m) => m.de),
+  es: () => import('date-fns/locale/es').then((m) => m.es),
+  fa: () => import('date-fns/locale/fa-IR').then((m) => m.faIR),
+  fr: () => import('date-fns/locale/fr').then((m) => m.fr),
+  hi: () => import('date-fns/locale/hi').then((m) => m.hi),
+  id: () => import('date-fns/locale/id').then((m) => m.id),
+  it: () => import('date-fns/locale/it').then((m) => m.it),
+  ja: () => import('date-fns/locale/ja').then((m) => m.ja),
+  ko: () => import('date-fns/locale/ko').then((m) => m.ko),
+  nl: () => import('date-fns/locale/nl').then((m) => m.nl),
+  pl: () => import('date-fns/locale/pl').then((m) => m.pl),
+  pt: () => import('date-fns/locale/pt').then((m) => m.pt),
+  ru: () => import('date-fns/locale/ru').then((m) => m.ru),
+  sk: () => import('date-fns/locale/sk').then((m) => m.sk),
+  th: () => import('date-fns/locale/th').then((m) => m.th),
+  tr: () => import('date-fns/locale/tr').then((m) => m.tr),
+  uk: () => import('date-fns/locale/uk').then((m) => m.uk),
+  vi: () => import('date-fns/locale/vi').then((m) => m.vi),
+  zh: () => import('date-fns/locale/zh-CN').then((m) => m.zhCN),
+}
+
+function useDateLocale(language: string) {
+  const code = language.split('-')[0]!
+  const [loaded, setLoaded] = useState<{ code: string; locale: Locale } | null>(null)
+  useEffect(() => {
+    const load = DATE_LOCALES[code]
+    if (!load) return
+    let cancelled = false
+    load().then((locale) => {
+      if (!cancelled) setLoaded({ code, locale })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [code])
+  return loaded?.code === code ? loaded.locale : undefined
+}
+
+/**
+ * Feed event → calendar event. The feed's all-day `end` is the inclusive last
+ * day; the calendar wants an exclusive midnight. With `collapseSpans` (the list
+ * view) a multi-day all-day event is listed once, on its first day, with its
+ * date range on the row, instead of repeating on every day it covers.
+ */
+function toGridEvent(e: CalendarEvent, title: string, collapseSpans: boolean): GridEvent<CalendarEvent> {
+  const color = EVENT_STYLES[e.type].dot
+  const start = eventStart(e)
+  if (e.all_day) {
+    const first = startOfDay(start)
+    const last = collapseSpans ? first : startOfDay(eventEnd(e))
+    return { id: e.id, title, start: first, end: addDays(last < first ? first : last, 1), allDay: true, color, data: e }
+  }
+  const end = eventEnd(e)
+  return { id: e.id, title, start, end: end < start ? start : end, color, data: e }
+}
 
 /**
  * Role-aware events calendar shared by the dashboard (/dash/calendar) and the
@@ -37,20 +120,23 @@ export default function EventsCalendar({
   orgslug: string
   className?: string
 }) {
-  const { t, i18n } = useTranslation()
+  const { t, i18n } = useTranslation(undefined, I18N_OPTIONS)
+  const locale = useDateLocale(i18n.language)
   const today = useMemo(() => startOfDay(new Date()), [])
-  const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
-  const [view, setView] = useState<View>('month')
+  const apiRef = useRef<EventCalendarApi<CalendarEvent> | null>(null)
+  const [view, setView] = useState<CalendarView>(() =>
+    typeof window !== 'undefined' && window.matchMedia(NARROW_QUERY).matches ? 'agenda' : 'month'
+  )
+  const [range, setRange] = useState<EventCalendarDateRange | null>(null)
   const [selectedDay, setSelectedDay] = useState(today)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [hidden, setHidden] = useState<Set<CalendarEventType>>(new Set())
 
-  // Fetch the whole visible grid (it spills into neighbouring months) plus a
-  // little extra so "Up next" can look past the month end.
-  const grid = useMemo(() => monthGrid(month), [month])
-  const rangeStart = grid[0]!
-  const rangeEnd = useMemo(() => addDays(grid[41]!, 15), [grid])
-  const { data, isLoading, isError } = useCalendarEvents(rangeStart, rangeEnd)
+  // Fetch what the calendar shows (reported through onRangeChange) plus a
+  // little extra so "Up next" can look past its end.
+  const rangeStart = useMemo(() => startOfDay(range?.start ?? today), [range, today])
+  const rangeEnd = useMemo(() => addDays(startOfDay(range?.end ?? today), 15), [range, today])
+  const { data, isLoading, isError } = useCalendarEvents(rangeStart, rangeEnd, !!range)
 
   const allEvents = useMemo(() => data?.events ?? [], [data])
   const events = useMemo(() => allEvents.filter((e) => !hidden.has(e.type)), [allEvents, hidden])
@@ -60,29 +146,62 @@ export default function EventsCalendar({
     return c
   }, [allEvents])
 
+  const gridEvents = useMemo(
+    () => events.map((e) => toGridEvent(e, eventHeadline(t, e), view === 'agenda')),
+    [events, t, view]
+  )
   const byDay = useMemo(() => eventsByDay(events, rangeStart, rangeEnd), [events, rangeStart, rangeEnd])
   const dayEvents = byDay.get(dayKey(selectedDay)) ?? []
   const upNext = useMemo(
     () => events.filter((e) => eventStart(e) >= new Date() || (e.end && new Date(e.end) >= today)).slice(0, 5),
     [events, today]
   )
-  const monthEvents = useMemo(
-    () =>
-      events.filter((e) => {
-        const s = eventStart(e)
-        return s.getMonth() === month.getMonth() && s.getFullYear() === month.getFullYear()
-      }),
-    [events, month]
+
+  // Memoized: the calendar treats a new i18n object as a settings change.
+  const calendarI18n = useMemo<EventCalendarI18nOverrides>(
+    () => ({
+      labels: {
+        today: t('calendar.today', 'Today'),
+        previous: t('calendar.previous', 'Previous'),
+        next: t('calendar.next', 'Next'),
+        allDay: t('calendar.all_day', 'All day'),
+        noEvents: t('calendar.empty_period', 'Nothing scheduled in this period.'),
+        selectView: t('calendar.select_view', 'Select view'),
+        goToDate: t('calendar.go_to_date', 'Go to date'),
+        more: (count: number) => t('calendar.more', '+{{count}} more', { count }),
+      },
+      viewNames: {
+        month: t('calendar.view_month', 'Month'),
+        week: t('calendar.view_week', 'Week'),
+        day: t('calendar.view_day', 'Day'),
+        agenda: t('calendar.view_list', 'List'),
+      },
+    }),
+    [t]
   )
 
-  const goMonth = (delta: number) => {
-    setMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1))
-    setSelectedEvent(null)
-  }
-  const goToday = () => {
-    setMonth(new Date(today.getFullYear(), today.getMonth(), 1))
-    setSelectedDay(today)
-    setSelectedEvent(null)
+  // List rows show the feed's own time label, so a collapsed multi-day event
+  // reads "3 Jan – 14 Jan" rather than "All day".
+  const renderAgendaEvent = useCallback(
+    ({ occurrence }: EventCalendarRenderEventProps<CalendarEvent>) => (
+      <>
+        <span className="w-28 shrink-0 truncate tabular-nums text-muted-foreground sm:w-40">
+          {occurrence.event.data ? formatTimeRange(occurrence.event.data, i18n.language, t) : null}
+        </span>
+        <span aria-hidden className="size-2 shrink-0 rounded-full bg-(--ec-event-color)" />
+        <span className="truncate text-sm">{occurrence.event.title}</span>
+      </>
+    ),
+    [i18n.language, t]
+  )
+  const dayClassName = useCallback(
+    (day: Date) => (sameDay(day, selectedDay) ? 'bg-[hsl(var(--dash-accent-soft))]/60' : undefined),
+    [selectedDay]
+  )
+
+  const selectEvent = (e: CalendarEvent) => {
+    setSelectedDay(startOfDay(eventStart(e)))
+    setSelectedEvent(e)
   }
   const toggleType = (type: CalendarEventType) =>
     setHidden((prev) => {
@@ -102,73 +221,15 @@ export default function EventsCalendar({
   return (
     <div className={cn('flex min-h-0 flex-col gap-4', className)}>
       {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]">
-            <CalendarBlank size={22} weight="duotone" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))]">
-              {t('calendar.title', 'Calendar')}
-            </h1>
-            <p className="truncate text-xs text-[hsl(var(--dash-muted))]">{data ? scopeText : ' '}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={goToday}
-            className="rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-3.5 py-1.5 text-xs font-medium text-[hsl(var(--dash-ink))] hover:bg-[hsl(var(--dash-canvas))]"
-          >
-            {t('calendar.today', 'Today')}
-          </button>
-          <div className="flex items-center rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))]">
-            <button
-              type="button"
-              onClick={() => goMonth(-1)}
-              aria-label={t('dashboard.home.rail.previous_month', 'Previous month')}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]"
-            >
-              <CaretLeft size={14} weight="bold" className="rtl:rotate-180" />
-            </button>
-            <span className="min-w-[8.5rem] text-center text-sm font-semibold text-[hsl(var(--dash-ink))]">
-              {month.toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })}
-            </span>
-            <button
-              type="button"
-              onClick={() => goMonth(1)}
-              aria-label={t('dashboard.home.rail.next_month', 'Next month')}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]"
-            >
-              <CaretRight size={14} weight="bold" className="rtl:rotate-180" />
-            </button>
-          </div>
-          <div className="flex rounded-full bg-[hsl(var(--dash-canvas))] p-0.5" role="tablist">
-            {(
-              [
-                ['month', SquaresFour, t('calendar.view_month', 'Month')],
-                ['list', ListBullets, t('calendar.view_list', 'List')],
-              ] as const
-            ).map(([key, Icon, label]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={view === key}
-                onClick={() => setView(key)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                  view === key
-                    ? 'bg-[hsl(var(--dash-surface))] text-[hsl(var(--dash-ink))] shadow-sm'
-                    : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]'
-                )}
-              >
-                <Icon size={14} />
-                {label}
-              </button>
-            ))}
-          </div>
+      <header className="flex min-w-0 items-center gap-3">
+        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]">
+          <CalendarBlank size={22} weight="duotone" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))]">
+            {t('calendar.title', 'Calendar')}
+          </h1>
+          <p className="truncate text-xs text-[hsl(var(--dash-muted))]">{data ? scopeText : ' '}</p>
         </div>
       </header>
 
@@ -206,60 +267,32 @@ export default function EventsCalendar({
 
       {/* Body */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="relative min-h-0 overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] p-3 shadow-[0_1px_2px_hsl(0_0%_8%/0.04),0_0_0_1px_hsl(var(--dash-border)/0.6)]">
-          {isLoading && !data ? (
-            <div className="dash-shimmer h-full min-h-[560px] rounded-2xl" />
-          ) : view === 'month' ? (
-            <CalendarMonthGrid
-              month={month}
-              events={events}
-              selectedDay={selectedDay}
-              selectedEventId={selectedEvent?.id ?? null}
-              onSelectDay={(d) => {
-                setSelectedDay(d)
-                setSelectedEvent(null)
-              }}
-              onSelectEvent={(e) => {
-                setSelectedDay(startOfDay(eventStart(e)))
-                setSelectedEvent(e)
-              }}
-            />
-          ) : (
-            <div className="h-full min-h-[560px] overflow-y-auto p-1">
-              {monthEvents.length === 0 ? (
-                <EmptyNote>{t('calendar.empty_month', 'Nothing scheduled this month.')}</EmptyNote>
-              ) : (
-                <ol className="space-y-5">
-                  {groupByDay(monthEvents).map(([key, list]) => {
-                    const d = eventStart(list[0]!)
-                    return (
-                      <li key={key} className="grid grid-cols-[72px_minmax(0,1fr)] gap-3">
-                        <div className={cn('pt-1 text-center', sameDay(d, today) && 'text-[hsl(var(--dash-accent))]')}>
-                          <p className="text-2xl font-semibold leading-none">{d.getDate()}</p>
-                          <p className="mt-1 text-[11px] uppercase text-[hsl(var(--dash-muted))]">
-                            {d.toLocaleDateString(i18n.language, { weekday: 'short' })}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          {list.map((e) => (
-                            <CalendarEventRow
-                              key={e.id}
-                              event={e}
-                              active={selectedEvent?.id === e.id}
-                              onClick={() => {
-                                setSelectedDay(startOfDay(eventStart(e)))
-                                setSelectedEvent(e)
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ol>
-              )}
-            </div>
-          )}
+        <section className="relative flex min-h-0 flex-col overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] p-2 shadow-[0_1px_2px_hsl(0_0%_8%/0.04),0_0_0_1px_hsl(var(--dash-border)/0.6)]">
+          <EventCalendar<CalendarEvent>
+            events={gridEvents}
+            views={VIEWS}
+            view={view}
+            onViewChange={setView}
+            loading={!data && (isLoading || !range)}
+            interactions={READ_ONLY}
+            locale={locale}
+            i18n={calendarI18n}
+            renderAgendaEvent={renderAgendaEvent}
+            dayClassName={dayClassName}
+            apiRef={apiRef}
+            onRangeChange={(info) => setRange(info.range)}
+            onEventClick={(occurrence) => {
+              if (occurrence.event.data) selectEvent(occurrence.event.data)
+            }}
+            onSlotClick={(slot) => {
+              setSelectedDay(startOfDay(slot.date))
+              setSelectedEvent(null)
+            }}
+            className="min-h-[560px] flex-1"
+          >
+            <EventCalendarNav />
+            <EventCalendarContent />
+          </EventCalendar>
         </section>
 
         {/* Side panel: event detail, or the selected day + what's next */}
@@ -269,7 +302,10 @@ export default function EventsCalendar({
               event={selectedEvent}
               context={context}
               orgslug={orgslug}
-              onBack={() => setSelectedEvent(null)}
+              onBack={() => {
+                setSelectedEvent(null)
+                apiRef.current?.clearSelection()
+              }}
             />
           ) : (
             <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pe-1">
@@ -302,9 +338,8 @@ export default function EventsCalendar({
                         event={e}
                         showDate
                         onClick={() => {
-                          setMonth(new Date(eventStart(e).getFullYear(), eventStart(e).getMonth(), 1))
-                          setSelectedDay(startOfDay(eventStart(e)))
-                          setSelectedEvent(e)
+                          apiRef.current?.goTo(eventStart(e))
+                          selectEvent(e)
                         }}
                       />
                     ))
@@ -325,13 +360,4 @@ function EmptyNote({ children }: { children: React.ReactNode }) {
       {children}
     </p>
   )
-}
-
-function groupByDay(events: CalendarEvent[]) {
-  const groups = new Map<string, CalendarEvent[]>()
-  for (const e of events) {
-    const key = dayKey(eventStart(e))
-    groups.set(key, [...(groups.get(key) ?? []), e])
-  }
-  return [...groups.entries()]
 }
