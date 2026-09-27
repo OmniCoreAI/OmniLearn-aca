@@ -32,6 +32,7 @@ from src.db.academic.course_profiles import (
 )
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import ensure_coordinator_authorship, get_user_author
+from src.services.administration.addons import course_addons_as_legacy, sync_legacy_course_addons
 from src.services.administration.facilities import (
     check_session_booking,
     facility_ref,
@@ -100,13 +101,14 @@ async def build_profile_read(
     sessions = await _sessions_read(db_session, profile.id)
 
     return CourseAcademicProfileRead(
-        **profile.model_dump(),
+        **profile.model_dump(exclude={"add_ons"}),
         course_uuid=course.course_uuid,
         instructor=instructor,
         has_course_certification=bool(has_cert),
         assignment_count=int(assignment_count),
         sessions=sessions,
         facility=await facility_ref(db_session, profile.facility_id),
+        add_ons=await course_addons_as_legacy(db_session, course.course_uuid),
     )
 
 
@@ -179,7 +181,8 @@ async def upsert_course_academic_profile(
 
     add_ons = None
     if "add_ons" in data:
-        # payload.add_ons are pydantic models; store as plain JSON dicts.
+        # Legacy field: mapped onto the add-on catalog + course attachments
+        # (Administration → Add-ons) instead of the deprecated JSON column.
         add_ons = [a.model_dump() for a in (payload.add_ons or [])]
         data.pop("add_ons", None)
 
@@ -197,7 +200,7 @@ async def upsert_course_academic_profile(
     if instructor_changed:
         profile.instructor_id = instructor_id
     if add_ons is not None:
-        profile.add_ons = add_ons
+        await sync_legacy_course_addons(db_session, course.org_id, course.course_uuid, add_ons)
     if facility_changed:
         if facility_id and profile.id and not allow_conflict:
             # Sessions without their own room move to the new default: check them.

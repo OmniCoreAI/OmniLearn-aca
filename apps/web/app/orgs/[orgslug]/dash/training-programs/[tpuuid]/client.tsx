@@ -10,6 +10,8 @@ import AuthenticatedClientElement from '@components/Security/AuthenticatedClient
 import CourseThumbnail, { removeCoursePrefix } from '@components/Objects/Thumbnails/CourseThumbnail'
 import AttachCourseModal from '@components/Dashboard/Pages/Academic/AttachCourseModal'
 import { CourseProfilePanel } from '@components/Dashboard/Pages/Academic/CourseProfilePanel'
+import { Section } from '@components/Dashboard/Pages/Academic/AcademicUI'
+import { AddOnAttachmentsPanel } from '@components/Dashboard/Pages/Administration/AddOnAttachmentsPanel'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
@@ -124,6 +126,15 @@ function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: s
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Section
+          title={t('administration.addons.program_addons', 'Program add-ons')}
+          description={t('administration.addons.program_addons_desc', 'Meals, kits and services offered with this program.')}
+        >
+          <AddOnAttachmentsPanel targetType="training_program" targetUuid={tp_uuid} />
+        </Section>
       </div>
 
       <Modal

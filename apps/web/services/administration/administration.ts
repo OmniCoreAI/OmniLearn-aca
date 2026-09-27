@@ -94,3 +94,42 @@ export async function uploadFacilityImage(uuid: string, file: File, token: strin
   const result = await fetch(`${getAPIUrl()}facilities/${uuid}/image`, RequestBodyFormWithAuthHeader('PUT', form, null, token))
   return errorHandling(result)
 }
+
+// ----------------------------- Add-ons -----------------------------
+
+export type AddOnTargetType = 'course' | 'training_program' | 'cohort' | 'offering'
+
+export const getAddOns = (org_id: number, token: string) => call('GET', `addons/org/${org_id}`, token)
+export const getAddOnOptions = (org_id: number, token: string) => call('GET', `addons/org/${org_id}/options`, token)
+export const createAddOn = (org_id: number, data: any, token: string) => call('POST', `addons/${qs({ org_id })}`, token, data)
+export const updateAddOn = (uuid: string, data: any, token: string) => call('PUT', `addons/${uuid}`, token, data)
+export const deleteAddOn = (uuid: string, token: string) => call('DELETE', `addons/${uuid}`, token)
+export const getAddOnSelections = (
+  org_id: number,
+  token: string,
+  params: { target_uuid?: string; addon_uuid?: string; include_cancelled?: boolean } = {}
+) => call('GET', `addons/org/${org_id}/selections${qs(params)}`, token)
+
+export async function uploadAddOnImage(uuid: string, file: File, token: string) {
+  const form = new FormData()
+  form.append('image', file)
+  const result = await fetch(`${getAPIUrl()}addons/${uuid}/image`, RequestBodyFormWithAuthHeader('PUT', form, null, token))
+  return errorHandling(result)
+}
+
+export const getTargetAttachments = (target_type: AddOnTargetType, target_uuid: string, token: string) =>
+  call('GET', `addons/targets/${target_type}/${target_uuid}/attachments`, token)
+export const createAddOnAttachment = (data: any, token: string) => call('POST', 'addons/attachments', token, data)
+export const updateAddOnAttachment = (uuid: string, data: any, token: string) =>
+  call('PUT', `addons/attachments/${uuid}`, token, data)
+export const deleteAddOnAttachment = (uuid: string, token: string) => call('DELETE', `addons/attachments/${uuid}`, token)
+
+/** Participant view: add-ons offered on a target + my current choice. */
+export const getTargetAddOns = (target_type: AddOnTargetType, target_uuid: string, token: string) =>
+  call('GET', `addons/targets/${target_type}/${target_uuid}`, token)
+export const setMyAddOnSelection = (
+  target_type: AddOnTargetType,
+  target_uuid: string,
+  items: { attachment_uuid: string; quantity: number }[],
+  token: string
+) => call('PUT', `addons/targets/${target_type}/${target_uuid}/my-selection`, token, { items })

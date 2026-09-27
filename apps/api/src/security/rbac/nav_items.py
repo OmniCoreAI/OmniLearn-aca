@@ -49,6 +49,7 @@ NAV_ITEMS: tuple[NavItem, ...] = (
     NavItem("administration", "administration"),
     NavItem("instructors", "administration"),
     NavItem("facilities", "administration"),
+    NavItem("addons", "administration"),
 )
 
 NAV_ITEM_IDS: frozenset[str] = frozenset(item.id for item in NAV_ITEMS)

@@ -24,6 +24,7 @@ import {
   saveWithConflictCheck,
   useFacilityOptions,
 } from '@components/Dashboard/Pages/Administration/Pickers'
+import { AddOnAttachmentsPanel } from '@components/Dashboard/Pages/Administration/AddOnAttachmentsPanel'
 
 const inputCls =
   'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]'
@@ -73,7 +74,6 @@ export function CourseProfilePanel({
   const [instructorUuid, setInstructorUuid] = useState<string>('')
   const [facilityUuid, setFacilityUuid] = useState<string>('')
   const facilityOptions = useFacilityOptions()
-  const [addOns, setAddOns] = useState<{ name: string; price?: number | null }[]>([])
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -85,7 +85,6 @@ export function CourseProfilePanel({
     setIssuesCertificate(!!profile?.issues_certificate)
     setInstructorUuid(profile?.instructor?.user_uuid || '')
     setFacilityUuid(profile?.facility?.facility_uuid || '')
-    setAddOns(Array.isArray(profile?.add_ons) ? profile.add_ons : [])
   }, [profile])
 
   const save = async () => {
@@ -99,12 +98,6 @@ export function CourseProfilePanel({
         issues_certificate: issuesCertificate,
         instructor_uuid: instructorUuid,
         facility_uuid: facilityUuid,
-        add_ons: addOns
-          .filter((a) => a.name.trim())
-          .map((a) => ({
-            name: a.name.trim(),
-            price: a.price === null || a.price === undefined || (a.price as any) === '' ? null : Number(a.price),
-          })),
       }
       const saved = await saveWithConflictCheck(
         (allow_conflict) => upsertCourseAcademicProfile(courseUuid, { ...payload, allow_conflict }, access_token),
@@ -198,52 +191,10 @@ export function CourseProfilePanel({
         </div>
       </div>
 
-      {/* Add-ons ("snacks", material kits, etc.) */}
+      {/* Add-ons come from the shared catalog (Administration → Add-ons). */}
       <div>
         <label className={labelCls}>{t('academic.add_ons')}</label>
-        <div className="space-y-2">
-          {addOns.map((a, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input
-                className={inputCls}
-                placeholder={t('academic.add_on_name')}
-                value={a.name}
-                onChange={(e) => {
-                  const next = [...addOns]
-                  next[i] = { ...next[i], name: e.target.value }
-                  setAddOns(next)
-                }}
-              />
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="w-28 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]"
-                placeholder={t('academic.price')}
-                value={a.price ?? ''}
-                onChange={(e) => {
-                  const next = [...addOns]
-                  next[i] = { ...next[i], price: e.target.value === '' ? null : Number(e.target.value) }
-                  setAddOns(next)
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setAddOns(addOns.filter((_, j) => j !== i))}
-                className="text-gray-400 hover:text-red-600"
-              >
-                <Trash className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => setAddOns([...addOns, { name: '', price: null }])}
-            className="flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-black"
-          >
-            <Plus className="w-3.5 h-3.5" /> {t('academic.add_add_on')}
-          </button>
-        </div>
+        <AddOnAttachmentsPanel targetType="course" targetUuid={courseUuid} compact />
       </div>
 
       <label className="flex items-center gap-2 text-sm text-gray-700">

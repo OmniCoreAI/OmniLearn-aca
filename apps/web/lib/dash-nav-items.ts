@@ -37,6 +37,7 @@ export const DASH_NAV_ITEMS: DashNavItemDef[] = [
   { id: 'administration', section: 'administration', labelKey: 'administration.nav.overview', fallbackLabel: 'Administration overview & settings', pathPrefixes: ['/dash/administration'] },
   { id: 'instructors', section: 'administration', labelKey: 'instructors.title', fallbackLabel: 'Instructors', pathPrefixes: ['/dash/instructors'] },
   { id: 'facilities', section: 'administration', labelKey: 'administration.nav.facilities', fallbackLabel: 'Facilities & Rooms', pathPrefixes: ['/dash/administration/facilities'] },
+  { id: 'addons', section: 'administration', labelKey: 'administration.nav.addons', fallbackLabel: 'Add-ons', pathPrefixes: ['/dash/administration/add-ons'] },
 ]
 
 export const DASH_NAV_ITEM_IDS = DASH_NAV_ITEMS.map((item) => item.id)

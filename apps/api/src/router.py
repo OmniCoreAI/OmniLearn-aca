@@ -40,6 +40,7 @@ from src.routers.administration import (
     overview as admin_overview_router_module,
     locations as admin_locations_router_module,
     facilities as admin_facilities_router_module,
+    addons as admin_addons_router_module,
 )
 from src.routers.folders import folders as folders_router_module
 from src.routers.media import media as media_router_module
@@ -282,6 +283,12 @@ v1_router.include_router(
     admin_facilities_router_module.router,
     prefix="/facilities",
     tags=["administration", "facilities"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_addons_router_module.router,
+    prefix="/addons",
+    tags=["administration", "add-ons"],
     dependencies=[Depends(require_authenticated_user)],
 )
 v1_router.include_router(search.router, prefix="/search", tags=["search"])

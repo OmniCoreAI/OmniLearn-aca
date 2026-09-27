@@ -2,6 +2,7 @@ import React from 'react'
 import {
   ChalkboardTeacher,
   Door,
+  Package,
   SlidersHorizontal,
   SquaresFour,
 } from '@phosphor-icons/react'
@@ -43,6 +44,13 @@ export const ADMIN_NAV_LINKS: AdminNavLink[] = [
     labelKey: 'administration.nav.facilities',
     fallback: 'Facilities & Rooms',
     icon: (size) => <Door size={size} weight="fill" />,
+  },
+  {
+    navId: 'addons',
+    href: '/dash/administration/add-ons',
+    labelKey: 'administration.nav.addons',
+    fallback: 'Add-ons',
+    icon: (size) => <Package size={size} />,
   },
   {
     navId: 'administration',

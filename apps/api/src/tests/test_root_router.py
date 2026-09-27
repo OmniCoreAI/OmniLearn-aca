@@ -48,6 +48,7 @@ ADMINISTRATION_ROUTER_MODULES = [
     "overview",
     "locations",
     "facilities",
+    "addons",
 ]
 
 
