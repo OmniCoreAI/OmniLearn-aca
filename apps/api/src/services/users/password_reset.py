@@ -306,6 +306,9 @@ async def change_password_with_reset_code(
     # Change password
     user.password = security_hash_password(new_password)
     user.password_changed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    if reset_code_object.get("reset_code_type") == "password_setup":
+        # The user just chose their own password for an academy-created account.
+        user.must_change_password = False
     db_session.add(user)
 
     await db_session.commit()
@@ -316,6 +319,36 @@ async def change_password_with_reset_code(
 
     logging.info(f"Password successfully changed for user: {user.user_uuid}")
     return "Password changed"
+
+
+PASSWORD_SETUP_TTL = 7 * 24 * 60 * 60  # 7 days
+
+
+def create_password_setup_code(user: User, org: Organization, ttl: int = PASSWORD_SETUP_TTL) -> str | None:
+    """One-time code letting an academy-created account choose its password.
+
+    Stored exactly like a reset code (same key, same ``/reset`` page) with a
+    longer lifetime. Returns None when Redis is not available.
+    """
+    try:
+        r = _get_redis_connection()
+    except HTTPException:
+        return None
+    code = generate_secure_reset_code(length=8)
+    payload = {
+        "reset_code": code,
+        "reset_code_expires": int(datetime.now().timestamp()) + ttl,
+        "reset_code_type": "password_setup",
+        "created_at": datetime.now().isoformat(),
+        "created_by": user.user_uuid,
+        "org_uuid": org.org_uuid,
+    }
+    try:
+        r.set(f"pwd_reset:user:{user.user_uuid}:org:{org.org_uuid}:code:{code}", json.dumps(payload), ex=ttl)
+    except Exception:
+        logging.exception("Could not store password setup code")
+        return None
+    return code
 
 
 async def send_reset_password_code_platform(

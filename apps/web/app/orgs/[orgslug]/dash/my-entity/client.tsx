@@ -11,9 +11,12 @@ import { EntityMembersPanel } from '@components/Dashboard/Pages/Entities/EntityM
 import { EntityGroupsPanel } from '@components/Dashboard/Pages/Entities/EntityGroupsPanel'
 import { EntityLearningPanel } from '@components/Dashboard/Pages/Entities/EntityLearningPanel'
 import { PageTabs } from '@components/Dashboard/Pages/Entities/EntitiesTabs'
+import { UserImportWizard } from '@components/Dashboard/Pages/Entities/UserImportWizard'
+import { EntityProgressPanel } from '@components/Dashboard/Pages/Entities/EntityProgressPanel'
+import { EntityInstructorsPanel } from '@components/Dashboard/Pages/Entities/EntityInstructorsPanel'
 import { getEntityLearning, getMyEntities } from '@services/administration/administration'
 
-type Tab = 'overview' | 'members' | 'groups' | 'training'
+type Tab = 'overview' | 'members' | 'groups' | 'training' | 'progress' | 'import' | 'instructors'
 
 function PortalOverview({ entity }: { entity: any }) {
   const { t } = useTranslation()
@@ -105,10 +108,13 @@ function MyEntityPortal({ orgslug: _orgslug }: { orgslug: string }) {
         value={tab}
         onChange={setTab}
         tabs={[
-          { id: 'overview', label: t('entities.tab_overview', 'Overview') },
-          { id: 'members', label: `${t('entities.members', 'Members')} (${entity.member_count})` },
-          { id: 'groups', label: t('entities.groups', 'Groups') },
-          { id: 'training', label: t('entities.portal.training', 'Training') },
+          { id: 'overview' as Tab, label: t('entities.tab_overview', 'Overview') },
+          { id: 'members' as Tab, label: `${t('entities.members', 'Members')} (${entity.member_count})` },
+          ...(perms.can_import_users ? [{ id: 'import' as Tab, label: t('entities.portal.import', 'Import') }] : []),
+          { id: 'groups' as Tab, label: t('entities.groups', 'Groups') },
+          { id: 'training' as Tab, label: t('entities.portal.training', 'Training') },
+          { id: 'progress' as Tab, label: t('entities.tab_progress', 'Progress & activity') },
+          ...(perms.can_add_instructors ? [{ id: 'instructors' as Tab, label: t('instructors.title', 'Instructors') }] : []),
         ]}
       />
       {tab === 'overview' && <PortalOverview entity={entity} />}
@@ -116,6 +122,9 @@ function MyEntityPortal({ orgslug: _orgslug }: { orgslug: string }) {
         <EntityMembersPanel key={entity.entity_uuid} entityUuid={entity.entity_uuid} isAcademy={false} canManage={!!perms.can_manage_members} />
       )}
       {tab === 'groups' && <EntityGroupsPanel key={entity.entity_uuid} entityUuid={entity.entity_uuid} canManage={!!perms.can_manage_groups} />}
+      {tab === 'progress' && <EntityProgressPanel key={entity.entity_uuid} entityUuid={entity.entity_uuid} />}
+      {tab === 'import' && perms.can_import_users && <UserImportWizard key={entity.entity_uuid} entityUuid={entity.entity_uuid} />}
+      {tab === 'instructors' && perms.can_add_instructors && <EntityInstructorsPanel key={entity.entity_uuid} entityUuid={entity.entity_uuid} />}
       {tab === 'training' && (
         <EntityLearningPanel key={entity.entity_uuid} entityUuid={entity.entity_uuid} isAcademy={false} canAssign={!!perms.can_assign_training} />
       )}

@@ -307,3 +307,67 @@ class EntityGroupRead(SQLModel):
 
 class GroupMembersUpdate(SQLModel):
     member_uuids: List[str] = []
+
+
+# ---------------------------------------------------------------------------
+# Coordinator: instructor invitations and progress follow-up
+# ---------------------------------------------------------------------------
+
+
+class EntityInstructorInvite(SQLModel):
+    first_name: str
+    last_name: str = ""
+    email: str
+    phone: Optional[str] = None
+    specializations: List[str] = []
+    bio: Optional[str] = None
+
+
+class EntityInstructorRead(SQLModel):
+    """What a coordinator sees about an instructor — never categories or rates."""
+
+    instructor_uuid: str
+    user: UserReadAuthor
+    email: Optional[str] = None
+    status: str
+    specializations: List[str] = []
+    creation_date: str
+
+
+class CourseProgressRead(SQLModel):
+    course_uuid: str
+    course_name: str
+    status: str
+    completion_percentage: float = 0
+    enrolled_at: Optional[str] = None
+
+
+class MemberProgressRead(SQLModel):
+    member_uuid: str
+    user: UserReadAuthor
+    email: Optional[str] = None
+    position_name: Optional[str] = None
+    employee_id: Optional[str] = None
+    enrolled: int = 0
+    in_progress: int = 0
+    completed: int = 0
+    average_progress: float = 0
+    certificates: int = 0
+    last_activity: Optional[str] = None
+    courses: List[CourseProgressRead] = []
+
+
+class EntityCourseStats(SQLModel):
+    course_uuid: str
+    course_name: str
+    enrolled: int = 0
+    completed: int = 0
+    average_progress: float = 0
+
+
+class EntityProgressRead(SQLModel):
+    members: List[MemberProgressRead] = []
+    courses: List[EntityCourseStats] = []
+    total_members: int = 0
+    active_learners: int = 0
+    completion_rate: float = 0

@@ -87,3 +87,24 @@ def register() -> None:
     from src.services.administration.audience import register_audience_listener
 
     register_audience_listener(_on_audience_covered)
+
+
+async def password_setup(db_session: AsyncSession, org_id: int, user_id: int) -> bool:
+    """Invite an academy-created account to choose its password (reset-code flow)."""
+    from urllib.parse import quote
+
+    from src.db.organizations import Organization
+    from src.db.users import User
+    from src.services.users.password_reset import create_password_setup_code
+
+    org = await db_session.get(Organization, org_id)
+    user = await db_session.get(User, user_id)
+    if org is None or user is None or not user.email:
+        return False
+    code = create_password_setup_code(user, org)
+    if not code:
+        return False
+    base = (await org_variables(db_session, org_id)).get("platform_url", "")
+    link = f"{base}/reset?email={quote(user.email, safe='')}&resetCode={code}" if base else ""
+    queued = await notify(db_session, org_id, "password_setup", [user_id], {"setup_code": code, "setup_link": link})
+    return queued > 0

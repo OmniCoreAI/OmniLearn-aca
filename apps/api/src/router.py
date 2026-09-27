@@ -45,6 +45,7 @@ from src.routers.administration import (
     positions as admin_positions_router_module,
     audience as admin_audience_router_module,
     notifications as admin_notifications_router_module,
+    imports as admin_imports_router_module,
 )
 from src.routers.folders import folders as folders_router_module
 from src.routers.media import media as media_router_module
@@ -317,6 +318,12 @@ v1_router.include_router(
     admin_notifications_router_module.router,
     prefix="/notifications",
     tags=["administration", "communication"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_imports_router_module.router,
+    prefix="/imports",
+    tags=["administration", "imports"],
     dependencies=[Depends(require_authenticated_user)],
 )
 v1_router.include_router(search.router, prefix="/search", tags=["search"])

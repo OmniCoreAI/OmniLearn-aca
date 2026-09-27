@@ -254,3 +254,59 @@ export interface NotificationSettings {
   default_language: 'en' | 'ar' | null
   sender_name: string | null
 }
+
+// ----------------------------- Imports & coordinator follow-up -----------------------------
+
+/** Fetch an authenticated file (xlsx…) and hand it to the browser as a download. */
+export async function downloadAuthed(path: string, token: string, filename: string) {
+  const result = await fetch(`${getAPIUrl()}${path}`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+    credentials: 'include',
+    cache: 'no-store',
+  })
+  if (!result.ok) {
+    let message = 'Download failed'
+    try {
+      message = (await result.json())?.detail || message
+    } catch {
+      /* not JSON */
+    }
+    throw new Error(message)
+  }
+  const blob = await result.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+export const downloadImportTemplate = (entity_uuid: string, token: string) =>
+  downloadAuthed(`imports/users/template${qs({ entity_uuid })}`, token, 'members-import-template.xlsx')
+export async function validateImportFile(entity_uuid: string, file: File, token: string) {
+  const form = new FormData()
+  form.append('file', file)
+  const result = await fetch(
+    `${getAPIUrl()}imports/users/validate${qs({ entity_uuid })}`,
+    RequestBodyFormWithAuthHeader('POST', form, null, token)
+  )
+  return errorHandling(result)
+}
+export const getImportJobs = (entity_uuid: string, token: string) => call('GET', `imports/entity/${entity_uuid}`, token)
+export const getImportJob = (job_uuid: string, token: string) => call('GET', `imports/${job_uuid}`, token)
+export const getImportRows = (job_uuid: string, token: string, params: { status?: string; page?: number; limit?: number } = {}) =>
+  call('GET', `imports/${job_uuid}/rows${qs(params)}`, token)
+export const commitImport = (job_uuid: string, options: any, token: string) =>
+  call('POST', `imports/${job_uuid}/commit`, token, options)
+export const downloadFailedRows = (job_uuid: string, token: string) =>
+  downloadAuthed(`imports/${job_uuid}/failed.xlsx`, token, 'failed-rows.xlsx')
+
+export const getEntityProgress = (uuid: string, token: string, group_uuid?: string) =>
+  call('GET', `entities/${uuid}/progress${qs({ group_uuid })}`, token)
+export const getEntityInstructors = (uuid: string, token: string) => call('GET', `entities/${uuid}/instructors`, token)
+export const inviteEntityInstructor = (uuid: string, data: any, token: string) =>
+  call('POST', `entities/${uuid}/instructors/invite`, token, data)

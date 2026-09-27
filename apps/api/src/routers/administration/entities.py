@@ -8,6 +8,9 @@ from src.db.administration.audience import AvailableResourceRead
 from src.db.administration.entities import (
     CoordinatorAssign,
     EntityCreate,
+    EntityInstructorInvite,
+    EntityInstructorRead,
+    EntityProgressRead,
     EntityGroupCreate,
     EntityGroupRead,
     EntityGroupUpdate,
@@ -24,6 +27,7 @@ from src.db.users import PublicUser
 from src.security.auth import get_current_user
 from src.services.administration import audience as audience_svc
 from src.services.administration import entities as svc
+from src.services.administration import entity_coordination as coord_svc
 
 router = APIRouter()
 
@@ -261,3 +265,35 @@ async def api_entity_learning(
     current_user: PublicUser = Depends(get_current_user),
 ) -> List[AvailableResourceRead]:
     return await audience_svc.list_entity_learning(db_session, current_user, entity_uuid)
+
+
+# --- Coordinator follow-up ---------------------------------------------------
+
+
+@router.get("/{entity_uuid}/progress", response_model=EntityProgressRead, summary="Members' learning progress")
+async def api_entity_progress(
+    entity_uuid: str,
+    group_uuid: Optional[str] = None,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> EntityProgressRead:
+    return await coord_svc.get_entity_progress(db_session, current_user, entity_uuid, group_uuid)
+
+
+@router.get("/{entity_uuid}/instructors", response_model=List[EntityInstructorRead], summary="Instructors proposed by the entity")
+async def api_entity_instructors(
+    entity_uuid: str,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> List[EntityInstructorRead]:
+    return await coord_svc.list_entity_instructors(db_session, current_user, entity_uuid)
+
+
+@router.post("/{entity_uuid}/instructors/invite", response_model=EntityInstructorRead, summary="Propose an instructor (academy approves)")
+async def api_invite_instructor(
+    entity_uuid: str,
+    payload: EntityInstructorInvite,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> EntityInstructorRead:
+    return await coord_svc.invite_instructor(db_session, current_user, entity_uuid, payload)

@@ -15,12 +15,14 @@ import { EntityMembersPanel, personName } from '@components/Dashboard/Pages/Enti
 import { EntityGroupsPanel } from '@components/Dashboard/Pages/Entities/EntityGroupsPanel'
 import { EntityLearningPanel } from '@components/Dashboard/Pages/Entities/EntityLearningPanel'
 import { PositionsManager } from '@components/Dashboard/Pages/Entities/PositionsManager'
+import { UserImportWizard } from '@components/Dashboard/Pages/Entities/UserImportWizard'
+import { EntityProgressPanel } from '@components/Dashboard/Pages/Entities/EntityProgressPanel'
 import { PageTabs } from '@components/Dashboard/Pages/Entities/EntitiesTabs'
 import { getEntity } from '@services/administration/administration'
 import { getInstructors } from '@services/instructors/instructors'
 import { entityLogoUrl } from '../client'
 
-type Tab = 'overview' | 'members' | 'groups' | 'positions' | 'instructors' | 'learning'
+type Tab = 'overview' | 'members' | 'groups' | 'positions' | 'instructors' | 'learning' | 'progress' | 'imports'
 
 function EntityInstructors({ orgslug, entityUuid }: { orgslug: string; entityUuid: string }) {
   const { t } = useTranslation()
@@ -103,6 +105,8 @@ function EntityDetail({ orgslug, entityUuid }: { orgslug: string; entityUuid: st
           { id: 'positions', label: t('entities.positions', 'Positions') },
           { id: 'instructors', label: t('instructors.title', 'Instructors') },
           { id: 'learning', label: t('entities.tab_learning', 'Available & assigned learning') },
+          { id: 'progress', label: t('entities.tab_progress', 'Progress & activity') },
+          { id: 'imports', label: t('entities.tab_imports', 'Imports') },
         ]}
       />
       {tab === 'overview' && <EntityOverview key={entity.update_date} entity={entity} isAcademy />}
@@ -111,6 +115,8 @@ function EntityDetail({ orgslug, entityUuid }: { orgslug: string; entityUuid: st
       {tab === 'positions' && <PositionsManager entityUuid={entityUuid} />}
       {tab === 'instructors' && <EntityInstructors orgslug={orgslug} entityUuid={entityUuid} />}
       {tab === 'learning' && <EntityLearningPanel entityUuid={entityUuid} isAcademy canAssign={false} />}
+      {tab === 'progress' && <EntityProgressPanel entityUuid={entityUuid} />}
+      {tab === 'imports' && <UserImportWizard entityUuid={entityUuid} />}
 
       <Modal
         isDialogOpen={editOpen}
