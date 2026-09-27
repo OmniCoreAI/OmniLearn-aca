@@ -24,7 +24,7 @@ SYSTEM_ROLE_UUIDS = (
 
 class NavItem(NamedTuple):
     id: str
-    section: str  # overview | academic | teaching | manage
+    section: str  # overview | academic | teaching | manage | administration
 
 
 NAV_ITEMS: tuple[NavItem, ...] = (
@@ -32,7 +32,6 @@ NAV_ITEMS: tuple[NavItem, ...] = (
     NavItem("calendar", "overview"),
     NavItem("postgraduate", "academic"),
     NavItem("training-programs", "academic"),
-    NavItem("instructors", "academic"),
     NavItem("finance", "academic"),
     NavItem("cms-news", "academic"),
     # Lecturer workspace: offerings they teach, gradebooks, interview panels.
@@ -45,6 +44,9 @@ NAV_ITEMS: tuple[NavItem, ...] = (
     NavItem("payments", "manage"),
     NavItem("organization", "manage"),
     NavItem("analytics", "manage"),
+    # Administration & Configuration — reusable entities and settings.
+    NavItem("administration", "administration"),
+    NavItem("instructors", "administration"),
 )
 
 NAV_ITEM_IDS: frozenset[str] = frozenset(item.id for item in NAV_ITEMS)

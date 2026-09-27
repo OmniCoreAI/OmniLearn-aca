@@ -13,6 +13,7 @@ import { getUriWithOrg } from '@services/config/config'
 import { AcademicPageShell, AcademicHeader } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { InstructorTabs } from '@components/Dashboard/Pages/Instructors/InstructorTabs'
 import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
+import { CurrencySelect, useFinanceDefaults } from '@components/Dashboard/Pages/Administration/AdminUI'
 import {
   getInstructorCategories,
   createInstructorCategory,
@@ -104,6 +105,11 @@ function InstructorCategoriesHome({ orgslug }: { orgslug: string }) {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-[hsl(var(--dash-ink))]">{c.name}</h3>
+                {c.status === 'inactive' && (
+                  <span className="rounded-full bg-[hsl(var(--dash-canvas))] px-2 py-0.5 text-[10px] font-bold uppercase text-[hsl(var(--dash-muted))]">
+                    {t('instructors.status_inactive', 'Inactive')}
+                  </span>
+                )}
                 {c.instructor_count > 0 && (
                   <span className="rounded-full bg-[hsl(var(--dash-canvas))] px-2 py-0.5 text-[10px] font-bold uppercase text-[hsl(var(--dash-muted))]">
                     {c.instructor_count} {t('instructors.title', 'Instructors')}
@@ -180,9 +186,9 @@ function CategoryForm({
   const { t } = useTranslation()
   const [name, setName] = useState(category?.name || '')
   const [description, setDescription] = useState(category?.description || '')
-  const [currency, setCurrency] = useState<'EGP' | 'USD'>(
-    category?.currency === 'USD' ? 'USD' : 'EGP'
-  )
+  const financeDefaults = useFinanceDefaults()
+  const [currency, setCurrency] = useState<string>(category?.currency || financeDefaults.default_currency)
+  const [status, setStatus] = useState<string>(category?.status || 'active')
   const [baseRate, setBaseRate] = useState<string>(
     category?.hourly_rate != null ? String(category.hourly_rate) : ''
   )
@@ -212,6 +218,7 @@ function CategoryForm({
         currency: currency || null,
         hourly_rate: baseRate === '' ? null : Number(baseRate),
         language_rates,
+        status,
       }
       if (category) {
         await updateInstructorCategory(category.category_uuid, payload, access_token)
@@ -235,16 +242,16 @@ function CategoryForm({
           <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>
         <Field label={t('academic.currency')}>
-          <select
-            className={inputCls}
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value as 'EGP' | 'USD')}
-          >
-            <option value="EGP">{t('instructors.currency_egp', 'Egyptian Pound (EGP)')}</option>
-            <option value="USD">{t('instructors.currency_usd', 'US Dollar (USD)')}</option>
-          </select>
+          <CurrencySelect value={currency} onChange={setCurrency} />
         </Field>
       </div>
+
+      <Field label={t('instructors.status', 'Status')}>
+        <select className={inputCls} value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="active">{t('instructors.status_active', 'Active')}</option>
+          <option value="inactive">{t('instructors.status_inactive', 'Inactive')}</option>
+        </select>
+      </Field>
 
       <Field label={t('instructors.base_rate', 'Base hourly rate')}>
         <input

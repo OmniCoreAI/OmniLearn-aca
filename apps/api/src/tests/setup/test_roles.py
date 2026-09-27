@@ -199,7 +199,10 @@ class TestRightsModel:
         assert "programs" in dumped
         assert "training_programs" in dumped
         assert "instructors" in dumped
-        assert len(dumped) == 19  # All 19 fields
+        assert "configuration" in dumped
+        assert "entities" in dumped
+        assert "communications" in dumped
+        assert len(dumped) == 22  # All 22 fields
 
 
 class TestPermissionModels:
@@ -270,6 +273,9 @@ class TestDefaultRolesValidation:
         "programs",
         "training_programs",
         "instructors",
+        "configuration",
+        "entities",
+        "communications",
     ]
 
     def test_rights_model_has_expected_fields(self):
@@ -601,6 +607,9 @@ class TestRightsFieldConsistency:
             "programs",
             "training_programs",
             "instructors",
+            "configuration",
+            "entities",
+            "communications",
         }
 
         actual_fields = set(fields.keys())

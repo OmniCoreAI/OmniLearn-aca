@@ -38,7 +38,6 @@ import {
   FolderSimple,
   GraduationCap,
   Certificate,
-  ChalkboardTeacher,
   Newspaper,
   CalendarBlank,
 } from '@phosphor-icons/react'
@@ -77,6 +76,7 @@ import { getDeploymentMode, getUpgradeUrl } from '@services/config/config'
 import PlanBadge from '@components/Dashboard/Shared/PlanRestricted/PlanBadge'
 import { usePlan } from '@components/Hooks/usePlan'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
+import { ADMIN_NAV_LINKS, isAdminLinkActive } from '@components/Dashboard/Menus/adminNavItems'
 
 function DashLeftMenu() {
   const org = useOrg() as any
@@ -147,6 +147,8 @@ function DashLeftMenu() {
 
   const plan = usePlan()
   const mode = getDeploymentMode()
+  // Hooks must run on every render — keep this above the early return.
+  const { isItemVisible } = usePortalNavVisibility()
 
   if (!org || !session) return null
   const planLabel =
@@ -158,13 +160,10 @@ function DashLeftMenu() {
   const rf = org?.config?.config?.resolved_features
   const isEnabled = (feature: string) => rf?.[feature]?.enabled === true
 
-  const { isItemVisible } = usePortalNavVisibility()
-
   const showHome = isItemVisible('home')
   const showCalendar = isItemVisible('calendar')
   const showPostgraduate = isItemVisible('postgraduate')
   const showTrainingPrograms = isItemVisible('training-programs')
-  const showInstructors = isItemVisible('instructors')
   const showFinance = isItemVisible('finance')
   const showCmsNews = isItemVisible('cms-news')
   const showMyTeaching = isItemVisible('postgraduate-teaching')
@@ -177,7 +176,8 @@ function DashLeftMenu() {
   const showOrganization = isItemVisible('organization')
   const showAnalytics = isItemVisible('analytics')
 
-  const showAcademicSection = showPostgraduate || showTrainingPrograms || showInstructors || showFinance || showCmsNews
+  const showAcademicSection = showPostgraduate || showTrainingPrograms || showFinance || showCmsNews
+  const adminLinks = ADMIN_NAV_LINKS.filter((link) => isItemVisible(link.navId))
   const showTeachingSection = showMyTeaching || showAssignments || showLibrary || showBoards || showPlaygrounds
   // "My Teaching" lives under /dash/postgraduate but is its own sidebar entry.
   const inMyTeaching = isActivePath('/dash/postgraduate/teaching')
@@ -292,16 +292,6 @@ function DashLeftMenu() {
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/training-programs')}
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'training_programs' })}
-              />
-              )}
-              {showInstructors && (
-              <MenuLink
-                href="/dash/instructors"
-                icon={<ChalkboardTeacher size={20} />}
-                label={t('instructors.title', 'Instructors')}
-                isCollapsed={isCollapsed}
-                active={isActivePath('/dash/instructors')}
-                onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'instructors' })}
               />
               )}
               {showFinance && (
@@ -737,6 +727,22 @@ function DashLeftMenu() {
                 </button>
               </HoverMenu>
             )}
+            </NavSection>
+            )}
+
+            {adminLinks.length > 0 && (
+            <NavSection label={t('dashboard.home.nav.administration', 'Administration & Configuration')} isCollapsed={isCollapsed}>
+              {adminLinks.map((link) => (
+                <MenuLink
+                  key={link.href}
+                  href={link.href}
+                  icon={link.icon(20)}
+                  label={t(link.labelKey, link.fallback)}
+                  isCollapsed={isCollapsed}
+                  active={isAdminLinkActive(link, pathname)}
+                  onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: link.navId })}
+                />
+              ))}
             </NavSection>
             )}
           </div>

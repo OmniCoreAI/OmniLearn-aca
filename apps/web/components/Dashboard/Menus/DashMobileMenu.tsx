@@ -4,7 +4,6 @@ import { useOrg } from '@components/Contexts/OrgContext'
 import { signOut } from '@components/Contexts/AuthContext'
 import {
   House,
-  BookOpen,
   Files,
   Users,
   CurrencyCircleDollar,
@@ -19,7 +18,6 @@ import {
   FolderSimple,
   GraduationCap,
   Certificate,
-  ChalkboardTeacher,
   Newspaper,
   List,
   X,
@@ -46,6 +44,7 @@ import { usePlan } from '@components/Hooks/usePlan'
 import { FeedbackModal } from '@components/Objects/Modals/FeedbackModal'
 import { useCommandPalette } from '@components/Dashboard/CommandPalette/CommandPaletteContext'
 import usePortalNavVisibility from '@components/Hooks/usePortalNavVisibility'
+import { ADMIN_NAV_LINKS, isAdminLinkActive } from '@components/Dashboard/Menus/adminNavItems'
 
 function DashMobileMenu() {
   const org = useOrg() as any
@@ -208,7 +207,6 @@ function DashMobileMenu() {
                 <PanelItem href="/dash" icon={<House size={15} weight="fill" />} label={t('common.home')} active={isActive('/dash')} onClick={close} />
                 {isItemVisible('postgraduate') && <PanelItem href="/dash/postgraduate" icon={<GraduationCap size={15} weight="fill" />} label={t('academic.postgraduate_studies', 'Postgraduate Studies')} active={isActive('/dash/postgraduate') && !isActive('/dash/postgraduate/teaching')} onClick={close} />}
                 {isItemVisible('training-programs') && <PanelItem href="/dash/training-programs" icon={<Certificate size={15} weight="fill" />} label={t('academic.training_programs', 'Training Programs')} active={isActive('/dash/training-programs')} onClick={close} />}
-                {isItemVisible('instructors') && <PanelItem href="/dash/instructors" icon={<ChalkboardTeacher size={15} weight="fill" />} label={t('instructors.title', 'Instructors')} active={isActive('/dash/instructors')} onClick={close} />}
                 {isItemVisible('finance') && <PanelItem href="/dash/finance" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.finance', 'Finance')} active={isActive('/dash/finance')} onClick={close} />}
                 {isItemVisible('cms-news') && <PanelItem href="/dash/cms/news" icon={<Newspaper size={15} weight="fill" />} label={t('cms.news.title', 'News')} active={isActive('/dash/cms/news')} onClick={close} />}
                 {isEnabled('folders') && isItemVisible('library') && <PanelItem href="/dash/library" icon={<FolderSimple size={15} weight="fill" />} label={t('library.library')} active={isActive('/dash/library')} onClick={close} />}
@@ -220,6 +218,9 @@ function DashMobileMenu() {
                 {isEnabled('payments') && isItemVisible('payments') && <PanelItem href="/dash/payments/overview" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.payments')} active={isActive('/dash/payments')} onClick={close} />}
                 {isItemVisible('analytics') && <PanelItem href="/dash/analytics" icon={<ChartBar size={15} weight="fill" />} label="Analytics" active={isActive('/dash/analytics')} onClick={close} />}
                 {isItemVisible('organization') && <PanelItem href="/dash/org/settings/general" icon={<Buildings size={15} weight="fill" />} label={t('common.organization')} active={isActive('/dash/org')} onClick={close} />}
+                {ADMIN_NAV_LINKS.filter((link) => isItemVisible(link.navId)).map((link) => (
+                  <PanelItem key={link.href} href={link.href} icon={link.icon(15)} label={t(link.labelKey, link.fallback)} active={isAdminLinkActive(link, pathname)} onClick={close} />
+                ))}
 
                 <div className="h-px bg-[hsl(var(--dash-canvas))] mx-2 my-1.5" />
 

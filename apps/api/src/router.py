@@ -34,6 +34,11 @@ from src.routers.instructors import (
     finance as instructor_finance_router_module,
 )
 from src.routers.finance import ledger as finance_ledger_router_module
+from src.routers.administration import (
+    lookups as admin_lookups_router_module,
+    settings as admin_settings_router_module,
+    overview as admin_overview_router_module,
+)
 from src.routers.folders import folders as folders_router_module
 from src.routers.media import media as media_router_module
 from src.routers.courses import migration as migration_router_module
@@ -244,6 +249,25 @@ v1_router.include_router(
     finance_ledger_router_module.router,
     prefix="/finance",
     tags=["finance"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+# Administration & Configuration (reusable, org-level configuration data).
+v1_router.include_router(
+    admin_lookups_router_module.router,
+    prefix="/lookups",
+    tags=["administration", "lookups"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_settings_router_module.router,
+    prefix="/admin-settings",
+    tags=["administration", "settings"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_overview_router_module.router,
+    prefix="/administration",
+    tags=["administration"],
     dependencies=[Depends(require_authenticated_user)],
 )
 v1_router.include_router(search.router, prefix="/search", tags=["search"])

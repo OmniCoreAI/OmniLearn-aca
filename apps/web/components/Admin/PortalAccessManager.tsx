@@ -19,7 +19,7 @@ const SYSTEM_ROLES: { uuid: string; label: string }[] = [
   { uuid: 'role_global_user', label: 'Trainee' },
 ]
 
-const SECTION_ORDER: DashNavSection[] = ['overview', 'academic', 'teaching', 'manage']
+const SECTION_ORDER: DashNavSection[] = ['overview', 'academic', 'teaching', 'manage', 'administration']
 
 export default function PortalAccessManager() {
   const session = useLHSession() as any
@@ -68,7 +68,7 @@ export default function PortalAccessManager() {
 
     try {
       await updatePortalNavigation(roleUuid, Array.from(current), access_token)
-    } catch (err) {
+    } catch {
       // Revert on failure
       setVisibility((prev) => ({
         ...prev,

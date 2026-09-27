@@ -6,7 +6,7 @@
  * them in sync with `apps/api/src/security/rbac/nav_items.py`.
  */
 
-export type DashNavSection = 'overview' | 'academic' | 'teaching' | 'manage'
+export type DashNavSection = 'overview' | 'academic' | 'teaching' | 'manage' | 'administration'
 
 export interface DashNavItemDef {
   id: string
@@ -22,7 +22,6 @@ export const DASH_NAV_ITEMS: DashNavItemDef[] = [
   { id: 'calendar', section: 'overview', labelKey: 'calendar.title', fallbackLabel: 'Calendar', pathPrefixes: ['/dash/calendar'] },
   { id: 'postgraduate', section: 'academic', labelKey: 'academic.postgraduate_studies', fallbackLabel: 'Postgraduate Studies', pathPrefixes: ['/dash/postgraduate'] },
   { id: 'training-programs', section: 'academic', labelKey: 'academic.training_programs', fallbackLabel: 'Training Programs', pathPrefixes: ['/dash/training-programs'] },
-  { id: 'instructors', section: 'academic', labelKey: 'instructors.title', fallbackLabel: 'Instructors', pathPrefixes: ['/dash/instructors'] },
   { id: 'finance', section: 'academic', labelKey: 'common.finance', fallbackLabel: 'Finance', pathPrefixes: ['/dash/finance'] },
   { id: 'cms-news', section: 'academic', labelKey: 'cms.news.title', fallbackLabel: 'News', pathPrefixes: ['/dash/cms/news'] },
   { id: 'postgraduate-teaching', section: 'teaching', labelKey: 'academic.my_teaching', fallbackLabel: 'My Teaching', pathPrefixes: ['/dash/postgraduate/teaching'] },
@@ -34,6 +33,9 @@ export const DASH_NAV_ITEMS: DashNavItemDef[] = [
   { id: 'payments', section: 'manage', labelKey: 'common.payments', fallbackLabel: 'Payments', pathPrefixes: ['/dash/payments'] },
   { id: 'organization', section: 'manage', labelKey: 'common.organization', fallbackLabel: 'Organization', pathPrefixes: ['/dash/org'] },
   { id: 'analytics', section: 'manage', labelKey: 'common.analytics', fallbackLabel: 'Analytics', pathPrefixes: ['/dash/analytics'] },
+  // Administration & Configuration — reusable entities and settings.
+  { id: 'administration', section: 'administration', labelKey: 'administration.nav.overview', fallbackLabel: 'Administration overview & settings', pathPrefixes: ['/dash/administration'] },
+  { id: 'instructors', section: 'administration', labelKey: 'instructors.title', fallbackLabel: 'Instructors', pathPrefixes: ['/dash/instructors'] },
 ]
 
 export const DASH_NAV_ITEM_IDS = DASH_NAV_ITEMS.map((item) => item.id)
@@ -43,6 +45,7 @@ export const SECTION_LABELS: Record<DashNavSection, { key: string; fallback: str
   academic: { key: 'dashboard.home.nav.academic', fallback: 'Academic' },
   teaching: { key: 'dashboard.home.nav.teaching', fallback: 'Teaching' },
   manage: { key: 'dashboard.home.nav.manage', fallback: 'Manage' },
+  administration: { key: 'dashboard.home.nav.administration', fallback: 'Administration & Configuration' },
 }
 
 /** Given a pathname, return the nav item id whose pathPrefixes matches it, if any. */

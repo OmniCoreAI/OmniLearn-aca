@@ -117,6 +117,32 @@ class Rights(BaseModel):
         action_update=False,
         action_delete=False,
     )
+    # Administration & Configuration layer. Academy admins always pass; these
+    # buckets let custom roles opt in. Default: NO access (costs, rates and
+    # participant data must not be readable by every org member).
+    # Reusable resources: facilities, locations, add-ons, lookups, settings,
+    # certificate templates.
+    configuration: Permission = Permission(
+        action_create=False,
+        action_read=False,
+        action_update=False,
+        action_delete=False,
+    )
+    # Entities (الجهات), their positions, members, groups, imports and
+    # audience assignment — academy-wide, not scoped to one entity.
+    entities: Permission = Permission(
+        action_create=False,
+        action_read=False,
+        action_update=False,
+        action_delete=False,
+    )
+    # Email / SMS templates, notification settings and the delivery log.
+    communications: Permission = Permission(
+        action_create=False,
+        action_read=False,
+        action_update=False,
+        action_delete=False,
+    )
 
     def __getitem__(self, item):
         return getattr(self, item)
