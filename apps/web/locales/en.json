@@ -7005,5 +7005,27 @@
     "border_single": "Single",
     "border_double": "Double",
     "border_ornate": "Ornate"
+  },
+  "delivery": {
+    "tab": "Delivery & Resources",
+    "program_messages": "Messages for this program",
+    "messages_desc": "Pick a different email or SMS template for this course; everything else uses the academy defaults.",
+    "no_templates": "All messages use the academy defaults. Write alternative templates under",
+    "channel": "Channel",
+    "template": "Template",
+    "step_audience": "Audience",
+    "public": "Public",
+    "assignments": "assignment(s)",
+    "step_instructor": "Instructor",
+    "step_facility": "Facility",
+    "step_addons": "Add-ons",
+    "step_certificate": "Certificate",
+    "step_messages": "Messages",
+    "custom": "custom",
+    "title": "Delivery & resources",
+    "desc": "Reusable items from Administration & Configuration attached to this course. Optional steps can stay empty.",
+    "teaching": "Instructor, room, sessions & add-ons",
+    "messages": "Messages for this course",
+    "program_messages_desc": "Pick a different email or SMS template for this program and its courses; everything else uses the academy defaults."
   }
 }

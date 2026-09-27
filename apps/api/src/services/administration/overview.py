@@ -23,7 +23,8 @@ Counter = Callable[[int], object]
 OVERVIEW_COUNTERS: List[Tuple[str, Counter]] = [
     ("instructor_categories", lambda org_id: select(func.count(InstructorCategory.id)).where(InstructorCategory.org_id == org_id)),
     ("instructors", lambda org_id: select(func.count(Instructor.id)).where(Instructor.org_id == org_id)),
-    ("usergroups", lambda org_id: select(func.count(UserGroup.id)).where(UserGroup.org_id == org_id)),
+    # Hand-made groups only (entity "all members" / audience groups are automatic).
+    ("usergroups", lambda org_id: select(func.count(UserGroup.id)).where(UserGroup.org_id == org_id, UserGroup.group_type != "system")),
     ("courses", lambda org_id: select(func.count(Course.id)).where(Course.org_id == org_id)),
 ]
 

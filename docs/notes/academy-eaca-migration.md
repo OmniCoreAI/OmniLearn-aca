@@ -2093,3 +2093,22 @@ When you paste those result sets back, we can fill every remaining “unknown 0/
 ---
 
 *Document generated from schema dumps, T-SQL label functions/views, and row-count export. Unique-value appendices require restoring `SnapShotDb.bak` and running §11.*
+
+---
+
+## 12. Administration & Configuration — where legacy config data lands
+
+Added with the Administration & Configuration layer (see [`administration-configuration.md`](./administration-configuration.md)).
+
+| Legacy | Rows | New home | Notes |
+| --- | --- | --- | --- |
+| `GENBranches` (+ types / hours) | few | `location` | Branch → location (type from `configlookup` kind `location_type`); opening hours can go to `extra_metadata`. |
+| `GENRooms` | 47 | `facility` | Room type → `configlookup` (`facility_type`: Lab / Classroom / ActivityRoom…); equipment counts → `facility.equipment` (`[{lookup_id, quantity}]`, kind `equipment`); capacity → `capacity`. `GENClassrooms.RoomId` → `courseoffering.facility_id` / session `facility_id`. |
+| `GENCompanies` | 6,045 | `entity` | The Academy's own row stays the `organization`; employer/partner companies become entities (type via `entity_type` lookup: ministry, government, company…). `AspNetUsers.OfficialOrganizationId` / `GENContacts.CompanyId` → `entitymember`. |
+| `GENDepartments`, `GENEmployees.DepartmentId` | 6 | `usergroup` (`group_type = department`, `entity_id` set) | Department membership → `usergroupuser`. |
+| Job titles (`GENEmployees` / contact position fields) | — | `entityposition` + `entitymember.position_id` | Shared positions have `entity_id = NULL`. |
+| `GENClassrooms.CompanyId` (courses delivered for a company) | — | `audienceassignment` | `audience_type = entity`, `mode = assigned` (or `available` when the company's coordinator distributes seats). |
+| `GENWikis` used as certificate templates | part of 648 | `certificatetemplate` | Background / signatures / `Line1`–`Line4` → `design` (`background_image`, `signatures[]`, title/subtitle/body/footer). `GENCertificates.TemplateId` → the course's `certifications.config.certificate_template_uuid`. |
+| `GENCertificates.SerialNo` | 46,086 | `certificateuser.serial_no` | Keep the legacy number verbatim; new certificates use the template's serial format. |
+| `PushMSGs` / `PushMSGUsers` | 176 / 9,267 | `notificationlog` (history only) | Import as `status = sent`, `channel = sms` or `email` by message type; recurring texts become `notificationtemplate` rows. |
+| Legacy course "extras" (meals, kits) | — | `addon` + `addonattachment` | Per-course prices become attachment `price_override`. |

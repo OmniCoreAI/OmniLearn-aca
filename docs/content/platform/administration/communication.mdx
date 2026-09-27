@@ -1,0 +1,45 @@
+import { Callout } from 'nextra/components'
+
+# Email & SMS
+
+**Administration → Communication** controls the messages the academy sends.
+
+## Events
+
+| Event | When |
+| --- | --- |
+| Account created | An account is created (welcome) |
+| Set your password | The academy or an import created the account |
+| Password reset | A reset code is requested (always sent) |
+| Invitation | Someone is invited to join |
+| Role changed | A member's role changes |
+| Enrolled in a course | A learner enrolls (off by default) |
+| Training assigned | A course or program is assigned to the learner |
+| Course completed | Every activity is completed |
+| Certificate issued | A certificate is issued |
+| Session reminder | Before a scheduled session starts |
+| Assignment / exam due | Before a published assignment is due (only to learners who have not submitted) |
+
+**Notification settings** choose email and/or SMS per event, the reminder timing (hours before, several values allowed), the sender name and the message language (by default the academy's language).
+
+## Templates
+
+Write a template per event, channel and language (Arabic or English) using `{{variables}}` such as `{{user_first_name}}`, `{{course_name}}` or `{{due_date}}`. The editor lists the variables for the chosen event and shows a live preview with sample data. You can duplicate, activate or deactivate a template, and send yourself a test.
+
+Which message is sent:
+
+1. the template a course or training program chose for that event (its **Delivery & Resources** tab);
+2. the academy's template marked **Use for this event**, in the recipient's language (or the other language);
+3. the built-in message. For the security emails that existed before (password reset, invitation…), this is the original email, unchanged.
+
+<Callout type="info">
+Templates are plain text with `{{variables}}`, not code: values are escaped, and HTML in email templates is limited to safe formatting.
+</Callout>
+
+## Delivery log
+
+Every message is recorded with its channel, recipient, template, status (sent, failed, skipped) and error. Messages are sent in the background with retries. Reminders are sent once per person.
+
+## SMS
+
+SMS uses the phone number on the member's profile (entered in forms or imports). The SMS provider is configured on the server — see [Email configuration](/self-hosting/configuration/email#sms).

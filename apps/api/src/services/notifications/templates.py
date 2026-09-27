@@ -35,7 +35,7 @@ WHAT = "manage communication"
 MAX_BODY = 100_000
 
 register_overview_counter(
-    "notification_templates",
+    "email_templates",
     lambda org_id: select(func.count(NotificationTemplate.id)).where(NotificationTemplate.org_id == org_id),
 )
 
