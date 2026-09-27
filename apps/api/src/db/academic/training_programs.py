@@ -4,6 +4,7 @@ from sqlalchemy import Column, Enum as SAEnum, ForeignKey, Index, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
+from src.db.administration.facilities import FacilityRef
 from src.db.courses.courses import AuthorWithRole
 from src.db.users import UserReadAuthor
 
@@ -55,6 +56,11 @@ class TrainingProgram(TrainingProgramBase, table=True):
         default=None,
         sa_column=Column(Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True, index=True),
     )
+    # Default venue (Administration → Facilities); ``location`` stays as free text.
+    facility_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("facility.id", ondelete="SET NULL"), nullable=True, index=True),
+    )
     trainingprogram_uuid: str = Field(default="", index=True)
     creation_date: str = ""
     update_date: str = ""
@@ -66,6 +72,7 @@ class TrainingProgramCreate(TrainingProgramBase):
     # Coordinator addressed by public user_uuid; resolved server-side after
     # verifying same-org membership.
     coordinator_uuid: Optional[str] = None
+    facility_uuid: Optional[str] = None
     extra_metadata: Optional[dict] = None
 
 
@@ -85,6 +92,7 @@ class TrainingProgramUpdate(SQLModel):
     end_date: Optional[str] = None
     thumbnail_image: Optional[str] = None
     coordinator_uuid: Optional[str] = None
+    facility_uuid: Optional[str] = None
     public: Optional[bool] = None
     published: Optional[bool] = None
     extra_metadata: Optional[dict] = None
@@ -96,6 +104,7 @@ class TrainingProgramRead(TrainingProgramBase):
     trainingprogram_uuid: str
     coordinator_id: Optional[int] = None
     coordinator: Optional[UserReadAuthor] = None
+    facility: Optional[FacilityRef] = None
     authors: List[AuthorWithRole]
     creation_date: str
     update_date: str

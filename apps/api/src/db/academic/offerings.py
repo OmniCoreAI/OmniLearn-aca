@@ -13,6 +13,7 @@ from sqlalchemy import Column, Enum as SAEnum, ForeignKey, Index, Integer, Uniqu
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
+from src.db.administration.facilities import FacilityRef
 from src.db.users import UserReadAuthor
 from src.db.academic import cohorts as _cohorts  # noqa: F401  (FK targets)
 from src.db.usergroups import UserGroup as _UserGroup  # noqa: F401
@@ -84,6 +85,11 @@ class CourseOffering(CourseOfferingBase, table=True):
         default=None,
         sa_column=Column(Integer, ForeignKey("usergroup.id", ondelete="SET NULL"), nullable=True),
     )
+    # Default room for this delivery (sessions without their own facility use it).
+    facility_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("facility.id", ondelete="SET NULL"), nullable=True, index=True),
+    )
     offering_uuid: str = Field(default="", index=True)
     creation_date: str = ""
     update_date: str = ""
@@ -112,6 +118,7 @@ class CourseOfferingCreate(CourseOfferingBase):
     content_course_uuid: Optional[str] = None
     # When no content course is given, clone the catalog template (if any).
     clone_template: bool = True
+    facility_uuid: Optional[str] = None
 
 
 class CourseOfferingUpdate(SQLModel):
@@ -122,6 +129,8 @@ class CourseOfferingUpdate(SQLModel):
     instructor_uuid: Optional[str] = None
     teaching_assistant_uuid: Optional[str] = None
     content_course_uuid: Optional[str] = None
+    facility_uuid: Optional[str] = None
+    allow_conflict: bool = False
 
 
 class CourseOfferingRead(CourseOfferingBase):
@@ -146,6 +155,7 @@ class CourseOfferingRead(CourseOfferingBase):
     enrolled_count: int = 0
     grade_status: str = "open"
     grade_note: Optional[str] = None
+    facility: Optional[FacilityRef] = None
     creation_date: str
     update_date: str
     # What the caller may do (set on single reads and on "my offerings"):
@@ -179,13 +189,18 @@ class OfferingSession(OfferingSessionBase, table=True):
     org_id: int = Field(
         sa_column=Column(Integer, ForeignKey("organization.id", ondelete="CASCADE"))
     )
+    facility_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("facility.id", ondelete="SET NULL"), nullable=True, index=True),
+    )
     session_uuid: str = Field(default="", index=True)
     creation_date: str = ""
     update_date: str = ""
 
 
 class OfferingSessionCreate(OfferingSessionBase):
-    pass
+    facility_uuid: Optional[str] = None
+    allow_conflict: bool = False
 
 
 class OfferingSessionUpdate(SQLModel):
@@ -195,10 +210,13 @@ class OfferingSessionUpdate(SQLModel):
     end_datetime: Optional[str] = None
     location: Optional[str] = None
     order: Optional[int] = None
+    facility_uuid: Optional[str] = None
+    allow_conflict: bool = False
 
 
 class OfferingSessionRead(OfferingSessionBase):
     session_uuid: str
+    facility: Optional[FacilityRef] = None
 
 
 # ---------------------------------------------------------------------------

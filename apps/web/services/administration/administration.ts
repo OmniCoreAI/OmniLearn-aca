@@ -1,5 +1,5 @@
 import { getAPIUrl } from '@services/config/config'
-import { RequestBodyWithAuthHeader, errorHandling } from '@services/utils/ts/requests'
+import { RequestBodyFormWithAuthHeader, RequestBodyWithAuthHeader, errorHandling } from '@services/utils/ts/requests'
 
 /*
   Administration & Configuration: reusable, org-level configuration entities
@@ -67,4 +67,30 @@ export interface FinanceDefaults {
   default_currency: string
   currencies: string[]
   tax_rates: { name: string; rate: number; is_default: boolean }[]
+}
+
+// ----------------------------- Locations & facilities -----------------------------
+
+export const getLocations = (org_id: number, token: string) => call('GET', `locations/org/${org_id}`, token)
+export const createLocation = (org_id: number, data: any, token: string) =>
+  call('POST', `locations/${qs({ org_id })}`, token, data)
+export const updateLocation = (uuid: string, data: any, token: string) => call('PUT', `locations/${uuid}`, token, data)
+export const deleteLocation = (uuid: string, token: string) => call('DELETE', `locations/${uuid}`, token)
+
+export const getFacilities = (org_id: number, token: string) => call('GET', `facilities/org/${org_id}`, token)
+export const getFacilityOptions = (org_id: number, token: string) =>
+  call('GET', `facilities/org/${org_id}/options`, token)
+export const getFacility = (uuid: string, token: string) => call('GET', `facilities/${uuid}`, token)
+export const getFacilityBookings = (uuid: string, token: string, since?: string, until?: string) =>
+  call('GET', `facilities/${uuid}/bookings${qs({ since, until })}`, token)
+export const createFacility = (org_id: number, data: any, token: string) =>
+  call('POST', `facilities/${qs({ org_id })}`, token, data)
+export const updateFacility = (uuid: string, data: any, token: string) => call('PUT', `facilities/${uuid}`, token, data)
+export const deleteFacility = (uuid: string, token: string) => call('DELETE', `facilities/${uuid}`, token)
+
+export async function uploadFacilityImage(uuid: string, file: File, token: string) {
+  const form = new FormData()
+  form.append('image', file)
+  const result = await fetch(`${getAPIUrl()}facilities/${uuid}/image`, RequestBodyFormWithAuthHeader('PUT', form, null, token))
+  return errorHandling(result)
 }

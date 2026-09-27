@@ -14,6 +14,7 @@ import { PostgradTabs, selectCls, useAcademicContext } from '@components/Dashboa
 import { getPrograms, getProgramCohorts } from '@services/academic/academic'
 import { OfferingsTable } from '@components/Dashboard/Pages/Academic/OfferingsTable'
 import { createOffering, getAcademicCourses, getOfferings, getTerms } from '@services/academic/core'
+import { FacilitySelect } from '@components/Dashboard/Pages/Administration/Pickers'
 
 function OfferingsList({ orgslug }: { orgslug: string }) {
   const { t } = useTranslation()
@@ -98,6 +99,7 @@ function OfferingCreateForm({ terms, defaultTerm, onDone }: { terms: any[]; defa
   const [section, setSection] = useState('A')
   const [capacity, setCapacity] = useState('')
   const [classroom, setClassroom] = useState('')
+  const [facility, setFacility] = useState('')
   const [instructor, setInstructor] = useState<string | null>(null)
   const [instructorLabel, setInstructorLabel] = useState<string | undefined>()
   const [cloneTemplate, setCloneTemplate] = useState(true)
@@ -133,6 +135,7 @@ function OfferingCreateForm({ terms, defaultTerm, onDone }: { terms: any[]; defa
           section,
           capacity: capacity === '' ? null : Number(capacity),
           classroom: classroom || null,
+          facility_uuid: facility || null,
           instructor_uuid: instructor,
           clone_template: cloneTemplate,
         },
@@ -222,8 +225,11 @@ function OfferingCreateForm({ terms, defaultTerm, onDone }: { terms: any[]; defa
             }}
           />
         </Field>
+        <Field label={t('administration.facilities.default_room', 'Room / facility')}>
+          <FacilitySelect className={inputCls} value={facility} onChange={setFacility} />
+        </Field>
         <Field label={t('academic.classroom')}>
-          <input className={inputCls} value={classroom} onChange={(e) => setClassroom(e.target.value)} />
+          <input className={inputCls} value={classroom} onChange={(e) => setClassroom(e.target.value)} placeholder={t('administration.facilities.free_text_hint', 'Optional free-text note')} />
         </Field>
       </div>
       {selectedCourse?.template_course_uuid && (

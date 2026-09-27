@@ -46,6 +46,8 @@ ADMINISTRATION_ROUTER_MODULES = [
     "lookups",
     "settings",
     "overview",
+    "locations",
+    "facilities",
 ]
 
 

@@ -180,7 +180,7 @@ export function InstructorForm({
                 onClick={() => setMode(m)}
                 className={cn(
                   'rounded-full px-3 py-1 text-xs font-semibold',
-                  mode === m ? 'bg-[hsl(var(--dash-accent))] text-white' : 'text-[hsl(var(--dash-muted))]'
+                  mode === m ? 'bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))]' : 'text-[hsl(var(--dash-muted))]'
                 )}
               >
                 {m === 'existing'

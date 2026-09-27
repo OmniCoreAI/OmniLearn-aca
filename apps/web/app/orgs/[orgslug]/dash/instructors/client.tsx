@@ -187,7 +187,7 @@ function InstructorsHome({ orgslug }: { orgslug: string }) {
               <button
                 type="button"
                 onClick={() => setApproving(i)}
-                className="absolute bottom-3 end-3 rounded-full bg-[hsl(var(--dash-accent))] px-3 py-1 text-[11px] font-semibold text-white shadow"
+                className="absolute bottom-3 end-3 rounded-full bg-[hsl(var(--dash-accent))] px-3 py-1 text-[11px] font-semibold text-[hsl(var(--dash-ink))] shadow"
               >
                 {t('instructors.approve', 'Approve')}
               </button>

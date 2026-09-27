@@ -25,6 +25,7 @@ from src.services.academic.authors import (
     get_user_author,
 )
 from src.services.academic.course_profiles import get_profile_read_for_course
+from src.services.administration.facilities import facility_ref, resolve_facility_id
 from src.services.academic.validation import (
     assert_trainingprogram_code_unique,
     resolve_coordinator,
@@ -46,7 +47,12 @@ async def _to_read(db_session: AsyncSession, tp: TrainingProgram) -> TrainingPro
     """Assemble a TrainingProgramRead with authors + embedded coordinator."""
     authors = await get_resource_authors(db_session, tp.trainingprogram_uuid)
     coordinator = await get_user_author(db_session, tp.coordinator_id)
-    return TrainingProgramRead(**tp.model_dump(), authors=authors, coordinator=coordinator)
+    return TrainingProgramRead(
+        **tp.model_dump(),
+        authors=authors,
+        coordinator=coordinator,
+        facility=await facility_ref(db_session, tp.facility_id),
+    )
 
 
 async def create_training_program(
@@ -79,6 +85,7 @@ async def create_training_program(
 
     tp.org_id = org_id
     tp.coordinator_id = coordinator_id
+    tp.facility_id = await resolve_facility_id(db_session, org_id, tp_object.facility_uuid)
     tp.trainingprogram_uuid = f"trainingprogram_{uuid4()}"
     tp.creation_date = str(datetime.now())
     tp.update_date = str(datetime.now())
@@ -176,6 +183,9 @@ async def update_training_program(
             db_session, tp.org_id, coordinator_uuid
         )
         tp.coordinator_id = new_coordinator_id
+
+    if "facility_uuid" in update_data:
+        tp.facility_id = await resolve_facility_id(db_session, tp.org_id, update_data.pop("facility_uuid"))
 
     for key, value in update_data.items():
         setattr(tp, key, value)

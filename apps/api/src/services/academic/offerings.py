@@ -41,6 +41,11 @@ from src.db.usergroups import UserGroup
 from src.db.users import User, UserReadAuthor
 from src.security.auth import resolve_acting_user_id
 from src.security.rbac import AccessAction, check_resource_access
+from src.services.administration.facilities import (
+    check_session_booking,
+    facility_ref,
+    resolve_facility_id,
+)
 from src.services.academic.authors import (
     ensure_coordinator_authorship,
     get_user_author,
@@ -330,6 +335,7 @@ async def to_read(db_session: AsyncSession, offering: CourseOffering) -> CourseO
         content_course_uuid=content.course_uuid if content else None,
         content_course_name=content.name if content else None,
         enrolled_count=await _enrolled_count(db_session, offering.id),  # type: ignore[arg-type]
+        facility=await facility_ref(db_session, offering.facility_id),
     )
 
 
@@ -565,6 +571,7 @@ async def create_offering(
     instructor_id = await resolve_org_user(db_session, org_id, data.instructor_uuid, label="Instructor")
     ta_id = await resolve_org_user(db_session, org_id, data.teaching_assistant_uuid, label="Teaching assistant")
     content_course_id = await _resolve_content_course(db_session, org_id, data.content_course_uuid)
+    facility_id = await resolve_facility_id(db_session, org_id, data.facility_uuid)
 
     curriculum_item_id = None
     if cohort and cohort.curriculum_id:
@@ -590,6 +597,7 @@ async def create_offering(
             "status": data.status,
             "instructor_id": instructor_id,
             "teaching_assistant_id": ta_id,
+            "facility_id": facility_id,
         },
     )
     await db_session.commit()
@@ -619,6 +627,25 @@ async def update_offering(
         offering.teaching_assistant_id = await resolve_org_user(
             db_session, offering.org_id, update.pop("teaching_assistant_uuid"), label="Teaching assistant"
         )
+    allow_conflict = bool(update.pop("allow_conflict", False))
+    if "facility_uuid" in update:
+        facility_id = await resolve_facility_id(db_session, offering.org_id, update.pop("facility_uuid"))
+        if facility_id and not allow_conflict:
+            # Sessions without their own room move to the new default: check them.
+            inheriting = (
+                await db_session.execute(
+                    select(OfferingSession).where(
+                        OfferingSession.offering_id == offering.id,
+                        OfferingSession.facility_id.is_(None),  # type: ignore[union-attr]
+                    )
+                )
+            ).scalars().all()
+            for session in inheriting:
+                await check_session_booking(
+                    db_session, facility_id, session.start_datetime, session.end_datetime,
+                    exclude=("offering_session", session.id),
+                )
+        offering.facility_id = facility_id
     content_changed = False
     if "content_course_uuid" in update:
         offering.content_course_id = await _resolve_content_course(
@@ -696,7 +723,13 @@ async def list_sessions(offering_uuid: str, current_user: Principal, db_session:
             .order_by(OfferingSession.start_datetime, OfferingSession.order)  # type: ignore
         )
     ).scalars().all()
-    return [OfferingSessionRead.model_validate(r) for r in rows]
+    return [await _session_read(db_session, r) for r in rows]
+
+
+async def _session_read(db_session: AsyncSession, session: OfferingSession) -> OfferingSessionRead:
+    return OfferingSessionRead(
+        **session.model_dump(), facility=await facility_ref(db_session, session.facility_id)
+    )
 
 
 def _validate_session(data: dict) -> None:
@@ -711,13 +744,24 @@ async def create_session(
     offering = await get_offering_or_404(db_session, offering_uuid)
     await require_offering_staff(request, db_session, current_user, offering)
     _validate_session(data.model_dump())
-    session = OfferingSession.model_validate(data, update={"offering_id": offering.id, "org_id": offering.org_id})
+    facility_id = await resolve_facility_id(db_session, offering.org_id, data.facility_uuid)
+    await check_session_booking(
+        db_session,
+        facility_id or offering.facility_id,
+        data.start_datetime,
+        data.end_datetime,
+        allow_conflict=data.allow_conflict,
+    )
+    session = OfferingSession.model_validate(
+        data.model_dump(exclude={"facility_uuid", "allow_conflict"}),
+        update={"offering_id": offering.id, "org_id": offering.org_id, "facility_id": facility_id},
+    )
     session.session_uuid = f"offeringsession_{uuid4()}"
     session.creation_date = session.update_date = now()
     db_session.add(session)
     await db_session.commit()
     await db_session.refresh(session)
-    return OfferingSessionRead.model_validate(session)
+    return await _session_read(db_session, session)
 
 
 async def _get_session(db_session: AsyncSession, offering: CourseOffering, session_uuid: str) -> OfferingSession:
@@ -739,14 +783,26 @@ async def update_session(
     await require_offering_staff(request, db_session, current_user, offering)
     session = await _get_session(db_session, offering, session_uuid)
     update = data.model_dump(exclude_unset=True)
+    allow_conflict = bool(update.pop("allow_conflict", False))
+    if "facility_uuid" in update:
+        update["facility_id"] = await resolve_facility_id(db_session, offering.org_id, update.pop("facility_uuid"))
     _validate_session({**session.model_dump(), **update})
     for key, value in update.items():
         setattr(session, key, value)
+    if {"facility_id", "start_datetime", "end_datetime"} & set(update):
+        await check_session_booking(
+            db_session,
+            session.facility_id or offering.facility_id,
+            session.start_datetime,
+            session.end_datetime,
+            exclude=("offering_session", session.id),
+            allow_conflict=allow_conflict,
+        )
     session.update_date = now()
     db_session.add(session)
     await db_session.commit()
     await db_session.refresh(session)
-    return OfferingSessionRead.model_validate(session)
+    return await _session_read(db_session, session)
 
 
 async def delete_session(

@@ -29,6 +29,7 @@ import {
   deleteTrainingProgram,
 } from '@services/academic/academic'
 import { getTrainingProgramThumbnailMediaDirectory } from '@services/media/media'
+import { FacilitySelect } from '@components/Dashboard/Pages/Administration/Pickers'
 
 const TYPES = [
   'training_course',
@@ -209,6 +210,7 @@ function TrainingProgramForm({
   const [currency, setCurrency] = useState(program?.currency || 'USD')
   const [inPlan, setInPlan] = useState(program?.in_plan ?? true)
   const [location, setLocation] = useState(program?.location || '')
+  const [facility, setFacility] = useState<string>(program?.facility?.facility_uuid || '')
   const [startDate, setStartDate] = useState(program?.start_date || '')
   const [endDate, setEndDate] = useState(program?.end_date || '')
   const [published, setPublished] = useState(program?.published ?? false)
@@ -236,6 +238,7 @@ function TrainingProgramForm({
         currency: isPaid ? currency : null,
         in_plan: inPlan,
         location,
+        facility_uuid: facility,
         start_date: startDate || null,
         end_date: endDate || null,
         published,
@@ -310,9 +313,14 @@ function TrainingProgramForm({
         </Field>
       </div>
 
-      <Field label={t('academic.location')}>
-        <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t('administration.facilities.venue', 'Venue (facility)')}>
+          <FacilitySelect className={inputCls} value={facility} onChange={setFacility} current={program?.facility} />
+        </Field>
+        <Field label={t('academic.location')}>
+          <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
+        </Field>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('academic.start_date')}>

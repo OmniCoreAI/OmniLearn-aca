@@ -6,7 +6,8 @@ are the shared vocabulary between the super-admin visibility toggles and the
 frontend sidebar/route-guard.
 """
 
-from typing import NamedTuple
+import json
+from typing import Iterable, NamedTuple
 
 # The 4 seeded, cross-org system roles (see src/services/setup/setup.py).
 ROLE_UUID_ACADEMY_ADMIN = "role_global_admin"
@@ -47,6 +48,7 @@ NAV_ITEMS: tuple[NavItem, ...] = (
     # Administration & Configuration — reusable entities and settings.
     NavItem("administration", "administration"),
     NavItem("instructors", "administration"),
+    NavItem("facilities", "administration"),
 )
 
 NAV_ITEM_IDS: frozenset[str] = frozenset(item.id for item in NAV_ITEMS)
@@ -78,3 +80,28 @@ DEFAULT_VISIBILITY_BY_ROLE_UUID: dict[str, tuple[str, ...]] = {
     ROLE_UUID_INSTRUCTOR: _INSTRUCTOR_DEFAULT_ITEM_IDS,
     ROLE_UUID_TRAINEE: (),
 }
+
+
+def grant_saved_nav_items(bind, role_uuid: str, items: Iterable[str]) -> None:
+    """Migration helper: append item ids to a role's saved visibility override.
+
+    Defaults already include new items; a row saved by a super-admin before an
+    item existed would otherwise hide it forever. ``bind`` is a sync connection.
+    """
+    from sqlalchemy import inspect, text
+
+    if "portal_role_nav_config" not in set(inspect(bind).get_table_names()):
+        return
+    row = bind.execute(
+        text("SELECT id, visible_items FROM portal_role_nav_config WHERE role_uuid = :role"),
+        {"role": role_uuid},
+    ).first()
+    if not row:
+        return
+    current = row[1] if isinstance(row[1], list) else json.loads(row[1] or "[]")
+    merged = current + [item for item in items if item not in current]
+    if merged != current:
+        bind.execute(
+            text("UPDATE portal_role_nav_config SET visible_items = :items WHERE id = :id"),
+            {"items": json.dumps(merged), "id": row[0]},
+        )

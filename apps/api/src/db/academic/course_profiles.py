@@ -4,6 +4,7 @@ from sqlalchemy import Column, Enum as SAEnum, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
+from src.db.administration.facilities import FacilityRef
 from src.db.users import UserReadAuthor
 
 
@@ -61,6 +62,11 @@ class CourseAcademicProfile(SQLModel, table=True):
         sa_column=Column(Integer, ForeignKey("usergroup.id", ondelete="SET NULL"), nullable=True),
     )
     add_ons: Optional[list] = Field(default=None, sa_column=Column(JSONB))
+    # Default room for the course (sessions without their own facility use it).
+    facility_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("facility.id", ondelete="SET NULL"), nullable=True, index=True),
+    )
     profile_uuid: str = Field(default="", index=True)
     creation_date: str = ""
     update_date: str = ""
@@ -85,6 +91,10 @@ class CourseScheduleSession(SQLModel, table=True):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     location: Optional[str] = None
+    facility_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("facility.id", ondelete="SET NULL"), nullable=True, index=True),
+    )
     order: int = Field(default=0)
     session_uuid: str = Field(default="", index=True)
     creation_date: str = ""
@@ -102,6 +112,9 @@ class CourseAcademicProfileUpsert(SQLModel):
     instructor_uuid: Optional[str] = None
     usergroup_id: Optional[int] = None
     add_ons: Optional[List[CourseAddOn]] = None
+    # Default facility (uuid; "" clears). Its sessions are checked for clashes.
+    facility_uuid: Optional[str] = None
+    allow_conflict: bool = False
 
 
 class CourseScheduleSessionCreate(SQLModel):
@@ -110,6 +123,9 @@ class CourseScheduleSessionCreate(SQLModel):
     end_date: Optional[str] = None
     location: Optional[str] = None
     order: int = 0
+    facility_uuid: Optional[str] = None
+    # Book the room even when it clashes with another session / blackout.
+    allow_conflict: bool = False
 
 
 class CourseScheduleSessionUpdate(SQLModel):
@@ -118,6 +134,8 @@ class CourseScheduleSessionUpdate(SQLModel):
     end_date: Optional[str] = None
     location: Optional[str] = None
     order: Optional[int] = None
+    facility_uuid: Optional[str] = None
+    allow_conflict: bool = False
 
 
 class CourseScheduleSessionRead(SQLModel):
@@ -127,6 +145,7 @@ class CourseScheduleSessionRead(SQLModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     location: Optional[str] = None
+    facility: Optional[FacilityRef] = None
     order: int = 0
     creation_date: str = ""
     update_date: str = ""
@@ -147,6 +166,7 @@ class CourseAcademicProfileRead(SQLModel):
     instructor: Optional[UserReadAuthor] = None
     usergroup_id: Optional[int] = None
     add_ons: Optional[List[CourseAddOn]] = None
+    facility: Optional[FacilityRef] = None
     # Surfaced (not stored) from the existing Course subsystems:
     has_course_certification: bool = False
     assignment_count: int = 0

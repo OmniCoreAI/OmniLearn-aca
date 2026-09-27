@@ -1,4 +1,5 @@
 'use client'
+import { FacilitySelect, saveWithConflictCheck } from '@components/Dashboard/Pages/Administration/Pickers'
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { GraduationCap, Plus, Pencil, Trash2, ExternalLink, UserPlus } from 'lucide-react'
@@ -207,7 +208,7 @@ function OfferingDetail({
             value={offering ? `${offering.enrolled_count}${offering.capacity != null ? `/${offering.capacity}` : ''}` : '—'}
           />
           <Stat label={t('academic.instructor', 'Instructor')} value={offering?.instructor ? displayName(offering.instructor) : '—'} />
-          <Stat label={t('academic.classroom')} value={offering?.classroom} />
+          <Stat label={t('academic.classroom')} value={offering?.facility?.name || offering?.classroom} />
         </div>
 
         <Section
@@ -270,7 +271,7 @@ function OfferingDetail({
                 <td className={`${tdCls} text-xs`}>{s.session_type ? String(t(`academic.stype_${s.session_type}`, s.session_type)) : '—'}</td>
                 <td className={`${tdCls} text-xs`}>{s.start_datetime?.replace('T', ' ') || '—'}</td>
                 <td className={`${tdCls} text-xs`}>{s.end_datetime?.replace('T', ' ') || '—'}</td>
-                <td className={`${tdCls} text-xs`}>{s.location || '—'}</td>
+                <td className={`${tdCls} text-xs`}>{[s.facility?.name || (!s.location && offering?.facility?.name), s.location].filter(Boolean).join(' · ') || '—'}</td>
                 <td className={`${tdCls} whitespace-nowrap text-right`}>
                   {isStaff && (
                     <>
@@ -445,6 +446,7 @@ function OfferingEditForm({ orgslug, offering, onDone }: { orgslug: string; offe
   const { orgId, access_token } = useAcademicContext()
   const [section, setSection] = useState(offering.section)
   const [classroom, setClassroom] = useState(offering.classroom || '')
+  const [facility, setFacility] = useState<string>(offering.facility?.facility_uuid || '')
   const [capacity, setCapacity] = useState(offering.capacity != null ? String(offering.capacity) : '')
   const [instructor, setInstructor] = useState<string | null>(offering.instructor?.user_uuid || null)
   const [instructorLabel, setInstructorLabel] = useState<string | undefined>(
@@ -467,18 +469,25 @@ function OfferingEditForm({ orgslug, offering, onDone }: { orgslug: string; offe
     e.preventDefault()
     setSaving(true)
     try {
-      await updateOffering(
-        offering.offering_uuid,
-        {
-          section,
-          classroom: classroom || null,
-          capacity: capacity === '' ? null : Number(capacity),
-          instructor_uuid: instructor || '',
-          teaching_assistant_uuid: ta || '',
-          content_course_uuid: content || null,
-        },
-        access_token
+      const saved = await saveWithConflictCheck(
+        (allow_conflict) =>
+          updateOffering(
+            offering.offering_uuid,
+            {
+              section,
+              classroom: classroom || null,
+              facility_uuid: facility,
+              allow_conflict,
+              capacity: capacity === '' ? null : Number(capacity),
+              instructor_uuid: instructor || '',
+              teaching_assistant_uuid: ta || '',
+              content_course_uuid: content || null,
+            },
+            access_token
+          ),
+        t('administration.facilities.book_anyway', 'Book the room anyway?')
       )
+      if (!saved) return
       toast.success(t('academic.updated'))
       onDone()
     } catch (err: any) {
@@ -501,6 +510,9 @@ function OfferingEditForm({ orgslug, offering, onDone }: { orgslug: string; offe
           <input className={inputCls} value={classroom} onChange={(e) => setClassroom(e.target.value)} />
         </Field>
       </div>
+      <Field label={t('administration.facilities.default_room', 'Room / facility')}>
+        <FacilitySelect className={inputCls} value={facility} onChange={setFacility} current={offering.facility} />
+      </Field>
       <Field label={t('academic.instructor', 'Instructor')}>
         <LecturerPicker
           orgId={orgId}
@@ -552,6 +564,7 @@ function SessionForm({ offeringUuid, session, onDone }: { offeringUuid: string; 
   const [start, setStart] = useState(toLocalInput(session?.start_datetime))
   const [end, setEnd] = useState(toLocalInput(session?.end_datetime))
   const [location, setLocation] = useState(session?.location || '')
+  const [facility, setFacility] = useState<string>(session?.facility?.facility_uuid || '')
   const [saving, setSaving] = useState(false)
 
   const submit = async (e: React.FormEvent) => {
@@ -564,9 +577,16 @@ function SessionForm({ offeringUuid, session, onDone }: { offeringUuid: string; 
         start_datetime: start || null,
         end_datetime: end || null,
         location: location || null,
+        facility_uuid: facility || '',
       }
-      if (session) await updateOfferingSession(offeringUuid, session.session_uuid, payload, access_token)
-      else await createOfferingSession(offeringUuid, payload, access_token)
+      const saved = await saveWithConflictCheck(
+        (allow_conflict) =>
+          session
+            ? updateOfferingSession(offeringUuid, session.session_uuid, { ...payload, allow_conflict }, access_token)
+            : createOfferingSession(offeringUuid, { ...payload, allow_conflict }, access_token),
+        t('administration.facilities.book_anyway', 'Book the room anyway?')
+      )
+      if (!saved) return
       toast.success(session ? t('academic.updated') : t('academic.created'))
       onDone()
     } catch (err: any) {
@@ -600,9 +620,20 @@ function SessionForm({ offeringUuid, session, onDone }: { offeringUuid: string; 
           <input type="datetime-local" className={inputCls} value={end} onChange={(e) => setEnd(e.target.value)} />
         </Field>
       </div>
-      <Field label={t('academic.location', 'Location')}>
-        <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t('administration.facilities.room', 'Room')}>
+          <FacilitySelect
+            className={inputCls}
+            value={facility}
+            onChange={setFacility}
+            current={session?.facility}
+            emptyLabel={t('administration.facilities.offering_room', 'Offering room (default)')}
+          />
+        </Field>
+        <Field label={t('academic.location', 'Location')}>
+          <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
+        </Field>
+      </div>
       <SubmitRow saving={saving} />
     </form>
   )

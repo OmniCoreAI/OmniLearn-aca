@@ -16,10 +16,14 @@ import {
   upsertCourseAcademicProfile,
   getCourseSessions,
   createCourseSession,
-  updateCourseSession,
   deleteCourseSession,
 } from '@services/academic/academic'
-import { CoordinatorPicker } from './AcademicPeople'
+import {
+  FacilitySelect,
+  InstructorSelect,
+  saveWithConflictCheck,
+  useFacilityOptions,
+} from '@components/Dashboard/Pages/Administration/Pickers'
 
 const inputCls =
   'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]'
@@ -41,7 +45,6 @@ function instructorLabel(u: any): string {
  */
 export function CourseProfilePanel({
   courseUuid,
-  orgId,
   access_token,
 }: {
   courseUuid: string
@@ -67,8 +70,9 @@ export function CourseProfilePanel({
   const [status, setStatus] = useState('draft')
   const [classroom, setClassroom] = useState('')
   const [issuesCertificate, setIssuesCertificate] = useState(false)
-  const [instructorUuid, setInstructorUuid] = useState<string | null>(null)
-  const [instructorName, setInstructorName] = useState<string | undefined>(undefined)
+  const [instructorUuid, setInstructorUuid] = useState<string>('')
+  const [facilityUuid, setFacilityUuid] = useState<string>('')
+  const facilityOptions = useFacilityOptions()
   const [addOns, setAddOns] = useState<{ name: string; price?: number | null }[]>([])
   const [saving, setSaving] = useState(false)
 
@@ -79,40 +83,48 @@ export function CourseProfilePanel({
     setStatus(profile?.status || 'draft')
     setClassroom(profile?.classroom || '')
     setIssuesCertificate(!!profile?.issues_certificate)
-    setInstructorUuid(profile?.instructor?.user_uuid || null)
-    setInstructorName(instructorLabel(profile?.instructor) || undefined)
+    setInstructorUuid(profile?.instructor?.user_uuid || '')
+    setFacilityUuid(profile?.facility?.facility_uuid || '')
     setAddOns(Array.isArray(profile?.add_ons) ? profile.add_ons : [])
   }, [profile])
 
   const save = async () => {
     setSaving(true)
     try {
-      await upsertCourseAcademicProfile(
-        courseUuid,
-        {
-          credit_hours: creditHours === '' ? null : Number(creditHours),
-          capacity: capacity === '' ? null : Number(capacity),
-          status,
-          classroom: classroom || null,
-          issues_certificate: issuesCertificate,
-          instructor_uuid: instructorUuid ?? '',
-          add_ons: addOns
-            .filter((a) => a.name.trim())
-            .map((a) => ({
-              name: a.name.trim(),
-              price: a.price === null || a.price === undefined || (a.price as any) === '' ? null : Number(a.price),
-            })),
-        },
-        access_token
+      const payload = {
+        credit_hours: creditHours === '' ? null : Number(creditHours),
+        capacity: capacity === '' ? null : Number(capacity),
+        status,
+        classroom: classroom || null,
+        issues_certificate: issuesCertificate,
+        instructor_uuid: instructorUuid,
+        facility_uuid: facilityUuid,
+        add_ons: addOns
+          .filter((a) => a.name.trim())
+          .map((a) => ({
+            name: a.name.trim(),
+            price: a.price === null || a.price === undefined || (a.price as any) === '' ? null : Number(a.price),
+          })),
+      }
+      const saved = await saveWithConflictCheck(
+        (allow_conflict) => upsertCourseAcademicProfile(courseUuid, { ...payload, allow_conflict }, access_token),
+        t('administration.facilities.book_anyway', 'Book the room anyway?')
       )
-      toast.success(t('academic.profile_saved'))
-      queryClient.invalidateQueries({ queryKey: ['academic', 'course-profile', courseUuid] })
-    } catch {
-      toast.error(t('academic.profile_save_failed'))
+      if (saved) {
+        toast.success(t('academic.profile_saved'))
+        queryClient.invalidateQueries({ queryKey: ['academic', 'course-profile', courseUuid] })
+        queryClient.invalidateQueries({ queryKey: ['academic', 'course-sessions', courseUuid] })
+      }
+    } catch (err: any) {
+      toast.error(err?.message || t('academic.profile_save_failed'))
     } finally {
       setSaving(false)
     }
   }
+
+  const selectedFacility = facilityOptions.find((f) => f.facility_uuid === facilityUuid)
+  const overCapacity =
+    selectedFacility?.capacity != null && capacity !== '' && Number(capacity) > selectedFacility.capacity
 
   return (
     <div className="space-y-5">
@@ -160,18 +172,30 @@ export function CourseProfilePanel({
         </div>
       </div>
 
-      <div>
-        <label className={labelCls}>{t('academic.instructor')}</label>
-        <CoordinatorPicker
-          orgId={orgId}
-          access_token={access_token}
-          value={instructorUuid}
-          selectedLabel={instructorName}
-          onChange={(uuid, label) => {
-            setInstructorUuid(uuid)
-            setInstructorName(label)
-          }}
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelCls}>{t('academic.instructor')}</label>
+          <InstructorSelect
+            className={inputCls}
+            value={instructorUuid}
+            onChange={setInstructorUuid}
+            current={profile?.instructor ? { user_uuid: profile.instructor.user_uuid, name: instructorLabel(profile.instructor) } : null}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>{t('administration.facilities.default_room', 'Room / facility')}</label>
+          <FacilitySelect
+            className={inputCls}
+            value={facilityUuid}
+            onChange={setFacilityUuid}
+            current={profile?.facility || null}
+          />
+          {overCapacity && (
+            <p className="mt-1 text-[11px] text-amber-700">
+              {t('administration.facilities.over_capacity', 'Capacity is larger than the room ({{count}} seats).', { count: selectedFacility?.capacity })}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Add-ons ("snacks", material kits, etc.) */}
@@ -280,6 +304,7 @@ function SessionsEditor({
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [location, setLocation] = useState('')
+  const [facilityUuid, setFacilityUuid] = useState('')
   const [busy, setBusy] = useState(false)
 
   const refresh = () =>
@@ -289,18 +314,31 @@ function SessionsEditor({
     if (!title.trim()) return
     setBusy(true)
     try {
-      await createCourseSession(
-        courseUuid,
-        { title: title.trim(), start_date: start || null, end_date: end || null, location: location || null },
-        access_token
+      const created = await saveWithConflictCheck(
+        (allow_conflict) =>
+          createCourseSession(
+            courseUuid,
+            {
+              title: title.trim(),
+              start_date: start || null,
+              end_date: end || null,
+              location: location || null,
+              facility_uuid: facilityUuid || null,
+              allow_conflict,
+            },
+            access_token
+          ),
+        t('administration.facilities.book_anyway', 'Book the room anyway?')
       )
+      if (!created) return
       setTitle('')
       setStart('')
       setEnd('')
       setLocation('')
+      setFacilityUuid('')
       refresh()
-    } catch {
-      toast.error(t('academic.session_failed'))
+    } catch (err: any) {
+      toast.error(err?.message || t('academic.session_failed'))
     } finally {
       setBusy(false)
     }
@@ -331,10 +369,10 @@ function SessionsEditor({
           >
             <span className="text-sm text-gray-800">
               {s.title}
-              {(s.start_date || s.location) && (
+              {(s.start_date || s.location || s.facility) && (
                 <span className="text-gray-400 text-xs">
                   {' '}
-                  · {[s.start_date, s.location].filter(Boolean).join(' · ')}
+                  · {[s.start_date?.replace('T', ' '), s.facility?.name, s.location].filter(Boolean).join(' · ')}
                 </span>
               )}
             </span>
@@ -354,6 +392,12 @@ function SessionsEditor({
           placeholder={t('academic.session_title')}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+        />
+        <FacilitySelect
+          className={inputCls}
+          value={facilityUuid}
+          onChange={setFacilityUuid}
+          emptyLabel={t('administration.facilities.course_room', 'Course room (default)')}
         />
         <input
           className={inputCls}
