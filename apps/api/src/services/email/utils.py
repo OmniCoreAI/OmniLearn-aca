@@ -218,12 +218,14 @@ def get_base_url_from_request(request: Request) -> str:
     return f"{request.url.scheme}://{request.url.netloc}"
 
 
-def send_email(to: EmailStr, subject: str, body: str):
+def send_email(to: EmailStr, subject: str, body: str, sender_name: Optional[str] = None):
     from fastapi import HTTPException
 
     lh_config = get_omnilearn_config()
     mailing = lh_config.mailing_config
-    sender = f"OmniLearn <{mailing.system_email_address}>"
+    # Display name from Administration → Communication (header-safe).
+    display = "".join(ch for ch in (sender_name or "") if ch not in '<>"\r\n,;').strip()[:80] or "OmniLearn"
+    sender = f"{display} <{mailing.system_email_address}>"
 
     # Resend (and most providers) require a plain `email@example.com` string.
     # Pydantic's EmailStr is a str subclass, but third-party JSON serializers

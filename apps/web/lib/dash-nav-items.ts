@@ -40,6 +40,7 @@ export const DASH_NAV_ITEMS: DashNavItemDef[] = [
   { id: 'instructors', section: 'administration', labelKey: 'instructors.title', fallbackLabel: 'Instructors', pathPrefixes: ['/dash/instructors'] },
   { id: 'facilities', section: 'administration', labelKey: 'administration.nav.facilities', fallbackLabel: 'Facilities & Rooms', pathPrefixes: ['/dash/administration/facilities'] },
   { id: 'addons', section: 'administration', labelKey: 'administration.nav.addons', fallbackLabel: 'Add-ons', pathPrefixes: ['/dash/administration/add-ons'] },
+  { id: 'communication', section: 'administration', labelKey: 'administration.nav.communication', fallbackLabel: 'Communication', pathPrefixes: ['/dash/administration/communication'] },
   { id: 'entities', section: 'administration', labelKey: 'administration.nav.entities', fallbackLabel: 'Entities', pathPrefixes: ['/dash/administration/entities'] },
 ]
 

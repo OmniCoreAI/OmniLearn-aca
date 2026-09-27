@@ -164,13 +164,29 @@ async def send_reset_password_code(
 
     # Send reset code via email
     base_url = get_base_url_from_request(request)
-    isEmailSent = send_password_reset_email(
-        generated_reset_code=generated_reset_code,
-        user=user_read,
-        organization=org_read,
-        email=user_read.email,
-        base_url=base_url,
-        lang=get_org_default_language(org_config),
+    from urllib.parse import quote as _quote
+
+    from src.services.notifications.dispatcher import send_event_email
+
+    isEmailSent = await send_event_email(
+        db_session,
+        org.id,
+        "password_reset",
+        to=user_read.email,
+        user=user,
+        variables={
+            "reset_code": generated_reset_code,
+            "reset_link": f"{base_url}/reset?email={_quote(str(user_read.email), safe='')}"
+            f"&resetCode={_quote(generated_reset_code, safe='')}",
+        },
+        fallback=lambda: send_password_reset_email(
+            generated_reset_code=generated_reset_code,
+            user=user_read,
+            organization=org_read,
+            email=user_read.email,
+            base_url=base_url,
+            lang=get_org_default_language(org_config),
+        ),
     )
 
     if not isEmailSent:

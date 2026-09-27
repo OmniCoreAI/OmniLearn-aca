@@ -179,10 +179,19 @@ async def create_user(
     if is_oauth:
         org_config_stmt = select(OrganizationConfig).where(OrganizationConfig.org_id == org_id)
         org_config = (await db_session.execute(org_config_stmt)).scalars().first()
-        send_account_creation_email(
-            user=user_read,
-            email=user_read.email,
-            lang=get_org_default_language(org_config),
+        from src.services.notifications.dispatcher import send_event_email
+
+        await send_event_email(
+            db_session,
+            org_id,
+            "account_created",
+            to=user_read.email,
+            user=user,
+            fallback=lambda: send_account_creation_email(
+                user=user_read,
+                email=user_read.email,
+                lang=get_org_default_language(org_config),
+            ),
         )
     elif get_deployment_mode() == 'saas':
         # Import here to avoid circular imports

@@ -1,7 +1,7 @@
 import os
 import yaml
 from typing import Literal, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 
@@ -97,6 +97,57 @@ class MailingConfig(BaseModel):
     smtp_use_tls: Optional[bool] = True
 
 
+class SMSConfig(BaseModel):
+    """Pluggable SMS provider (Administration → Communication).
+
+    ``log`` only writes messages to the server log (development); ``http``
+    posts to any SMS gateway using a body template; ``twilio`` uses Twilio's
+    REST API. Configured only through ``OMNILEARN_SMS_*`` / ``OMNILEARN_TWILIO_*``.
+    """
+
+    provider: Literal["disabled", "log", "http", "twilio"] = "disabled"
+    sender: Optional[str] = None
+    http_url: Optional[str] = None
+    http_method: str = "POST"
+    http_headers: dict = {}
+    # Placeholders: {{to}}, {{message}}, {{sender}} (JSON-escaped for JSON bodies).
+    http_body_template: str = '{"to": "{{to}}", "message": "{{message}}", "sender": "{{sender}}"}'
+    http_content_type: str = "application/json"
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_from: Optional[str] = None
+
+
+def load_sms_config() -> SMSConfig:
+    import json as _json
+
+    env = os.environ
+    headers: dict = {}
+    raw_headers = env.get("OMNILEARN_SMS_HTTP_HEADERS")
+    if raw_headers:
+        try:
+            parsed = _json.loads(raw_headers)
+            headers = {str(k): str(v) for k, v in parsed.items()} if isinstance(parsed, dict) else {}
+        except ValueError:
+            headers = {}
+    provider = (env.get("OMNILEARN_SMS_PROVIDER") or "disabled").strip().lower()
+    if provider not in ("disabled", "log", "http", "twilio"):
+        provider = "disabled"
+    defaults = SMSConfig()
+    return SMSConfig(
+        provider=provider,  # type: ignore[arg-type]
+        sender=env.get("OMNILEARN_SMS_SENDER") or None,
+        http_url=env.get("OMNILEARN_SMS_HTTP_URL") or None,
+        http_method=(env.get("OMNILEARN_SMS_HTTP_METHOD") or "POST").upper(),
+        http_headers=headers,
+        http_body_template=env.get("OMNILEARN_SMS_HTTP_BODY") or defaults.http_body_template,
+        http_content_type=env.get("OMNILEARN_SMS_HTTP_CONTENT_TYPE") or defaults.http_content_type,
+        twilio_account_sid=env.get("OMNILEARN_TWILIO_ACCOUNT_SID") or None,
+        twilio_auth_token=env.get("OMNILEARN_TWILIO_AUTH_TOKEN") or None,
+        twilio_from=env.get("OMNILEARN_TWILIO_FROM") or None,
+    )
+
+
 class DatabaseConfig(BaseModel):
     sql_connection_string: Optional[str]
 
@@ -128,6 +179,7 @@ class OmniLearnConfig(BaseModel):
     security_config: SecurityConfig
     ai_config: AIConfig
     mailing_config: MailingConfig
+    sms_config: SMSConfig = Field(default_factory=SMSConfig)
     payments_config: InternalPaymentsConfig
     tinybird_config: TinybirdConfig | None
     judge0_config: Judge0Config | None
@@ -664,6 +716,7 @@ def get_omnilearn_config() -> OmniLearnConfig:
             smtp_password=smtp_password,
             smtp_use_tls=smtp_use_tls,
         ),
+        sms_config=load_sms_config(),
         payments_config=InternalPaymentsConfig(
             stripe=InternalStripeConfig(
                 stripe_secret_key=stripe_secret_key,

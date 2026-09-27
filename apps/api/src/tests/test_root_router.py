@@ -52,6 +52,7 @@ ADMINISTRATION_ROUTER_MODULES = [
     "entities",
     "positions",
     "audience",
+    "notifications",
 ]
 
 

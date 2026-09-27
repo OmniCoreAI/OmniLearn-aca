@@ -216,3 +216,41 @@ export const createAudienceAssignment = (data: any, token: string) => call('POST
 export const deleteAudienceAssignment = (uuid: string, token: string) => call('DELETE', `audience/${uuid}`, token)
 export const getAudienceOptions = (org_id: number, token: string, params: { q?: string; entity_uuid?: string } = {}) =>
   call('GET', `audience/org/${org_id}/options${qs(params)}`, token)
+
+// ----------------------------- Communication -----------------------------
+
+export type NotificationChannel = 'email' | 'sms'
+
+export const getNotificationCatalog = (org_id: number, token: string) =>
+  call('GET', `notifications/catalog/org/${org_id}`, token)
+export const getNotificationTemplates = (org_id: number, token: string, params: { channel?: NotificationChannel; event_key?: string } = {}) =>
+  call('GET', `notifications/templates/org/${org_id}${qs(params)}`, token)
+export const createNotificationTemplate = (org_id: number, data: any, token: string) =>
+  call('POST', `notifications/templates${qs({ org_id })}`, token, data)
+export const updateNotificationTemplate = (uuid: string, data: any, token: string) =>
+  call('PUT', `notifications/templates/${uuid}`, token, data)
+export const duplicateNotificationTemplate = (uuid: string, token: string) =>
+  call('POST', `notifications/templates/${uuid}/duplicate`, token)
+export const deleteNotificationTemplate = (uuid: string, token: string) => call('DELETE', `notifications/templates/${uuid}`, token)
+export const testNotificationTemplate = (uuid: string, to: string | undefined, token: string) =>
+  call('POST', `notifications/templates/${uuid}/test`, token, { to: to || undefined })
+export const previewNotification = (org_id: number, data: any, token: string) =>
+  call('POST', `notifications/preview/org/${org_id}`, token, data)
+export const getNotificationLog = (
+  org_id: number,
+  token: string,
+  params: { channel?: string; status?: string; event_key?: string; q?: string; page?: number; limit?: number } = {}
+) => call('GET', `notifications/log/org/${org_id}${qs(params)}`, token)
+export const getNotificationOverrides = (resource_type: AudienceResourceType, resource_uuid: string, token: string) =>
+  call('GET', `notifications/overrides/${resource_type}/${resource_uuid}`, token)
+export const setNotificationOverride = (data: any, token: string) => call('PUT', 'notifications/overrides', token, data)
+export const deleteNotificationOverride = (uuid: string, token: string) => call('DELETE', `notifications/overrides/${uuid}`, token)
+
+export interface NotificationSettings {
+  events: Record<string, { email: boolean; sms: boolean }>
+  reminders_enabled: boolean
+  session_reminder_hours: number[]
+  exam_reminder_hours: number[]
+  default_language: 'en' | 'ar' | null
+  sender_name: string | null
+}

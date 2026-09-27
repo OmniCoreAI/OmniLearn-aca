@@ -344,6 +344,11 @@ async def create_certificate_user(
                     },
                 },
             )
+            from src.services.notifications import events as notification_events
+
+            await notification_events.certificate_issued(
+                db_session, course, user_id, certificate_user.user_certification_uuid
+            )
     except Exception as e:
         logger.warning("Certificate tracking failed (non-critical): %s", e)
 

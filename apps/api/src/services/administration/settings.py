@@ -99,7 +99,8 @@ async def get_setting(
     if key in MEMBER_READABLE_KEYS:
         await require_org_member(db_session, current_user, org_id)
     else:
-        await authorize_admin(db_session, current_user, org_id, "configuration", "read")
+        bucket = "communications" if key.startswith("notifications") else "configuration"
+        await authorize_admin(db_session, current_user, org_id, bucket, "read")
     return (await load_setting(db_session, org_id, key)).model_dump()
 
 

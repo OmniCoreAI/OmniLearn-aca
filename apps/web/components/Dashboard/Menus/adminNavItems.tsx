@@ -2,6 +2,7 @@ import React from 'react'
 import {
   Buildings,
   ChalkboardTeacher,
+  EnvelopeSimple,
   Door,
   Package,
   SlidersHorizontal,
@@ -59,6 +60,13 @@ export const ADMIN_NAV_LINKS: AdminNavLink[] = [
     labelKey: 'administration.nav.entities',
     fallback: 'Entities',
     icon: (size) => <Buildings size={size} />,
+  },
+  {
+    navId: 'communication',
+    href: '/dash/administration/communication',
+    labelKey: 'administration.nav.communication',
+    fallback: 'Communication',
+    icon: (size) => <EnvelopeSimple size={size} />,
   },
   {
     navId: 'administration',

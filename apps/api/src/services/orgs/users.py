@@ -930,12 +930,22 @@ async def update_user_role(
         if user and user.email:
             org_config_stmt = select(OrganizationConfig).where(OrganizationConfig.org_id == org.id)
             org_config = (await db_session.execute(org_config_stmt)).scalars().first()
-            send_role_changed_email(
-                email=user.email,
-                username=user.username,
-                org_name=org.name,
-                new_role_name=role.name,
-                lang=get_org_default_language(org_config),
+            from src.services.notifications.dispatcher import send_event_email
+
+            await send_event_email(
+                db_session,
+                org.id,
+                "role_changed",
+                to=user.email,
+                user=user,
+                variables={"role_name": role.name},
+                fallback=lambda: send_role_changed_email(
+                    email=user.email,
+                    username=user.username,
+                    org_name=org.name,
+                    new_role_name=role.name,
+                    lang=get_org_default_language(org_config),
+                ),
             )
     except Exception:
         logger.warning("Failed to send role change email to user %s", user_id)
