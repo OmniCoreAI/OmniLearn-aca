@@ -1,9 +1,9 @@
 """Instructor Finance service.
 
-Computes ``amount = hours × rate`` where the rate is resolved from the
-instructor's category for the chosen delivery language (category rate wins,
-per-language rate preferred, instructor rate as final fallback). Work logs
-persist a snapshot of the rate/amount so financial history is stable.
+Computes ``amount = hours × rate`` where the rate is the instructor's override
+when set, otherwise the category rate for the chosen delivery language
+(per-language rate preferred, then the category base rate). Work logs persist a
+snapshot of the rate/amount so financial history is stable.
 """
 from datetime import datetime
 from typing import List, Optional, Tuple

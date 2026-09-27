@@ -187,6 +187,11 @@ export function getActivityMediaDirectory(
   }
 }
 
+/** Public org-level asset (instructor photos, facility images, entity logos…). */
+export function getOrgContentUrl(orgUUID: string, path: string) {
+  return `${getMediaUrl()}content/orgs/${orgUUID}/${path}`
+}
+
 export function getOrgLogoMediaDirectory(orgUUID: string, fileId: string) {
   if (!fileId) return ''
   // Allow absolute URLs (e.g. hosted org logos) — same pattern as news covers.

@@ -14,6 +14,8 @@ Role Hierarchy (global org roles):
 # Core role IDs - these match the database seed data
 ADMIN_ROLE_ID = 1
 MAINTAINER_ROLE_ID = 2
+INSTRUCTOR_ROLE_ID = 3
+TRAINEE_ROLE_ID = 4
 
 # Role ID sets for common checks
 ADMIN_ROLE_IDS = frozenset([ADMIN_ROLE_ID])

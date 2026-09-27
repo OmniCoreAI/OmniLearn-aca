@@ -683,35 +683,41 @@ def _build_admin_create_extra_metadata(payload: AdminUserCreate) -> dict | None:
     return meta or None
 
 
-async def admin_create_user(
-    request: Request,
-    org_id: int,
-    payload: AdminUserCreate,
+async def generate_unique_username(db_session: AsyncSession, seed: str) -> str:
+    """A free username derived from ``seed`` (e.g. an email local part)."""
+    base = "".join(ch for ch in (seed or "").split("@")[0].lower() if ch.isalnum() or ch in "._-")[:24]
+    if len(base) < 2:
+        base = "user"
+    candidate = base
+    for _ in range(20):
+        taken = (await db_session.execute(
+            select(User.id).where(User.username == candidate)
+        )).first()
+        if not taken:
+            return candidate
+        candidate = f"{base}{uuid4().hex[:5]}"
+    return f"{base}{uuid4().hex[:10]}"
+
+
+async def provision_org_user(
     db_session: AsyncSession,
-    current_user: PublicUser | AnonymousUser | APITokenUser,
-) -> AdminUserCreateResult:
-    """Admin/maintainer-initiated direct account creation.
+    org_id: int,
+    *,
+    email: str,
+    username: Optional[str] = None,
+    first_name: str = "",
+    last_name: str = "",
+    role_id: int = DEFAULT_MEMBER_ROLE_ID,
+    extra_metadata: dict | None = None,
+    signup_method: str = "admin_created",
+) -> tuple[User, str]:
+    """Create a verified account + org membership with a one-time password.
 
-    Generates a one-time temporary password, auto-verifies the account, assigns
-    the chosen role, and flags the user to change their password on first login.
-    The plaintext temporary password is returned exactly once.
+    Shared by admin provisioning, instructor creation and bulk imports; the
+    caller is responsible for authorization. Returns ``(user, temporary_password)``.
     """
-    org = (await db_session.execute(
-        select(Organization).where(Organization.id == org_id)
-    )).scalars().first()
-
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found")
-
-    # RBAC: only org admins/maintainers (or superadmins) may provision accounts.
-    await rbac_check(request, org.org_uuid, current_user, "create", db_session)
-
-    # Resolve the role BEFORE creating anything so we fail fast on a bad role.
-    role_id = await _resolve_role_for_org(db_session, org_id, payload.role_uuid)
-
-    # Basic input normalization / validation.
-    username = (payload.username or "").strip()
-    email = (payload.email or "").strip().lower()
+    email = (email or "").strip().lower()
+    username = (username or "").strip() or await generate_unique_username(db_session, email)
     if len(username) < 2:
         raise HTTPException(status_code=400, detail="Username must be at least 2 characters")
 
@@ -727,19 +733,18 @@ async def admin_create_user(
         raise HTTPException(status_code=400, detail="Email or username is already in use")
 
     temporary_password = generate_temporary_password()
-    extra_metadata = _build_admin_create_extra_metadata(payload)
 
     now_iso = str(datetime.now())
     user = User(
         username=username,
         email=email,
-        first_name=payload.first_name or "",
-        last_name=payload.last_name or "",
+        first_name=first_name or "",
+        last_name=last_name or "",
         user_uuid=f"user_{uuid4()}",
         password=security_hash_password(temporary_password),
         email_verified=True,
         email_verified_at=datetime.now(timezone.utc).isoformat(),
-        signup_method="admin_created",
+        signup_method=signup_method,
         must_change_password=True,
         extra_metadata=extra_metadata,
         creation_date=now_iso,
@@ -767,7 +772,7 @@ async def admin_create_user(
         event_name=analytics_events.USER_SIGNED_UP,
         org_id=org_id,
         user_id=user.id if user.id else 0,
-        properties={"signup_method": "admin_created"},
+        properties={"signup_method": signup_method},
     )
     await dispatch_webhooks(
         event_name=analytics_events.USER_SIGNED_UP,
@@ -780,8 +785,51 @@ async def admin_create_user(
                 "first_name": user.first_name,
                 "last_name": user.last_name,
             },
-            "signup_method": "admin_created",
+            "signup_method": signup_method,
         },
+    )
+    return user, temporary_password
+
+
+async def admin_create_user(
+    request: Request,
+    org_id: int,
+    payload: AdminUserCreate,
+    db_session: AsyncSession,
+    current_user: PublicUser | AnonymousUser | APITokenUser,
+) -> AdminUserCreateResult:
+    """Admin/maintainer-initiated direct account creation.
+
+    Generates a one-time temporary password, auto-verifies the account, assigns
+    the chosen role, and flags the user to change their password on first login.
+    The plaintext temporary password is returned exactly once.
+    """
+    org = (await db_session.execute(
+        select(Organization).where(Organization.id == org_id)
+    )).scalars().first()
+
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    # RBAC: only org admins/maintainers (or superadmins) may provision accounts.
+    await rbac_check(request, org.org_uuid, current_user, "create", db_session)
+
+    # Resolve the role BEFORE creating anything so we fail fast on a bad role.
+    role_id = await _resolve_role_for_org(db_session, org_id, payload.role_uuid)
+
+    username = (payload.username or "").strip()
+    if len(username) < 2:
+        raise HTTPException(status_code=400, detail="Username must be at least 2 characters")
+
+    user, temporary_password = await provision_org_user(
+        db_session,
+        org_id,
+        email=payload.email,
+        username=username,
+        first_name=payload.first_name or "",
+        last_name=payload.last_name or "",
+        role_id=role_id,
+        extra_metadata=_build_admin_create_extra_metadata(payload),
     )
 
     return AdminUserCreateResult(

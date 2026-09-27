@@ -295,3 +295,291 @@ class TestInstructorAuthz:
         with pytest.raises(HTTPException) as exc:
             await cat_svc.list_categories(db, regular_user, org.id)
         assert exc.value.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Administration & Configuration extensions (profiles, override, approval,
+# new-user creation, pickers, course links)
+# ---------------------------------------------------------------------------
+
+from contextlib import ExitStack  # noqa: E402
+from unittest.mock import AsyncMock, patch  # noqa: E402
+
+from sqlmodel import select  # noqa: E402
+
+from src.db.academic.course_profiles import CourseAcademicProfile  # noqa: E402
+from src.db.instructors.instructors import (  # noqa: E402
+    InstructorApprove,
+    InstructorNewUser,
+)
+from src.db.administration.lookups import ConfigStatus  # noqa: E402
+from src.db.resource_authors import ResourceAuthor  # noqa: E402
+from src.db.user_organizations import UserOrganization  # noqa: E402
+from src.db.users import User  # noqa: E402
+
+
+def _provisioning_patches():
+    stack = ExitStack()
+    for target in (
+        "src.services.orgs.users.check_limits_with_usage",
+        "src.services.orgs.users.increase_feature_usage",
+        "src.services.orgs.users.track",
+        "src.services.orgs.users.dispatch_webhooks",
+    ):
+        stack.enter_context(patch(target, new_callable=AsyncMock))
+    return stack
+
+
+class TestRateOverride:
+    @pytest.mark.asyncio
+    async def test_instructor_override_beats_category_rates(self, db, org, admin_user, regular_user):
+        cat = await _make_category(db, admin_user, org, base=500.0, rates=[("Arabic", 550.0)])
+        inst = await _make_instructor(
+            db, admin_user, org, regular_user, category_uuid=cat.category_uuid, hourly_rate=650.0
+        )
+        assert inst.effective_hourly_rate == 650.0
+        assert inst.rate_source == "instructor"
+        assert inst.rate_currency == "USD"  # currency follows the category
+        preview = await fin_svc.compute_rate(db, admin_user, inst.instructor_uuid, 2, "Arabic")
+        assert preview.rate_source == "instructor"
+        assert preview.amount == 1300.0
+
+        # Clearing the override falls back to the category.
+        cleared = await inst_svc.update_instructor(
+            db, admin_user, inst.instructor_uuid, InstructorUpdate(hourly_rate=None)
+        )
+        assert cleared.effective_hourly_rate == 500.0
+        assert cleared.rate_source == "category_base"
+
+    @pytest.mark.asyncio
+    async def test_worklog_snapshot_survives_rate_change(self, db, org, admin_user, regular_user):
+        cat = await _make_category(db, admin_user, org, base=100.0)
+        inst = await _make_instructor(db, admin_user, org, regular_user, category_uuid=cat.category_uuid)
+        log = await fin_svc.create_worklog(
+            db, admin_user, org.id, InstructorWorkLogCreate(instructor_uuid=inst.instructor_uuid, hours=1)
+        )
+        await inst_svc.update_instructor(db, admin_user, inst.instructor_uuid, InstructorUpdate(hourly_rate=999.0))
+        logs = await fin_svc.list_worklogs(db, admin_user, org.id, None)
+        assert [entry.amount for entry in logs if entry.worklog_uuid == log.worklog_uuid] == [100.0]
+
+
+class TestInstructorProfiles:
+    @pytest.mark.asyncio
+    async def test_profile_fields_and_availability(self, db, org, admin_user, regular_user):
+        inst = await _make_instructor(db, admin_user, org, regular_user)
+        updated = await inst_svc.update_instructor(
+            db,
+            admin_user,
+            inst.instructor_uuid,
+            InstructorUpdate(
+                bio="Aviation safety expert",
+                specializations=["Safety", "CRM"],
+                availability={"slots": [{"day": "sun", "start": "09:00", "end": "13:00"}], "notes": "AM only"},
+            ),
+        )
+        assert updated.bio == "Aviation safety expert"
+        assert updated.specializations == ["Safety", "CRM"]
+        assert updated.availability["slots"][0]["day"] == "sun"
+
+        for bad in (
+            {"slots": [{"day": "funday", "start": "09:00", "end": "10:00"}]},
+            {"slots": [{"day": "sun", "start": "13:00", "end": "09:00"}]},
+            {"slots": [{"day": "sun", "start": "9am", "end": "10:00"}]},
+        ):
+            with pytest.raises(HTTPException) as exc:
+                await inst_svc.update_instructor(
+                    db, admin_user, inst.instructor_uuid, InstructorUpdate(availability=bad)
+                )
+            assert exc.value.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_create_with_new_user_account(self, db, org, admin_user, user_role):
+        with _provisioning_patches():
+            inst = await inst_svc.create_instructor(
+                db,
+                admin_user,
+                org.id,
+                InstructorCreate(
+                    new_user=InstructorNewUser(
+                        first_name="Ahmed", last_name="Mohamed", email="Ahmed.M@Example.com", phone="+2010"
+                    ),
+                    hourly_rate=650.0,
+                ),
+            )
+        assert inst.temporary_password
+        assert inst.user.first_name == "Ahmed"
+        user = (await db.execute(select(User).where(User.email == "ahmed.m@example.com"))).scalars().first()
+        assert user.must_change_password is True
+        assert user.username.startswith("ahmed")
+        assert user.extra_metadata == {"phone": "+2010"}
+        membership = (
+            await db.execute(select(UserOrganization).where(UserOrganization.user_id == user.id))
+        ).scalars().first()
+        assert membership.role_id == 3  # Instructor role
+
+        # A second read never exposes the password again.
+        again = await inst_svc.get_instructor(db, admin_user, inst.instructor_uuid)
+        assert again.temporary_password is None
+
+    @pytest.mark.asyncio
+    async def test_create_rejects_both_or_neither_user(self, db, org, admin_user, regular_user):
+        with pytest.raises(HTTPException) as exc:
+            await inst_svc.create_instructor(
+                db,
+                admin_user,
+                org.id,
+                InstructorCreate(
+                    user_uuid=regular_user.user_uuid,
+                    new_user=InstructorNewUser(first_name="A", email="a@b.co"),
+                ),
+            )
+        assert exc.value.status_code == 400
+        with pytest.raises(HTTPException) as exc:
+            await inst_svc.create_instructor(db, admin_user, org.id, InstructorCreate())
+        assert exc.value.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_existing_user_must_be_member(self, db, org, other_org, admin_user):
+        outsider = User(
+            id=77,
+            username="outsider",
+            first_name="Out",
+            last_name="Sider",
+            email="out@x.com",
+            password="x",
+            user_uuid="user_outsider",
+            creation_date="",
+            update_date="",
+        )
+        db.add(outsider)
+        await db.commit()
+        with pytest.raises(HTTPException) as exc:
+            await inst_svc.create_instructor(
+                db, admin_user, org.id, InstructorCreate(user_uuid="user_outsider")
+            )
+        assert exc.value.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_active_instructor_gets_instructor_role(self, db, org, admin_user, regular_user):
+        await _make_instructor(db, admin_user, org, regular_user)
+        membership = (
+            await db.execute(select(UserOrganization).where(UserOrganization.user_id == regular_user.id))
+        ).scalars().first()
+        assert membership.role_id == 3
+
+
+class TestApprovalAndPickers:
+    @pytest.mark.asyncio
+    async def test_pending_instructor_approval(self, db, org, admin_user, regular_user):
+        cat = await _make_category(db, admin_user, org, base=300.0)
+        inst = await inst_svc.create_instructor(
+            db,
+            admin_user,
+            org.id,
+            InstructorCreate(user_uuid=regular_user.user_uuid, status=InstructorStatus.PENDING_APPROVAL),
+        )
+        membership = (
+            await db.execute(select(UserOrganization).where(UserOrganization.user_id == regular_user.id))
+        ).scalars().first()
+        assert membership.role_id == 4  # not promoted while pending
+
+        # Pending instructors are hidden from pickers.
+        options = await inst_svc.list_instructor_options(db, regular_user, org.id)
+        assert options == []
+
+        approved = await inst_svc.approve_instructor(
+            db, admin_user, inst.instructor_uuid, InstructorApprove(category_uuid=cat.category_uuid)
+        )
+        assert approved.status == InstructorStatus.ACTIVE
+        assert approved.effective_hourly_rate == 300.0
+        await db.refresh(membership)
+        assert membership.role_id == 3
+
+        with pytest.raises(HTTPException) as exc:
+            await inst_svc.approve_instructor(db, admin_user, inst.instructor_uuid, InstructorApprove())
+        assert exc.value.status_code == 409
+
+        options = await inst_svc.list_instructor_options(db, regular_user, org.id)
+        assert [o.name for o in options] == ["Regular User"]
+        assert not hasattr(options[0], "hourly_rate")
+
+    @pytest.mark.asyncio
+    async def test_regular_user_cannot_approve(self, db, org, admin_user, regular_user):
+        inst = await inst_svc.create_instructor(
+            db,
+            admin_user,
+            org.id,
+            InstructorCreate(user_uuid=regular_user.user_uuid, status=InstructorStatus.PENDING_APPROVAL),
+        )
+        with pytest.raises(HTTPException) as exc:
+            await inst_svc.approve_instructor(db, regular_user, inst.instructor_uuid, InstructorApprove())
+        assert exc.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_category_status(self, db, org, admin_user):
+        cat = await _make_category(db, admin_user, org)
+        assert cat.status == ConfigStatus.ACTIVE
+        updated = await cat_svc.update_category(
+            db, admin_user, cat.category_uuid, InstructorCategoryUpdate(status=ConfigStatus.INACTIVE)
+        )
+        assert updated.status == ConfigStatus.INACTIVE
+
+
+class TestInstructorCourses:
+    @pytest.mark.asyncio
+    async def test_assign_list_unassign(self, db, org, admin_user, regular_user, course):
+        inst = await _make_instructor(db, admin_user, org, regular_user)
+        courses = await inst_svc.assign_instructor_course(db, admin_user, inst.instructor_uuid, course.course_uuid)
+        assert [(c.course_uuid, c.source) for c in courses] == [(course.course_uuid, "profile")]
+
+        profile = (
+            await db.execute(select(CourseAcademicProfile).where(CourseAcademicProfile.course_id == course.id))
+        ).scalars().first()
+        assert profile.instructor_id == regular_user.id
+        author = (
+            await db.execute(
+                select(ResourceAuthor).where(
+                    ResourceAuthor.resource_uuid == course.course_uuid, ResourceAuthor.user_id == regular_user.id
+                )
+            )
+        ).scalars().first()
+        assert author is not None
+
+        courses = await inst_svc.unassign_instructor_course(db, admin_user, inst.instructor_uuid, course.course_uuid)
+        # Authorship is kept, so the course is still listed as co-authored.
+        assert [(c.course_uuid, c.source) for c in courses] == [(course.course_uuid, "author")]
+        await db.refresh(profile)
+        assert profile.instructor_id is None
+
+    @pytest.mark.asyncio
+    async def test_inactive_instructor_cannot_be_assigned(self, db, org, admin_user, regular_user, course):
+        inst = await _make_instructor(db, admin_user, org, regular_user)
+        await inst_svc.update_instructor(
+            db, admin_user, inst.instructor_uuid, InstructorUpdate(status=InstructorStatus.INACTIVE)
+        )
+        with pytest.raises(HTTPException) as exc:
+            await inst_svc.assign_instructor_course(db, admin_user, inst.instructor_uuid, course.course_uuid)
+        assert exc.value.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_course_must_belong_to_org(self, db, org, other_org, admin_user, regular_user):
+        from src.db.courses.courses import Course
+
+        foreign = Course(
+            id=99,
+            name="Foreign",
+            description="",
+            public=True,
+            published=True,
+            open_to_contributors=False,
+            org_id=other_org.id,
+            course_uuid="course_foreign",
+            creation_date="",
+            update_date="",
+        )
+        db.add(foreign)
+        await db.commit()
+        inst = await _make_instructor(db, admin_user, org, regular_user)
+        with pytest.raises(HTTPException) as exc:
+            await inst_svc.assign_instructor_course(db, admin_user, inst.instructor_uuid, "course_foreign")
+        assert exc.value.status_code == 404

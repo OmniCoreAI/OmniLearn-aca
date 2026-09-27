@@ -114,6 +114,7 @@ async def create_category(
         description=payload.description,
         hourly_rate=payload.hourly_rate,
         currency=payload.currency,
+        status=payload.status,
         org_id=org_id,
         category_uuid=f"instructorcategory_{uuid4()}",
         creation_date=str(datetime.now()),
