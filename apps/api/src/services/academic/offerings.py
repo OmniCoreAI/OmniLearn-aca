@@ -132,6 +132,7 @@ async def _ensure_roster_group(db_session: AsyncSession, offering: CourseOfferin
         name=f"{offering.code} (Roster)",
         description=f"Enrollment roster for course offering {offering.code}",
         org_id=offering.org_id,
+        group_type="cohort",
         usergroup_uuid=f"usergroup_{uuid4()}",
         creation_date=now(),
         update_date=now(),

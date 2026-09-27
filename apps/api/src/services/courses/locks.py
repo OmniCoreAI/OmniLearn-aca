@@ -21,7 +21,7 @@ from src.db.usergroup_resources import UserGroupResource
 from src.db.usergroup_user import UserGroupUser
 from src.db.users import AnonymousUser, APITokenUser, PublicUser
 from src.security.auth import resolve_acting_user_id
-from src.security.rbac.constants import ADMIN_OR_MAINTAINER_ROLE_IDS
+from src.security.rbac.constants import ACADEMY_ADMIN_ROLE_IDS
 
 
 async def is_org_admin(user_id: int, org_id: int, db_session: AsyncSession) -> bool:
@@ -32,7 +32,7 @@ async def is_org_admin(user_id: int, org_id: int, db_session: AsyncSession) -> b
             UserOrganization.org_id == org_id,
         )
     )).scalars().first()
-    return bool(uo and uo.role_id in ADMIN_OR_MAINTAINER_ROLE_IDS)
+    return bool(uo and uo.role_id in ACADEMY_ADMIN_ROLE_IDS)
 
 
 async def batch_accessible_restricted_uuids(

@@ -133,3 +133,86 @@ export const setMyAddOnSelection = (
   items: { attachment_uuid: string; quantity: number }[],
   token: string
 ) => call('PUT', `addons/targets/${target_type}/${target_uuid}/my-selection`, token, { items })
+
+// ----------------------------- Entities (الجهات) -----------------------------
+
+export interface CoordinatorPermissions {
+  can_manage_members: boolean
+  can_import_users: boolean
+  can_manage_groups: boolean
+  can_assign_training: boolean
+  can_add_instructors: boolean
+}
+
+export const COORDINATOR_CAPABILITIES: (keyof CoordinatorPermissions)[] = [
+  'can_manage_members',
+  'can_import_users',
+  'can_manage_groups',
+  'can_assign_training',
+  'can_add_instructors',
+]
+
+export const getEntities = (org_id: number, token: string, params: { q?: string; status?: string } = {}) =>
+  call('GET', `entities/org/${org_id}${qs(params)}`, token)
+export const getEntityOptions = (org_id: number, token: string) => call('GET', `entities/org/${org_id}/options`, token)
+export const getMyEntities = (org_id: number, token: string) => call('GET', `entities/org/${org_id}/mine`, token)
+export const getEntity = (uuid: string, token: string) => call('GET', `entities/${uuid}`, token)
+export const createEntity = (org_id: number, data: any, token: string) =>
+  call('POST', `entities/${qs({ org_id })}`, token, data)
+export const updateEntity = (uuid: string, data: any, token: string) => call('PUT', `entities/${uuid}`, token, data)
+export const deleteEntity = (uuid: string, token: string) => call('DELETE', `entities/${uuid}`, token)
+export async function uploadEntityLogo(uuid: string, file: File, token: string) {
+  const formData = new FormData()
+  formData.append('logo', file)
+  const result = await fetch(`${getAPIUrl()}entities/${uuid}/logo`, RequestBodyFormWithAuthHeader('PUT', formData, null, token))
+  return errorHandling(result)
+}
+
+export const getEntityMembers = (
+  uuid: string,
+  token: string,
+  params: { q?: string; status?: string; position_uuid?: string; group_uuid?: string; page?: number; limit?: number } = {}
+) => call('GET', `entities/${uuid}/members${qs(params)}`, token)
+export const addEntityMember = (uuid: string, data: any, token: string) => call('POST', `entities/${uuid}/members`, token, data)
+export const updateEntityMember = (uuid: string, member_uuid: string, data: any, token: string) =>
+  call('PUT', `entities/${uuid}/members/${member_uuid}`, token, data)
+export const removeEntityMember = (uuid: string, member_uuid: string, token: string) =>
+  call('DELETE', `entities/${uuid}/members/${member_uuid}`, token)
+
+export const assignEntityCoordinator = (uuid: string, data: any, token: string) =>
+  call('POST', `entities/${uuid}/coordinators`, token, data)
+export const removeEntityCoordinator = (uuid: string, member_uuid: string, token: string) =>
+  call('DELETE', `entities/${uuid}/coordinators/${member_uuid}`, token)
+
+export const getEntityGroups = (uuid: string, token: string) => call('GET', `entities/${uuid}/groups`, token)
+export const createEntityGroup = (uuid: string, data: any, token: string) => call('POST', `entities/${uuid}/groups`, token, data)
+export const updateEntityGroup = (uuid: string, group_uuid: string, data: any, token: string) =>
+  call('PUT', `entities/${uuid}/groups/${group_uuid}`, token, data)
+export const setEntityGroupMembers = (uuid: string, group_uuid: string, member_uuids: string[], token: string) =>
+  call('PUT', `entities/${uuid}/groups/${group_uuid}/members`, token, { member_uuids })
+export const deleteEntityGroup = (uuid: string, group_uuid: string, token: string) =>
+  call('DELETE', `entities/${uuid}/groups/${group_uuid}`, token)
+export const getEntityLearning = (uuid: string, token: string) => call('GET', `entities/${uuid}/learning`, token)
+
+// ----------------------------- Positions -----------------------------
+
+export const getPositions = (org_id: number, token: string, entity_uuid?: string) =>
+  call('GET', `positions/org/${org_id}${qs({ entity_uuid })}`, token)
+export const createPosition = (org_id: number, data: any, token: string) =>
+  call('POST', `positions/${qs({ org_id })}`, token, data)
+export const updatePosition = (uuid: string, data: any, token: string) => call('PUT', `positions/${uuid}`, token, data)
+export const deletePosition = (uuid: string, token: string) => call('DELETE', `positions/${uuid}`, token)
+
+// ----------------------------- Audience assignment -----------------------------
+
+export type AudienceResourceType = 'course' | 'training_program'
+export type AudienceType = 'user' | 'usergroup' | 'entity' | 'position' | 'cohort'
+
+export const getResourceAudience = (resource_type: AudienceResourceType, resource_uuid: string, token: string) =>
+  call('GET', `audience/resource/${resource_type}/${resource_uuid}`, token)
+export const resyncResourceAudience = (resource_type: AudienceResourceType, resource_uuid: string, token: string) =>
+  call('POST', `audience/resource/${resource_type}/${resource_uuid}/sync`, token)
+export const createAudienceAssignment = (data: any, token: string) => call('POST', 'audience/', token, data)
+export const deleteAudienceAssignment = (uuid: string, token: string) => call('DELETE', `audience/${uuid}`, token)
+export const getAudienceOptions = (org_id: number, token: string, params: { q?: string; entity_uuid?: string } = {}) =>
+  call('GET', `audience/org/${org_id}/options${qs(params)}`, token)

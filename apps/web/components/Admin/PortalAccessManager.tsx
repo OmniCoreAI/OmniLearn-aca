@@ -14,7 +14,7 @@ import { DASH_NAV_ITEMS, SECTION_LABELS, DashNavSection } from '@/lib/dash-nav-i
 
 const SYSTEM_ROLES: { uuid: string; label: string }[] = [
   { uuid: 'role_global_admin', label: 'Academy Admin' },
-  { uuid: 'role_global_maintainer', label: 'Organization Coordinator' },
+  { uuid: 'role_global_maintainer', label: 'Entity Coordinator' },
   { uuid: 'role_global_instructor', label: 'Instructor' },
   { uuid: 'role_global_user', label: 'Trainee' },
 ]

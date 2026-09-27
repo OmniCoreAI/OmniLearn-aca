@@ -236,6 +236,10 @@ async def delete_training_program(
     await check_resource_access(
         request, db_session, current_user, tp.trainingprogram_uuid, AccessAction.DELETE
     )
+    from src.services.administration.audience import forget_resource
+
+    # Drop audience links the program put on its courses before they detach.
+    await forget_resource(db_session, "training_program", tp.trainingprogram_uuid)
     await db_session.delete(tp)
     await db_session.commit()
     return "Training program deleted"
@@ -293,6 +297,10 @@ async def link_course_to_training_program(
         )
     )
     await db_session.commit()
+    from src.services.administration.audience import sync_resource_audience
+
+    # The program's audiences now also reach this course.
+    await sync_resource_audience(db_session, "training_program", tp.trainingprogram_uuid)
     return "Course linked to training program"
 
 
@@ -329,6 +337,11 @@ async def unlink_course_from_training_program(
 
     await db_session.delete(link)
     await db_session.commit()
+    from src.services.administration.audience import sync_resource_audience
+
+    await sync_resource_audience(
+        db_session, "training_program", tp.trainingprogram_uuid, dropped_targets=[course_uuid]
+    )
     return "Course unlinked from training program"
 
 

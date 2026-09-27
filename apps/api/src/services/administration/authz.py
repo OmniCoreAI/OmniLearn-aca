@@ -17,7 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.user_organizations import UserOrganization
 from src.db.users import AnonymousUser, APITokenUser, PublicUser
-from src.security.rbac.constants import ADMIN_OR_MAINTAINER_ROLE_IDS
+from src.security.rbac.constants import ACADEMY_ADMIN_ROLE_IDS
 from src.security.rbac.rbac import _load_applicable_roles
 from src.security.superadmin import is_user_superadmin
 
@@ -77,7 +77,7 @@ async def has_admin_permission(
     membership = await get_membership(db_session, user_id, org_id)
     if not membership:
         return False
-    if membership.role_id in ADMIN_OR_MAINTAINER_ROLE_IDS:
+    if membership.role_id in ACADEMY_ADMIN_ROLE_IDS:
         return True
     roles = await _load_applicable_roles(db_session, user_id, org_id)
     return any(_bucket_grants(role.rights, bucket, action) for role in roles)

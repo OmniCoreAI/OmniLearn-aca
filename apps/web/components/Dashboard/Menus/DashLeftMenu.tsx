@@ -40,6 +40,7 @@ import {
   Certificate,
   Newspaper,
   CalendarBlank,
+  IdentificationCard,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import CommandPaletteTrigger from '@components/Dashboard/CommandPalette/CommandPaletteTrigger'
@@ -162,6 +163,7 @@ function DashLeftMenu() {
 
   const showHome = isItemVisible('home')
   const showCalendar = isItemVisible('calendar')
+  const showMyEntity = isItemVisible('my-entity')
   const showPostgraduate = isItemVisible('postgraduate')
   const showTrainingPrograms = isItemVisible('training-programs')
   const showFinance = isItemVisible('finance')
@@ -247,7 +249,7 @@ function DashLeftMenu() {
       <div className="flex-1 overflow-y-auto py-3 px-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <AdminAuthorization authorizationMode="component">
           <div className="space-y-4">
-            {(showHome || showCalendar) && (
+            {(showHome || showCalendar || showMyEntity) && (
             <NavSection label={t('dashboard.home.nav.overview', 'Overview')} isCollapsed={isCollapsed}>
               {showHome && (
               <MenuLink
@@ -267,6 +269,16 @@ function DashLeftMenu() {
                 isCollapsed={isCollapsed}
                 active={isActivePath('/dash/calendar')}
                 onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'calendar' })}
+              />
+              )}
+              {showMyEntity && (
+              <MenuLink
+                href="/dash/my-entity"
+                icon={<IdentificationCard size={20} />}
+                label={t('entities.portal.nav', 'My entity')}
+                isCollapsed={isCollapsed}
+                active={isActivePath('/dash/my-entity')}
+                onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'my-entity' })}
               />
               )}
             </NavSection>

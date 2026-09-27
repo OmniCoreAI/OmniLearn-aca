@@ -21,9 +21,89 @@ from src.db.usergroup_resources import UserGroupResource
 from src.db.usergroup_user import UserGroupUser
 from src.db.user_organizations import UserOrganization
 from src.db.organizations import Organization
-from src.db.usergroups import UserGroup, UserGroupCreate, UserGroupRead, UserGroupUpdate
+from src.db.usergroups import (
+    UserGroup,
+    UserGroupCreate,
+    UserGroupRead,
+    UserGroupType,
+    UserGroupUpdate,
+)
 from src.db.users import AnonymousUser, APITokenUser, InternalUser, PublicUser, User, UserRead
 from src.services.webhooks.dispatch import dispatch_webhooks
+
+
+USERGROUP_STATUSES = ("active", "inactive")
+
+
+def _is_locked(usergroup: UserGroup) -> bool:
+    """System groups are maintained automatically (entity members, audiences)."""
+    return usergroup.group_type == UserGroupType.SYSTEM.value or bool(usergroup.managed_key)
+
+
+def _ensure_editable(usergroup: UserGroup, current_user) -> None:
+    if isinstance(current_user, InternalUser):
+        return
+    if _is_locked(usergroup):
+        raise HTTPException(
+            status_code=409,
+            detail="This group is maintained automatically and cannot be changed by hand",
+        )
+
+
+def _validate_status(status: str | None) -> None:
+    if status is not None and status not in USERGROUP_STATUSES:
+        raise HTTPException(status_code=400, detail="status must be 'active' or 'inactive'")
+
+
+def _validate_group_type(group_type) -> str | None:
+    if group_type is None:
+        return None
+    value = group_type.value if isinstance(group_type, UserGroupType) else str(group_type)
+    if value == UserGroupType.SYSTEM.value:
+        raise HTTPException(status_code=400, detail="System groups cannot be created or set by hand")
+    return value
+
+
+async def _resolve_entity_id(
+    db_session: AsyncSession, org_id: int, entity_uuid: str | None
+) -> int | None:
+    if not entity_uuid:
+        return None
+    from src.db.administration.entities import Entity
+
+    entity = (
+        await db_session.execute(
+            select(Entity).where(Entity.entity_uuid == entity_uuid, Entity.org_id == org_id)
+        )
+    ).scalars().first()
+    if entity is None:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    return entity.id
+
+
+async def enrich_usergroups(
+    db_session: AsyncSession, usergroups: list[UserGroup]
+) -> list[UserGroupRead]:
+    """Build reads with the owning entity's uuid/name resolved in one query."""
+    from src.db.administration.entities import Entity
+
+    entity_ids = {ug.entity_id for ug in usergroups if ug.entity_id}
+    entities: dict[int, Entity] = {}
+    if entity_ids:
+        rows = (
+            await db_session.execute(select(Entity).where(Entity.id.in_(entity_ids)))  # type: ignore[union-attr]
+        ).scalars().all()
+        entities = {e.id: e for e in rows if e.id is not None}
+    reads = []
+    for ug in usergroups:
+        read = UserGroupRead.model_validate(ug)
+        entity = entities.get(ug.entity_id) if ug.entity_id else None
+        if entity is not None:
+            read.entity_uuid = entity.entity_uuid
+            read.entity_name = entity.name
+        read.managed = _is_locked(ug)
+        reads.append(read)
+    return reads
 
 
 async def _validate_resource_exists_and_belongs_to_org(
@@ -109,7 +189,15 @@ async def create_usergroup(
 
     from src.security.auth import resolve_acting_user_id
 
-    usergroup = UserGroup.model_validate(usergroup_create)
+    _validate_status(usergroup_create.status)
+    group_type = _validate_group_type(usergroup_create.group_type) or UserGroupType.GENERAL.value
+    usergroup = UserGroup(
+        name=usergroup_create.name,
+        description=usergroup_create.description,
+        org_id=usergroup_create.org_id,
+        group_type=group_type,
+        status=usergroup_create.status,
+    )
 
     await require_org_membership(
         resolve_acting_user_id(current_user), usergroup_create.org_id, db_session
@@ -137,6 +225,10 @@ async def create_usergroup(
     # Usage check
     await check_limits_with_usage("courses", org.id, db_session)
 
+    usergroup.entity_id = await _resolve_entity_id(
+        db_session, org.id, usergroup_create.entity_uuid
+    )
+
     # Complete the object
     usergroup.usergroup_uuid = f"usergroup_{uuid4()}"
     usergroup.creation_date = str(datetime.now())
@@ -159,9 +251,7 @@ async def create_usergroup(
         },
     )
 
-    usergroup = UserGroupRead.model_validate(usergroup)
-
-    return usergroup
+    return (await enrich_usergroups(db_session, [usergroup]))[0]
 
 
 async def read_usergroup_by_id(
@@ -190,9 +280,7 @@ async def read_usergroup_by_id(
         org_id=usergroup.org_id,
     )
 
-    usergroup = UserGroupRead.model_validate(usergroup)
-
-    return usergroup
+    return (await enrich_usergroups(db_session, [usergroup]))[0]
 
 
 async def get_users_linked_to_usergroup(
@@ -257,9 +345,7 @@ async def read_usergroups_by_org_id(
         db_session=db_session,
     )
 
-    usergroups = [UserGroupRead.model_validate(usergroup) for usergroup in usergroups]
-
-    return usergroups
+    return await enrich_usergroups(db_session, list(usergroups))
 
 
 async def get_usergroups_by_resource(
@@ -303,7 +389,7 @@ async def get_usergroups_by_resource(
     statement = select(UserGroup).where(UserGroup.id.in_(usergroup_ids))  # type: ignore
     usergroups = (await db_session.execute(statement)).scalars().all()
 
-    return [UserGroupRead.model_validate(ug) for ug in usergroups]
+    return await enrich_usergroups(db_session, list(usergroups))
 
 
 async def get_resources_by_usergroup(
@@ -367,19 +453,29 @@ async def update_usergroup_by_id(
         org_id=usergroup.org_id,
     )
 
+    _ensure_editable(usergroup, current_user)
+    _validate_status(usergroup_update.status)
+    group_type = _validate_group_type(usergroup_update.group_type)
+
     if usergroup_update.name is not None:
         usergroup.name = usergroup_update.name
     if usergroup_update.description is not None:
         usergroup.description = usergroup_update.description
+    if group_type is not None:
+        usergroup.group_type = group_type
+    if usergroup_update.status is not None:
+        usergroup.status = usergroup_update.status
+    if usergroup_update.entity_uuid is not None:
+        usergroup.entity_id = await _resolve_entity_id(
+            db_session, usergroup.org_id, usergroup_update.entity_uuid
+        )
     usergroup.update_date = str(datetime.now())
 
     db_session.add(usergroup)
     await db_session.commit()
     await db_session.refresh(usergroup)
 
-    usergroup = UserGroupRead.model_validate(usergroup)
-
-    return usergroup
+    return (await enrich_usergroups(db_session, [usergroup]))[0]
 
 
 async def delete_usergroup_by_id(
@@ -408,6 +504,8 @@ async def delete_usergroup_by_id(
         org_id=usergroup.org_id,
     )
 
+    _ensure_editable(usergroup, current_user)
+
     # Feature usage — deleting a usergroup must DECREASE the counter, not increase it.
     await decrease_feature_usage("usergroups", usergroup.org_id, db_session)
 
@@ -415,6 +513,9 @@ async def delete_usergroup_by_id(
     usergroup_name_val = usergroup.name
     usergroup_org_id = usergroup.org_id
 
+    from src.services.administration.audience import forget_usergroup
+
+    await forget_usergroup(db_session, usergroup)
     await db_session.delete(usergroup)
     await db_session.commit()
 
@@ -456,6 +557,8 @@ async def add_users_to_usergroup(
         db_session=db_session,
         org_id=usergroup.org_id,
     )
+
+    _ensure_editable(usergroup, current_user)
 
     try:
         user_ids_array = [int(uid) for uid in user_ids.split(",") if uid.strip() != ""]
@@ -550,6 +653,8 @@ async def remove_users_from_usergroup(
         db_session=db_session,
         org_id=usergroup.org_id,
     )
+
+    _ensure_editable(usergroup, current_user)
 
     try:
         user_ids_array = [int(uid) for uid in user_ids.split(",") if uid.strip() != ""]

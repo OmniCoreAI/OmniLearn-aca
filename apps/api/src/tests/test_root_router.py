@@ -49,6 +49,9 @@ ADMINISTRATION_ROUTER_MODULES = [
     "locations",
     "facilities",
     "addons",
+    "entities",
+    "positions",
+    "audience",
 ]
 
 

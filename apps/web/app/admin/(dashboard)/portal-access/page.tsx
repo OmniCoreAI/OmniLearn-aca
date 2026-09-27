@@ -13,7 +13,7 @@ export default function AdminPortalAccessPage() {
         <h1 className="text-2xl font-bold text-white">Portal Access</h1>
         <p className="text-white/40 mt-1">
           Choose which dashboard sidebar sections each system role (Academy
-          Admin, Organization Coordinator, Instructor, Trainee) can see,
+          Admin, Entity Coordinator, Instructor, Trainee) can see,
           across every organization.
         </p>
       </div>

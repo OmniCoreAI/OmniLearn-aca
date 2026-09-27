@@ -31,6 +31,8 @@ class NavItem(NamedTuple):
 NAV_ITEMS: tuple[NavItem, ...] = (
     NavItem("home", "overview"),
     NavItem("calendar", "overview"),
+    # Entity Coordinator portal (their own entity only).
+    NavItem("my-entity", "overview"),
     NavItem("postgraduate", "academic"),
     NavItem("training-programs", "academic"),
     NavItem("finance", "academic"),
@@ -50,6 +52,7 @@ NAV_ITEMS: tuple[NavItem, ...] = (
     NavItem("instructors", "administration"),
     NavItem("facilities", "administration"),
     NavItem("addons", "administration"),
+    NavItem("entities", "administration"),
 )
 
 NAV_ITEM_IDS: frozenset[str] = frozenset(item.id for item in NAV_ITEMS)
@@ -69,15 +72,19 @@ _INSTRUCTOR_DEFAULT_ITEM_IDS = (
     "playgrounds",
 )
 
+# The Entity Coordinator only manages their own entity.
+_ENTITY_COORDINATOR_DEFAULT_ITEM_IDS = ("home", "my-entity")
+# Academy staff manage every entity from Administration → Entities instead.
+_ACADEMY_ADMIN_DEFAULT_ITEM_IDS = tuple(i for i in _ALL_ITEM_IDS if i != "my-entity")
+
 # Default visibility per system role, used whenever no override row exists
-# in `portal_role_nav_config` for that role_uuid. Academy Admin and
-# Organization Coordinator default to everything, matching today's
-# dashboard.action_access-gated, all-or-nothing behavior exactly (zero
-# regression). Trainee defaults to nothing, matching today's reality that
+# in `portal_role_nav_config` for that role_uuid. Academy Admin defaults to
+# everything, matching the dashboard.action_access-gated, all-or-nothing
+# behavior. Trainee defaults to nothing, matching today's reality that
 # Trainees don't have dashboard.action_access and see an empty dashboard.
 DEFAULT_VISIBILITY_BY_ROLE_UUID: dict[str, tuple[str, ...]] = {
-    ROLE_UUID_ACADEMY_ADMIN: _ALL_ITEM_IDS,
-    ROLE_UUID_ORG_COORDINATOR: _ALL_ITEM_IDS,
+    ROLE_UUID_ACADEMY_ADMIN: _ACADEMY_ADMIN_DEFAULT_ITEM_IDS,
+    ROLE_UUID_ORG_COORDINATOR: _ENTITY_COORDINATOR_DEFAULT_ITEM_IDS,
     ROLE_UUID_INSTRUCTOR: _INSTRUCTOR_DEFAULT_ITEM_IDS,
     ROLE_UUID_TRAINEE: (),
 }

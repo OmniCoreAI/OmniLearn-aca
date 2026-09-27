@@ -49,9 +49,10 @@ export async function deleteInstructorCategory(category_uuid: string, access_tok
 
 // ----------------------------- Instructors -----------------------------
 
-export async function getInstructors(org_id: number, access_token: string) {
+export async function getInstructors(org_id: number, access_token: string, entity_uuid?: string) {
+  const query = entity_uuid ? `?entity_uuid=${encodeURIComponent(entity_uuid)}` : ''
   const result = await fetch(
-    `${getAPIUrl()}instructors/org/${org_id}`,
+    `${getAPIUrl()}instructors/org/${org_id}${query}`,
     RequestBodyWithAuthHeader('GET', null, null, access_token)
   )
   return errorHandling(result)

@@ -12,6 +12,7 @@ import AttachCourseModal from '@components/Dashboard/Pages/Academic/AttachCourse
 import { CourseProfilePanel } from '@components/Dashboard/Pages/Academic/CourseProfilePanel'
 import { Section } from '@components/Dashboard/Pages/Academic/AcademicUI'
 import { AddOnAttachmentsPanel } from '@components/Dashboard/Pages/Administration/AddOnAttachmentsPanel'
+import { AudiencePanel } from '@components/Dashboard/Pages/Administration/AudiencePanel'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
@@ -135,6 +136,7 @@ function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: s
         >
           <AddOnAttachmentsPanel targetType="training_program" targetUuid={tp_uuid} />
         </Section>
+        <AudiencePanel resourceType="training_program" resourceUuid={tp_uuid} />
       </div>
 
       <Modal

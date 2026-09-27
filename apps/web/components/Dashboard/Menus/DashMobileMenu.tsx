@@ -26,6 +26,7 @@ import {
   Book,
   CaretDown,
   MagnifyingGlass,
+  IdentificationCard,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import Link from 'next/link'
@@ -109,6 +110,7 @@ function DashMobileMenu() {
             />
           </Link>
           {/* Progressive reveal — more icons as viewport widens */}
+          {isItemVisible('my-entity') && <PillLink href="/dash/my-entity" icon={<IdentificationCard size={18} weight="fill" />} active={isActive('/dash/my-entity')} />}
           {isItemVisible('postgraduate') && <PillLink href="/dash/postgraduate" icon={<GraduationCap size={18} weight="fill" />} active={isActive('/dash/postgraduate') && !isActive('/dash/postgraduate/teaching')} className="hidden min-[340px]:flex" />}
           {isItemVisible('training-programs') && <PillLink href="/dash/training-programs" icon={<Certificate size={18} weight="fill" />} active={isActive('/dash/training-programs')} className="hidden min-[360px]:flex" />}
           {isItemVisible('assignments') && <PillLink href="/dash/assignments" icon={<Files size={18} weight="fill" />} active={isActive('/dash/assignments')} className="hidden min-[390px]:flex" />}
@@ -205,6 +207,7 @@ function DashMobileMenu() {
               {/* Nav items */}
               <div className="py-2 px-2 max-h-[52vh] overflow-y-auto overscroll-contain space-y-px">
                 <PanelItem href="/dash" icon={<House size={15} weight="fill" />} label={t('common.home')} active={isActive('/dash')} onClick={close} />
+                {isItemVisible('my-entity') && <PanelItem href="/dash/my-entity" icon={<IdentificationCard size={15} weight="fill" />} label={t('entities.portal.nav', 'My entity')} active={isActive('/dash/my-entity')} onClick={close} />}
                 {isItemVisible('postgraduate') && <PanelItem href="/dash/postgraduate" icon={<GraduationCap size={15} weight="fill" />} label={t('academic.postgraduate_studies', 'Postgraduate Studies')} active={isActive('/dash/postgraduate') && !isActive('/dash/postgraduate/teaching')} onClick={close} />}
                 {isItemVisible('training-programs') && <PanelItem href="/dash/training-programs" icon={<Certificate size={15} weight="fill" />} label={t('academic.training_programs', 'Training Programs')} active={isActive('/dash/training-programs')} onClick={close} />}
                 {isItemVisible('finance') && <PanelItem href="/dash/finance" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.finance', 'Finance')} active={isActive('/dash/finance')} onClick={close} />}

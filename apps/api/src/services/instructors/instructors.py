@@ -91,10 +91,17 @@ async def _to_read(db_session: AsyncSession, instructor: Instructor) -> Instruct
         rate, source, currency = await resolve_effective_rate(db_session, instructor, None)
     except HTTPException:
         pass  # no rate configured yet — shown as "—"
+    entity = None
+    if instructor.entity_id:
+        from src.db.administration.entities import Entity
+
+        entity = await db_session.get(Entity, instructor.entity_id)
     return InstructorRead(
         **instructor.model_dump(),
         user=user,
         category=category,
+        entity_uuid=entity.entity_uuid if entity else None,
+        entity_name=entity.name if entity else None,
         effective_hourly_rate=rate,
         rate_source=source,
         rate_currency=currency,
@@ -203,14 +210,23 @@ async def list_instructors(
     db_session: AsyncSession,
     current_user: AnyUser,
     org_id: int,
+    entity_uuid: Optional[str] = None,
 ) -> List[InstructorRead]:
     await authorize_instructor_management(db_session, current_user, org_id, "read")
+    stmt = select(Instructor).where(Instructor.org_id == org_id)
+    if entity_uuid:
+        from src.db.administration.entities import Entity
+
+        entity = (
+            await db_session.execute(
+                select(Entity).where(Entity.entity_uuid == entity_uuid, Entity.org_id == org_id)
+            )
+        ).scalars().first()
+        if entity is None:
+            raise HTTPException(status_code=404, detail="Entity not found")
+        stmt = stmt.where(Instructor.entity_id == entity.id)
     instructors = (
-        await db_session.execute(
-            select(Instructor)
-            .where(Instructor.org_id == org_id)
-            .order_by(Instructor.creation_date.desc())  # type: ignore
-        )
+        await db_session.execute(stmt.order_by(Instructor.creation_date.desc()))  # type: ignore
     ).scalars().all()
     return [await _to_read(db_session, i) for i in instructors]
 

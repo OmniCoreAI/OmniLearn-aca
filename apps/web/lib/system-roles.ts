@@ -2,6 +2,7 @@
 export const SYSTEM_ROLE_NAMES = [
   'Super Admin',
   'Academy Admin',
+  'Entity Coordinator',
   'Organization Coordinator',
   'Instructor',
   'Trainee',

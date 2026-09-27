@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, UploadFile
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -48,10 +48,11 @@ async def api_create_instructor(
 )
 async def api_list_instructors(
     org_id: int,
+    entity_uuid: Optional[str] = None,
     db_session: AsyncSession = Depends(get_db_session),
     current_user: PublicUser = Depends(get_current_user),
 ) -> List[InstructorRead]:
-    return await list_instructors(db_session, current_user, org_id)
+    return await list_instructors(db_session, current_user, org_id, entity_uuid)
 
 
 @router.get(

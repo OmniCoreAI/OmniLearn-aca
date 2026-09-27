@@ -20,6 +20,8 @@ export interface DashNavItemDef {
 export const DASH_NAV_ITEMS: DashNavItemDef[] = [
   { id: 'home', section: 'overview', labelKey: 'common.home', fallbackLabel: 'Home', pathPrefixes: ['/dash'] },
   { id: 'calendar', section: 'overview', labelKey: 'calendar.title', fallbackLabel: 'Calendar', pathPrefixes: ['/dash/calendar'] },
+  // Entity Coordinator portal — only their own entity.
+  { id: 'my-entity', section: 'overview', labelKey: 'entities.portal.nav', fallbackLabel: 'My entity', pathPrefixes: ['/dash/my-entity'] },
   { id: 'postgraduate', section: 'academic', labelKey: 'academic.postgraduate_studies', fallbackLabel: 'Postgraduate Studies', pathPrefixes: ['/dash/postgraduate'] },
   { id: 'training-programs', section: 'academic', labelKey: 'academic.training_programs', fallbackLabel: 'Training Programs', pathPrefixes: ['/dash/training-programs'] },
   { id: 'finance', section: 'academic', labelKey: 'common.finance', fallbackLabel: 'Finance', pathPrefixes: ['/dash/finance'] },
@@ -38,6 +40,7 @@ export const DASH_NAV_ITEMS: DashNavItemDef[] = [
   { id: 'instructors', section: 'administration', labelKey: 'instructors.title', fallbackLabel: 'Instructors', pathPrefixes: ['/dash/instructors'] },
   { id: 'facilities', section: 'administration', labelKey: 'administration.nav.facilities', fallbackLabel: 'Facilities & Rooms', pathPrefixes: ['/dash/administration/facilities'] },
   { id: 'addons', section: 'administration', labelKey: 'administration.nav.addons', fallbackLabel: 'Add-ons', pathPrefixes: ['/dash/administration/add-ons'] },
+  { id: 'entities', section: 'administration', labelKey: 'administration.nav.entities', fallbackLabel: 'Entities', pathPrefixes: ['/dash/administration/entities'] },
 ]
 
 export const DASH_NAV_ITEM_IDS = DASH_NAV_ITEMS.map((item) => item.id)

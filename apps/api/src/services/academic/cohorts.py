@@ -190,6 +190,7 @@ async def create_cohort(
         name=f"{cohort.name} (Cohort)",
         description=f"Enrollment group for cohort {cohort.name}",
         org_id=program.org_id,
+        group_type="cohort",
         usergroup_uuid=f"usergroup_{uuid4()}",
         creation_date=str(datetime.now()),
         update_date=str(datetime.now()),
@@ -380,6 +381,9 @@ async def delete_cohort_dependents(db_session: AsyncSession, cohort: Cohort) -> 
     ).scalars().all()
     for offering in offerings:
         await delete_offering_group(db_session, offering)
+    from src.services.administration.audience import forget_cohort
+
+    await forget_cohort(db_session, cohort)
     if cohort.usergroup_id:
         group = await db_session.get(UserGroup, cohort.usergroup_id)
         if group:

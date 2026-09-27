@@ -89,7 +89,7 @@ class TestIsOrgAdmin:
         # User ID 999 has no UserOrganization row for this org
         assert await is_org_admin(999, org.id, db) is False
 
-    async def test_maintainer_role_returns_true(self, db, org):
+    async def test_entity_coordinator_role_is_not_org_admin(self, db, org):
         # role_id=2 is MAINTAINER_ROLE_ID — create a user+UO with that role
         from src.db.users import User
         from src.db.user_organizations import UserOrganization
@@ -111,14 +111,14 @@ class TestIsOrgAdmin:
         uo = UserOrganization(
             user_id=u.id,
             org_id=org.id,
-            role_id=2,  # MAINTAINER_ROLE_ID
+            role_id=2,  # Entity Coordinator: scoped to its entity, not an academy admin
             creation_date=str(datetime.now()),
             update_date=str(datetime.now()),
         )
         db.add(uo)
         await db.commit()
 
-        assert await is_org_admin(u.id, org.id, db) is True
+        assert await is_org_admin(u.id, org.id, db) is False
 
 
 # ---------------------------------------------------------------------------

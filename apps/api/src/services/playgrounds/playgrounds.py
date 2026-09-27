@@ -19,7 +19,7 @@ from src.security.auth import resolve_acting_user_id
 from src.db.organizations import Organization
 from src.db.user_organizations import UserOrganization
 from src.db.courses.courses import Course
-from src.security.rbac.constants import ADMIN_OR_MAINTAINER_ROLE_IDS
+from src.security.rbac.constants import ACADEMY_ADMIN_ROLE_IDS
 from src.security.superadmin import is_user_superadmin
 from src.services.utils.upload_content import upload_file
 from src.services.webhooks.dispatch import dispatch_webhooks
@@ -93,7 +93,7 @@ async def _is_org_admin(user_id: int, org_id: int, db_session: AsyncSession) -> 
     user_org = (await db_session.execute(statement)).scalars().first()
     if not user_org:
         return False
-    return user_org.role_id in ADMIN_OR_MAINTAINER_ROLE_IDS
+    return user_org.role_id in ACADEMY_ADMIN_ROLE_IDS
 
 
 async def _user_in_playground_usergroup(

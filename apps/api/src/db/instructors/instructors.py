@@ -157,6 +157,11 @@ class Instructor(InstructorBase, table=True):
     )
     # Photo file name (org content: instructors/{instructor_uuid}/images/).
     profile_image: Optional[str] = None
+    # Entity (Administration → Entities) that proposed / employs this instructor.
+    entity_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("entity.id", ondelete="SET NULL"), nullable=True, index=True),
+    )
     instructor_uuid: str = Field(default="", index=True)
     creation_date: str = ""
     update_date: str = ""
@@ -211,6 +216,9 @@ class InstructorRead(InstructorBase):
     category_id: Optional[int] = None
     category: Optional[InstructorCategoryRead] = None
     profile_image: Optional[str] = None
+    entity_id: Optional[int] = None
+    entity_uuid: Optional[str] = None
+    entity_name: Optional[str] = None
     # Resolved for the default delivery language (no language-specific row).
     effective_hourly_rate: Optional[float] = None
     rate_source: Optional[str] = None

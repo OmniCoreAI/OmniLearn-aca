@@ -1,5 +1,6 @@
 import React from 'react'
 import {
+  Buildings,
   ChalkboardTeacher,
   Door,
   Package,
@@ -43,7 +44,7 @@ export const ADMIN_NAV_LINKS: AdminNavLink[] = [
     href: '/dash/administration/facilities',
     labelKey: 'administration.nav.facilities',
     fallback: 'Facilities & Rooms',
-    icon: (size) => <Door size={size} weight="fill" />,
+    icon: (size) => <Door size={size} />,
   },
   {
     navId: 'addons',
@@ -51,6 +52,13 @@ export const ADMIN_NAV_LINKS: AdminNavLink[] = [
     labelKey: 'administration.nav.addons',
     fallback: 'Add-ons',
     icon: (size) => <Package size={size} />,
+  },
+  {
+    navId: 'entities',
+    href: '/dash/administration/entities',
+    labelKey: 'administration.nav.entities',
+    fallback: 'Entities',
+    icon: (size) => <Buildings size={size} />,
   },
   {
     navId: 'administration',

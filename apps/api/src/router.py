@@ -41,6 +41,9 @@ from src.routers.administration import (
     locations as admin_locations_router_module,
     facilities as admin_facilities_router_module,
     addons as admin_addons_router_module,
+    entities as admin_entities_router_module,
+    positions as admin_positions_router_module,
+    audience as admin_audience_router_module,
 )
 from src.routers.folders import folders as folders_router_module
 from src.routers.media import media as media_router_module
@@ -289,6 +292,24 @@ v1_router.include_router(
     admin_addons_router_module.router,
     prefix="/addons",
     tags=["administration", "add-ons"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_entities_router_module.router,
+    prefix="/entities",
+    tags=["administration", "entities"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_positions_router_module.router,
+    prefix="/positions",
+    tags=["administration", "entities"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_audience_router_module.router,
+    prefix="/audience",
+    tags=["administration", "audience"],
     dependencies=[Depends(require_authenticated_user)],
 )
 v1_router.include_router(search.router, prefix="/search", tags=["search"])

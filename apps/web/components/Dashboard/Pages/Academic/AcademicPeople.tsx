@@ -37,7 +37,7 @@ export function CoordinatorPicker({
   access_token: string
   value: string | null
   selectedLabel?: string
-  onChange: (uuid: string | null, label?: string) => void
+  onChange: (_uuid: string | null, _label?: string) => void
   /** Restrict the list to members holding one of these role_uuids (e.g. trainees). */
   onlyRoles?: string[]
   placeholder?: string
@@ -109,8 +109,9 @@ export function CoordinatorPicker({
   )
 }
 
-// Staff roles offered when the instructor registry is still empty (never trainees).
-const STAFF_ROLES = ['role_global_admin', 'role_global_maintainer', 'role_global_instructor']
+// Staff roles offered when the instructor registry is still empty (never trainees,
+// never entity coordinators — they only manage their own entity).
+const STAFF_ROLES = ['role_global_admin', 'role_global_instructor']
 
 /**
  * Pick the lecturer (or teaching assistant) of an offering from the active
