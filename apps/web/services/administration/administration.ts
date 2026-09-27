@@ -310,3 +310,26 @@ export const getEntityProgress = (uuid: string, token: string, group_uuid?: stri
 export const getEntityInstructors = (uuid: string, token: string) => call('GET', `entities/${uuid}/instructors`, token)
 export const inviteEntityInstructor = (uuid: string, data: any, token: string) =>
   call('POST', `entities/${uuid}/instructors/invite`, token, data)
+
+// ----------------------------- Certificate templates -----------------------------
+
+export const getCertificateTemplates = (org_id: number, token: string) => call('GET', `certificate-templates/org/${org_id}`, token)
+export const getCertificateTemplateOptions = (org_id: number, token: string) =>
+  call('GET', `certificate-templates/org/${org_id}/options`, token)
+export const getCertificateTemplate = (uuid: string, token: string) => call('GET', `certificate-templates/${uuid}`, token)
+export const createCertificateTemplate = (org_id: number, data: any, token: string) =>
+  call('POST', `certificate-templates/${qs({ org_id })}`, token, data)
+export const updateCertificateTemplate = (uuid: string, data: any, token: string) =>
+  call('PUT', `certificate-templates/${uuid}`, token, data)
+export const duplicateCertificateTemplate = (uuid: string, token: string) =>
+  call('POST', `certificate-templates/${uuid}/duplicate`, token)
+export const deleteCertificateTemplate = (uuid: string, token: string) => call('DELETE', `certificate-templates/${uuid}`, token)
+export async function uploadCertificateAsset(uuid: string, kind: string, file: File, token: string) {
+  const form = new FormData()
+  form.append('file', file)
+  const result = await fetch(
+    `${getAPIUrl()}certificate-templates/${uuid}/assets/${kind}`,
+    RequestBodyFormWithAuthHeader('PUT', form, null, token)
+  )
+  return errorHandling(result)
+}

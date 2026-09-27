@@ -25,6 +25,7 @@ from src.services.academic.authors import (
     get_user_author,
 )
 from src.services.academic.course_profiles import get_profile_read_for_course
+from src.services.administration.certificates import resolve_template_id, template_uuid_for
 from src.services.administration.facilities import facility_ref, resolve_facility_id
 from src.services.academic.validation import (
     assert_trainingprogram_code_unique,
@@ -52,6 +53,7 @@ async def _to_read(db_session: AsyncSession, tp: TrainingProgram) -> TrainingPro
         authors=authors,
         coordinator=coordinator,
         facility=await facility_ref(db_session, tp.facility_id),
+        certificate_template_uuid=await template_uuid_for(db_session, tp.certificate_template_id),
     )
 
 
@@ -186,6 +188,10 @@ async def update_training_program(
 
     if "facility_uuid" in update_data:
         tp.facility_id = await resolve_facility_id(db_session, tp.org_id, update_data.pop("facility_uuid"))
+    if "certificate_template_uuid" in update_data:
+        tp.certificate_template_id = await resolve_template_id(
+            db_session, tp.org_id, update_data.pop("certificate_template_uuid")
+        )
 
     for key, value in update_data.items():
         setattr(tp, key, value)

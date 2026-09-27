@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   Buildings,
+  Certificate,
   ChalkboardTeacher,
   EnvelopeSimple,
   Door,
@@ -67,6 +68,13 @@ export const ADMIN_NAV_LINKS: AdminNavLink[] = [
     labelKey: 'administration.nav.communication',
     fallback: 'Communication',
     icon: (size) => <EnvelopeSimple size={size} />,
+  },
+  {
+    navId: 'certificate-templates',
+    href: '/dash/administration/certificates',
+    labelKey: 'administration.nav.certificates',
+    fallback: 'Certificates',
+    icon: (size) => <Certificate size={size} />,
   },
   {
     navId: 'administration',

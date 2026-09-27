@@ -54,6 +54,7 @@ ADMINISTRATION_ROUTER_MODULES = [
     "audience",
     "notifications",
     "imports",
+    "certificates",
 ]
 
 

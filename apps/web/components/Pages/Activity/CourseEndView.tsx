@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 const ReactConfetti = dynamic(() => import('react-confetti'), { ssr: false });
@@ -11,6 +11,7 @@ import { useOrg } from '@components/Contexts/OrgContext';
 import { useLHSession } from '@components/Contexts/LHSessionContext';
 import { getUserCertificates } from '@services/courses/certifications';
 import CertificatePreview from '@components/Dashboard/Pages/Course/EditCourseCertification/CertificatePreview';
+import { TemplateCertificateView, TemplateCertificateHandle } from '@components/Certificates/TemplateCertificate';
 import { useTranslation } from 'react-i18next';
 
 interface CourseEndViewProps {
@@ -33,6 +34,7 @@ const CourseEndView: React.FC<CourseEndViewProps> = ({
   const { t, i18n } = useTranslation();
   const { width, height } = useWindowSize();
   const org = useOrg() as any;
+  const templateRef = useRef<TemplateCertificateHandle>(null);
   const session = useLHSession() as any;
   const [userCertificate, setUserCertificate] = useState<any>(null);
   const [isLoadingCertificate, setIsLoadingCertificate] = useState(false);
@@ -119,6 +121,12 @@ const CourseEndView: React.FC<CourseEndViewProps> = ({
   // Generate PDF using canvas
   const downloadCertificate = async () => {
     if (!userCertificate) return;
+    if (userCertificate.render && templateRef.current) {
+      // Template certificates are captured from the shared renderer.
+      const name = (userCertificate.certification.config.certification_name || 'Certificate').replace(/[^a-zA-Z0-9]/g, '_');
+      await templateRef.current.download(`${name}_Certificate.pdf`);
+      return;
+    }
 
     try {
       const [{ default: html2canvas }, { default: jsPDF }, QRCode] = await Promise.all([
@@ -477,6 +485,9 @@ const CourseEndView: React.FC<CourseEndViewProps> = ({
               <h2 className="text-2xl font-semibold text-gray-900">{t('certificate.your_certificate')}</h2>
               <div className="max-w-2xl mx-auto" id="certificate-preview">
                 <div id="certificate-content">
+                  {userCertificate.render ? (
+                    <TemplateCertificateView ref={templateRef} render={userCertificate.render} verifyUrl={qrCodeLink} orgLogo={org?.logo_image} />
+                  ) : (
                   <CertificatePreview
                     certificationName={userCertificate.certification.config.certification_name}
                     certificationDescription={userCertificate.certification.config.certification_description}
@@ -491,6 +502,7 @@ const CourseEndView: React.FC<CourseEndViewProps> = ({
                     })}
                     qrCodeLink={qrCodeLink}
                   />
+                  )}
                 </div>
               </div>
               <div className="flex justify-center space-x-4">

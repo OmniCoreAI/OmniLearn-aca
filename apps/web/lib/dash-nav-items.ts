@@ -41,6 +41,7 @@ export const DASH_NAV_ITEMS: DashNavItemDef[] = [
   { id: 'facilities', section: 'administration', labelKey: 'administration.nav.facilities', fallbackLabel: 'Facilities & Rooms', pathPrefixes: ['/dash/administration/facilities'] },
   { id: 'addons', section: 'administration', labelKey: 'administration.nav.addons', fallbackLabel: 'Add-ons', pathPrefixes: ['/dash/administration/add-ons'] },
   { id: 'communication', section: 'administration', labelKey: 'administration.nav.communication', fallbackLabel: 'Communication', pathPrefixes: ['/dash/administration/communication'] },
+  { id: 'certificate-templates', section: 'administration', labelKey: 'administration.nav.certificates', fallbackLabel: 'Certificates', pathPrefixes: ['/dash/administration/certificates'] },
   { id: 'entities', section: 'administration', labelKey: 'administration.nav.entities', fallbackLabel: 'Entities', pathPrefixes: ['/dash/administration/entities'] },
 ]
 

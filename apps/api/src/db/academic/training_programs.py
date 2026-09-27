@@ -61,6 +61,11 @@ class TrainingProgram(TrainingProgramBase, table=True):
         default=None,
         sa_column=Column(Integer, ForeignKey("facility.id", ondelete="SET NULL"), nullable=True, index=True),
     )
+    # Certificate template for the program's courses (Administration → Certificates).
+    certificate_template_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("certificatetemplate.id", ondelete="SET NULL"), nullable=True),
+    )
     trainingprogram_uuid: str = Field(default="", index=True)
     creation_date: str = ""
     update_date: str = ""
@@ -93,6 +98,8 @@ class TrainingProgramUpdate(SQLModel):
     thumbnail_image: Optional[str] = None
     coordinator_uuid: Optional[str] = None
     facility_uuid: Optional[str] = None
+    # "" clears it.
+    certificate_template_uuid: Optional[str] = None
     public: Optional[bool] = None
     published: Optional[bool] = None
     extra_metadata: Optional[dict] = None
@@ -105,6 +112,7 @@ class TrainingProgramRead(TrainingProgramBase):
     coordinator_id: Optional[int] = None
     coordinator: Optional[UserReadAuthor] = None
     facility: Optional[FacilityRef] = None
+    certificate_template_uuid: Optional[str] = None
     authors: List[AuthorWithRole]
     creation_date: str
     update_date: str

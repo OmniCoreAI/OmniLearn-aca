@@ -9,7 +9,7 @@ import { AlertTriangle, Award, FileText, Settings } from 'lucide-react';
 import CertificatePreview from './CertificatePreview';
 import * as Form from '@radix-ui/react-form';
 import React, { useEffect, useState, useRef } from 'react';
-import { useCourseFieldSync, useCourse } from '@components/Contexts/CourseContext';
+import { useCourseFieldSync } from '@components/Contexts/CourseContext';
 import { useLHSession } from '@components/Contexts/LHSessionContext';
 import { useOrg } from '@components/Contexts/OrgContext';
 import { 
@@ -26,6 +26,8 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query/keys';
 import { getCourseCertifications } from '@services/courses/certifications';
+import { getCertificateTemplate, getCertificateTemplateOptions } from '@services/administration/administration';
+import { SAMPLE_CERTIFICATE_VARIABLES, TemplateCertificate } from '@components/Certificates/TemplateCertificate';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
@@ -52,11 +54,10 @@ const validate = (values: any, t: any) => {
   return errors;
 };
 
-function EditCourseCertification(props: EditCourseCertificationProps) {
+function EditCourseCertification(_props: EditCourseCertificationProps) {
   const { t } = useTranslation()
   const [error, setError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const course = useCourse() as any;
   const session = useLHSession() as any;
   const org = useOrg() as any;
   const access_token = session?.data?.tokens?.access_token;
@@ -120,17 +121,32 @@ function EditCourseCertification(props: EditCourseCertificationProps) {
       certification_type: config.certification_type || 'completion',
       certificate_pattern: config.certificate_pattern || 'professional',
       certificate_instructor: config.certificate_instructor || getInstructorName(),
+      certificate_template_uuid: config.certificate_template_uuid || '',
     };
   };
 
   const formik = useFormik({
     initialValues: getInitialValues(),
     validate: (values) => validate(values, t),
-    onSubmit: async values => {
+    onSubmit: async () => {
       // This is no longer used - saving is handled by the main Save button
     },
     enableReinitialize: true,
   }) as any;
+
+  // Certificate templates: explicit choice, else the academy default.
+  const { data: templateOptions = [] } = useQuery({
+    queryKey: ['administration', 'certificate-template-options', org?.id],
+    queryFn: () => getCertificateTemplateOptions(org.id, access_token),
+    enabled: !!org?.id && !!access_token,
+  });
+  const defaultTemplate = (templateOptions as any[]).find((o) => o.is_default);
+  const activeTemplateUuid = formik.values.certificate_template_uuid || defaultTemplate?.template_uuid || '';
+  const { data: activeTemplate } = useQuery({
+    queryKey: ['administration', 'certificate-template', activeTemplateUuid],
+    queryFn: () => getCertificateTemplate(activeTemplateUuid, access_token),
+    enabled: !!activeTemplateUuid && !!access_token,
+  });
 
   // Handle enabling/disabling certification
   const handleCertificationToggle = async (enabled: boolean) => {
@@ -144,6 +160,7 @@ function EditCourseCertification(props: EditCourseCertificationProps) {
           certification_type: formik.values.certification_type || 'completion',
           certificate_pattern: formik.values.certificate_pattern || 'professional',
           certificate_instructor: formik.values.certificate_instructor || '',
+          certificate_template_uuid: formik.values.certificate_template_uuid || undefined,
         };
 
         const result = await createCertification(
@@ -163,7 +180,7 @@ function EditCourseCertification(props: EditCourseCertificationProps) {
         } else {
           throw new Error('Failed to create certification');
         }
-      } catch (e) {
+      } catch {
         setError(t('dashboard.courses.certification.errors.create_failed'));
         toast.error(t('dashboard.courses.certification.toasts.create_error'));
         formik.setFieldValue('enable_certification', false);
@@ -187,7 +204,7 @@ function EditCourseCertification(props: EditCourseCertificationProps) {
         } else {
           throw new Error('Failed to delete certification');
         }
-      } catch (e) {
+      } catch {
         setError(t('dashboard.courses.certification.errors.remove_failed'));
         toast.error(t('dashboard.courses.certification.toasts.remove_error'));
         formik.setFieldValue('enable_certification', true);
@@ -241,6 +258,7 @@ function EditCourseCertification(props: EditCourseCertificationProps) {
             certification_type: formikValues.certification_type,
             certificate_pattern: formikValues.certificate_pattern,
             certificate_instructor: formikValues.certificate_instructor,
+            certificate_template_uuid: formikValues.certificate_template_uuid || undefined,
           }
         }
       };
@@ -411,7 +429,29 @@ function EditCourseCertification(props: EditCourseCertificationProps) {
                       </p>
                     </div>
 
-                    {/* Pattern Selection */}
+                    {/* Certificate template (Administration → Certificates) */}
+                    {templateOptions.length > 0 && (
+                      <FormField name="certificate_template_uuid">
+                        <FormLabelAndMessage label={t('certificates.course_template', 'Certificate template')} />
+                        <select
+                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                          value={formik.values.certificate_template_uuid}
+                          onChange={(e) => formik.setFieldValue('certificate_template_uuid', e.target.value)}
+                        >
+                          <option value="">
+                            {defaultTemplate
+                              ? `${t('certificates.academy_default', 'Academy default')} (${defaultTemplate.name})`
+                              : t('certificates.use_pattern', 'Built-in pattern below')}
+                          </option>
+                          {templateOptions.map((o: any) => (
+                            <option key={o.template_uuid} value={o.template_uuid}>{o.name}</option>
+                          ))}
+                        </select>
+                      </FormField>
+                    )}
+
+                    {/* Pattern Selection (used when no template applies) */}
+                    {!activeTemplateUuid && (
                     <FormField name="certificate_pattern">
                       <FormLabelAndMessage label={t('dashboard.courses.certification.form.certificate_pattern_label')} />
                       <Form.Control asChild>
@@ -435,6 +475,7 @@ function EditCourseCertification(props: EditCourseCertificationProps) {
                         </div>
                       </Form.Control>
                     </FormField>
+                    )}
 
                     {/* Custom Instructor */}
                     <FormField name="certificate_instructor">
@@ -466,6 +507,23 @@ function EditCourseCertification(props: EditCourseCertificationProps) {
                     </div>
                     
                     <div className="p-4">
+                      {activeTemplate ? (
+                        <div className="overflow-x-auto">
+                          <TemplateCertificate
+                            template={activeTemplate}
+                            variables={{
+                              ...SAMPLE_CERTIFICATE_VARIABLES,
+                              course_name: courseStructure?.name || SAMPLE_CERTIFICATE_VARIABLES.course_name,
+                              certification_name: formik.values.certification_name,
+                              instructor_name: formik.values.certificate_instructor || SAMPLE_CERTIFICATE_VARIABLES.instructor_name,
+                              org_name: org?.name || SAMPLE_CERTIFICATE_VARIABLES.org_name,
+                            }}
+                            orgUuid={org?.org_uuid}
+                            orgLogo={org?.logo_image}
+                            scale={activeTemplate.orientation === 'portrait' ? 0.34 : 0.4}
+                          />
+                        </div>
+                      ) : (
                       <CertificatePreview
                         certificationName={formik.values.certification_name}
                         certificationDescription={formik.values.certification_description}
@@ -473,6 +531,7 @@ function EditCourseCertification(props: EditCourseCertificationProps) {
                         certificatePattern={formik.values.certificate_pattern}
                         certificateInstructor={formik.values.certificate_instructor}
                       />
+                      )}
                     </div>
                   </div>
                 </div>
