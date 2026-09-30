@@ -15,7 +15,7 @@ from typing import Iterable, List, Optional, Sequence
 from uuid import uuid4
 
 from fastapi import HTTPException, UploadFile
-from sqlmodel import delete, func, or_, select
+from sqlmodel import and_, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.administration.entities import (
@@ -208,6 +208,22 @@ async def _entity_read(
             )
         )
     ).scalar() or 0
+    from src.db.administration.audience import AudienceAssignment, AudienceType
+
+    learning_count = (
+        await db_session.execute(
+            select(func.count(func.distinct(AudienceAssignment.resource_uuid))).where(
+                AudienceAssignment.org_id == entity.org_id,
+                or_(
+                    AudienceAssignment.entity_id == entity.id,
+                    and_(
+                        AudienceAssignment.audience_type == AudienceType.ENTITY.value,
+                        AudienceAssignment.audience_id == entity.id,
+                    ),
+                ),
+            )
+        )
+    ).scalar() or 0
     coordinators = (
         await db_session.execute(
             select(User)
@@ -226,6 +242,7 @@ async def _entity_read(
         members_group_uuid=members_group.usergroup_uuid if members_group else None,
         member_count=int(member_count),
         group_count=int(group_count),
+        learning_count=int(learning_count),
         coordinators=[_author(u) for u in coordinators],
         viewer_is_coordinator=viewer_is_coordinator,
     )

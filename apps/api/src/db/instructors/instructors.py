@@ -223,6 +223,8 @@ class InstructorRead(InstructorBase):
     effective_hourly_rate: Optional[float] = None
     rate_source: Optional[str] = None
     rate_currency: Optional[str] = None
+    # Distinct courses taught or co-authored (filled on list reads).
+    course_count: int = 0
     creation_date: str
     update_date: str
     extra_metadata: Optional[dict] = None

@@ -3,6 +3,12 @@
 from datetime import datetime
 
 from src.db.courses.courses import Course
+from src.db.instructors.instructors import Instructor, InstructorStatus
+from src.db.resource_authors import (
+    ResourceAuthor,
+    ResourceAuthorshipEnum,
+    ResourceAuthorshipStatusEnum,
+)
 from src.db.trail_runs import StatusEnum, TrailRun
 from src.db.trail_steps import TrailStep
 from src.db.trails import Trail
@@ -104,6 +110,7 @@ async def test_home_overview_aggregates_org_data(db, org, other_org, admin_user,
     assert totals["completions"] == 1
     assert totals["students"] == 2
     assert totals["enrollments_30d"] == 2
+    assert data["attention"]["draft_courses"] == 1
 
     trend = data["enrollment_trend"]
     assert [{k: r[k] for k in ("month", "enrollments", "completions")} for r in trend] == [
@@ -145,4 +152,65 @@ async def test_home_overview_empty_org(db, org):
     assert data["totals"]["enrollments"] == 0
     assert len(data["enrollment_trend"]) == 7
     assert data["top_courses"] == []
+    assert data["top_instructors"] == []
     assert data["recent_activity"] == []
+    assert data["attention"] == {
+        "submissions_to_grade": 0,
+        "applications_to_review": 0,
+        "tests_to_review": 0,
+        "grades_to_approve": 0,
+        "draft_courses": 0,
+    }
+
+
+def _author(user_id, course_uuid, authorship, status=ResourceAuthorshipStatusEnum.ACTIVE):
+    return ResourceAuthor(
+        resource_uuid=course_uuid,
+        user_id=user_id,
+        authorship=authorship,
+        authorship_status=status,
+    )
+
+
+async def test_home_overview_ranks_instructors(db, org, admin_user, regular_user, course):
+    await _enroll(db, org, regular_user.id, course.id, "2026-09-01 10:00:00", status=StatusEnum.STATUS_COMPLETED)
+    await _enroll(db, org, admin_user.id, course.id, "2026-09-02 10:00:00")
+    db.add_all(
+        [
+            _author(admin_user.id, course.course_uuid, ResourceAuthorshipEnum.CREATOR),
+            # Pending invitations and reporters don't count as teaching.
+            _author(regular_user.id, course.course_uuid, ResourceAuthorshipEnum.CONTRIBUTOR, ResourceAuthorshipStatusEnum.PENDING),
+            _author(regular_user.id, course.course_uuid, ResourceAuthorshipEnum.REPORTER),
+            # A registry lecturer shows up even without courses yet.
+            Instructor(
+                org_id=org.id,
+                user_id=regular_user.id,
+                instructor_uuid="instructor_reg",
+                department="AI",
+                status=InstructorStatus.ACTIVE,
+            ),
+        ]
+    )
+    await db.commit()
+
+    data = await get_home_overview(org.id, db, now=NOW)
+
+    top = data["top_instructors"]
+    assert [i["user"]["username"] for i in top] == [admin_user.username, regular_user.username]
+    assert top[0] | {"user": None} == {
+        "instructor_uuid": None,
+        "department": None,
+        "courses": 1,
+        "enrollments": 2,
+        "completions": 1,
+        "user": None,
+    }
+    assert top[1]["instructor_uuid"] == "instructor_reg"
+    assert top[1]["department"] == "AI"
+    assert top[1]["courses"] == 0
+
+
+async def test_home_overview_counts_submissions_to_grade(db, org, user_submission, graded_submission):
+    data = await get_home_overview(org.id, db, now=NOW)
+    # Only the submitted one waits for a grade; the graded one is done.
+    assert data["attention"]["submissions_to_grade"] == 1

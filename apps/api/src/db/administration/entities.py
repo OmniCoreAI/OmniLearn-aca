@@ -130,6 +130,8 @@ class EntityRead(EntityBase):
     members_group_uuid: Optional[str] = None
     member_count: int = 0
     group_count: int = 0
+    # Distinct courses / programs assigned to the entity or any of its groups.
+    learning_count: int = 0
     coordinators: List[UserReadAuthor] = []
     # Set on reads for the calling coordinator (None for academy staff).
     viewer_is_coordinator: bool = False

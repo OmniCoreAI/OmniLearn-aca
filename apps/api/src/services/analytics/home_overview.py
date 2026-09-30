@@ -15,18 +15,44 @@ from sqlalchemy import case, func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.db.academic.admissions import (
+    AdmissionApplication,
+    ApplicationStatus,
+    EntranceTestAttempt,
+    TestAttemptStatus,
+)
+from src.db.academic.course_profiles import CourseAcademicProfile
+from src.db.academic.grading import GradeStatus
+from src.db.academic.offerings import CourseOffering
 from src.db.courses.activities import Activity
+from src.db.courses.assignments import (
+    Assignment,
+    AssignmentUserSubmission,
+    AssignmentUserSubmissionStatus,
+)
 from src.db.courses.courses import Course
+from src.db.instructors.instructors import Instructor, InstructorStatus
+from src.db.resource_authors import (
+    ResourceAuthor,
+    ResourceAuthorshipEnum,
+    ResourceAuthorshipStatusEnum,
+)
 from src.db.trail_runs import StatusEnum, TrailRun
 from src.db.trail_steps import TrailStep
 from src.db.user_organizations import UserOrganization
 from src.db.users import User
 
 TOP_COURSES_LIMIT = 5
+TOP_INSTRUCTORS_LIMIT = 5
 RECENT_COURSES_LIMIT = 3
 RECENT_ACTIVITY_LIMIT = 8
 LEARNER_PREVIEW_LIMIT = 3
 HEATMAP_DAYS = 30
+TEACHING_AUTHORSHIPS = (
+    ResourceAuthorshipEnum.CREATOR,
+    ResourceAuthorshipEnum.MAINTAINER,
+    ResourceAuthorshipEnum.CONTRIBUTOR,
+)
 
 
 def _parse_ts(value: Optional[str]) -> Optional[datetime]:
@@ -243,6 +269,80 @@ async def get_home_overview(
         if course_id in courses_by_id
     ][:TOP_COURSES_LIMIT]
 
+    # --- Top instructors ----------------------------------------------------
+    # Someone teaches a course when they are an active author of it, the
+    # lecturer on its academic profile, or the instructor of an offering
+    # delivered through it. Registry instructors appear even before they
+    # teach anything, so a new academy still sees its lecturers.
+    course_id_by_uuid = {row.course_uuid: row.id for row in course_rows}
+    teaching: dict[int, set[int]] = {}
+
+    def teaches(user_id: Optional[int], course_id: Optional[int]) -> None:
+        if user_id is not None and course_id in courses_by_id:
+            teaching.setdefault(user_id, set()).add(course_id)
+
+    for user_id, resource_uuid in (
+        await db_session.execute(
+            select(ResourceAuthor.user_id, ResourceAuthor.resource_uuid).where(
+                ResourceAuthor.resource_uuid.in_(list(course_id_by_uuid) or [""]),  # type: ignore
+                ResourceAuthor.authorship.in_(TEACHING_AUTHORSHIPS),  # type: ignore
+                ResourceAuthor.authorship_status == ResourceAuthorshipStatusEnum.ACTIVE,
+            )
+        )
+    ).all():
+        teaches(user_id, course_id_by_uuid.get(resource_uuid))
+    for user_id, course_id in (
+        await db_session.execute(
+            select(CourseAcademicProfile.instructor_id, CourseAcademicProfile.course_id).where(
+                CourseAcademicProfile.org_id == org_id,
+                CourseAcademicProfile.instructor_id.is_not(None),  # type: ignore
+            )
+        )
+    ).all():
+        teaches(user_id, course_id)
+    for user_id, course_id in (
+        await db_session.execute(
+            select(CourseOffering.instructor_id, CourseOffering.content_course_id).where(
+                CourseOffering.org_id == org_id,
+                CourseOffering.instructor_id.is_not(None),  # type: ignore
+                CourseOffering.content_course_id.is_not(None),  # type: ignore
+            )
+        )
+    ).all():
+        teaches(user_id, course_id)
+
+    registry = {
+        user_id: (instructor_uuid, department)
+        for user_id, instructor_uuid, department in (
+            await db_session.execute(
+                select(Instructor.user_id, Instructor.instructor_uuid, Instructor.department).where(
+                    Instructor.org_id == org_id,
+                    Instructor.status == InstructorStatus.ACTIVE,
+                )
+            )
+        ).all()
+    }
+
+    def instructor_stats(user_id: int) -> dict[str, Any]:
+        course_ids = teaching.get(user_id, set())
+        enrolled = sum(per_course.get(course_id, (0, 0))[0] for course_id in course_ids)
+        done = sum(per_course.get(course_id, (0, 0))[1] for course_id in course_ids)
+        instructor_uuid, department = registry.get(user_id, (None, None))
+        return {
+            "user_id": user_id,
+            "instructor_uuid": instructor_uuid,
+            "department": department,
+            "courses": len(course_ids),
+            "enrollments": enrolled,
+            "completions": done,
+        }
+
+    ranked_instructors = sorted(
+        (instructor_stats(user_id) for user_id in set(teaching) | set(registry)),
+        key=lambda item: (item["enrollments"], item["courses"], item["completions"]),
+        reverse=True,
+    )[:TOP_INSTRUCTORS_LIMIT]
+
     recent_rows = sorted(course_rows, key=lambda row: row.creation_date or "", reverse=True)[
         :RECENT_COURSES_LIMIT
     ]
@@ -280,7 +380,11 @@ async def get_home_overview(
         if len(bucket) < LEARNER_PREVIEW_LIMIT and user_id not in bucket:
             bucket.append(user_id)
 
-    user_ids = {row.user_id for row in recent_runs} | {row.user_id for row in recent_members}
+    user_ids = (
+        {row.user_id for row in recent_runs}
+        | {row.user_id for row in recent_members}
+        | {item["user_id"] for item in ranked_instructors}
+    )
     for ids in learners_by_course.values():
         user_ids.update(ids)
     users = {
@@ -294,6 +398,12 @@ async def get_home_overview(
         payload["learners"] = [
             _user_payload(users.get(user_id)) for user_id in learners_by_course.get(row.id, []) if user_id in users
         ]
+
+    top_instructors = [
+        {**{k: v for k, v in item.items() if k != "user_id"}, "user": _user_payload(users[item["user_id"]])}
+        for item in ranked_instructors
+        if item["user_id"] in users
+    ]
 
     def course_ref(course_id: int) -> Optional[dict[str, Any]]:
         row = courses_by_id.get(course_id)
@@ -330,6 +440,48 @@ async def get_home_overview(
         )
     events.sort(key=lambda event: event["timestamp"] or "", reverse=True)
 
+    # --- Work waiting on staff ---------------------------------------------
+    async def count(stmt: Any) -> int:
+        return int((await db_session.execute(stmt)).scalar_one())
+
+    attention = {
+        "submissions_to_grade": await count(
+            select(func.count())
+            .select_from(AssignmentUserSubmission)
+            .join(Assignment, Assignment.id == AssignmentUserSubmission.assignment_id)  # type: ignore
+            .where(
+                Assignment.org_id == org_id,
+                AssignmentUserSubmission.submission_status.in_(  # type: ignore
+                    [AssignmentUserSubmissionStatus.SUBMITTED, AssignmentUserSubmissionStatus.LATE]
+                ),
+            )
+        ),
+        "applications_to_review": await count(
+            select(func.count())
+            .select_from(AdmissionApplication)
+            .where(
+                AdmissionApplication.org_id == org_id,
+                AdmissionApplication.status.in_(  # type: ignore
+                    [ApplicationStatus.SUBMITTED, ApplicationStatus.UNDER_REVIEW]
+                ),
+            )
+        ),
+        "tests_to_review": await count(
+            select(func.count())
+            .select_from(EntranceTestAttempt)
+            .where(
+                EntranceTestAttempt.org_id == org_id,
+                EntranceTestAttempt.status == TestAttemptStatus.PENDING_REVIEW,
+            )
+        ),
+        "grades_to_approve": await count(
+            select(func.count())
+            .select_from(CourseOffering)
+            .where(CourseOffering.org_id == org_id, CourseOffering.grade_status == GradeStatus.SUBMITTED.value)
+        ),
+        "draft_courses": sum(1 for row in course_rows if not row.published),
+    }
+
     return {
         "totals": {
             "students": int(students),
@@ -345,6 +497,8 @@ async def get_home_overview(
         "enrollment_trend": enrollment_trend,
         "activity_heatmap": activity_heatmap,
         "top_courses": top_courses,
+        "top_instructors": top_instructors,
         "recent_courses": recent_courses,
         "recent_activity": events[:RECENT_ACTIVITY_LIMIT],
+        "attention": attention,
     }

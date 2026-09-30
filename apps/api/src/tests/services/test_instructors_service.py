@@ -527,6 +527,12 @@ class TestApprovalAndPickers:
 
 class TestInstructorCourses:
     @pytest.mark.asyncio
+    async def test_list_counts_zero_without_courses(self, db, org, admin_user, regular_user):
+        inst = await _make_instructor(db, admin_user, org, regular_user)
+        listed = await inst_svc.list_instructors(db, admin_user, org.id)
+        assert [(i.instructor_uuid, i.course_count) for i in listed] == [(inst.instructor_uuid, 0)]
+
+    @pytest.mark.asyncio
     async def test_assign_list_unassign(self, db, org, admin_user, regular_user, course):
         inst = await _make_instructor(db, admin_user, org, regular_user)
         courses = await inst_svc.assign_instructor_course(db, admin_user, inst.instructor_uuid, course.course_uuid)
@@ -544,6 +550,11 @@ class TestInstructorCourses:
             )
         ).scalars().first()
         assert author is not None
+
+        # The list read counts it once, even though it comes from two sources
+        # (academic profile + authorship).
+        listed = {i.instructor_uuid: i for i in await inst_svc.list_instructors(db, admin_user, org.id)}
+        assert listed[inst.instructor_uuid].course_count == 1
 
         courses = await inst_svc.unassign_instructor_course(db, admin_user, inst.instructor_uuid, course.course_uuid)
         # Authorship is kept, so the course is still listed as co-authored.

@@ -228,7 +228,56 @@ async def list_instructors(
     instructors = (
         await db_session.execute(stmt.order_by(Instructor.creation_date.desc()))  # type: ignore
     ).scalars().all()
-    return [await _to_read(db_session, i) for i in instructors]
+    counts = await _course_counts(db_session, org_id, [i.user_id for i in instructors])
+    reads = [await _to_read(db_session, i) for i in instructors]
+    for read in reads:
+        read.course_count = counts.get(read.user_id, 0)
+    return reads
+
+
+async def _course_counts(db_session: AsyncSession, org_id: int, user_ids: List[int]) -> dict[int, int]:
+    """Distinct courses per user across the same sources as ``list_instructor_courses``
+    (academic profile, offering instructor/TA, authorship), in three queries."""
+    if not user_ids:
+        return {}
+    courses: dict[int, set[int]] = {}
+
+    def add(rows) -> None:
+        for user_id, course_id in rows:
+            if user_id is not None:
+                courses.setdefault(user_id, set()).add(course_id)
+
+    add(
+        (
+            await db_session.execute(
+                select(CourseAcademicProfile.instructor_id, Course.id)
+                .join(Course, Course.id == CourseAcademicProfile.course_id)  # type: ignore[arg-type]
+                .where(CourseAcademicProfile.instructor_id.in_(user_ids), Course.org_id == org_id)  # type: ignore[union-attr]
+            )
+        ).all()
+    )
+    offerings = (
+        await db_session.execute(
+            select(CourseOffering.instructor_id, CourseOffering.teaching_assistant_id, Course.id)
+            .join(Course, Course.id == CourseOffering.content_course_id)  # type: ignore[arg-type]
+            .where(
+                (CourseOffering.instructor_id.in_(user_ids)) | (CourseOffering.teaching_assistant_id.in_(user_ids)),  # type: ignore[union-attr]
+                Course.org_id == org_id,
+            )
+        )
+    ).all()
+    add((instructor_id, course_id) for instructor_id, _, course_id in offerings)
+    add((assistant_id, course_id) for _, assistant_id, course_id in offerings)
+    add(
+        (
+            await db_session.execute(
+                select(ResourceAuthor.user_id, Course.id)
+                .join(Course, Course.course_uuid == ResourceAuthor.resource_uuid)  # type: ignore[arg-type]
+                .where(ResourceAuthor.user_id.in_(user_ids), Course.org_id == org_id)  # type: ignore[attr-defined]
+            )
+        ).all()
+    )
+    return {user_id: len(ids) for user_id, ids in courses.items()}
 
 
 async def list_instructor_options(

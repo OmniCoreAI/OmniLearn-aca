@@ -383,8 +383,12 @@ class TestAudience:
 
         audience = await aud_svc.get_resource_audience(db, admin_user, "course", course.course_uuid)
         assert audience.covered_users == 1 and audience.other_groups == []
+        listed = {e.entity_uuid: e for e in await ent_svc.list_entities(db, admin_user, org.id)}
+        assert listed[entity.entity_uuid].learning_count == 1
 
         await aud_svc.delete_assignment(db, admin_user, assignment.assignment_uuid)
+        listed = {e.entity_uuid: e for e in await ent_svc.list_entities(db, admin_user, org.id)}
+        assert listed[entity.entity_uuid].learning_count == 0
         links = (await db.execute(select(UserGroupResource).where(UserGroupResource.resource_uuid == course.course_uuid))).scalars().all()
         assert links == []
 

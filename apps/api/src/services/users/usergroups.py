@@ -3,7 +3,7 @@ import logging
 from typing import Literal
 from uuid import uuid4
 from fastapi import HTTPException, Request
-from sqlmodel import select
+from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.security.features_utils.usage import (
     check_limits_with_usage,
@@ -94,6 +94,31 @@ async def enrich_usergroups(
             await db_session.execute(select(Entity).where(Entity.id.in_(entity_ids)))  # type: ignore[union-attr]
         ).scalars().all()
         entities = {e.id: e for e in rows if e.id is not None}
+    group_ids = [ug.id for ug in usergroups if ug.id is not None]
+    member_counts: dict[int, int] = {}
+    course_counts: dict[int, int] = {}
+    if group_ids:
+        member_counts = dict(
+            (
+                await db_session.execute(
+                    select(UserGroupUser.usergroup_id, func.count())
+                    .where(UserGroupUser.usergroup_id.in_(group_ids))  # type: ignore[attr-defined]
+                    .group_by(UserGroupUser.usergroup_id)
+                )
+            ).all()
+        )
+        course_counts = dict(
+            (
+                await db_session.execute(
+                    select(UserGroupResource.usergroup_id, func.count())
+                    .where(
+                        UserGroupResource.usergroup_id.in_(group_ids),  # type: ignore[attr-defined]
+                        UserGroupResource.resource_uuid.startswith("course_"),  # type: ignore[attr-defined]
+                    )
+                    .group_by(UserGroupResource.usergroup_id)
+                )
+            ).all()
+        )
     reads = []
     for ug in usergroups:
         read = UserGroupRead.model_validate(ug)
@@ -102,6 +127,8 @@ async def enrich_usergroups(
             read.entity_uuid = entity.entity_uuid
             read.entity_name = entity.name
         read.managed = _is_locked(ug)
+        read.member_count = int(member_counts.get(ug.id, 0)) if ug.id is not None else 0
+        read.course_count = int(course_counts.get(ug.id, 0)) if ug.id is not None else 0
         reads.append(read)
     return reads
 

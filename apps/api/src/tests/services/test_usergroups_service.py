@@ -10,12 +10,13 @@ from src.db.boards import Board
 from src.db.usergroup_resources import UserGroupResource
 from src.db.usergroup_user import UserGroupUser
 from src.db.users import APITokenUser, InternalUser
-from src.db.usergroups import UserGroupCreate, UserGroupUpdate
+from src.db.usergroups import UserGroup, UserGroupCreate, UserGroupUpdate
 from src.services.users.usergroups import (
     _validate_resource_exists_and_belongs_to_org,
     add_resources_to_usergroup,
     add_users_to_usergroup,
     create_usergroup,
+    enrich_usergroups,
     delete_usergroup_by_id,
     get_resources_by_usergroup,
     get_usergroups_by_resource,
@@ -536,6 +537,8 @@ class TestUsergroupsService:
             groups_for_resource = await get_usergroups_by_resource(
                 mock_request, db, admin_user, board.board_uuid
             )
+            # List reads count members; only course links count as courses.
+            listed = {g.id: g for g in await enrich_usergroups(db, [await db.get(UserGroup, usergroup.id)])}
             remove_users = await remove_users_from_usergroup(
                 mock_request, db, admin_user, usergroup.id, str(regular_user.id)
             )
@@ -548,6 +551,7 @@ class TestUsergroupsService:
         assert {user.id for user in users} == {admin_user.id, regular_user.id}
         assert resources == [board.board_uuid]
         assert groups_for_resource[0].id == usergroup.id
+        assert (listed[usergroup.id].member_count, listed[usergroup.id].course_count) == (2, 0)
         assert remove_users == "Users removed from UserGroup successfully"
         assert remove_resources == "Resources removed from UserGroup successfully"
 

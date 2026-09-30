@@ -67,5 +67,8 @@ class UserGroupRead(UserGroupBase):
     group_type: str = UserGroupType.GENERAL.value
     status: str = "active"
     managed: bool = False
+    # Filled by list reads (enrich_usergroups).
+    member_count: int = 0
+    course_count: int = 0
     creation_date: str
     update_date: str
