@@ -220,7 +220,7 @@ function DashMobileMenu() {
                 {isEnabled('playgrounds') && isItemVisible('playgrounds') && <PanelItem href="/dash/playgrounds" icon={<Cube size={15} weight="fill" />} label="Playgrounds" active={isActive('/dash/playgrounds')} onClick={close} />}
                 {isEnabled('payments') && isItemVisible('payments') && <PanelItem href="/dash/payments/overview" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.payments')} active={isActive('/dash/payments')} onClick={close} />}
                 {isItemVisible('analytics') && <PanelItem href="/dash/analytics" icon={<ChartBar size={15} weight="fill" />} label="Analytics" active={isActive('/dash/analytics')} onClick={close} />}
-                {isItemVisible('organization') && <PanelItem href="/dash/org/settings/general" icon={<Buildings size={15} weight="fill" />} label={t('common.organization')} active={isActive('/dash/org')} onClick={close} />}
+                {isItemVisible('organization') && <PanelItem href="/dash/org/settings/general" icon={<Buildings size={15} weight="fill" />} label={t('common.academy_settings', 'Academy settings')} active={isActive('/dash/org')} onClick={close} />}
                 {ADMIN_NAV_LINKS.filter((link) => isItemVisible(link.navId)).map((link) => (
                   <PanelItem key={link.href} href={link.href} icon={link.icon(15)} label={t(link.labelKey, link.fallback)} active={isAdminLinkActive(link, pathname)} onClick={close} />
                 ))}

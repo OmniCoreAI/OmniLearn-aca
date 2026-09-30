@@ -48,7 +48,7 @@ export default function CourseCover({
   /** Uploaded thumbnail; the generated cover shows if it is missing or broken. */
   src?: string | null
   className?: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'lg'
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
   const palette = COVERS[hash(seed ?? name) % COVERS.length]!
@@ -73,6 +73,7 @@ export default function CourseCover({
       <span
         className={cn(
           'absolute bottom-3 start-4 font-semibold tracking-tight',
+          size === 'xs' && 'bottom-1 start-1.5 text-[11px]',
           size === 'sm' && 'text-xl',
           size === 'md' && 'text-3xl',
           size === 'lg' && 'text-5xl'

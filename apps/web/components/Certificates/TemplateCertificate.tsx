@@ -89,7 +89,7 @@ function useQrCode(value?: string) {
   return url
 }
 
-const assetUrl = (orgUuid: string, path?: string | null) =>
+export const assetUrl = (orgUuid: string, path?: string | null) =>
   path ? getOrgContentUrl(orgUuid, `certificates/templates/${path}`) : ''
 
 function Border({ style, color, accent }: { style: string; color: string; accent: string }) {
@@ -159,7 +159,9 @@ export const TemplateCertificate = forwardRef<
   }
 
   return (
-    <div style={{ width: width * scale, height: height * scale, overflow: 'hidden' }}>
+    // The wrapper stays LTR so the top-left scale origin also works on RTL pages;
+    // the sheet sets the certificate's own text direction.
+    <div style={{ width: width * scale, height: height * scale, overflow: 'hidden', direction: 'ltr' }}>
       <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width, height }}>
         <div ref={ref} style={sheet}>
           {modern && (

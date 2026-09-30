@@ -129,7 +129,7 @@ function OrgPage(props: { params: Promise<OrgParams> }) {
       <div className="relative z-10 min-w-0 flex-shrink-0 border-b border-[hsl(var(--dash-border))]/70 bg-[hsl(var(--dash-canvas))] px-4 tracking-tight sm:px-10">
         <div className="pb-4 pt-6">
           <Breadcrumbs items={[
-            { label: t('common.organization'), href: '/dash/org/settings/general', icon: <School size={14} /> }
+            { label: t('common.academy_settings', 'Academy settings'), href: '/dash/org/settings/general', icon: <School size={14} /> }
           ]} />
         </div>
         <div className="my-2 py-3">

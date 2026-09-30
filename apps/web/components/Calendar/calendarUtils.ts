@@ -24,13 +24,16 @@ export const EVENT_STYLES: Record<
   CalendarEventType,
   { dot: string; bg: string; fg: string; icon: React.ElementType }
 > = {
-  lecture: { dot: 'hsl(43 80% 50%)', bg: 'hsl(43 78% 92%)', fg: 'hsl(38 75% 30%)', icon: ChalkboardTeacher },
-  class: { dot: 'hsl(28 70% 52%)', bg: 'hsl(28 80% 93%)', fg: 'hsl(24 70% 32%)', icon: BookOpen },
-  exam: { dot: 'hsl(0 0% 12%)', bg: 'hsl(0 0% 92%)', fg: 'hsl(0 0% 10%)', icon: Exam },
-  deadline: { dot: 'hsl(351 80% 48%)', bg: 'hsl(351 75% 94%)', fg: 'hsl(351 80% 36%)', icon: HourglassMedium },
-  term: { dot: 'hsl(40 10% 58%)', bg: 'hsl(40 16% 93%)', fg: 'hsl(30 8% 32%)', icon: FlagBanner },
-  program: { dot: 'hsl(160 38% 40%)', bg: 'hsl(160 35% 92%)', fg: 'hsl(160 45% 24%)', icon: CalendarCheck },
-  interview: { dot: 'hsl(222 38% 50%)', bg: 'hsl(222 45% 94%)', fg: 'hsl(222 45% 32%)', icon: UsersThree },
+  // Brand gold, bronze, ink and flag red first; slate, emerald and indigo keep
+  // the remaining types distinguishable. dot = the event colour, bg = its tint,
+  // fg = readable text on that tint.
+  lecture: { dot: 'hsl(43 85% 48%)', bg: 'hsl(43 90% 92%)', fg: 'hsl(36 80% 28%)', icon: ChalkboardTeacher },
+  class: { dot: 'hsl(24 80% 52%)', bg: 'hsl(24 90% 93%)', fg: 'hsl(20 75% 32%)', icon: BookOpen },
+  exam: { dot: 'hsl(0 0% 12%)', bg: 'hsl(220 12% 90%)', fg: 'hsl(0 0% 10%)', icon: Exam },
+  deadline: { dot: 'hsl(351 82% 48%)', bg: 'hsl(351 85% 94%)', fg: 'hsl(351 80% 34%)', icon: HourglassMedium },
+  term: { dot: 'hsl(220 12% 50%)', bg: 'hsl(220 16% 92%)', fg: 'hsl(220 18% 28%)', icon: FlagBanner },
+  program: { dot: 'hsl(158 55% 36%)', bg: 'hsl(158 45% 91%)', fg: 'hsl(158 60% 22%)', icon: CalendarCheck },
+  interview: { dot: 'hsl(228 60% 55%)', bg: 'hsl(228 70% 94%)', fg: 'hsl(228 55% 32%)', icon: UsersThree },
 }
 
 export const EVENT_TYPES = Object.keys(EVENT_STYLES) as CalendarEventType[]

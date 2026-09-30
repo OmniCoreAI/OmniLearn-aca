@@ -218,8 +218,10 @@ export const config = {
      * 7. /embed (activity embeds)
      * 8. /ingest (PostHog reverse proxy — must reach the next.config rewrite
      *    untouched; otherwise the middleware mis-routes it and ingestion 404s)
+     * 9. /content/ (uploaded media proxied to the API by next.config — same
+     *    reason: the tenant rewrite would turn it into a 404 page)
      */
-    '/((?!api|_next|fonts|umami|ingest|examples|embed|monitoring|[\\w-]+\\.\\w+).*)',
+    '/((?!api|_next|fonts|umami|ingest|content/|examples|embed|monitoring|[\\w-]+\\.\\w+).*)',
     '/sitemap.xml',
     '/robots.txt',
     '/payments/stripe/connect/oauth',

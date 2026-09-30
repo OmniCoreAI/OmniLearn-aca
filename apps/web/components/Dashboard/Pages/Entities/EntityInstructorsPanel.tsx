@@ -4,11 +4,16 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { UserPlus } from 'lucide-react'
+import { ChalkboardTeacher } from '@phosphor-icons/react'
 import { Field, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
-import { DataTable, GhostButton, Section, StatusPill, tdCls } from '@components/Dashboard/Pages/Academic/AcademicUI'
-import { useAdminContext } from '@components/Dashboard/Pages/Administration/AdminUI'
+import { AcademicEmptyState } from '@components/Dashboard/Pages/Academic/AcademicShared'
+import { StatusPill } from '@components/Dashboard/Pages/Academic/AcademicUI'
+import DashDataTable from '@components/Dashboard/Shared/DataTable/DashDataTable'
+import { AdminCard, PersonAvatar, useAdminContext } from '@components/Dashboard/Pages/Administration/AdminUI'
 import { getEntityInstructors, inviteEntityInstructor } from '@services/administration/administration'
 import { personName } from './EntityMembersPanel'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /** Coordinator view: propose instructors; the academy approves them and sets their rate. */
 export function EntityInstructorsPanel({ entityUuid }: { entityUuid: string }) {
@@ -17,7 +22,7 @@ export function EntityInstructorsPanel({ entityUuid }: { entityUuid: string }) {
   const queryClient = useQueryClient()
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', specializations: '', bio: '' })
   const [saving, setSaving] = useState(false)
-  const { data: instructors = [] } = useQuery({
+  const { data: instructors = [], isLoading } = useQuery({
     queryKey: ['entities', entityUuid, 'proposed-instructors'],
     queryFn: () => getEntityInstructors(entityUuid, access_token),
     enabled: ready,
@@ -40,46 +45,92 @@ export function EntityInstructorsPanel({ entityUuid }: { entityUuid: string }) {
       setSaving(false)
     }
   }
+  const emailError = form.email && !EMAIL_RE.test(form.email) ? String(t('administration.validation.email', 'Enter a valid email')) : undefined
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <Section title={t('entities.instructors.proposed', 'Instructors you proposed')} className="lg:col-span-2">
-        <DataTable headers={[t('instructors.title', 'Instructors'), t('entities.instructors.expertise', 'Expertise'), t('administration.common.status', 'Status')]} empty={t('entities.no_instructors', 'No instructors linked to this entity.')}>
-          {(instructors as any[]).map((i) => (
-            <tr key={i.instructor_uuid}>
-              <td className={tdCls}>
-                <div className="font-medium">{personName(i.user)}</div>
-                <div className="text-xs text-[hsl(var(--dash-muted))]">{i.email}</div>
-              </td>
-              <td className={`${tdCls} text-xs`}>{(i.specializations || []).join(', ') || '—'}</td>
-              <td className={tdCls}>
-                <StatusPill status={i.status === 'pending_approval' ? 'pending' : i.status} label={String(t(`instructors.status_${i.status}`, i.status))} />
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      </Section>
-      <Section
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3">
+      <div className="lg:col-span-2">
+        <DashDataTable
+          rows={instructors as any[]}
+          rowKey={(i: any) => i.instructor_uuid}
+          loading={isLoading}
+          initialSort={{ key: 'name', dir: 'asc' }}
+          itemLabel={(n) => t('instructors.count', '{{count}} instructors', { count: n })}
+          toolbar={<span className="text-sm font-semibold text-[hsl(var(--dash-ink))]">{t('entities.instructors.proposed', 'Instructors you proposed')}</span>}
+          empty={
+            <AcademicEmptyState
+              compact
+              icon={<ChalkboardTeacher size={24} />}
+              title={t('entities.no_instructors', 'No instructors linked to this organization.')}
+              description={t('entities.instructors.invite_desc', 'The academy reviews the proposal, sets the category and rate, then activates the instructor.')}
+            />
+          }
+          columns={[
+            {
+              key: 'name',
+              header: t('instructors.instructor', 'Instructor'),
+              primary: true,
+              sortValue: (i: any) => personName(i.user),
+              cell: (i: any) => (
+                <div className="flex min-w-0 items-center gap-3">
+                  <PersonAvatar name={personName(i.user)} size={32} />
+                  <div className="min-w-0 leading-tight">
+                    <div className="truncate font-medium">{personName(i.user)}</div>
+                    <div className="truncate text-[11px] text-[hsl(var(--dash-muted))]">{i.email}</div>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: 'expertise',
+              header: t('entities.instructors.expertise', 'Expertise'),
+              hideOnMobile: true,
+              cell: (i: any) => <span className="line-clamp-1 text-[13px]">{(i.specializations || []).join(', ') || '—'}</span>,
+            },
+            {
+              key: 'status',
+              header: t('administration.common.status', 'Status'),
+              sortValue: (i: any) => i.status,
+              cell: (i: any) => <StatusPill status={i.status === 'pending_approval' ? 'pending' : i.status} label={String(t(`instructors.status_${i.status}`, i.status))} />,
+            },
+          ]}
+        />
+      </div>
+      <AdminCard
         title={t('entities.instructors.invite', 'Propose an instructor')}
         description={t('entities.instructors.invite_desc', 'The academy reviews the proposal, sets the category and rate, then activates the instructor.')}
       >
-        <form onSubmit={invite} className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <input className={inputCls} required placeholder={String(t('entities.first_name', 'First name'))} value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
-            <input className={inputCls} placeholder={String(t('entities.last_name', 'Last name'))} value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+        <form onSubmit={invite} className="space-y-4" noValidate>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t('entities.first_name', 'First name')} required>
+              <input className={inputCls} value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+            </Field>
+            <Field label={t('entities.last_name', 'Last name')}>
+              <input className={inputCls} value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+            </Field>
           </div>
-          <input className={inputCls} type="email" required placeholder={String(t('entities.contact_email', 'Email'))} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <input className={inputCls} placeholder={String(t('entities.contact_phone', 'Phone'))} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          <Field label={t('entities.instructors.expertise', 'Expertise')}>
+          <Field label={t('entities.contact_email', 'Email')} required error={emailError}>
+            <input className={inputCls} type="email" aria-invalid={!!emailError} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          </Field>
+          <Field label={t('entities.contact_phone', 'Phone')}>
+            <input className={inputCls} inputMode="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          </Field>
+          <Field label={t('entities.instructors.expertise', 'Expertise')} hint={t('administration.common.comma_hint', 'Separate with commas.')}>
             <input className={inputCls} placeholder="Networks, Cybersecurity" value={form.specializations} onChange={(e) => setForm({ ...form, specializations: e.target.value })} />
           </Field>
-          <textarea className={inputCls} rows={3} placeholder={String(t('entities.instructors.bio', 'Short bio'))} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+          <Field label={t('entities.instructors.bio', 'Short bio')}>
+            <textarea className={inputCls} rows={3} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+          </Field>
           <div className="flex justify-end">
-            <GhostButton type="submit" disabled={saving}>
-              <UserPlus className="h-3.5 w-3.5" /> {saving ? '…' : t('entities.instructors.send', 'Send for approval')}
-            </GhostButton>
+            <button
+              type="submit"
+              disabled={saving || !form.first_name.trim() || !form.email || !!emailError}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-ink))] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              <UserPlus className="h-4 w-4" /> {saving ? t('academic.saving', 'Saving…') : t('entities.instructors.send', 'Send for approval')}
+            </button>
           </div>
         </form>
-      </Section>
+      </AdminCard>
     </div>
   )
 }

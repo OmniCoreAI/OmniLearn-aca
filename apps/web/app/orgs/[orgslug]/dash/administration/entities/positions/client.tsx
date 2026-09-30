@@ -10,15 +10,13 @@ function PositionsPage({ orgslug }: { orgslug: string }) {
   const { t } = useTranslation()
   return (
     <AcademicPageShell>
-      <AdminBreadcrumbs orgslug={orgslug} items={[{ label: t('administration.nav.entities', 'Entities'), href: '/dash/administration/entities' }, { label: t('entities.positions', 'Positions') }]} />
+      <AdminBreadcrumbs orgslug={orgslug} items={[{ label: t('administration.nav.entities', 'Organizations'), href: '/dash/administration/entities' }, { label: t('entities.positions', 'Positions') }]} />
       <AcademicHeader
         title={t('entities.positions', 'Positions')}
-        subtitle={t('entities.positions_desc', 'Job positions (Manager, Engineer…) shared by every entity or specific to one. Training can be assigned to a position.')}
+        subtitle={t('entities.positions_desc', 'Job positions (Manager, Engineer…) shared by every organization or specific to one. Training can be assigned to a position.')}
       />
       <EntitiesTabs orgslug={orgslug} />
-      <section className="rounded-[var(--dash-radius)] border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] p-4 sm:p-5">
-        <PositionsManager />
-      </section>
+      <PositionsManager />
     </AcademicPageShell>
   )
 }

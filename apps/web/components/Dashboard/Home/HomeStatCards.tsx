@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CheckSquare, GraduationCap, PlayCircle } from '@phosphor-icons/react'
+import { CheckSquare, GraduationCap, PlayCircle, SealCheck } from '@phosphor-icons/react'
 import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
 import { useHomeOverview } from './homeData'
 
@@ -25,11 +25,14 @@ export default function HomeStatCards() {
   }, [data])
 
   const thisMonth = (n: number) => t('dashboard.home.stats.this_month', '+{{count}} this month', { count: n })
+  const enrolled = totals?.enrollments ?? 0
+  const completed = totals?.completions ?? 0
+  const rate = enrolled ? completed / enrolled : 0
 
   return (
     <DashStatCards
-      variant="glass"
       density="fit"
+      className="fit:gap-3"
       loading={isLoading}
       error={isError}
       stats={[
@@ -37,7 +40,6 @@ export default function HomeStatCards() {
           key: 'students',
           label: t('dashboard.home.stats.total_students', 'Total Students'),
           value: totals?.students ?? 0,
-          hint: t('dashboard.home.stats.members_hint', '{{count}} members in total', { count: totals?.members ?? 0 }),
           icon: GraduationCap,
           href: '/dash/users/settings/users',
           tone: 'rose',
@@ -48,7 +50,6 @@ export default function HomeStatCards() {
           key: 'courses',
           label: t('dashboard.home.stats.total_courses', 'Total Courses'),
           value: totals?.courses ?? 0,
-          hint: t('dashboard.home.stats.published_hint', '{{count}} published', { count: totals?.published_courses ?? 0 }),
           icon: PlayCircle,
           href: '/dash/courses',
           tone: 'stone',
@@ -61,13 +62,24 @@ export default function HomeStatCards() {
         {
           key: 'enrollments',
           label: t('dashboard.home.stats.total_enrollments', 'Total Enrollments'),
-          value: totals?.enrollments ?? 0,
-          hint: t('dashboard.home.stats.last_30_days_hint', '+{{count}} in the last 30 days', { count: totals?.enrollments_30d ?? 0 }),
+          value: enrolled,
           icon: CheckSquare,
           href: '/dash/analytics',
           tone: 'gold',
           trend: series.enrollments,
           delta: { ...series.dEnroll, label: thisMonth(series.dEnroll.current) },
+        },
+        {
+          key: 'completion',
+          label: t('dashboard.home.stats.completion_rate', 'Completion Rate'),
+          value: `${Math.round(rate * 100)}%`,
+          hint: t('dashboard.home.stats.completed_of', '{{done}} of {{total}} completed', {
+            done: completed,
+            total: enrolled,
+          }),
+          icon: SealCheck,
+          tone: 'sand',
+          progress: rate,
         },
       ]}
     />

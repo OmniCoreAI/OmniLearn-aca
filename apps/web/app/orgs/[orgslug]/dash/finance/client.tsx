@@ -59,6 +59,7 @@ import {
   ProfitLossPanel,
   RefundsPanel,
 } from './reports'
+import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
 
 type RangeKey = '7d' | '30d' | '90d' | 'all'
 type SectionTab = 'overview' | 'pl' | 'courses' | 'payroll' | 'refunds'
@@ -128,7 +129,7 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="dash-glass min-h-[300px] min-w-0 overflow-hidden rounded-[var(--dash-radius)] p-5 sm:p-6">
+    <div className="dash-card min-h-[300px] min-w-0 overflow-hidden rounded-[var(--dash-radius)] p-5 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold tracking-tight text-[hsl(var(--dash-ink))]">{title}</h3>
@@ -154,18 +155,9 @@ function PillGroup<T extends string>({
   onChange: (_v: T) => void
 }) {
   return (
-    <div className="dash-glass flex w-fit items-center gap-1 overflow-x-auto rounded-full p-1">
+    <div className={TAB_TRACK}>
       {options.map(([id, label]) => (
-        <button
-          key={id}
-          type="button"
-          onClick={() => onChange(id)}
-          className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium capitalize transition-all duration-200 ${
-            value === id
-              ? 'bg-[hsl(var(--dash-ink))] text-[hsl(var(--auth-gold))] shadow-[0_4px_14px_hsl(0_0%_0%/0.18)]'
-              : 'text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-ink))]'
-          }`}
-        >
+        <button key={id} type="button" onClick={() => onChange(id)} className={tabItemClass(value === id, 'capitalize')}>
           {label}
         </button>
       ))}
@@ -589,7 +581,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
 
   return (
     <div className="finance-shell flex h-screen w-full flex-col bg-[hsl(var(--dash-canvas))]">
-      <div className="dash-glass z-10 flex-shrink-0 px-4 tracking-tight sm:px-10">
+      <div className="dash-card z-10 flex-shrink-0 px-4 tracking-tight sm:px-10">
         <div className="pb-4 pt-6">
           <Breadcrumbs
             items={[
@@ -615,14 +607,14 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
               <button
                 type="button"
                 onClick={exportSummary}
-                className="dash-glass inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-ink))]"
+                className="dash-card inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-ink))]"
               >
                 <Download size={14} /> Summary CSV
               </button>
               <button
                 type="button"
                 onClick={exportEntries}
-                className="dash-glass inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-ink))]"
+                className="dash-card inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-ink))]"
               >
                 <Download size={14} /> Entries CSV
               </button>
@@ -888,7 +880,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
           </ChartCard>
         </div>
 
-        <div className="dash-glass overflow-hidden rounded-[var(--dash-radius)]">
+        <div className="dash-card overflow-hidden rounded-[var(--dash-radius)]">
           <div className="flex items-center justify-between border-b border-[hsl(var(--dash-border))] px-5 py-3">
             <span className="flex items-center gap-2 text-sm font-semibold text-[hsl(var(--dash-ink))]">
               <Activity size={14} className="text-[hsl(var(--dash-accent))]" /> Ledger entries

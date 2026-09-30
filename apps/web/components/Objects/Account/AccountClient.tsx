@@ -81,23 +81,27 @@ const AccountClient = ({ orgslug, org_id, subpage }: AccountClientProps) => {
           />
         </div>
 
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))]">{t('account.title')}</h1>
+          <p className="mt-1 text-sm text-[hsl(var(--dash-muted))]">
+            {t('account.subtitle', 'Manage your profile, security and purchases.')}
+          </p>
+        </div>
+
         {/* Layout - Sidebar Left, Content Right */}
-        <div className="flex flex-col md:flex-row gap-6 pt-2">
-          {/* Left Sidebar - User Info (Desktop only) */}
-          <div className="hidden md:block w-full md:w-72 lg:w-80 flex-shrink-0">
+        <div className="flex flex-col gap-6 md:flex-row">
+          {/* Left Sidebar - navigation (desktop only) */}
+          <div className="hidden w-full flex-shrink-0 md:block md:w-72">
             <div className="sticky top-24">
               <AccountSidebar orgslug={orgslug} currentSubpage={subpage} />
             </div>
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             {/* Mobile only shows user name */}
-            <div className="md:hidden mb-4">
-              <h1 className="text-xl font-bold text-gray-900">
-                {user?.first_name} {user?.last_name}
-              </h1>
-              <p className="mt-1 text-sm text-gray-500">@{user?.username}</p>
+            <div className="mb-4 md:hidden">
+              <p className="text-sm text-[hsl(var(--dash-muted))]">@{user?.username}</p>
             </div>
 
             {/* Subpage Content */}

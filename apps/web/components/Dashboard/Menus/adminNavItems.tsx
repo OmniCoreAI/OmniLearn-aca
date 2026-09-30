@@ -8,6 +8,7 @@ import {
   Package,
   SlidersHorizontal,
   SquaresFour,
+  UsersThree,
 } from '@phosphor-icons/react'
 
 /**
@@ -59,8 +60,16 @@ export const ADMIN_NAV_LINKS: AdminNavLink[] = [
     navId: 'entities',
     href: '/dash/administration/entities',
     labelKey: 'administration.nav.entities',
-    fallback: 'Entities',
+    fallback: 'Organizations',
     icon: (size) => <Buildings size={size} />,
+  },
+  {
+    // Same audience as Organizations; the page lists academy-wide and organization groups.
+    navId: 'entities',
+    href: '/dash/administration/user-groups',
+    labelKey: 'administration.nav.user_groups',
+    fallback: 'User groups',
+    icon: (size) => <UsersThree size={size} />,
   },
   {
     navId: 'communication',

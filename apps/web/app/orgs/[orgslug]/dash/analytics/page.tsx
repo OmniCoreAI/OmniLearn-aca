@@ -11,6 +11,7 @@ import { DashTabBar } from '@components/Dashboard/Shared/DashTabBar/DashTabBar'
 import FeatureGate from '@components/Dashboard/Shared/FeatureGate/FeatureGate'
 import { usePlan } from '@components/Hooks/usePlan'
 import ExportAnalyticsButton from '@components/Dashboard/Analytics/AnalyticsExport'
+import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
 
 // Core widgets — dynamic to code-split recharts
 const EventOverview = dynamic(() => import('@components/Dashboard/Analytics/EventOverview'))
@@ -94,16 +95,12 @@ export default function AnalyticsDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+              <div className={TAB_TRACK}>
                 {DATE_RANGES.map((r) => (
                   <button
                     key={r.value}
                     onClick={() => setDays(r.value)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                      days === r.value
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={tabItemClass(days === r.value, 'px-3 text-xs')}
                   >
                     {r.label}
                   </button>

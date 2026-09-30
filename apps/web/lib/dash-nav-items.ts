@@ -33,7 +33,7 @@ export const DASH_NAV_ITEMS: DashNavItemDef[] = [
   { id: 'playgrounds', section: 'teaching', labelKey: 'common.playgrounds', fallbackLabel: 'Playgrounds', pathPrefixes: ['/dash/playgrounds'] },
   { id: 'users', section: 'manage', labelKey: 'common.users', fallbackLabel: 'Users', pathPrefixes: ['/dash/users'] },
   { id: 'payments', section: 'manage', labelKey: 'common.payments', fallbackLabel: 'Payments', pathPrefixes: ['/dash/payments'] },
-  { id: 'organization', section: 'manage', labelKey: 'common.organization', fallbackLabel: 'Organization', pathPrefixes: ['/dash/org'] },
+  { id: 'organization', section: 'manage', labelKey: 'common.academy_settings', fallbackLabel: 'Academy settings', pathPrefixes: ['/dash/org'] },
   { id: 'analytics', section: 'manage', labelKey: 'common.analytics', fallbackLabel: 'Analytics', pathPrefixes: ['/dash/analytics'] },
   // Administration & Configuration — reusable entities and settings.
   { id: 'administration', section: 'administration', labelKey: 'administration.nav.overview', fallbackLabel: 'Administration overview & settings', pathPrefixes: ['/dash/administration'] },

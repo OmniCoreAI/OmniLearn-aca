@@ -30,6 +30,16 @@ export type HomeCourse = {
   learners?: HomeUser[]
 }
 
+export type HomeInstructor = {
+  user: HomeUser
+  /** Set when the person has an instructor-registry profile. */
+  instructor_uuid: string | null
+  department: string | null
+  courses: number
+  enrollments: number
+  completions: number
+}
+
 export type HomeActivity = {
   type: 'enrollment' | 'completion' | 'course_created' | 'member_joined'
   timestamp: string
@@ -52,8 +62,17 @@ export type HomeOverview = {
   enrollment_trend: { month: string; enrollments: number; completions: number; members: number; courses: number }[]
   activity_heatmap: { day: number; hour: number; count: number }[]
   top_courses: HomeCourse[]
+  top_instructors?: HomeInstructor[]
   recent_courses: HomeCourse[]
   recent_activity: HomeActivity[]
+  /** Work waiting on staff, for the "Needs attention" card. */
+  attention?: {
+    submissions_to_grade: number
+    applications_to_review: number
+    tests_to_review: number
+    grades_to_approve: number
+    draft_courses: number
+  }
 }
 
 /** Always fetch 12 months so range pickers can slice client-side without refetching. */

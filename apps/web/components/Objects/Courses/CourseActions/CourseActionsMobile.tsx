@@ -232,7 +232,7 @@ const CourseActionsMobile = ({ courseuuid, orgslug, course, trailData }: CourseA
           </div>
           <a
             href={getUriWithOrg(orgslug, '/signup')}
-            className="w-full py-2 px-4 rounded-lg bg-neutral-900 text-white font-semibold text-sm hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2 px-4 rounded-xl bg-[hsl(var(--dash-ink))] text-white font-semibold text-sm hover:opacity-90 transition-colors flex items-center justify-center gap-2"
           >
             <UserPlus className="w-4 h-4" />
             Join Organization
@@ -271,7 +271,7 @@ const CourseActionsMobile = ({ courseuuid, orgslug, course, trailData }: CourseA
             <div className="space-y-3">
               {isStarted ? (
                 <>
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                       <span className="text-green-800 text-sm font-semibold">You Own This Course</span>
@@ -280,10 +280,10 @@ const CourseActionsMobile = ({ courseuuid, orgslug, course, trailData }: CourseA
                   <button
                     onClick={handleCourseAction}
                     disabled={isActionLoading}
-                    className="w-full py-2 px-4 rounded-lg bg-red-500 text-white font-semibold text-sm hover:bg-red-600 transition-colors flex items-center justify-center gap-2 disabled:bg-red-400"
+                    className="w-full py-2 px-4 rounded-xl border border-[hsl(var(--dash-border))] bg-white text-[hsl(var(--dash-warn))] hover:border-[hsl(var(--dash-warn))]/40 hover:bg-[hsl(var(--dash-warn-soft))] disabled:opacity-60 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
                   >
                     {isActionLoading ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
                         <LogOut className="w-4 h-4" />
@@ -313,7 +313,7 @@ const CourseActionsMobile = ({ courseuuid, orgslug, course, trailData }: CourseA
                         amount: offer.amount,
                         currency: offer.currency,
                       })}
-                      className="w-full py-2 px-4 rounded-lg bg-neutral-900 text-white font-semibold text-sm hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+                      className="w-full py-2 px-4 rounded-xl bg-[hsl(var(--dash-ink))] text-white font-semibold text-sm hover:opacity-90 transition-colors flex items-center justify-center gap-2"
                     >
                       <ShoppingCart className="w-4 h-4" />
                       {formattedPrice ? `Get Access — ${formattedPrice}` : 'Purchase Course'}
@@ -329,12 +329,12 @@ const CourseActionsMobile = ({ courseuuid, orgslug, course, trailData }: CourseA
             disabled={isActionLoading}
             className={`w-full py-2 px-4 rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2 ${
               isStarted
-                ? 'bg-red-500 text-white hover:bg-red-600 disabled:bg-red-400'
-                : 'bg-neutral-900 text-white hover:bg-neutral-800 disabled:bg-neutral-700'
+                ? 'border border-[hsl(var(--dash-border))] bg-white text-[hsl(var(--dash-warn))] hover:border-[hsl(var(--dash-warn))]/40 hover:bg-[hsl(var(--dash-warn-soft))] disabled:opacity-60'
+                : 'bg-[hsl(var(--dash-ink))] text-white hover:opacity-90 disabled:opacity-60'
             }`}
           >
             {isActionLoading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
             ) : !session.data?.user ? (
               <>
                 <LogIn className="w-4 h-4" />

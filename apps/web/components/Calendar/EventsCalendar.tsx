@@ -50,11 +50,13 @@ const CALENDAR_THEME = [
   '[--color-primary-foreground:hsl(var(--dash-ink))]',
   '[--color-foreground:hsl(var(--dash-ink))]',
   '[--color-muted-foreground:hsl(var(--dash-muted))]',
-  '[--color-border:hsl(var(--dash-border)/0.8)]',
+  // Hairlines that read on frosted glass without boxing every cell in.
+  '[--color-border:hsl(222_25%_60%/0.18)]',
   '[--ec-month-bar-h:1.5rem]',
 ].join(' ')
 
-const TODAY_CLASS = 'bg-[hsl(var(--dash-accent-soft))]/45 border-b-0'
+const TODAY_CLASS = 'bg-[linear-gradient(180deg,hsl(43_90%_60%/0.16),hsl(43_90%_60%/0.04))] border-b-0'
+const SELECTED_DAY_CLASS = 'bg-white/60 shadow-[inset_0_0_0_1.5px_hsl(var(--dash-accent)/0.55)]'
 
 /**
  * Month cells show the day number at the top (the upstream default puts it at
@@ -63,18 +65,26 @@ const TODAY_CLASS = 'bg-[hsl(var(--dash-accent-soft))]/45 border-b-0'
  * 0.125rem top padding) so multi-day bars line up with the reserved lanes.
  */
 const CALENDAR_CLASSES: EventCalendarClassNames = {
-  monthHeader: 'bg-[hsl(var(--dash-canvas))]/60',
-  monthDayHeader: 'px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wide',
-  monthCell: 'flex-col-reverse transition-colors hover:bg-[hsl(var(--dash-canvas))]/70',
+  monthHeader: 'bg-white/35',
+  monthDayHeader: 'px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--dash-muted))]',
+  monthCell: 'flex-col-reverse transition-colors hover:bg-white/45',
   monthCellFooter: 'h-7 shrink-0 justify-start px-2 pb-0 pt-1.5',
   monthCellContent: 'pt-0.5',
   monthBarOverlay: 'pt-[1.875rem]',
   monthDayNumber: 'size-6 text-[12.5px] font-medium tabular-nums',
-  event: 'rounded-md text-[11.5px]',
+  // Grid chips (not list rows): a solid colour bar on the leading edge over a
+  // fading tint of the event colour, so types read at a glance on glass.
+  event: cn(
+    'rounded-md text-[11.5px]',
+    'not-data-[view=agenda]:rounded-lg not-data-[view=agenda]:border-s-[3px] not-data-[view=agenda]:border-(--ec-event-color)',
+    'not-data-[view=agenda]:bg-linear-to-r not-data-[view=agenda]:from-(--ec-event-color)/25 not-data-[view=agenda]:to-(--ec-event-color)/8',
+    'not-data-[view=agenda]:font-medium not-data-[view=agenda]:shadow-[0_1px_2px_hsl(222_40%_18%/0.06)]',
+    'not-data-[view=agenda]:hover:from-(--ec-event-color)/35 not-data-[view=agenda]:data-selected:from-(--ec-event-color)/45'
+  ),
   moreIndicator: 'text-[11px] font-medium text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]',
-  timeGridHeader: 'bg-[hsl(var(--dash-canvas))]/60',
+  timeGridHeader: 'bg-white/35',
   timeGutterLabel: 'text-[11px] tabular-nums',
-  agendaDayHeader: 'bg-[hsl(var(--dash-canvas))]/60 text-[13px]',
+  agendaDayHeader: 'bg-white/40 text-[13px]',
   agendaItem: 'py-1',
 }
 
@@ -93,22 +103,22 @@ function CalendarToolbar({
   const { t } = useTranslation()
   const nav = useEventCalendarNavigation()
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[hsl(var(--dash-border))]/70 px-3 py-2.5">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/60 px-3 py-2.5">
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
           onClick={nav.today}
           disabled={nav.isToday}
-          className="rounded-full border border-[hsl(var(--dash-border))] px-3.5 py-1.5 text-xs font-medium text-[hsl(var(--dash-ink))] transition-colors hover:bg-[hsl(var(--dash-canvas))] disabled:opacity-50"
+          className="glass-chip rounded-full px-3.5 py-1.5 text-xs font-medium text-[hsl(var(--dash-ink))] transition-colors hover:bg-white disabled:opacity-50"
         >
           {t('calendar.today', 'Today')}
         </button>
-        <div className="flex items-center">
+        <div className="glass-chip flex items-center rounded-full p-0.5">
           <button
             type="button"
             onClick={nav.prev}
             aria-label={t('calendar.previous', 'Previous')}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[hsl(var(--dash-muted))] transition-colors hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[hsl(var(--dash-ink))] transition-colors hover:bg-white"
           >
             <CaretLeft size={15} weight="bold" className="rtl:rotate-180" />
           </button>
@@ -116,16 +126,16 @@ function CalendarToolbar({
             type="button"
             onClick={nav.next}
             aria-label={t('calendar.next', 'Next')}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[hsl(var(--dash-muted))] transition-colors hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[hsl(var(--dash-ink))] transition-colors hover:bg-white"
           >
             <CaretRight size={15} weight="bold" className="rtl:rotate-180" />
           </button>
         </div>
-        <h2 className="truncate text-base font-semibold tracking-tight text-[hsl(var(--dash-ink))]" aria-live="polite">
+        <h2 className="truncate text-lg font-semibold tracking-tight text-[hsl(var(--dash-ink))]" aria-live="polite">
           {nav.title}
         </h2>
       </div>
-      <div className="flex rounded-full bg-[hsl(var(--dash-canvas))] p-0.5" role="tablist" aria-label={t('calendar.select_view', 'Select view')}>
+      <div className="glass-chip flex rounded-full p-0.5" role="tablist" aria-label={t('calendar.select_view', 'Select view')}>
         {views.map((v) => (
           <button
             key={v}
@@ -136,8 +146,8 @@ function CalendarToolbar({
             className={cn(
               'rounded-full px-3.5 py-1.5 text-xs font-medium transition-all',
               view === v
-                ? 'bg-[hsl(var(--dash-surface))] text-[hsl(var(--dash-ink))] shadow-[0_1px_3px_hsl(0_0%_8%/0.12)]'
-                : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]'
+                ? 'bg-[hsl(var(--dash-ink))] text-white shadow-[0_4px_12px_-4px_hsl(0_0%_8%/0.45)]'
+                : 'text-[hsl(var(--dash-muted))] hover:bg-white/70 hover:text-[hsl(var(--dash-ink))]'
             )}
           >
             {viewNames[v]}
@@ -320,7 +330,7 @@ export default function EventsCalendar({
     [i18n.language, t]
   )
   const dayClassName = useCallback(
-    (day: Date) => (sameDay(day, selectedDay) ? 'bg-[hsl(var(--dash-accent-soft))]/60' : undefined),
+    (day: Date) => (sameDay(day, selectedDay) ? SELECTED_DAY_CLASS : undefined),
     [selectedDay]
   )
 
@@ -358,7 +368,7 @@ export default function EventsCalendar({
       {/* Header: title + scope on the left, type filters on the right */}
       <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,hsl(43_85%_60%),hsl(38_76%_42%))] text-white shadow-[0_10px_22px_-10px_hsl(43_80%_35%/0.9)]">
             <CalendarBlank size={22} weight="duotone" />
           </span>
           <div className="min-w-0">
@@ -380,12 +390,12 @@ export default function EventsCalendar({
                 aria-pressed={!off}
                 onClick={() => toggleType(type)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all',
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all',
                   off
-                    ? 'border-dashed border-[hsl(var(--dash-border))] text-[hsl(var(--dash-muted))] opacity-60 hover:opacity-100'
-                    : 'border-transparent hover:brightness-95'
+                    ? 'border border-dashed border-[hsl(var(--dash-muted))]/40 text-[hsl(var(--dash-muted))] opacity-70 hover:opacity-100'
+                    : 'glass-chip hover:bg-white'
                 )}
-                style={off ? undefined : { background: style.bg, color: style.fg }}
+                style={off ? undefined : { color: style.fg }}
               >
                 <span
                   className="h-2 w-2 rounded-full"
@@ -395,7 +405,12 @@ export default function EventsCalendar({
                   }}
                 />
                 {typeLabel(t, type)}
-                <span className="tabular-nums opacity-60">{counts[type]}</span>
+                <span
+                  className="min-w-5 rounded-full px-1.5 text-center text-[10px] font-semibold tabular-nums"
+                  style={off ? undefined : { background: style.bg }}
+                >
+                  {counts[type]}
+                </span>
               </button>
             )
           })}
@@ -409,7 +424,7 @@ export default function EventsCalendar({
 
       {/* Body */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="relative flex min-h-0 flex-col overflow-hidden rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] shadow-[0_1px_2px_hsl(0_0%_8%/0.04),0_0_0_1px_hsl(var(--dash-border)/0.6)]">
+        <section className="glass-panel relative flex min-h-0 flex-col overflow-hidden rounded-[1.5rem]">
           <EventCalendar<CalendarEvent>
             events={gridEvents}
             views={VIEWS}
@@ -441,7 +456,7 @@ export default function EventsCalendar({
         </section>
 
         {/* Side panel: event detail, or the selected day + what's next */}
-        <aside className="flex min-h-0 flex-col rounded-[var(--dash-radius)] bg-[hsl(var(--dash-surface))] p-4 shadow-[0_1px_2px_hsl(0_0%_8%/0.04),0_0_0_1px_hsl(var(--dash-border)/0.6)]">
+        <aside className="glass-panel flex min-h-0 flex-col rounded-[1.5rem] p-4">
           {selectedEvent ? (
             <CalendarEventDetail
               event={selectedEvent}
@@ -501,7 +516,7 @@ export default function EventsCalendar({
 
 function EmptyNote({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-2xl bg-[hsl(var(--dash-canvas))] px-4 py-5 text-center text-xs text-[hsl(var(--dash-muted))]">
+    <p className="rounded-2xl border border-dashed border-white/90 bg-white/40 px-4 py-5 text-center text-xs text-[hsl(var(--dash-muted))]">
       {children}
     </p>
   )

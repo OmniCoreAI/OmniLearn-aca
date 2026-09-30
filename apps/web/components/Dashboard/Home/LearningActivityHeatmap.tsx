@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
-import { CardMenuLink, EmptyState, HomeCard, POP_SURFACE } from './HomeCard'
+import { CardMenuLink, HomeCard, POP_SURFACE } from './HomeCard'
 import { HOME_COLORS, useHomeOverview } from './homeData'
 
 const BUCKET_HOURS = 4
@@ -44,34 +44,15 @@ export default function LearningActivityHeatmap() {
   return (
     <HomeCard
       title={t('dashboard.home.learning_activity.title', 'Learning Activity')}
-      action={
-        <div className="flex items-center gap-2">
-          {max > 0 && (
-            <div className="hidden items-center gap-2 text-[10px] text-[hsl(var(--dash-muted))] sm:flex">
-              {legend.map((label, i) => (
-                <span key={label} className="inline-flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-[3px]" style={{ background: LEVEL_COLORS[i + 1] }} />
-                  {label}
-                </span>
-              ))}
-            </div>
-          )}
-          <CardMenuLink href="/dash/analytics" label={t('dashboard.home.full_analytics', 'Full analytics')} />
-        </div>
-      }
+      subtitle={t('dashboard.home.learning_activity.subtitle', 'Completed lessons, last 30 days')}
+      action={<CardMenuLink href="/dash/analytics" label={t('dashboard.home.full_analytics', 'Full analytics')} />}
     >
       {isLoading ? (
-        <div className="dash-shimmer h-[230px] rounded-2xl fit:min-h-0 fit:flex-1" />
-      ) : max === 0 ? (
-        <EmptyState className="h-[230px]">
-          {t(
-            'dashboard.home.learning_activity.empty',
-            'When learners complete lessons, their busiest days and hours show up here.'
-          )}
-        </EmptyState>
+        <div className="dash-shimmer h-[230px] rounded-2xl fit:h-auto fit:min-h-0 fit:flex-1" />
       ) : (
+        <>
         <div
-          className="relative grid gap-1.5 fit:min-h-0 fit:flex-1"
+          className="relative grid h-[200px] gap-1 fit:h-auto fit:min-h-0 fit:flex-1"
           onMouseLeave={() => setHover(null)}
           style={{
             gridTemplateColumns: 'auto repeat(7, minmax(0, 1fr))',
@@ -82,7 +63,7 @@ export default function LearningActivityHeatmap() {
         >
           {BUCKETS.map((hour) => (
             <React.Fragment key={hour}>
-              <span className="self-center pe-1 text-end text-[11px] text-[hsl(var(--dash-muted))]">
+              <span className="self-center pe-1 text-end text-[10px] text-[hsl(var(--dash-muted))]">
                 {hourName(hour)}
               </span>
               {COLUMNS.map((day) => {
@@ -99,7 +80,7 @@ export default function LearningActivityHeatmap() {
                     onMouseEnter={(e) => show(e.currentTarget)}
                     onFocus={(e) => show(e.currentTarget)}
                     onBlur={() => setHover(null)}
-                    className={`h-7 rounded-md outline-none transition-all focus-visible:ring-2 focus-visible:ring-[hsl(var(--dash-ink))]/40 fit:h-auto fit:min-h-2 ${
+                    className={`min-h-2 rounded-[5px] outline-none transition-all focus-visible:ring-2 focus-visible:ring-[hsl(var(--dash-ink))]/40 ${
                       active ? 'scale-110 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.35)]' : ''
                     }`}
                     style={{ background: LEVEL_COLORS[level(count)] }}
@@ -110,7 +91,7 @@ export default function LearningActivityHeatmap() {
           ))}
           <span />
           {COLUMNS.map((day) => (
-            <span key={day} className="text-center text-[11px] text-[hsl(var(--dash-muted))]">
+            <span key={day} className="truncate text-center text-[10px] text-[hsl(var(--dash-muted))]">
               {dayName(day)}
             </span>
           ))}
@@ -131,7 +112,23 @@ export default function LearningActivityHeatmap() {
               </span>
             </div>
           ) : null}
+          {max === 0 ? (
+            <p className="pointer-events-none absolute inset-x-0 top-[42%] mx-auto w-fit max-w-[85%] -translate-y-1/2 rounded-xl border border-[hsl(var(--dash-border))] bg-white px-3 py-1.5 text-center text-[11px] leading-snug text-[hsl(var(--dash-muted))] shadow-sm">
+              {t(
+                'dashboard.home.learning_activity.empty',
+                'When learners complete lessons, their busiest days and hours show up here.'
+              )}
+            </p>
+          ) : null}
         </div>
+        <div className="mt-2 flex shrink-0 items-center justify-end gap-1 text-[10px] text-[hsl(var(--dash-muted))]" title={legend.join(' · ')}>
+          {t('dashboard.home.learning_activity.less', 'Less')}
+          {LEVEL_COLORS.map((color) => (
+            <span key={color} className="h-2.5 w-2.5 rounded-[3px]" style={{ background: color }} />
+          ))}
+          {t('dashboard.home.learning_activity.more', 'More')}
+        </div>
+        </>
       )}
     </HomeCard>
   )

@@ -75,16 +75,28 @@ export function AcademicEmptyState({
   title,
   description,
   action,
+  icon,
+  compact = false,
 }: {
   title: string
   description?: string
   action?: React.ReactNode
+  /** Replaces the default inbox icon (e.g. the section's own icon). */
+  icon?: React.ReactNode
+  /** Borderless, for use inside a card that already frames it (tables). */
+  compact?: boolean
 }) {
   return (
-    <div className="col-span-full flex items-center justify-center py-14">
-      <div className="flex max-w-md flex-col items-center rounded-[var(--dash-radius)] border border-dashed border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-10 py-12 text-center">
+    <div className={compact ? 'col-span-full flex items-center justify-center' : 'col-span-full flex items-center justify-center py-14'}>
+      <div
+        className={
+          compact
+            ? 'flex max-w-md flex-col items-center px-4 text-center'
+            : 'flex max-w-md flex-col items-center rounded-[var(--dash-radius)] border border-dashed border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-10 py-12 text-center'
+        }
+      >
         <span className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]">
-          <Inbox className="h-6 w-6" />
+          {icon ?? <Inbox className="h-6 w-6" />}
         </span>
         <h2 className="text-lg font-semibold text-[hsl(var(--dash-ink))]">{title}</h2>
         {description && (

@@ -48,9 +48,10 @@ export function CalendarEventRow({
       className={cn(
         'flex w-full items-center gap-3 rounded-2xl border p-2.5 text-start transition-all',
         active
-          ? 'border-[hsl(var(--dash-ink))]/15 bg-[hsl(var(--dash-surface))] shadow-[0_4px_14px_hsl(0_0%_8%/0.08)]'
-          : 'border-transparent bg-[hsl(var(--dash-canvas))] hover:border-[hsl(var(--dash-border))] hover:bg-[hsl(var(--dash-surface))]'
+          ? 'border-white bg-white shadow-[0_8px_20px_-10px_hsl(222_40%_18%/0.3)]'
+          : 'border-white/80 bg-white/50 hover:-translate-y-px hover:bg-white/85 hover:shadow-[0_8px_20px_-12px_hsl(222_40%_18%/0.3)]'
       )}
+      style={{ borderInlineStartColor: style.dot, borderInlineStartWidth: 3 }}
     >
       {showDate ? (
         <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-white shadow-[0_1px_2px_hsl(0_0%_8%/0.06)]">
@@ -118,13 +119,16 @@ export function CalendarEventDetail({
       <button
         type="button"
         onClick={onBack}
-        className="mb-3 inline-flex items-center gap-1.5 self-start rounded-full px-2 py-1 text-xs font-medium text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]"
+        className="glass-chip mb-3 inline-flex items-center gap-1.5 self-start rounded-full px-2.5 py-1 text-xs font-medium text-[hsl(var(--dash-muted))] hover:bg-white hover:text-[hsl(var(--dash-ink))]"
       >
         <ArrowLeft size={14} className="rtl:rotate-180" />
         {t('calendar.back_to_day', 'Back to day')}
       </button>
 
-      <div className="rounded-2xl p-4" style={{ background: style.bg }}>
+      <div
+        className="rounded-2xl border border-white/80 p-4 shadow-[0_12px_28px_-18px_hsl(222_40%_18%/0.4)]"
+        style={{ background: `linear-gradient(145deg, ${style.bg}, hsl(0 0% 100% / 0.6))`, borderInlineStartColor: style.dot, borderInlineStartWidth: 4 }}
+      >
         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide" style={{ color: style.fg }}>
           <Icon size={16} weight="duotone" />
           {kindLabel(t, event)}
@@ -158,7 +162,7 @@ export function CalendarEventDetail({
           <DetailLine icon={GraduationCap}>{event.subtitle}</DetailLine>
         )}
         {event.description && (
-          <p className="whitespace-pre-line rounded-xl bg-[hsl(var(--dash-canvas))] p-3 text-xs leading-relaxed text-[hsl(var(--dash-ink))]/80">
+          <p className="whitespace-pre-line rounded-xl border border-white/80 bg-white/50 p-3 text-xs leading-relaxed text-[hsl(var(--dash-ink))]/80">
             {event.description}
           </p>
         )}

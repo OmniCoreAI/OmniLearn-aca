@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { getUriWithOrg } from '@services/config/config'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
+import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
 import { cn } from '@/lib/utils'
 
 /* Building blocks shared by the Postgraduate Studies screens. */
@@ -40,19 +41,14 @@ export function PostgradTabs({ orgslug }: { orgslug: string }) {
   }
 
   return (
-    <div className="mb-6 flex w-fit max-w-full items-center gap-1 overflow-x-auto rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] p-1">
+    <div className={cn(TAB_TRACK, 'mb-6')}>
       {tabs.map((tab) => {
         const active = tab.match ? tab.match(pathname) : pathname.includes(tab.href)
         return (
           <Link
             key={tab.href}
             href={getUriWithOrg(orgslug, tab.href)}
-            className={cn(
-              'whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors',
-              active
-                ? 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]'
-                : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]'
-            )}
+            className={tabItemClass(active)}
           >
             {tab.label}
           </Link>
@@ -102,6 +98,11 @@ const STATUS_TONES: Record<string, string> = {
   scheduled: 'bg-sky-100 text-sky-800',
   no_show: 'bg-red-100 text-red-800',
   elective: 'bg-violet-100 text-violet-800',
+  inactive: 'bg-slate-100 text-slate-600',
+  on_leave: 'bg-amber-100 text-amber-800',
+  pending_approval: 'bg-orange-100 text-orange-800',
+  maintenance: 'bg-orange-100 text-orange-800',
+  default: 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]',
 }
 
 export function StatusPill({ status, label }: { status?: string | null; label?: string }) {
@@ -111,7 +112,7 @@ export function StatusPill({ status, label }: { status?: string | null; label?: 
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold',
+        'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize',
         STATUS_TONES[key] || 'bg-slate-100 text-slate-700'
       )}
     >

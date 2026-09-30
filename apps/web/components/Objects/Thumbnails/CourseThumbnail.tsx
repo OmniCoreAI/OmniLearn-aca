@@ -184,30 +184,23 @@ function CourseThumbnail({ course, orgslug, customLink, isDashboard = false, isS
       />
 
       <Link prefetch={false} href={courseLink} onClick={handleCardOpen} className="relative block aspect-video overflow-hidden bg-[hsl(var(--dash-canvas))]">
-        {thumbnailImage ? (
-          <>
-            {/* Hidden img gives the browser a real resource hint so it can fetch the background-image early as an LCP candidate */}
-            {isPriority && (
-              <img
-                src={thumbnailImage}
-                alt=""
-                aria-hidden="true"
-                fetchPriority="high"
-                className="pointer-events-none absolute h-0 w-0 opacity-0"
-              />
-            )}
-            <div
-              className="h-full w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-              style={{ backgroundImage: `url(${thumbnailImage})` }}
-            />
-          </>
-        ) : (
-          <CourseCover
-            name={course.name}
-            seed={course.course_uuid}
-            className="transition-transform duration-500 group-hover:scale-105"
+        {/* Hidden img gives the browser a real resource hint so it can fetch the cover early as an LCP candidate */}
+        {thumbnailImage && isPriority && (
+          <img
+            src={thumbnailImage}
+            alt=""
+            aria-hidden="true"
+            fetchPriority="high"
+            className="pointer-events-none absolute h-0 w-0 opacity-0"
           />
         )}
+        {/* The generated cover shows when there's no thumbnail or it fails to load. */}
+        <CourseCover
+          name={course.name}
+          seed={course.course_uuid}
+          src={thumbnailImage || null}
+          className="transition-transform duration-500 group-hover:scale-105"
+        />
         <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
         {isDashboard && (
           <div className="absolute bottom-2.5 end-2.5">

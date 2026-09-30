@@ -71,7 +71,7 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="dash-glass min-w-0 overflow-hidden rounded-[var(--dash-radius)] p-5 sm:p-6">
+    <div className="dash-card min-w-0 overflow-hidden rounded-[var(--dash-radius)] p-5 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold tracking-tight text-[hsl(var(--dash-ink))]">{title}</h3>
@@ -163,7 +163,7 @@ export function ProfitLossPanel({
           ['Net revenue', data.net_revenue],
           ['Net profit', data.net_profit],
         ].map(([label, value]) => (
-          <div key={String(label)} className="dash-lift rounded-[var(--dash-radius)] dash-glass px-4 py-3">
+          <div key={String(label)} className="dash-lift rounded-[var(--dash-radius)] dash-card px-4 py-3">
             <div className="text-xs text-[hsl(var(--dash-muted))]">{label}</div>
             <div className="text-lg font-bold">{fmt(Number(value), data.currency)}</div>
           </div>
@@ -189,7 +189,7 @@ export function ProfitLossPanel({
           </ResponsiveContainer>
         </div>
       </ChartCard>
-      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-glass">
+      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -398,7 +398,7 @@ export function CoursesProfitPanel({
           </div>
         </ChartCard>
       </div>
-      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-glass">
+      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -466,7 +466,7 @@ export function CoursesProfitPanel({
       </div>
 
       {editing && (
-        <div className="dash-glass max-w-xl space-y-3 rounded-[var(--dash-radius)] p-5">
+        <div className="dash-card max-w-xl space-y-3 rounded-[var(--dash-radius)] p-5">
           <h3 className="font-semibold text-sm">
             Cost assumptions — {editing.course_name || editing.course_uuid}
           </h3>
@@ -592,11 +592,11 @@ export function PayrollPanel({
       </div>
 
       <div className="grid grid-cols-2 gap-3 max-w-md">
-        <div className="dash-lift rounded-[var(--dash-radius)] dash-glass px-4 py-3">
+        <div className="dash-lift rounded-[var(--dash-radius)] dash-card px-4 py-3">
           <div className="text-xs text-[hsl(var(--dash-muted))]">Total hours</div>
           <div className="text-xl font-bold">{data?.total_hours ?? 0}</div>
         </div>
-        <div className="dash-lift rounded-[var(--dash-radius)] dash-glass px-4 py-3">
+        <div className="dash-lift rounded-[var(--dash-radius)] dash-card px-4 py-3">
           <div className="text-xs text-[hsl(var(--dash-muted))]">Total pay</div>
           <div className="text-xl font-bold">
             {fmt(data?.total_pay || 0, data?.currency)}
@@ -627,7 +627,7 @@ export function PayrollPanel({
         </ChartCard>
       )}
 
-      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-glass">
+      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -726,7 +726,7 @@ export function RefundsPanel({
 
   return (
     <div className="space-y-6">
-      <div className="dash-glass max-w-xl space-y-3 rounded-[var(--dash-radius)] p-5">
+      <div className="dash-card max-w-xl space-y-3 rounded-[var(--dash-radius)] p-5">
         <h3 className="font-semibold text-sm">Request refund (manual accounting)</h3>
         <p className="text-xs text-[hsl(var(--dash-muted))]">
           No payment gateway — approval records the refund for reports only.
@@ -755,7 +755,7 @@ export function RefundsPanel({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-glass">
+      <div className="overflow-hidden rounded-[var(--dash-radius)] dash-card">
         <Table>
           <TableHeader>
             <TableRow>

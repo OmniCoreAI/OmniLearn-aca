@@ -5,10 +5,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Pencil, Star, StarOff, Trash2, UserPlus } from 'lucide-react'
 import Modal from '@components/Objects/StyledElements/Modal/Modal'
-import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
-import { DataTable, GhostButton, IconButton, StatusPill, tdCls } from '@components/Dashboard/Pages/Academic/AcademicUI'
+import { Field, FormActions, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
+import { GhostButton, StatusPill } from '@components/Dashboard/Pages/Academic/AcademicUI'
+import { AcademicEmptyState } from '@components/Dashboard/Pages/Academic/AcademicShared'
+import DashDataTable, { ToolbarSearch, ToolbarSelect } from '@components/Dashboard/Shared/DataTable/DashDataTable'
+import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
 import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
-import { SearchBox, useAdminContext } from '@components/Dashboard/Pages/Administration/AdminUI'
+import { PersonAvatar, useAdminContext, useConfirm } from '@components/Dashboard/Pages/Administration/AdminUI'
 import {
   addEntityMember,
   assignEntityCoordinator,
@@ -57,11 +60,13 @@ function MemberForm({
   isAcademy,
   member,
   onDone,
+  onCancel,
 }: {
   entityUuid: string
   isAcademy: boolean
   member: any
   onDone: () => void
+  onCancel: () => void
 }) {
   const { t } = useTranslation()
   const { orgId, access_token } = useAdminContext()
@@ -113,16 +118,11 @@ function MemberForm({
       {!member && (
         <>
           {isAcademy && (
-            <div className="flex gap-2">
+            <div className={TAB_TRACK} role="tablist">
               {(['new', 'existing'] as const).map((m) => (
-                <GhostButton
-                  key={m}
-                  type="button"
-                  onClick={() => setMode(m)}
-                  className={mode === m ? 'bg-[hsl(var(--dash-canvas))]' : ''}
-                >
+                <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={tabItemClass(mode === m, 'text-xs')}>
                   {m === 'new' ? t('entities.by_email', 'By name & email') : t('entities.existing_user', 'Existing platform user')}
-                </GhostButton>
+                </button>
               ))}
             </div>
           )}
@@ -142,13 +142,13 @@ function MemberForm({
           ) : (
             <>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label={t('entities.first_name', 'First name')}>
+                <Field label={t('entities.first_name', 'First name')} required>
                   <input className={inputCls} required value={person.first_name} onChange={(e) => setPerson({ ...person, first_name: e.target.value })} />
                 </Field>
                 <Field label={t('entities.last_name', 'Last name')}>
                   <input className={inputCls} value={person.last_name} onChange={(e) => setPerson({ ...person, last_name: e.target.value })} />
                 </Field>
-                <Field label={t('entities.contact_email', 'Email')}>
+                <Field label={t('entities.contact_email', 'Email')} required>
                   <input className={inputCls} type="email" required value={person.email} onChange={(e) => setPerson({ ...person, email: e.target.value })} />
                 </Field>
                 <Field label={t('entities.contact_phone', 'Phone')}>
@@ -212,7 +212,7 @@ function MemberForm({
           </Field>
         )
       )}
-      <SubmitRow saving={saving} />
+      <FormActions saving={saving} onCancel={onCancel} submitLabel={member ? t('academic.save', 'Save') : t('entities.add_member', 'Add member')} />
     </form>
   )
 }
@@ -231,17 +231,26 @@ export function EntityMembersPanel({
   const { t } = useTranslation()
   const { access_token, ready } = useAdminContext()
   const queryClient = useQueryClient()
+  const { confirm, dialog } = useConfirm()
   const positions = useEntityPositions(entityUuid)
   const groups = useEntityGroups(entityUuid).filter((g) => !g.managed)
   const [q, setQ] = useState('')
-  const [status, setStatus] = useState('')
-  const [positionUuid, setPositionUuid] = useState('')
-  const [groupUuid, setGroupUuid] = useState('')
+  const [status, setStatus] = useState('all')
+  const [positionUuid, setPositionUuid] = useState('all')
+  const [groupUuid, setGroupUuid] = useState('all')
   const [page, setPage] = useState(1)
   const [editing, setEditing] = useState<any>(null)
   const [open, setOpen] = useState(false)
 
-  const params = { q: q.trim() || undefined, status: status || undefined, position_uuid: positionUuid || undefined, group_uuid: groupUuid || undefined, page, limit: PAGE_SIZE }
+  const pick = (v: string) => (v === 'all' ? undefined : v)
+  const params = {
+    q: q.trim() || undefined,
+    status: pick(status),
+    position_uuid: pick(positionUuid),
+    group_uuid: pick(groupUuid),
+    page,
+    limit: PAGE_SIZE,
+  }
   const { data, isLoading } = useQuery({
     queryKey: ['entities', entityUuid, 'members', params],
     queryFn: () => getEntityMembers(entityUuid, access_token, params),
@@ -249,14 +258,14 @@ export function EntityMembersPanel({
   })
   const items = (data?.items || []) as any[]
   const total = data?.total || 0
+  const filtering = !!q || status !== 'all' || positionUuid !== 'all' || groupUuid !== 'all'
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['entities', entityUuid] })
     onChanged?.()
   }
-
-  const act = async (fn: () => Promise<any>, ok: string, confirm?: string) => {
-    if (confirm && !window.confirm(confirm)) return
+  const act = async (fn: () => Promise<any>, ok: string, ask?: { title: string; message: string; confirmText: string; tone?: 'warning' | 'info' }) => {
+    if (ask && !(await confirm(ask))) return
     try {
       await fn()
       toast.success(ok)
@@ -265,123 +274,156 @@ export function EntityMembersPanel({
       toast.error(err?.message || t('administration.common.save_failed', 'Could not save'))
     }
   }
+  const filterTo = (setter: (_v: string) => void) => (v: string) => {
+    setter(v)
+    setPage(1)
+  }
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="min-w-[220px] flex-1">
-          <SearchBox value={q} onChange={(v) => { setQ(v); setPage(1) }} placeholder={t('entities.search_members', 'Search by name, email or employee ID')} />
-        </div>
-        <select className={`${inputCls} mb-4 w-40`} value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
-          <option value="">{t('entities.all_statuses', 'All statuses')}</option>
-          <option value="active">{String(t('administration.common.status_active', 'active'))}</option>
-          <option value="inactive">{String(t('administration.common.status_inactive', 'inactive'))}</option>
-        </select>
-        <select className={`${inputCls} mb-4 w-44`} value={positionUuid} onChange={(e) => { setPositionUuid(e.target.value); setPage(1) }}>
-          <option value="">{t('entities.all_positions', 'All positions')}</option>
-          {positions.map((p) => (
-            <option key={p.position_uuid} value={p.position_uuid}>{p.name}</option>
-          ))}
-        </select>
-        <select className={`${inputCls} mb-4 w-44`} value={groupUuid} onChange={(e) => { setGroupUuid(e.target.value); setPage(1) }}>
-          <option value="">{t('entities.all_groups', 'All groups')}</option>
-          {groups.map((g) => (
-            <option key={g.usergroup_uuid} value={g.usergroup_uuid}>{g.name}</option>
-          ))}
-        </select>
-        {canManage && (
-          <GhostButton className="mb-4" onClick={() => { setEditing(null); setOpen(true) }}>
-            <UserPlus className="h-3.5 w-3.5" /> {t('entities.add_member', 'Add member')}
-          </GhostButton>
-        )}
-      </div>
-
-      <DataTable
-        headers={[
-          t('entities.member', 'Member'),
-          t('entities.employee_id', 'Employee ID'),
-          t('entities.position', 'Position'),
-          t('entities.groups', 'Groups'),
-          t('administration.common.status', 'Status'),
-          '',
-        ]}
-        empty={isLoading ? '…' : t('entities.no_members', 'No members yet.')}
-      >
-        {items.map((m) => (
-          <tr key={m.member_uuid}>
-            <td className={tdCls}>
-              <div className="flex items-center gap-1.5 font-medium">
-                {personName(m.user)}
-                {m.is_coordinator && (
-                  <span className="rounded-full bg-[hsl(var(--dash-tile-lavender))] px-2 py-0.5 text-[10px] font-semibold text-[hsl(var(--dash-tile-lavender-fg))]">
-                    {t('entities.coordinator', 'Coordinator')}
-                  </span>
-                )}
+      <DashDataTable
+        rows={items}
+        rowKey={(m: any) => m.member_uuid}
+        loading={isLoading}
+        serverPaging={{ page, pageSize: PAGE_SIZE, total, onChange: setPage }}
+        onRowClick={canManage ? (m: any) => { setEditing(m); setOpen(true) } : undefined}
+        itemLabel={(n) => t('entities.members_count', '{{count}} members', { count: n })}
+        toolbar={
+          <>
+            <ToolbarSearch value={q} onChange={filterTo(setQ)} placeholder={t('entities.search_members', 'Search by name, email or employee ID')} />
+            <ToolbarSelect
+              label={t('administration.common.status', 'Status')}
+              value={status}
+              onChange={filterTo(setStatus)}
+              options={[
+                { value: 'all', label: t('administration.common.all', 'All') },
+                { value: 'active', label: String(t('administration.common.status_active', 'Active')) },
+                { value: 'inactive', label: String(t('administration.common.status_inactive', 'Inactive')) },
+              ]}
+            />
+            {positions.length ? (
+              <ToolbarSelect
+                label={t('entities.position', 'Position')}
+                value={positionUuid}
+                onChange={filterTo(setPositionUuid)}
+                options={[{ value: 'all', label: t('administration.common.all', 'All') }, ...positions.map((p) => ({ value: p.position_uuid, label: p.name }))]}
+              />
+            ) : null}
+            {groups.length ? (
+              <ToolbarSelect
+                label={t('entities.group', 'Group')}
+                value={groupUuid}
+                onChange={filterTo(setGroupUuid)}
+                options={[{ value: 'all', label: t('administration.common.all', 'All') }, ...groups.map((g) => ({ value: g.usergroup_uuid, label: g.name }))]}
+              />
+            ) : null}
+          </>
+        }
+        toolbarEnd={
+          canManage ? (
+            <GhostButton onClick={() => { setEditing(null); setOpen(true) }}>
+              <UserPlus className="h-3.5 w-3.5" /> {t('entities.add_member', 'Add member')}
+            </GhostButton>
+          ) : null
+        }
+        empty={
+          <AcademicEmptyState
+            compact
+            title={filtering ? t('administration.common.no_matches', 'No matches') : t('entities.no_members', 'No members yet.')}
+            description={
+              filtering
+                ? t('administration.common.no_matches_hint', 'Try a different search or clear the filters.')
+                : t('entities.no_members_hint', 'Add people one by one or import them from Excel in the Imports tab.')
+            }
+          />
+        }
+        columns={[
+          {
+            key: 'member',
+            header: t('entities.member', 'Member'),
+            primary: true,
+            cell: (m: any) => (
+              <div className="flex min-w-0 items-center gap-3">
+                <PersonAvatar name={personName(m.user)} size={32} />
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-1.5 font-medium">
+                    <span className="truncate">{personName(m.user)}</span>
+                    {m.is_coordinator && (
+                      <span className="shrink-0 rounded-full bg-[hsl(var(--dash-accent-soft))] px-2 py-0.5 text-[10px] font-semibold text-[hsl(var(--dash-accent))]">
+                        {t('entities.coordinator', 'Coordinator')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="truncate text-xs text-[hsl(var(--dash-muted))]">{m.email}</div>
+                </div>
               </div>
-              <div className="text-xs text-[hsl(var(--dash-muted))]">{m.email}</div>
-            </td>
-            <td className={tdCls}>{m.employee_id || '—'}</td>
-            <td className={tdCls}>{m.position_name || '—'}</td>
-            <td className={`${tdCls} text-xs`}>{(m.groups || []).map((g: any) => g.name).join(', ') || '—'}</td>
-            <td className={tdCls}>
-              <StatusPill status={m.status} label={String(t(`administration.common.status_${m.status}`, m.status))} />
-            </td>
-            <td className={`${tdCls} whitespace-nowrap text-end`}>
-              {isAcademy &&
-                (m.is_coordinator ? (
-                  <IconButton
-                    title={String(t('entities.remove_coordinator', 'Stop being coordinator'))}
-                    onClick={() => act(() => removeEntityCoordinator(entityUuid, m.member_uuid, access_token), t('administration.common.updated', 'Saved'))}
-                  >
-                    <StarOff className="h-3.5 w-3.5" />
-                  </IconButton>
-                ) : (
-                  <IconButton
-                    title={String(t('entities.make_coordinator', 'Make coordinator'))}
-                    onClick={() =>
-                      act(
-                        () => assignEntityCoordinator(entityUuid, { user_uuid: m.user.user_uuid }, access_token),
-                        t('administration.common.updated', 'Saved'),
-                        t('entities.confirm_make_coordinator', 'Make this member a coordinator of the entity? Trainees get the Entity Coordinator role.')
-                      )
+            ),
+          },
+          { key: 'employee', header: t('entities.employee_id', 'Employee ID'), cell: (m: any) => <span className="font-mono text-xs">{m.employee_id || '—'}</span> },
+          { key: 'position', header: t('entities.position', 'Position'), cell: (m: any) => m.position_name || <span className="text-[hsl(var(--dash-muted))]">—</span> },
+          {
+            key: 'groups',
+            header: t('entities.groups', 'Groups'),
+            hideBelow: 'lg',
+            cell: (m: any) => {
+              const list = (m.groups || []) as any[]
+              if (!list.length) return <span className="text-[hsl(var(--dash-muted))]">—</span>
+              return (
+                <span className="flex items-center gap-1" title={list.map((g) => g.name).join(', ')}>
+                  <span className="truncate rounded-full bg-[hsl(var(--dash-canvas))] px-2 py-0.5 text-[11px]">{list[0].name}</span>
+                  {list.length > 1 ? <span className="text-[11px] text-[hsl(var(--dash-muted))]">+{list.length - 1}</span> : null}
+                </span>
+              )
+            },
+          },
+          {
+            key: 'status',
+            header: t('administration.common.status', 'Status'),
+            cell: (m: any) => <StatusPill status={m.status} label={String(t(`administration.common.status_${m.status}`, m.status))} />,
+          },
+        ]}
+        actions={(m: any) => [
+          ...(canManage && (!m.is_coordinator || isAcademy)
+            ? [{ label: t('administration.common.edit', 'Edit'), icon: <Pencil className="h-3.5 w-3.5" />, onSelect: () => { setEditing(m); setOpen(true) } }]
+            : []),
+          ...(isAcademy
+            ? [
+                m.is_coordinator
+                  ? {
+                      label: t('entities.remove_coordinator', 'Stop being coordinator'),
+                      icon: <StarOff className="h-3.5 w-3.5" />,
+                      onSelect: () => act(() => removeEntityCoordinator(entityUuid, m.member_uuid, access_token), t('administration.common.updated', 'Saved')),
                     }
-                  >
-                    <Star className="h-3.5 w-3.5" />
-                  </IconButton>
-                ))}
-              {canManage && (!m.is_coordinator || isAcademy) && (
-                <>
-                  <IconButton title={String(t('administration.common.edit', 'Edit'))} onClick={() => { setEditing(m); setOpen(true) }}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </IconButton>
-                  <IconButton
-                    tone="danger"
-                    title={String(t('entities.remove_member', 'Remove from entity'))}
-                    onClick={() =>
-                      act(
-                        () => removeEntityMember(entityUuid, m.member_uuid, access_token),
-                        t('administration.common.deleted', 'Deleted'),
-                        t('entities.confirm_remove_member', 'Remove this member from the entity? Their account stays; they leave the entity’s groups.')
-                      )
-                    }
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </IconButton>
-                </>
-              )}
-            </td>
-          </tr>
-        ))}
-      </DataTable>
-      {total > PAGE_SIZE && (
-        <div className="mt-3 flex items-center justify-end gap-2 text-xs">
-          <GhostButton disabled={page <= 1} onClick={() => setPage(page - 1)}>‹</GhostButton>
-          <span>
-            {page} / {Math.ceil(total / PAGE_SIZE)}
-          </span>
-          <GhostButton disabled={page * PAGE_SIZE >= total} onClick={() => setPage(page + 1)}>›</GhostButton>
-        </div>
-      )}
+                  : {
+                      label: t('entities.make_coordinator', 'Make coordinator'),
+                      icon: <Star className="h-3.5 w-3.5" />,
+                      onSelect: () =>
+                        act(() => assignEntityCoordinator(entityUuid, { user_uuid: m.user.user_uuid }, access_token), t('administration.common.updated', 'Saved'), {
+                          title: t('entities.make_coordinator_title', 'Make {{name}} a coordinator?', { name: personName(m.user) }),
+                          message: t('entities.confirm_make_coordinator', 'Make this member a coordinator of the entity? Trainees get the Entity Coordinator role.'),
+                          confirmText: t('entities.make_coordinator', 'Make coordinator'),
+                          tone: 'info',
+                        }),
+                    },
+              ]
+            : []),
+          ...(canManage && (!m.is_coordinator || isAcademy)
+            ? [
+                {
+                  label: t('entities.remove_member', 'Remove from entity'),
+                  icon: <Trash2 className="h-3.5 w-3.5" />,
+                  tone: 'danger' as const,
+                  onSelect: () =>
+                    act(() => removeEntityMember(entityUuid, m.member_uuid, access_token), t('administration.common.deleted', 'Deleted'), {
+                      title: t('entities.remove_member_title', 'Remove {{name}}?', { name: personName(m.user) }),
+                      message: t('entities.confirm_remove_member', 'Remove this member from the entity? Their account stays; they leave the entity’s groups.'),
+                      confirmText: t('entities.remove_member_short', 'Remove'),
+                    }),
+                },
+              ]
+            : []),
+        ]}
+      />
 
       <Modal
         isDialogOpen={open}
@@ -394,6 +436,7 @@ export function EntityMembersPanel({
             entityUuid={entityUuid}
             isAcademy={isAcademy}
             member={editing}
+            onCancel={() => setOpen(false)}
             onDone={() => {
               setOpen(false)
               refresh()
@@ -401,6 +444,7 @@ export function EntityMembersPanel({
           />
         }
       />
+      {dialog}
     </div>
   )
 }
