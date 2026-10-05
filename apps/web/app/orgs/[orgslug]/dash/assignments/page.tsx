@@ -369,8 +369,8 @@ function CourseCard({
   assignments: any[]
   originalCount: number
   org: any
-  removeAssignmentPrefix: (uuid: string) => string
-  removeCoursePrefix: (uuid: string) => string
+  removeAssignmentPrefix: (_uuid: string) => string
+  removeCoursePrefix: (_uuid: string) => string
 }) {
   const { t } = useTranslation()
 
@@ -431,7 +431,7 @@ function AssignmentCard({
 }: {
   assignment: any
   org: any
-  removeAssignmentPrefix: (uuid: string) => string
+  removeAssignmentPrefix: (_uuid: string) => string
 }) {
   const { t } = useTranslation()
   const gradingBadge = assignment.grading_type ? GRADING_TYPE_BADGE[assignment.grading_type] : null

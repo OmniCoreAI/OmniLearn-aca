@@ -5,7 +5,7 @@ import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
 import { ChartBar, ChartLine, SquaresFour } from '@phosphor-icons/react'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
-import { usePlanInfo, useAnalyticsStatus } from '@components/Dashboard/Analytics/useAnalyticsDashboard'
+import { useAnalyticsStatus } from '@components/Dashboard/Analytics/useAnalyticsDashboard'
 import { isFeatureAvailable } from '@services/plans/plans'
 import { DashTabBar } from '@components/Dashboard/Shared/DashTabBar/DashTabBar'
 import FeatureGate from '@components/Dashboard/Shared/FeatureGate/FeatureGate'
@@ -60,7 +60,6 @@ export default function AnalyticsDashboard() {
   const { t } = useTranslation()
   const [days, setDays] = useState('30')
   const [tab, setTab] = useState<Tab>('overview')
-  const { data: planInfo } = usePlanInfo()
   const { data: analyticsStatus } = useAnalyticsStatus()
   const plan = usePlan()
   const isAnalyticsAvailable = isFeatureAvailable('analytics', plan)

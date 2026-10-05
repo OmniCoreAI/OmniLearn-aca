@@ -4,7 +4,6 @@ import { Form, Formik } from 'formik'
 import * as Yup from 'yup'
 import { updateOrganization } from '@services/settings/org'
 import { revalidateTags } from '@services/utils/ts/requests'
-import { useRouter } from 'next/navigation'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { toast } from 'react-hot-toast'
@@ -30,10 +29,6 @@ interface Script {
   content: string
 }
 
-interface OrganizationScripts {
-  scripts: Script[]
-}
-
 const getValidationSchema = (t: any) => Yup.object().shape({
   name: Yup.string().required(t('dashboard.organization.scripts.script_name') + ' is required'),
   content: Yup.string().required(t('dashboard.organization.scripts.script_content') + ' is required')
@@ -41,7 +36,6 @@ const getValidationSchema = (t: any) => Yup.object().shape({
 
 const OrgEditOther: React.FC = () => {
   const { t } = useTranslation()
-  const router = useRouter()
   const session = useLHSession() as any
   const access_token = session?.data?.tokens?.access_token
   const org = useOrg() as any

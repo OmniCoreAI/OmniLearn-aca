@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils'
 
 type Props = {
   value: string
-  onChange: (html: string) => void
+  onChange: (_html: string) => void
   placeholder?: string
   className?: string
 }

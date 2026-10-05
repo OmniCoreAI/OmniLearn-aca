@@ -4,7 +4,7 @@ import { Info } from 'lucide-react'
 
 interface FormLayoutProps {
   children: React.ReactNode
-  onSubmit: (e: any) => void
+  onSubmit: (_e: any) => void
   className?: string
 }
 

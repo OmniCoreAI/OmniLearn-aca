@@ -16,7 +16,6 @@ import {
   SiYoutube 
 } from '@icons-pack/react-simple-icons'
 import { Plus, X as XIcon } from "lucide-react"
-import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query/keys'
 import { useTranslation } from 'react-i18next'
@@ -40,7 +39,6 @@ export default function OrgEditSocials() {
   const access_token = session?.data?.tokens?.access_token
   const org = useOrg() as any
   const queryClient = useQueryClient()
-  const router = useRouter()
   const initialValues: OrganizationValues = {
     socials: org?.socials || {},
     links: org?.links || {}
@@ -54,7 +52,7 @@ export default function OrgEditSocials() {
 
       queryClient.invalidateQueries({ queryKey: queryKeys.org.detail(org.slug) })
       toast.success(t('dashboard.organization.settings.update_success'), { id: loadingToast })
-    } catch (err) {
+    } catch {
       toast.error(t('dashboard.organization.settings.update_error'), { id: loadingToast })
     }
   }

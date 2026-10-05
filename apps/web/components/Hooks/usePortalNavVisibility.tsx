@@ -18,7 +18,7 @@ interface UsePortalNavVisibilityReturn {
   loading: boolean
   /** null means "no restriction — fall back to isAdmin all-or-nothing" (custom/unknown role, or data not loaded yet). */
   visibleItemIds: Set<string> | null
-  isItemVisible: (itemId: string) => boolean
+  isItemVisible: (_itemId: string) => boolean
 }
 
 /**

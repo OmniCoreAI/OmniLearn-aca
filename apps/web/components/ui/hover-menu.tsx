@@ -16,8 +16,8 @@ const HoverMenu = React.forwardRef<HTMLDivElement, HoverMenuProps>(
     const triggerRef = React.useRef<HTMLDivElement>(null)
     const [isHovered, setIsHovered] = React.useState(false)
     const [position, setPosition] = React.useState<{ top: number; left?: number; right?: number } | null>(null)
-    const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
-    const leaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+    const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+    const leaveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const updatePosition = React.useCallback(() => {
       if (triggerRef.current) {
