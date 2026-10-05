@@ -13,6 +13,7 @@
     "test": "bun test tests"
   },
   "dependencies": {
+    "@base-ui/react": "^1.5.0",
     "@codemirror/autocomplete": "^6.18.4",
     "@codemirror/lang-cpp": "^6.0.3",
     "@codemirror/lang-go": "^6.0.1",
@@ -30,6 +31,7 @@
     "@codemirror/lint": "^6.9.5",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.36.5",
+    "@date-fns/tz": "^1.4.1",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@hello-pangea/dnd": "^18.0.1",
@@ -85,6 +87,7 @@
     "cmdk": "^1.1.1",
     "cobe": "^2.0.1",
     "currency-codes": "^2.2.0",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.19",
     "dompurify": "^3.3.1",
     "emblor": "^1.4.8",
@@ -110,6 +113,7 @@
     "re-resizable": "^6.11.2",
     "react": "19.2.7",
     "react-confetti": "^6.4.0",
+    "react-day-picker": "^9.14.0",
     "react-dom": "19.2.7",
     "react-hot-toast": "^2.6.0",
     "react-i18next": "^17.0.0",

@@ -7,7 +7,8 @@ from src.routers import health
 from src.routers import instance
 from src.routers import plans
 from src.routers import usergroups
-from src.routers import dev, trail, users, auth, orgs, roles, search
+from src.routers import dev, trail, users, auth, orgs, roles, search, portal_navigation
+from src.routers import calendar as calendar_router_module
 from src.routers import monitoring
 from src.routers import stream
 from src.routers import api_tokens
@@ -25,6 +26,7 @@ from src.routers.academic import (
     semesters as semesters_router_module,
     training_programs as training_programs_router_module,
     course_profiles as course_profiles_router_module,
+    core as academic_core_router_module,
 )
 from src.routers.instructors import (
     instructors as instructors_router_module,
@@ -32,6 +34,20 @@ from src.routers.instructors import (
     finance as instructor_finance_router_module,
 )
 from src.routers.finance import ledger as finance_ledger_router_module
+from src.routers.administration import (
+    lookups as admin_lookups_router_module,
+    settings as admin_settings_router_module,
+    overview as admin_overview_router_module,
+    locations as admin_locations_router_module,
+    facilities as admin_facilities_router_module,
+    addons as admin_addons_router_module,
+    entities as admin_entities_router_module,
+    positions as admin_positions_router_module,
+    audience as admin_audience_router_module,
+    notifications as admin_notifications_router_module,
+    imports as admin_imports_router_module,
+    certificates as admin_certificates_router_module,
+)
 from src.routers.folders import folders as folders_router_module
 from src.routers.media import media as media_router_module
 from src.routers.courses import migration as migration_router_module
@@ -101,6 +117,12 @@ v1_router.include_router(
     roles.router,
     prefix="/roles",
     tags=["roles"],
+    dependencies=[Depends(require_authenticated_user)]
+)
+v1_router.include_router(
+    portal_navigation.router,
+    prefix="/portal-navigation",
+    tags=["portal-navigation"],
     dependencies=[Depends(require_authenticated_user)]
 )
 v1_router.include_router(
@@ -198,6 +220,14 @@ v1_router.include_router(
     tags=["academic", "training-programs"],
     dependencies=[Depends(require_authenticated_user)],
 )
+# Academic core: calendar, course catalog, curricula, offerings, students.
+# Absolute paths (/academic-years, /terms, /academic-courses, /curricula,
+# /offerings, /cohorts/{uuid}/students, ...).
+v1_router.include_router(
+    academic_core_router_module.router,
+    tags=["academic"],
+    dependencies=[Depends(require_authenticated_user)],
+)
 # Course academic profile (1:1 course extension) — reuses course RBAC.
 v1_router.include_router(
     course_profiles_router_module.router,
@@ -230,7 +260,86 @@ v1_router.include_router(
     tags=["finance"],
     dependencies=[Depends(require_authenticated_user)],
 )
+# Administration & Configuration (reusable, org-level configuration data).
+v1_router.include_router(
+    admin_lookups_router_module.router,
+    prefix="/lookups",
+    tags=["administration", "lookups"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_settings_router_module.router,
+    prefix="/admin-settings",
+    tags=["administration", "settings"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_overview_router_module.router,
+    prefix="/administration",
+    tags=["administration"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_locations_router_module.router,
+    prefix="/locations",
+    tags=["administration", "facilities"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_facilities_router_module.router,
+    prefix="/facilities",
+    tags=["administration", "facilities"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_addons_router_module.router,
+    prefix="/addons",
+    tags=["administration", "add-ons"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_entities_router_module.router,
+    prefix="/entities",
+    tags=["administration", "entities"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_positions_router_module.router,
+    prefix="/positions",
+    tags=["administration", "entities"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_audience_router_module.router,
+    prefix="/audience",
+    tags=["administration", "audience"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_notifications_router_module.router,
+    prefix="/notifications",
+    tags=["administration", "communication"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_imports_router_module.router,
+    prefix="/imports",
+    tags=["administration", "imports"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    admin_certificates_router_module.router,
+    prefix="/certificate-templates",
+    tags=["administration", "certificates"],
+    dependencies=[Depends(require_authenticated_user)],
+)
 v1_router.include_router(search.router, prefix="/search", tags=["search"])
+v1_router.include_router(
+    calendar_router_module.router,
+    prefix="/calendar",
+    tags=["calendar"],
+    dependencies=[Depends(require_authenticated_user)],
+)
 v1_router.include_router(
     assignments.router,
     prefix="/assignments",

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useLHSession } from '@components/Contexts/LHSessionContext';
 import { useOrg } from '@components/Contexts/OrgContext';
 import { getUserCertificates } from '@services/courses/certifications';
 import CertificatePreview from '@components/Dashboard/Pages/Course/EditCourseCertification/CertificatePreview';
+import { TemplateCertificateView, TemplateCertificateHandle } from '@components/Certificates/TemplateCertificate';
 import { ArrowLeft, Download, Share2, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import { getUriWithOrg } from '@services/config/config';
@@ -20,6 +21,7 @@ interface CertificatePageProps {
 const CertificatePage: React.FC<CertificatePageProps> = ({ orgslug, courseid, qrCodeLink }) => {
   const session = useLHSession() as any;
   const org = useOrg() as any;
+  const templateRef = useRef<TemplateCertificateHandle>(null);
   const [userCertificate, setUserCertificate] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +72,12 @@ const CertificatePage: React.FC<CertificatePageProps> = ({ orgslug, courseid, qr
   // Generate PDF using canvas
   const downloadCertificate = async () => {
     if (!userCertificate) return;
+    if (userCertificate.render && templateRef.current) {
+      // Template certificates are captured from the shared renderer.
+      const name = (userCertificate.certification.config.certification_name || 'Certificate').replace(/[^a-zA-Z0-9]/g, '_');
+      await templateRef.current.download(`${name}_Certificate.pdf`);
+      return;
+    }
 
     try {
       const [{ default: html2canvas }, { default: jsPDF }, QRCode] = await Promise.all([
@@ -471,6 +479,9 @@ const CertificatePage: React.FC<CertificatePageProps> = ({ orgslug, courseid, qr
         {/* Certificate Display */}
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <div className="max-w-2xl mx-auto">
+            {userCertificate.render ? (
+              <TemplateCertificateView ref={templateRef} render={userCertificate.render} verifyUrl={qrCodeLink} orgLogo={org?.logo_image} />
+            ) : (
             <CertificatePreview
               certificationName={userCertificate.certification.config.certification_name}
               certificationDescription={userCertificate.certification.config.certification_description}
@@ -485,6 +496,7 @@ const CertificatePage: React.FC<CertificatePageProps> = ({ orgslug, courseid, qr
               })}
               qrCodeLink={qrCodeLink}
             />
+            )}
           </div>
         </div>
 

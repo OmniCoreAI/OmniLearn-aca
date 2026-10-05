@@ -15,6 +15,7 @@ import { useFormik } from 'formik'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
+import { GroupClassificationFields } from './GroupClassificationFields'
 
 type AddUserGroupProps = {
     setCreateUserGroupModal: any
@@ -42,14 +43,17 @@ function AddUserGroup(props: AddUserGroupProps) {
         initialValues: {
             name: '',
             description: '',
-            org_id: org?.id || ''
+            org_id: org?.id || '',
+            entity_uuid: '',
+            group_type: 'general',
+            status: 'active',
         },
         enableReinitialize: true,
         validate: getValidate(t),
         onSubmit: async (values) => {
             const toastID = toast.loading(t('dashboard.users.usergroups.modals.create.toasts.creating'))
             setIsSubmitting(true)
-            const submitValues = { ...values, org_id: org?.id }
+            const submitValues = { ...values, org_id: org?.id, entity_uuid: values.entity_uuid || undefined }
             const res = await createUserGroup(submitValues, access_token)
             if (res.status == 200) {
                 setIsSubmitting(false)
@@ -93,6 +97,7 @@ function AddUserGroup(props: AddUserGroupProps) {
                     />
                 </Form.Control>
             </FormField>
+            <GroupClassificationFields values={formik.values} onChange={(field, value) => formik.setFieldValue(field, value)} />
             <div className="flex py-4">
                 <Form.Submit asChild>
                     <button className="w-full bg-black text-white font-bold text-center p-2 rounded-md shadow-md hover:cursor-pointer">

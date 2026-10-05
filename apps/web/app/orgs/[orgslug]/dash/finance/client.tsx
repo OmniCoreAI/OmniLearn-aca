@@ -3,6 +3,9 @@
 import React, { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import { TrendUp, TrendDown, UsersThree, Wallet as WalletIcon, Percent as PercentIcon } from '@phosphor-icons/react'
 import {
   Bar,
   BarChart,
@@ -23,10 +26,6 @@ import {
   Plus,
   Trash2,
   Wallet,
-  TrendingUp,
-  TrendingDown,
-  Percent,
-  Users,
   Activity,
 } from 'lucide-react'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
@@ -60,6 +59,7 @@ import {
   ProfitLossPanel,
   RefundsPanel,
 } from './reports'
+import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
 
 type RangeKey = '7d' | '30d' | '90d' | 'all'
 type SectionTab = 'overview' | 'pl' | 'courses' | 'payroll' | 'refunds'
@@ -118,34 +118,6 @@ const BRAND = {
   tick: '#6b6b6b',
 } as const
 
-function MetricCard({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  color,
-}: {
-  label: string
-  value: string
-  sub?: string
-  icon: any
-  color: string
-}) {
-  return (
-    <div className="dash-lift dash-glass flex items-center gap-4 rounded-[var(--dash-radius)] px-5 py-4">
-      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ring-black/5 ${color}`}>
-        <Icon size={18} />
-      </div>
-      <div className="min-w-0">
-        <div className="truncate text-xl font-bold tracking-tight text-[hsl(var(--dash-ink))]">{value}</div>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[hsl(var(--dash-muted))]">
-          {label}
-        </div>
-        {sub && <div className="mt-0.5 text-xs text-[hsl(var(--dash-muted))]/75">{sub}</div>}
-      </div>
-    </div>
-  )
-}
 
 function ChartCard({
   title,
@@ -157,7 +129,7 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="dash-glass min-h-[300px] min-w-0 overflow-hidden rounded-[var(--dash-radius)] p-5 sm:p-6">
+    <div className="dash-card min-h-[300px] min-w-0 overflow-hidden rounded-[var(--dash-radius)] p-5 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold tracking-tight text-[hsl(var(--dash-ink))]">{title}</h3>
@@ -183,18 +155,9 @@ function PillGroup<T extends string>({
   onChange: (_v: T) => void
 }) {
   return (
-    <div className="dash-glass flex w-fit items-center gap-1 overflow-x-auto rounded-full p-1">
+    <div className={TAB_TRACK}>
       {options.map(([id, label]) => (
-        <button
-          key={id}
-          type="button"
-          onClick={() => onChange(id)}
-          className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium capitalize transition-all duration-200 ${
-            value === id
-              ? 'bg-[hsl(var(--dash-ink))] text-[hsl(var(--auth-gold))] shadow-[0_4px_14px_hsl(0_0%_0%/0.18)]'
-              : 'text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-ink))]'
-          }`}
-        >
+        <button key={id} type="button" onClick={() => onChange(id)} className={tabItemClass(value === id, 'capitalize')}>
           {label}
         </button>
       ))}
@@ -432,6 +395,7 @@ function EntryForm({
 }
 
 export default function FinanceClient({ orgslug }: { orgslug: string }) {
+  const { t } = useTranslation()
   const org = useOrg() as any
   const orgId = org?.id as number | undefined
   const session = useLHSession() as any
@@ -617,7 +581,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
 
   return (
     <div className="finance-shell flex h-screen w-full flex-col bg-[hsl(var(--dash-canvas))]">
-      <div className="dash-glass z-10 flex-shrink-0 px-4 tracking-tight sm:px-10">
+      <div className="dash-card z-10 flex-shrink-0 px-4 tracking-tight sm:px-10">
         <div className="pb-4 pt-6">
           <Breadcrumbs
             items={[
@@ -643,14 +607,14 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
               <button
                 type="button"
                 onClick={exportSummary}
-                className="dash-glass inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-ink))]"
+                className="dash-card inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-ink))]"
               >
                 <Download size={14} /> Summary CSV
               </button>
               <button
                 type="button"
                 onClick={exportEntries}
-                className="dash-glass inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-ink))]"
+                className="dash-card inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-[hsl(var(--dash-muted))] transition-colors hover:text-[hsl(var(--dash-ink))]"
               >
                 <Download size={14} /> Entries CSV
               </button>
@@ -725,47 +689,16 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
           />
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-          <MetricCard
-            label="Revenue"
-            value={fmt(summary?.total_revenue || 0, currency)}
-            sub={`${summary?.revenue_count || 0} entries`}
-            icon={TrendingUp}
-            color="bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]"
-          />
-          <MetricCard
-            label="Expenses"
-            value={fmt(summary?.total_expenses || 0, currency)}
-            sub={`${summary?.expense_count || 0} entries`}
-            icon={TrendingDown}
-            color="bg-[hsl(var(--dash-tile-rose))] text-[hsl(var(--dash-tile-rose-fg))]"
-          />
-          <MetricCard
-            label="Instructor cost"
-            value={fmt(summary?.instructor_cost || 0, currency)}
-            sub="From work logs"
-            icon={Users}
-            color="bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]"
-          />
-          <MetricCard
-            label="Est. profit"
-            value={fmt(summary?.estimated_profit || 0, currency)}
-            sub="Revenue − expenses − instructors"
-            icon={Wallet}
-            color={
-              (summary?.estimated_profit || 0) >= 0
-                ? 'bg-[hsl(var(--dash-tile-lavender))] text-[hsl(var(--dash-tile-lavender-fg))]'
-                : 'bg-[hsl(var(--dash-tile-rose))] text-[hsl(var(--dash-tile-rose-fg))]'
-            }
-          />
-          <MetricCard
-            label="Margin"
-            value={`${(summary?.estimated_margin || 0).toFixed(0)}%`}
-            sub="Of revenue"
-            icon={Percent}
-            color="bg-[hsl(var(--dash-tile-sky))] text-[hsl(var(--dash-tile-sky-fg))]"
-          />
-        </div>
+        <DashStatCards
+          loading={!summary}
+          stats={[
+            { key: 'revenue', label: t('finance.stats.revenue', 'Revenue'), value: fmt(summary?.total_revenue || 0, currency), hint: t('finance.stats.entries', '{{count}} entries', { count: summary?.revenue_count || 0 }), icon: TrendUp, tone: 'gold' },
+            { key: 'expenses', label: t('finance.stats.expenses', 'Expenses'), value: fmt(summary?.total_expenses || 0, currency), hint: t('finance.stats.entries', '{{count}} entries', { count: summary?.expense_count || 0 }), icon: TrendDown, tone: 'rose' },
+            { key: 'instructors', label: t('finance.stats.instructor_cost', 'Instructor cost'), value: fmt(summary?.instructor_cost || 0, currency), hint: t('finance.stats.from_work_logs', 'From work logs'), icon: UsersThree, tone: 'stone' },
+            { key: 'profit', label: t('finance.stats.profit', 'Est. profit'), value: fmt(summary?.estimated_profit || 0, currency), hint: t('finance.stats.profit_hint', 'Revenue − expenses − instructors'), icon: WalletIcon, tone: (summary?.estimated_profit || 0) >= 0 ? 'sand' : 'rose' },
+            { key: 'margin', label: t('finance.stats.margin', 'Margin'), value: `${(summary?.estimated_margin || 0).toFixed(0)}%`, hint: t('finance.stats.of_revenue', 'Of revenue'), icon: PercentIcon, tone: 'stone' },
+          ]}
+        />
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <div className="xl:col-span-2">
@@ -947,7 +880,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
           </ChartCard>
         </div>
 
-        <div className="dash-glass overflow-hidden rounded-[var(--dash-radius)]">
+        <div className="dash-card overflow-hidden rounded-[var(--dash-radius)]">
           <div className="flex items-center justify-between border-b border-[hsl(var(--dash-border))] px-5 py-3">
             <span className="flex items-center gap-2 text-sm font-semibold text-[hsl(var(--dash-ink))]">
               <Activity size={14} className="text-[hsl(var(--dash-accent))]" /> Ledger entries

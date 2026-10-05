@@ -143,7 +143,7 @@ export const OrgMenu = (props: any) => {
       <div className="backdrop-blur-lg h-[60px] blur-3xl" style={{ zIndex: 'var(--z-behind)', marginTop: topOffset }}></div>
       <nav
         aria-label="Top navigation"
-        className={`backdrop-blur-lg fixed left-0 right-0 h-[60px] ${!primaryColor ? 'bg-white/90 nice-shadow' : ''}`}
+        className={`backdrop-blur-lg fixed left-0 right-0 h-[60px] ${!primaryColor ? 'bg-white/85 border-b border-[hsl(var(--dash-border))]/70' : ''}`}
         style={{
           zIndex: 'var(--z-nav)',
           backgroundColor: primaryColor || undefined,
@@ -151,9 +151,9 @@ export const OrgMenu = (props: any) => {
         }}
       >
         <div className="flex items-center justify-between w-full max-w-(--breakpoint-2xl) mx-auto px-4 sm:px-6 lg:px-8 h-full">
-          <div className="flex items-center space-x-5 md:w-auto w-full">
+          <div className="flex items-center gap-4 md:w-auto w-full">
             <div className="logo flex md:w-auto w-full justify-center">
-              <Link href={getUriWithOrg(orgslug, '/')}>
+              <Link href={getUriWithOrg(orgslug, '/')} className="flex items-center gap-2.5">
                 <div className="flex w-auto h-9 rounded-md items-center m-auto py-1 justify-center">
                   {org?.logo_image ? (
                     <img
@@ -172,6 +172,11 @@ export const OrgMenu = (props: any) => {
                     </div>
                   )}
                 </div>
+                {org?.name && (
+                  <span className={`hidden max-w-[10rem] truncate text-[15px] font-semibold tracking-tight xl:inline ${colors.text}`}>
+                    {org.name}
+                  </span>
+                )}
               </Link>
             </div>
             <div className="hidden md:flex">

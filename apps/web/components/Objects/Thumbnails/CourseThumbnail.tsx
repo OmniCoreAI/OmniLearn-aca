@@ -12,7 +12,8 @@ import { getCourseThumbnailMediaDirectory, getUserAvatarMediaDirectory } from '@
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query/keys'
 import { getCourseMetadata } from '@services/courses/courses'
-import { BookMinus, FilePenLine, Settings2, MoreVertical, Copy, Download, CheckSquare, Square, Lock } from 'lucide-react'
+import { BookMinus, FilePenLine, Settings2, MoreVertical, Copy, Download, CheckSquare, Square, Lock, ArrowRight } from 'lucide-react'
+import CourseCover from '@components/Objects/Thumbnails/CourseCover'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import Link from 'next/link'
 import React from 'react'
@@ -149,12 +150,12 @@ function CourseThumbnail({ course, orgslug, customLink, isDashboard = false, isS
 
   const thumbnailImage = course.thumbnail_image
     ? getCourseThumbnailMediaDirectory(org?.org_uuid, course.course_uuid, course.thumbnail_image)
-    : '/empty_thumbnail.png'
+    : null
 
   const courseLink = customLink ? customLink : getUriWithOrg(orgslug, `/course/${removeCoursePrefix(course.course_uuid)}`)
 
   return (
-    <div onMouseEnter={handleMouseEnter} className={`group relative flex flex-col bg-white rounded-xl nice-shadow overflow-hidden w-full transition-all duration-300 hover:scale-[1.01] ${isSelected ? 'ring-2 ring-black ring-offset-2' : ''}`}>
+    <div onMouseEnter={handleMouseEnter} className={`group relative flex w-full flex-col overflow-hidden rounded-2xl border border-[hsl(var(--dash-border))]/70 bg-white shadow-[0_1px_2px_hsl(0_0%_8%/0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_-12px_hsl(0_0%_8%/0.18)] ${isSelected ? 'ring-2 ring-[hsl(var(--dash-accent))] ring-offset-2' : ''}`}>
       {/* Selection checkbox - visible on hover or when selected (dashboard only) */}
       {isDashboard && onToggleSelect && (
         <button
@@ -182,57 +183,51 @@ function CourseThumbnail({ course, orgslug, customLink, isDashboard = false, isS
         isDashboard={isDashboard}
       />
 
-      <Link prefetch={false} href={courseLink} onClick={handleCardOpen} className="block relative aspect-video overflow-hidden bg-gray-50">
-        {/* Hidden img gives the browser a real resource hint so it can fetch the background-image early as an LCP candidate */}
-        {isPriority && (
-           
+      <Link prefetch={false} href={courseLink} onClick={handleCardOpen} className="relative block aspect-video overflow-hidden bg-[hsl(var(--dash-canvas))]">
+        {/* Hidden img gives the browser a real resource hint so it can fetch the cover early as an LCP candidate */}
+        {thumbnailImage && isPriority && (
           <img
             src={thumbnailImage}
             alt=""
             aria-hidden="true"
             fetchPriority="high"
-            className="absolute w-0 h-0 opacity-0 pointer-events-none"
+            className="pointer-events-none absolute h-0 w-0 opacity-0"
           />
         )}
-        <div
-          className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-          style={{ backgroundImage: `url(${thumbnailImage})` }}
+        {/* The generated cover shows when there's no thumbnail or it fails to load. */}
+        <CourseCover
+          name={course.name}
+          seed={course.course_uuid}
+          src={thumbnailImage || null}
+          className="transition-transform duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+        <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
         {isDashboard && (
-          <div className="absolute bottom-2 left-2">
-            {course.published ? (
-              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700 rounded-full">
-                {t('courses.published')}
-              </span>
-            ) : (
-              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-yellow-100 text-yellow-700 rounded-full">
-                {t('courses.unpublished')}
-              </span>
-            )}
+          <div className="absolute bottom-2.5 end-2.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-[hsl(var(--dash-ink))] shadow-sm backdrop-blur">
+              <span className={`h-1.5 w-1.5 rounded-full ${course.published ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              {course.published ? t('courses.published') : t('courses.unpublished')}
+            </span>
           </div>
         )}
       </Link>
 
-      <div className="p-3 flex flex-col space-y-1.5">
-        <div className="flex items-start justify-between">
-          <Link
-            prefetch={false}
-            href={courseLink}
-            onClick={handleCardOpen}
-            className="text-base font-bold text-gray-900 leading-tight hover:text-black transition-colors line-clamp-1"
-          >
-            {course.name}
-          </Link>
-        </div>
-        
-        {course.description && (
-          <p className="text-[11px] text-gray-500 line-clamp-2 min-h-[1.5rem]">
-            {course.description}
-          </p>
-        )}
+      <div className="flex flex-1 flex-col gap-1.5 p-4">
+        <Link
+          prefetch={false}
+          href={courseLink}
+          onClick={handleCardOpen}
+          title={course.name}
+          className="line-clamp-2 text-[15px] font-semibold leading-snug text-[hsl(var(--dash-ink))] transition-colors hover:text-[hsl(var(--dash-accent))]"
+        >
+          {course.name}
+        </Link>
 
-        <div className="pt-1.5 flex items-center justify-between border-t border-gray-100">
+        <p className="line-clamp-2 min-h-[2.25rem] text-xs leading-relaxed text-[hsl(var(--dash-muted))]">
+          {course.description || '\u00a0'}
+        </p>
+
+        <div className="mt-auto flex items-center justify-between border-t border-[hsl(var(--dash-border))]/60 pt-3">
           <div className="flex items-center gap-2">
             {displayedAuthors.length > 0 && (
               <div className="flex -space-x-2 items-center">
@@ -264,19 +259,20 @@ function CourseThumbnail({ course, orgslug, customLink, isDashboard = false, isS
             )}
             
             {course.update_date && (
-              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
-                {new Date(course.update_date).toLocaleDateString(i18n.language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', day: 'numeric' })}
+              <span className="text-[11px] text-[hsl(var(--dash-muted))]">
+                {new Date(course.update_date).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
               </span>
             )}
           </div>
-          
+
           <Link
             prefetch={false}
             href={courseLink}
             onClick={handleCardOpen}
-            className="text-[10px] font-bold text-gray-400 hover:text-gray-900 transition-colors uppercase tracking-wider"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-[hsl(var(--dash-ink))] transition-colors hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))]"
           >
             {t('courses.start_learning')}
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 rtl:rotate-180" />
           </Link>
         </div>
       </div>
@@ -308,7 +304,7 @@ const AdminEditOptions = ({ course, orgSlug, deleteCourse, cloneCourse, exportCo
       }`}>
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger asChild>
-            <button aria-label="Course actions"className="p-1.5 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-all shadow-md">
+            <button aria-label="Course actions" className="rounded-full bg-white/95 p-1.5 shadow-sm backdrop-blur-sm transition-all hover:bg-white">
               <MoreVertical size={18} className="text-gray-700" />
             </button>
           </DropdownMenuTrigger>

@@ -67,7 +67,7 @@ export function DashPrimaryButton({
   return (
     <a
       className={cn(
-        'dash-lift inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-accent))] px-4 py-2 text-xs font-semibold text-white shadow-[0_4px_12px_hsl(var(--dash-accent)/0.3)] transition-colors hover:brightness-110',
+        'dash-lift inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-accent))] px-4 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] shadow-[0_4px_12px_hsl(var(--dash-accent)/0.3)] transition-colors hover:brightness-110',
         className
       )}
       {...props}

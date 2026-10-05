@@ -74,6 +74,10 @@ export function getProgramThumbnailMediaDirectory(
   return `${getMediaUrl()}content/orgs/${orgUUID}/programs/${programUUID}/thumbnails/${fileId}`
 }
 
+export function getProgramBannerMediaDirectory(orgUUID: string, programUUID: string, fileId: string) {
+  return `${getMediaUrl()}content/orgs/${orgUUID}/programs/${programUUID}/banners/${fileId}`
+}
+
 export function getTrainingProgramThumbnailMediaDirectory(
   orgUUID: string,
   trainingProgramUUID: string,
@@ -185,6 +189,11 @@ export function getActivityMediaDirectory(
     let uri = `${getMediaUrl()}content/orgs/${orgUUID}/courses/${courseUUID}/activities/${activityUUID}/documentpdf/${fileId}`
     return uri
   }
+}
+
+/** Public org-level asset (instructor photos, facility images, entity logos…). */
+export function getOrgContentUrl(orgUUID: string, path: string) {
+  return `${getMediaUrl()}content/orgs/${orgUUID}/${path}`
 }
 
 export function getOrgLogoMediaDirectory(orgUUID: string, fileId: string) {

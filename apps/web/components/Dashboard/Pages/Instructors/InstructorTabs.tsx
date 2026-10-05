@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { getUriWithOrg } from '@services/config/config'
+import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
 import { cn } from '@/lib/utils'
 
 export function InstructorTabs({ orgslug }: { orgslug: string }) {
@@ -20,19 +21,14 @@ export function InstructorTabs({ orgslug }: { orgslug: string }) {
     exact ? pathname.endsWith(href) : pathname.includes(href)
 
   return (
-    <div className="mb-6 flex items-center gap-1 rounded-full bg-[hsl(var(--dash-surface))] p-1 border border-[hsl(var(--dash-border))] w-fit max-w-full overflow-x-auto">
+    <div className={cn(TAB_TRACK, 'mb-6')}>
       {tabs.map((tab) => {
         const active = isActive(tab.href, tab.exact)
         return (
           <Link
             key={tab.href}
             href={getUriWithOrg(orgslug, tab.href)}
-            className={cn(
-              'whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors',
-              active
-                ? 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]'
-                : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]'
-            )}
+            className={tabItemClass(active)}
           >
             {tab.label}
           </Link>

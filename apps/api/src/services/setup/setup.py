@@ -168,152 +168,23 @@ async def install_default_elements(db_session: AsyncSession):
                 action_update=True,
                 action_delete=True,
             ),
-        ),
-        creation_date=str(datetime.now()),
-        update_date=str(datetime.now()),
-    )
-
-    role_global_maintainer = Role(
-        name="Organization Coordinator",
-        description=(
-            "Uploads trainee lists (group registration via Excel), follows their organization's "
-            "trainees' progress and attendance, and receives financial and training reports."
-        ),
-        id=2,
-        role_type=RoleTypeEnum.TYPE_GLOBAL,
-        role_uuid="role_global_maintainer",
-        rights=Rights(
-            courses=PermissionsWithOwn(
-                action_create=False,
-                action_read=True,
-                action_read_own=True,
-                action_update=False,
-                action_update_own=False,
-                action_delete=False,
-                action_delete_own=False,
-            ),
-            users=Permission(
+            configuration=Permission(
                 action_create=True,
                 action_read=True,
                 action_update=True,
-                action_delete=False,
+                action_delete=True,
             ),
-            usergroups=Permission(
+            entities=Permission(
                 action_create=True,
                 action_read=True,
                 action_update=True,
-                action_delete=False,
+                action_delete=True,
             ),
-            folders=Permission(
-                action_create=False,
-                action_read=True,
-                action_update=False,
-                action_delete=False,
-            ),
-            media=Permission(
-                action_create=False,
-                action_read=True,
-                action_update=False,
-                action_delete=False,
-            ),
-            organizations=Permission(
-                action_create=False,
-                action_read=True,
-                action_update=False,
-                action_delete=False,
-            ),
-            coursechapters=Permission(
-                action_create=False,
-                action_read=True,
-                action_update=False,
-                action_delete=False,
-            ),
-            activities=Permission(
-                action_create=False,
-                action_read=True,
-                action_update=False,
-                action_delete=False,
-            ),
-            assignments=Permission(
-                action_create=False,
+            communications=Permission(
+                action_create=True,
                 action_read=True,
                 action_update=True,
-                action_delete=False,
-            ),
-            roles=Permission(
-                action_create=False,
-                action_read=True,
-                action_update=False,
-                action_delete=False,
-            ),
-            dashboard=DashboardPermission(
-                action_access=True,
-            ),
-            communities=Permission(
-                action_create=False,
-                action_read=True,
-                action_update=False,
-                action_delete=False,
-            ),
-            discussions=PermissionsWithOwn(
-                action_create=False,
-                action_read=True,
-                action_read_own=True,
-                action_update=False,
-                action_update_own=False,
-                action_delete=False,
-                action_delete_own=False,
-            ),
-            podcasts=PermissionsWithOwn(
-                action_create=False,
-                action_read=True,
-                action_read_own=True,
-                action_update=False,
-                action_update_own=False,
-                action_delete=False,
-                action_delete_own=False,
-            ),
-            boards=PermissionsWithOwn(
-                action_create=False,
-                action_read=True,
-                action_read_own=True,
-                action_update=False,
-                action_update_own=False,
-                action_delete=False,
-                action_delete_own=False,
-            ),
-            playgrounds=PermissionsWithOwn(
-                action_create=False,
-                action_read=True,
-                action_read_own=True,
-                action_update=False,
-                action_update_own=False,
-                action_delete=False,
-                action_delete_own=False,
-            ),
-            programs=PermissionsWithOwn(
-                action_create=False,
-                action_read=True,
-                action_read_own=True,
-                action_update=False,
-                action_update_own=False,
-                action_delete=False,
-                action_delete_own=False,
-            ),
-            training_programs=PermissionsWithOwn(
-                action_create=False,
-                action_read=True,
-                action_read_own=True,
-                action_update=False,
-                action_update_own=False,
-                action_delete=False,
-                action_delete_own=False,
-            ),
-            instructors=Permission(
-                action_create=False,
-                action_read=True,
-                action_update=False,
-                action_delete=False,
+                action_delete=True,
             ),
         ),
         creation_date=str(datetime.now()),
@@ -598,6 +469,28 @@ async def install_default_elements(db_session: AsyncSession):
                 action_delete=False,
                 action_delete_own=False,
             ),
+        ),
+        creation_date=str(datetime.now()),
+        update_date=str(datetime.now()),
+    )
+
+    # Entity Coordinator (منسق الجهة): a learner who also manages ONE entity's
+    # members, groups and assigned training. Entity-scoped power comes from
+    # EntityMember.is_coordinator (see services/administration/entities.py), so
+    # the role itself only adds dashboard access on top of Trainee rights — no
+    # academy-wide users / usergroups / courses management.
+    role_global_maintainer = Role(
+        name="Entity Coordinator",
+        description=(
+            "Manages their own entity (الجهة): adds and imports members, organizes them into "
+            "groups, assigns the training the academy made available, and follows members' "
+            "progress. Has no academy-wide administration rights."
+        ),
+        id=2,
+        role_type=RoleTypeEnum.TYPE_GLOBAL,
+        role_uuid="role_global_maintainer",
+        rights=role_global_user.rights.model_copy(
+            deep=True, update={"dashboard": DashboardPermission(action_access=True)}
         ),
         creation_date=str(datetime.now()),
         update_date=str(datetime.now()),

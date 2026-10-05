@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react'
 
 import Link from 'next/link'
-import { Crown, Shield, User, Users, SignOut, CaretDown, Globe, Check, ShoppingBag } from '@phosphor-icons/react'
+import { Crown, Shield, User, Users, SignOut, CaretDown, Globe, Check, ShoppingBag, SquaresFour, UserCircle } from '@phosphor-icons/react'
 import UserAvatar from '@components/Objects/UserAvatar'
 import useAdminStatus from '@components/Hooks/useAdminStatus'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
@@ -33,10 +33,32 @@ import { getMenuColorClasses } from '@services/utils/ts/colorUtils'
 interface RoleInfo {
   name: string;
   icon: React.ReactNode;
-  bgColor: string;
-  textColor: string;
+  /** Tinted pill used on light headers. */
+  tone: string;
   description: string;
   showBadge?: boolean;
+}
+
+const ROLE_TONES = {
+  superAdmin: 'bg-rose-50 text-rose-700 ring-rose-200/80',
+  admin: 'bg-amber-50 text-amber-800 ring-amber-200/80',
+  maintainer: 'bg-sky-50 text-sky-700 ring-sky-200/80',
+  instructor: 'bg-emerald-50 text-emerald-700 ring-emerald-200/80',
+  user: 'bg-gray-100 text-gray-700 ring-gray-200',
+}
+
+/** Small role pill: readable, tinted on light headers and translucent on coloured ones. */
+function RolePill({ icon, label, tone, onDark }: { icon: React.ReactNode; label: string; tone: string; onDark?: boolean }) {
+  return (
+    <span
+      className={`inline-flex max-w-[150px] items-center gap-1 rounded-full px-1.5 py-[1px] text-[10px] font-semibold leading-4 ring-1 ring-inset ${
+        onDark ? 'bg-white/15 text-white ring-white/25' : tone
+      }`}
+    >
+      <span className="shrink-0">{icon}</span>
+      <span className="truncate">{label}</span>
+    </span>
+  )
 }
 
 interface CustomRoleInfo {
@@ -57,9 +79,8 @@ export const HeaderProfileBox = ({ primaryColor = '' }: { primaryColor?: string 
     if (session.data?.user?.is_superadmin === true) {
       return {
         name: t('roles.role_super_admin'),
-        icon: <Crown size={12} weight="fill" />,
-        bgColor: 'bg-red-600',
-        textColor: 'text-white',
+        icon: <Crown size={11} weight="fill" />,
+        tone: ROLE_TONES.superAdmin,
         description: t('roles.role_super_admin_desc'),
         showBadge: true,
       }
@@ -89,33 +110,29 @@ export const HeaderProfileBox = ({ primaryColor = '' }: { primaryColor?: string 
     const roleConfigs: { [key: string]: RoleInfo } = {
       'role_global_admin': {
         name: t('roles.role_admin'),
-        icon: <Crown size={12} weight="fill" />,
-        bgColor: 'bg-purple-600',
-        textColor: 'text-white',
+        icon: <Crown size={11} weight="fill" />,
+        tone: ROLE_TONES.admin,
         description: t('roles.role_admin_desc'),
         showBadge: true,
       },
       'role_global_maintainer': {
         name: t('roles.role_maintainer'),
-        icon: <Shield size={12} weight="fill" />,
-        bgColor: 'bg-blue-600',
-        textColor: 'text-white',
+        icon: <Shield size={11} weight="fill" />,
+        tone: ROLE_TONES.maintainer,
         description: t('roles.role_maintainer_desc'),
         showBadge: true,
       },
       'role_global_instructor': {
         name: t('roles.role_instructor'),
-        icon: <Users size={12} weight="fill" />,
-        bgColor: 'bg-green-600',
-        textColor: 'text-white',
+        icon: <Users size={11} weight="fill" />,
+        tone: ROLE_TONES.instructor,
         description: t('roles.role_instructor_desc'),
         showBadge: true,
       },
       'role_global_user': {
         name: t('roles.role_user'),
-        icon: <User size={12} weight="fill" />,
-        bgColor: 'bg-gray-500',
-        textColor: 'text-white',
+        icon: <User size={11} weight="fill" />,
+        tone: ROLE_TONES.user,
         description: t('roles.role_user_desc'),
         showBadge: false,
       }
@@ -162,8 +179,24 @@ export const HeaderProfileBox = ({ primaryColor = '' }: { primaryColor?: string 
     // t is a real dependency: the fallback label must recompute on language change
   }, [userRoles, org?.id, t]);
 
+  const user = session.data?.user
+  const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || ''
+  const onDark = colors.profileName === 'text-white'
+  const customRoleInfos: RoleInfo[] = customRoles.map((role) => ({
+    name: role.name,
+    icon: <Shield size={11} weight="fill" />,
+    tone: ROLE_TONES.user,
+    description: role.description || `${t('roles.custom_role')}: ${role.name}`,
+  }))
+  const systemRole = userRoleInfo && userRoleInfo.showBadge !== false ? userRoleInfo : null
+  const allRoles = [...(systemRole ? [systemRole] : []), ...customRoleInfos]
+  const primaryRole = allRoles[0] || null
+  const extraRoles = allRoles.length - 1
+  const currentLanguage = AVAILABLE_LANGUAGES.find((l) => l.code === i18n.language.split('-')[0])
+  const menuItemCls = 'flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm'
+
   return (
-    <div className="flex items-stretch items-center">
+    <div className="flex items-center">
       {session.status == 'unauthenticated' && (
         <div className="flex items-stretch grow items-center">
           <ul className="flex space-x-0.5 sm:space-x-1 items-center">
@@ -182,114 +215,112 @@ export const HeaderProfileBox = ({ primaryColor = '' }: { primaryColor?: string 
         </div>
       )}
       {session.status == 'authenticated' && (
-        <div className="flex items-center space-x-0">
-          <div className="flex items-center space-x-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className={`cursor-pointer flex items-center space-x-3 rounded-lg p-2 transition-colors ${colors.profileHover}`}>
-                  <UserAvatar border="border-2" rounded="rounded-lg" width={30} shadow={primaryColor ? '' : undefined} />
-                  <div className="flex flex-col items-start space-y-0">
-                    <div className="flex items-center space-x-2">
-                      <p className={`text-sm font-semibold capitalize ${colors.profileName}`}>{session.data.user.username}</p>
-                      {userRoleInfo && userRoleInfo.showBadge !== false && (
-                        <Tooltip 
-                          content={userRoleInfo.description}
-                          sideOffset={15}
-                          side="bottom"
-                        >
-                          <div className={`text-[6px] ${userRoleInfo.bgColor} ${userRoleInfo.textColor} px-1 py-0.5 font-medium rounded-full flex items-center gap-0.5 w-fit`}>
-                            {userRoleInfo.icon}
-                            {userRoleInfo.name}
-                          </div>
-                        </Tooltip>
-                      )}
-                      {/* Custom roles */}
-                      {customRoles.map((customRole, index) => (
-                        <Tooltip 
-                          key={index}
-                          content={customRole.description || `${t('roles.custom_role')}: ${customRole.name}`}
-                          sideOffset={15}
-                          side="bottom"
-                        >
-                          <div className="text-[6px] bg-gray-500 text-white px-1 py-0.5 font-medium rounded-full flex items-center gap-0.5 w-fit">
-                            <Shield size={12} weight="fill" />
-                            {customRole.name}
-                          </div>
-                        </Tooltip>
-                      ))}
-                    </div>
-                    <p className={`text-xs ${colors.profileMuted}`}>{session.data.user.email}</p>
-                  </div>
-                  <CaretDown aria-hidden="true" size={16} weight="fill" className={colors.profileMuted} />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end">
-                <DropdownMenuLabel>
-                  <div className="flex items-center space-x-2">
-                    <UserAvatar border="border-2" rounded="rounded-full" width={24} />
-                    <div>
-                      <p className="text-sm font-medium">{session.data.user.username}</p>
-                      <p className="text-xs text-gray-500 capitalize">{session.data.user.email}</p>
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {rights?.dashboard?.action_access && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/dash" className="flex items-center space-x-2">
-                      <Shield size={16} weight="fill" />
-                      <span>{t('common.dashboard')}</span>
-                    </Link>
-                  </DropdownMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={`group flex cursor-pointer items-center gap-2.5 rounded-full py-1 pe-2.5 ps-1 transition-colors ${colors.profileHover} data-[state=open]:bg-black/[0.04]`}
+              aria-label={t('user.account_menu', 'Account menu')}
+            >
+              <span className="relative shrink-0">
+                <UserAvatar border="border-2" rounded="rounded-full" width={34} shadow={primaryColor ? '' : undefined} />
+                <span className="absolute -bottom-0.5 -end-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" aria-hidden="true" />
+              </span>
+              <span className="flex min-w-0 flex-col items-start gap-0.5 text-start">
+                <span className={`max-w-[160px] truncate text-[13px] font-semibold capitalize leading-4 ${colors.profileName}`}>{displayName}</span>
+                {primaryRole ? (
+                  <Tooltip content={primaryRole.description} sideOffset={12} side="bottom">
+                    <span className="flex items-center gap-1">
+                      <RolePill icon={primaryRole.icon} label={primaryRole.name} tone={primaryRole.tone} onDark={onDark} />
+                      {extraRoles > 0 ? (
+                        <span className={`text-[10px] font-semibold ${colors.profileMuted}`}>+{extraRoles}</span>
+                      ) : null}
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <span className={`max-w-[160px] truncate text-[11px] leading-4 ${colors.profileMuted}`}>{session.data.user.email}</span>
                 )}
-                <DropdownMenuItem asChild>
-                  <Link href="/account/general" className="flex items-center space-x-2">
-                    <User size={16} weight="fill" />
-                    <span>{t('user.user_settings')}</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={getUriWithOrg(org?.slug, '/account/purchases')} className="flex items-center space-x-2">
-                    <ShoppingBag size={16} weight="fill" />
-                    <span>{t('account.purchases')}</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="flex items-center space-x-2">
-                    <Globe size={14} weight="fill" />
-                    <span>{t('common.language')}</span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent>
-                      {AVAILABLE_LANGUAGES.map((language) => (
-                        <DropdownMenuItem 
-                          key={language.code}
-                          onClick={() => changeLanguage(language.code)}
-                          className="flex items-center justify-between"
-                        >
-                          <span>{t(language.translationKey)} ({language.nativeName})</span>
-                          {i18n.language.split('-')[0] === language.code && <Check size={14} weight="bold" />}
-                        </DropdownMenuItem>
+              </span>
+              <CaretDown
+                aria-hidden="true"
+                size={12}
+                weight="bold"
+                className={`${colors.profileMuted} transition-transform group-data-[state=open]:rotate-180`}
+              />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-72 rounded-2xl p-1.5" align="end" sideOffset={8}>
+            <DropdownMenuLabel className="p-0">
+              <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-3">
+                <UserAvatar border="border-2" rounded="rounded-full" width={42} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold capitalize text-gray-900">{displayName}</p>
+                  <p className="truncate text-xs font-normal text-gray-500">{session.data.user.email}</p>
+                  {allRoles.length > 0 ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {allRoles.map((role) => (
+                        <RolePill key={role.name} icon={role.icon} label={role.name} tone={role.tone} />
                       ))}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    track(AnalyticsEvent.LogoutClicked, { source: 'header_profile' })
-                    signOut({ callbackUrl: '/' })
-                  }}
-                  className="flex items-center space-x-2 text-red-600 focus:text-red-600"
-                >
-                  <SignOut size={16} weight="fill" />
-                  <span>Sign Out</span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </DropdownMenuLabel>
+            <div className="py-1">
+              {rights?.dashboard?.action_access && (
+                <DropdownMenuItem asChild className={menuItemCls}>
+                  <Link href="/dash">
+                    <SquaresFour size={16} weight="duotone" />
+                    <span>{t('common.dashboard')}</span>
+                  </Link>
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+              )}
+              <DropdownMenuItem asChild className={menuItemCls}>
+                <Link href="/account/general">
+                  <UserCircle size={16} weight="duotone" />
+                  <span>{t('user.user_settings')}</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className={menuItemCls}>
+                <Link href={getUriWithOrg(org?.slug, '/account/purchases')}>
+                  <ShoppingBag size={16} weight="duotone" />
+                  <span>{t('account.purchases')}</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className={menuItemCls}>
+                  <Globe size={16} weight="duotone" />
+                  <span className="flex-1">{t('common.language')}</span>
+                  <span className="text-xs text-gray-400">{currentLanguage?.nativeName}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="rounded-xl p-1">
+                    {AVAILABLE_LANGUAGES.map((language) => (
+                      <DropdownMenuItem
+                        key={language.code}
+                        onClick={() => changeLanguage(language.code)}
+                        className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-2"
+                      >
+                        <span>{t(language.translationKey)} ({language.nativeName})</span>
+                        {i18n.language.split('-')[0] === language.code && <Check size={14} weight="bold" />}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+            </div>
+            <DropdownMenuSeparator className="mx-1" />
+            <DropdownMenuItem
+              onClick={() => {
+                track(AnalyticsEvent.LogoutClicked, { source: 'header_profile' })
+                signOut({ callbackUrl: '/' })
+              }}
+              className={`${menuItemCls} text-red-600 focus:bg-red-50 focus:text-red-600`}
+            >
+              <SignOut size={16} weight="duotone" />
+              <span>{t('user.sign_out', 'Sign out')}</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </div>
   )

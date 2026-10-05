@@ -40,6 +40,8 @@ class CertificateUser(CertificateUserBase, table=True):
     user_id: int = Field(sa_column= Column("user_id", ForeignKey("user.id", ondelete="CASCADE")))
     certification_id: int = Field(sa_column= Column("certification_id", ForeignKey("certifications.id", ondelete="CASCADE")))
     user_certification_uuid: str = Field(unique=True, index=True)
+    # Human-readable number from the certificate template's serial format.
+    serial_no: Optional[str] = Field(default=None, index=True)
     created_at: str = ""
     updated_at: str = ""
 
@@ -53,6 +55,7 @@ class CertificateUserRead(SQLModel):
     user_id: int
     certification_id: int
     user_certification_uuid: str
+    serial_no: Optional[str] = None
     created_at: str
     updated_at: str
 

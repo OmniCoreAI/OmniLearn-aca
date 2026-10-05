@@ -115,6 +115,11 @@ async def _check_content_access(
         # access (these are only served via /media/{uuid}/file).
         raise HTTPException(status_code=403, detail="Access denied")
 
+    # Admission documents (IDs, certificates, transcripts) are private: they
+    # are only served through the authenticated admissions endpoint.
+    if len(parts) >= 3 and parts[0] == 'orgs' and parts[2] == 'admissions':
+        raise HTTPException(status_code=403, detail="Access denied")
+
     # Course metadata (thumbnails, etc.) and org-level content — always public
     # These are displayed on listing pages to all users
     if len(parts) >= 2 and parts[0] == 'orgs':

@@ -135,7 +135,7 @@ function IconPicker({
                     setOpen(false)
                   }}
                   title={name}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${selected ? 'bg-[hsl(var(--dash-accent))] text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${selected ? 'bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))]' : 'text-gray-500 hover:bg-gray-100'}`}
                 >
                   <IconOpt size={16} weight="fill" />
                 </button>

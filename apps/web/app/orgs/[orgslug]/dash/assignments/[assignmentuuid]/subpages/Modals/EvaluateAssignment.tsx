@@ -298,7 +298,7 @@ function EvaluateAssignment({ user_id }: any) {
                     <div className='flex items-center space-x-1.5'>
                         <button
                             onClick={finalizeAndComplete}
-                            className='flex items-center space-x-1.5 px-3.5 py-2 text-xs font-bold bg-[hsl(var(--dash-accent))] text-white rounded-lg nice-shadow hover:bg-gray-800 transition-colors cursor-pointer'
+                            className='flex items-center space-x-1.5 px-3.5 py-2 text-xs font-bold bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))] rounded-lg nice-shadow hover:bg-gray-800 transition-colors cursor-pointer'
                         >
                             <Check size={14} />
                             <span>{t('dashboard.assignments.submissions.actions.finalize')}</span>

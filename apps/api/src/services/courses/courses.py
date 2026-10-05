@@ -35,7 +35,7 @@ from src.security.rbac import (
     AccessContext,
     check_resource_access,
 )
-from src.security.rbac.constants import ADMIN_OR_MAINTAINER_ROLE_IDS
+from src.security.rbac.constants import ACADEMY_ADMIN_ROLE_IDS
 from src.security.superadmin import is_user_superadmin
 from src.services.courses.thumbnails import upload_thumbnail
 from src.services.search.normalization import LIKE_ESCAPE_CHAR, build_like_pattern
@@ -297,7 +297,7 @@ async def get_courses_orgslug(
             )
             user_roles = (await db_session.execute(role_statement)).scalars().all()
             for role in user_roles:
-                if role.id in ADMIN_OR_MAINTAINER_ROLE_IDS:  # Admin role IDs
+                if role.id in ACADEMY_ADMIN_ROLE_IDS:  # Admin role IDs
                     can_view_unpublished = True
                     break
 

@@ -1,3 +1,5 @@
+import { Callout } from 'nextra/components'
+
 # Roles and Permissions
 
 OmniLearn uses a role-based access control model. Roles are stored as database rows with a per-resource permission matrix (courses, users, usergroups, collections, organizations, chapters, activities, roles, dashboard, boards, playgrounds), so organizations can customize permissions or create their own roles on top of the defaults.
@@ -13,13 +15,21 @@ Admins have full control over the organization. They can:
 - Configure organization settings (branding, AI, signup)
 - Access all platform features
 
-## Maintainer
+## Entity Coordinator (منسق الجهة)
 
-Maintainers are mid-level managers who can operate most of the organization day-to-day but cannot change platform-level settings. They can:
+Role 2 (historically *Maintainer*, then *Organization Coordinator*) is the **Entity Coordinator**. It has learner rights plus access to the dashboard, and manages **only the entities it coordinates** — never the whole academy. Coordinators can:
 
-- Manage courses, collections, and published content
-- Manage users within the organization
-- Moderate boards
+- Add, import, review and deactivate their entity's members
+- Create their entity's groups and choose their members
+- Assign the courses the academy made available to their entity
+- Follow their members' progress
+- Propose instructors, when the academy allows it (the academy approves them)
+
+Which of these are allowed is set per entity by the academy. See [Entities & Coordinators](/platform/administration/entities).
+
+<Callout type="warning">
+Before this change, role 2 had academy-wide administration rights. When upgrading, move academy staff who held role 2 to **Admin**; the upgrade resets role 2's permissions and its sidebar to *Home* and *My entity*.
+</Callout>
 
 ## Instructor
 

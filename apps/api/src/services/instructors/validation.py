@@ -1,13 +1,18 @@
 """Validation + effective-rate resolution for the Instructor module.
 
-Rate precedence (per product decision): the **Category rate always wins**. The
-category additionally carries a table of per-delivery-language rates, so the
+Rate precedence: the category defines the default rate (optionally per delivery
+language) and an individual instructor may **override** it — e.g. category
+"Senior Instructor" at 500 EGP/h, instructor override 650 EGP/h → 650. The
 resolution order is:
 
-1. Category's language-specific rate (matching the chosen delivery language)
-2. Category's base ``hourly_rate``
-3. Instructor's own ``hourly_rate`` (final fallback when no category rate exists)
+1. Instructor's own ``hourly_rate`` (explicit override)
+2. Category's language-specific rate (matching the chosen delivery language)
+3. Category's base ``hourly_rate``
+
+Work logs snapshot the applied rate, so changing precedence or rates never
+rewrites historical amounts.
 """
+import re
 from typing import Optional, Tuple
 
 from fastapi import HTTPException
@@ -41,12 +46,39 @@ def validate_category_payload(data: dict) -> None:
             raise _bad("Each language rate must be a non-negative number")
 
 
+WEEKDAYS = ("sat", "sun", "mon", "tue", "wed", "thu", "fri")
+_TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def validate_availability(availability) -> None:
+    """``{"slots": [{"day", "start", "end"}], "notes"}`` with HH:MM times."""
+    if availability is None:
+        return
+    if not isinstance(availability, dict):
+        raise _bad("Availability must be an object")
+    slots = availability.get("slots") or []
+    if not isinstance(slots, list) or len(slots) > 50:
+        raise _bad("Availability slots must be a list (max 50)")
+    for slot in slots:
+        if not isinstance(slot, dict) or slot.get("day") not in WEEKDAYS:
+            raise _bad(f"Each availability slot needs a day ({', '.join(WEEKDAYS)})")
+        start, end = str(slot.get("start") or ""), str(slot.get("end") or "")
+        if not _TIME_RE.match(start) or not _TIME_RE.match(end):
+            raise _bad("Availability times must use HH:MM")
+        if end <= start:
+            raise _bad("An availability slot must end after it starts")
+
+
 def validate_instructor_payload(data: dict) -> None:
     if data.get("hourly_rate") is not None and data["hourly_rate"] < 0:
         raise _bad("Hourly rate cannot be negative")
     langs = data.get("languages")
     if langs is not None and not isinstance(langs, list):
         raise _bad("Languages must be a list of labels")
+    specs = data.get("specializations")
+    if specs is not None and (not isinstance(specs, list) or any(not isinstance(x, str) for x in specs)):
+        raise _bad("Specializations must be a list of labels")
+    validate_availability(data.get("availability"))
 
 
 def validate_worklog_payload(data: dict) -> None:
@@ -61,7 +93,7 @@ async def resolve_effective_rate(
 ) -> Tuple[float, str, Optional[str]]:
     """Return ``(rate, source, currency)`` for an instructor + delivery language.
 
-    ``source`` is one of ``category_language``, ``category_base`` or ``instructor``.
+    ``source`` is one of ``instructor``, ``category_language`` or ``category_base``.
     Raises 400 when no rate can be resolved.
     """
     category: Optional[InstructorCategory] = None
@@ -71,9 +103,14 @@ async def resolve_effective_rate(
                 select(InstructorCategory).where(InstructorCategory.id == instructor.category_id)
             )
         ).scalars().first()
+    currency = category.currency if category is not None else None
+
+    # 1. Instructor-level override.
+    if instructor.hourly_rate is not None:
+        return instructor.hourly_rate, "instructor", currency
 
     if category is not None:
-        # 1. Language-specific rate (case-insensitive label match).
+        # 2. Language-specific rate (case-insensitive label match).
         if language:
             rows = (
                 await db_session.execute(
@@ -86,13 +123,9 @@ async def resolve_effective_rate(
                 if row.language.strip().lower() == language.strip().lower():
                     return row.hourly_rate, "category_language", category.currency
 
-        # 2. Category base rate.
+        # 3. Category base rate.
         if category.hourly_rate is not None:
             return category.hourly_rate, "category_base", category.currency
-
-    # 3. Instructor fallback rate.
-    if instructor.hourly_rate is not None:
-        return instructor.hourly_rate, "instructor", None
 
     raise _bad(
         "No rate configured for this instructor. Set a category rate "

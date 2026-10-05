@@ -87,7 +87,7 @@ const OrgEditSEO: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.org.detail(org.slug) })
       setOgImageFile(null)
       toast.success('SEO settings saved successfully', { id: loadingToast })
-    } catch (err) {
+    } catch {
       toast.error(t('dashboard.organization.seo.save_failed'), { id: loadingToast })
     }
   }
@@ -109,7 +109,7 @@ const OrgEditSEO: React.FC = () => {
           }, 400)
         }}
       >
-        {({ isSubmitting, values, handleChange, setFieldValue }) => (
+        {({ isSubmitting, values, handleChange }) => (
           <Form>
             <div className="flex flex-col gap-0">
               {/* Quick Links */}
@@ -321,7 +321,7 @@ const OrgEditSEO: React.FC = () => {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
+                  className="bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))] hover:bg-black/90"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>

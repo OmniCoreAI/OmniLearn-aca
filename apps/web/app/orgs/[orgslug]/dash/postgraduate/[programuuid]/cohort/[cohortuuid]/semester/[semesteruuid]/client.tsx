@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
-import Modal from '@components/Objects/StyledElements/Modal/Modal'
+import { PostgradDrawer, useActionDialog } from '@components/Dashboard/Pages/Academic/AcademicDialogs'
 import AuthenticatedClientElement from '@components/Security/AuthenticatedClientElement'
 import CourseThumbnail, { removeCoursePrefix } from '@components/Objects/Thumbnails/CourseThumbnail'
 import AttachCourseModal from '@components/Dashboard/Pages/Academic/AttachCourseModal'
@@ -19,7 +19,7 @@ import {
   AcademicEmptyState,
   AcademicGridSkeleton,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
-import { Field, SubmitRow, inputCls } from '../../../../../client'
+import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import {
   getProgram,
   getCohort,
@@ -53,6 +53,7 @@ function SemesterDetail({
   const semester_uuid = `semester_${semesteruuid}`
 
   const [attachOpen, setAttachOpen] = useState(false)
+  const { ask, dialog } = useActionDialog()
   const [editing, setEditing] = useState<any>(null)
   const [profileCourse, setProfileCourse] = useState<any>(null)
 
@@ -82,7 +83,13 @@ function SemesterDetail({
     queryClient.invalidateQueries({ queryKey: ['academic', 'semester-courses', semester_uuid] })
 
   const handleUnlink = async (course_uuid: string) => {
-    if (!window.confirm(t('academic.confirm_delete'))) return
+    const ok = await ask({
+      title: t('academic.sem.unlink_title', 'Remove this course from the semester?'),
+      message: t('academic.sem.unlink_message', 'The course itself is kept; only its link to this legacy semester is removed.'),
+      confirmText: t('academic.coh.remove', 'Remove'),
+      tone: 'danger',
+    })
+    if (ok === null) return
     try {
       await unlinkCourseFromSemester(semester_uuid, course_uuid, access_token)
       toast.success(t('academic.updated'))
@@ -116,7 +123,7 @@ function SemesterDetail({
           <AuthenticatedClientElement checkMethod="roles" action="update" ressourceType="programs" orgId={orgId!}>
             <button
               onClick={() => setAttachOpen(true)}
-              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] flex items-center gap-2 hover:brightness-110 transition-all"
             >
               <Plus className="w-4 h-4" /> {t('academic.add_course')}
             </button>
@@ -178,7 +185,7 @@ function SemesterDetail({
         ))}
       </div>
 
-      <Modal
+      <PostgradDrawer
         isDialogOpen={attachOpen}
         onOpenChange={setAttachOpen}
         minWidth="md"
@@ -197,7 +204,7 @@ function SemesterDetail({
         }
       />
 
-      <Modal
+      <PostgradDrawer
         isDialogOpen={!!editing}
         onOpenChange={(open: boolean) => !open && setEditing(null)}
         minWidth="sm"
@@ -219,7 +226,7 @@ function SemesterDetail({
         }
       />
 
-      <Modal
+      <PostgradDrawer
         isDialogOpen={!!profileCourse}
         onOpenChange={(open: boolean) => !open && setProfileCourse(null)}
         minWidth="md"
@@ -237,6 +244,7 @@ function SemesterDetail({
           )
         }
       />
+      {dialog}
     </AcademicPageShell>
   )
 }

@@ -1,46 +1,58 @@
 'use client'
-import React, { useState } from 'react'
-import { Users as ChalkboardTeacher, Plus } from 'lucide-react'
+import React, { useMemo, useState } from 'react'
+import { Copy, Eye, Pencil, Plus, Power, ShieldCheck, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import DashDataTable, { ToolbarSearch, ToolbarSelect } from '@components/Dashboard/Shared/DataTable/DashDataTable'
+import { ChalkboardTeacher, ChalkboardTeacher as ChalkboardTeacherIcon, CheckCircle, Pause, Tag } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
 import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import AuthenticatedClientElement from '@components/Security/AuthenticatedClientElement'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
-import {
-  AcademicPageShell,
-  AcademicHeader,
-  AcademicGrid,
-  AcademicGridSkeleton,
-  AcademicEmptyState,
-  AcademicCard,
-} from '@components/Dashboard/Pages/Academic/AcademicShared'
-import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
+import { AcademicPageShell, AcademicHeader, AcademicEmptyState } from '@components/Dashboard/Pages/Academic/AcademicShared'
+import { GhostButton, StatusPill } from '@components/Dashboard/Pages/Academic/AcademicUI'
 import { InstructorTabs } from '@components/Dashboard/Pages/Instructors/InstructorTabs'
-import { Field, SubmitRow, inputCls } from '../postgraduate/client'
+import { InstructorForm } from '@components/Dashboard/Pages/Instructors/InstructorForm'
+import { ApproveInstructorForm } from '@components/Dashboard/Pages/Instructors/ApproveInstructorForm'
 import {
-  getInstructors,
-  createInstructor,
-  updateInstructor,
+  AdminBreadcrumbs,
+  AdminDrawer,
+  PersonAvatar,
+  formatAdminDate,
+  useConfirm,
+} from '@components/Dashboard/Pages/Administration/AdminUI'
+import {
   deleteInstructor,
   getInstructorCategories,
+  getInstructors,
+  getInstructorImageUrl,
+  updateInstructor,
 } from '@services/instructors/instructors'
 
-const STATUSES = ['active', 'inactive', 'on_leave']
+const STATUSES = ['active', 'pending_approval', 'on_leave', 'inactive']
+
+export const instructorName = (i: any) =>
+  `${i.user?.first_name || ''} ${i.user?.last_name || ''}`.trim() || i.user?.username || '—'
 
 function InstructorsHome({ orgslug }: { orgslug: string }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const org = useOrg() as any
   const orgId = org?.id as number | undefined
   const session = useLHSession() as any
   const access_token = session.data?.tokens?.access_token
   const queryClient = useQueryClient()
+  const { confirm, dialog } = useConfirm()
 
-  const [modalOpen, setModalOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const [approving, setApproving] = useState<any>(null)
+  const [tempPassword, setTempPassword] = useState<{ name: string; password: string } | null>(null)
+  const [status, setStatus] = useState('all')
+  const [category, setCategory] = useState('all')
+  const [query, setQuery] = useState('')
 
   const { data: instructors = [], isLoading } = useQuery({
     queryKey: ['instructors', orgId],
@@ -48,11 +60,29 @@ function InstructorsHome({ orgslug }: { orgslug: string }) {
     enabled: !!orgId && !!access_token,
     staleTime: 30_000,
   })
+  const { data: categories = [] } = useQuery({
+    queryKey: ['instructor-categories', orgId],
+    queryFn: () => getInstructorCategories(orgId!, access_token),
+    enabled: !!orgId && !!access_token,
+    staleTime: 30_000,
+  })
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['instructors', orgId] })
+  const openForm = (i: any) => {
+    setEditing(i)
+    setDrawerOpen(true)
+  }
 
-  const handleDelete = async (i: any) => {
-    if (!window.confirm(t('instructors.confirm_delete', 'Remove this instructor?'))) return
+  const remove = async (i: any) => {
+    const ok = await confirm({
+      title: t('instructors.delete_title', 'Delete {{name}}?', { name: instructorName(i) }),
+      message: t(
+        'instructors.delete_message',
+        'This removes the instructor profile and its rate settings. Their user account and course history stay. To keep them on record, deactivate instead.'
+      ),
+      confirmText: t('administration.common.delete', 'Delete'),
+    })
+    if (!ok) return
     try {
       await deleteInstructor(i.instructor_uuid, access_token)
       toast.success(t('academic.deleted'))
@@ -61,257 +91,305 @@ function InstructorsHome({ orgslug }: { orgslug: string }) {
       toast.error(t('academic.delete_failed'))
     }
   }
-
-  const nameOf = (i: any) =>
-    `${i.user?.first_name || ''} ${i.user?.last_name || ''}`.trim() || i.user?.username || '—'
-
-  const badgesFor = (i: any) => {
-    const badges: { label: string; className?: string }[] = []
-    if (i.category?.name)
-      badges.push({ label: i.category.name, className: 'bg-[hsl(var(--dash-tile-lavender))] text-[hsl(var(--dash-tile-lavender-fg))]' })
-    if (i.department) badges.push({ label: i.department, className: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]' })
-    const statusCls: Record<string, string> = {
-      active: 'bg-[hsl(var(--dash-tile-mint))] text-[hsl(var(--dash-tile-mint-fg))]',
-      inactive: 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]',
-      on_leave: 'bg-[hsl(var(--dash-tile-amber))] text-[hsl(var(--dash-tile-amber-fg))]',
+  const setInstructorStatus = async (rows: any[], next: string) => {
+    try {
+      await Promise.all(rows.map((i) => updateInstructor(i.instructor_uuid, { status: next }, access_token)))
+      toast.success(
+        next === 'active'
+          ? t('instructors.activated', '{{count}} activated', { count: rows.length })
+          : t('instructors.deactivated', '{{count}} deactivated', { count: rows.length })
+      )
+      refresh()
+    } catch (err: any) {
+      toast.error(err?.message || t('administration.common.save_failed', 'Could not save'))
     }
-    badges.push({
-      label: t(`instructors.status_${i.status}`, i.status) as string,
-      className: statusCls[i.status] || 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]',
-    })
-    return badges
   }
+
+  const counts = useMemo(() => {
+    const by = (s: string) => (instructors as any[]).filter((i) => i.status === s).length
+    return { active: by('active'), onLeave: by('on_leave'), pending: by('pending_approval') }
+  }, [instructors])
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return (instructors as any[]).filter(
+      (i) =>
+        (status === 'all' || i.status === status) &&
+        (category === 'all' || (category === 'none' ? !i.category : i.category?.category_uuid === category)) &&
+        (!q ||
+          instructorName(i).toLowerCase().includes(q) ||
+          (i.user?.username || '').toLowerCase().includes(q) ||
+          (i.contact_info?.email || '').toLowerCase().includes(q) ||
+          (i.specializations || []).some((s: string) => s.toLowerCase().includes(q)))
+    )
+  }, [instructors, query, status, category])
+
+  const filtering = !!query || status !== 'all' || category !== 'all'
+  const money = (v: number, currency?: string | null) =>
+    `${v.toLocaleString(i18n.language)} ${currency || ''}`.trim()
+
+  const createButton = (
+    <AuthenticatedClientElement checkMethod="roles" action="create" ressourceType="instructors" orgId={orgId!}>
+      <button
+        onClick={() => openForm(null)}
+        className="flex items-center gap-2 rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] transition-all hover:brightness-110"
+      >
+        <Plus className="h-4 w-4" /> {t('instructors.new_instructor', 'New Instructor')}
+      </button>
+    </AuthenticatedClientElement>
+  )
 
   return (
     <AcademicPageShell>
-      <Breadcrumbs
-        items={[
-          {
-            label: t('instructors.title', 'Instructors'),
-            href: getUriWithOrg(orgslug, '/dash/instructors'),
-            icon: <ChalkboardTeacher size={14} />,
-          },
-        ]}
-      />
+      <AdminBreadcrumbs orgslug={orgslug} items={[{ label: t('administration.nav.instructors', 'Instructors / Trainers') }]} />
       <AcademicHeader
-        title={t('instructors.title', 'Instructors')}
+        title={t('administration.nav.instructors', 'Instructors / Trainers')}
         subtitle={t('instructors.subtitle', 'Manage instructors, categories and finance')}
-        action={
-          <AuthenticatedClientElement checkMethod="roles" action="create" ressourceType="instructors" orgId={orgId!}>
-            <button
-              onClick={() => {
-                setEditing(null)
-                setModalOpen(true)
-              }}
-              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
-            >
-              <Plus className="w-4 h-4" /> {t('instructors.new_instructor', 'New Instructor')}
-            </button>
-          </AuthenticatedClientElement>
-        }
+        action={createButton}
+      />
+
+      <DashStatCards
+        className="mb-6"
+        loading={isLoading}
+        stats={[
+          { key: 'total', label: t('instructors.stats.total', 'Instructors'), value: instructors.length, icon: ChalkboardTeacherIcon, tone: 'rose' },
+          { key: 'active', label: t('instructors.stats.active', 'Active'), value: counts.active, icon: CheckCircle, tone: 'stone' },
+          {
+            key: 'pending',
+            label: t('instructors.stats.pending', 'Awaiting approval'),
+            value: counts.pending,
+            hint: counts.onLeave ? t('instructors.stats.on_leave_hint', '{{count}} on leave', { count: counts.onLeave }) : undefined,
+            icon: Pause,
+            tone: 'gold',
+          },
+          { key: 'categories', label: t('instructors.stats.categories', 'Categories'), value: (categories as any[]).length, icon: Tag, tone: 'sand', href: '/dash/instructors/categories' },
+        ]}
       />
 
       <InstructorTabs orgslug={orgslug} />
 
-      {isLoading && <AcademicGridSkeleton />}
-      <AcademicGrid>
-        {!isLoading && instructors.length === 0 && (
-          <AcademicEmptyState
-            title={t('instructors.none', 'No instructors yet')}
-            description={t('instructors.none_desc', 'Add an instructor to start tracking hours and cost.')}
-          />
+      <DashDataTable
+        rows={visible}
+        rowKey={(i: any) => i.instructor_uuid}
+        loading={isLoading}
+        selectable
+        rowHref={(i: any) => getUriWithOrg(orgslug, `/dash/instructors/${i.instructor_uuid}`)}
+        itemLabel={(n) => t('instructors.count', '{{count}} instructors', { count: n })}
+        initialSort={{ key: 'name', dir: 'asc' }}
+        toolbar={
+          <>
+            <ToolbarSearch value={query} onChange={setQuery} placeholder={t('instructors.search', 'Search by name, email or expertise')} />
+            <ToolbarSelect
+              label={t('instructors.status', 'Status')}
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: 'all', label: t('instructors.filter_all', 'All') },
+                ...STATUSES.map((s) => ({ value: s, label: t(`instructors.status_${s}`, s.replace('_', ' ')) as string })),
+              ]}
+            />
+            <ToolbarSelect
+              label={t('instructors.category', 'Category')}
+              value={category}
+              onChange={setCategory}
+              options={[
+                { value: 'all', label: t('instructors.filter_all', 'All') },
+                ...(categories as any[]).map((c) => ({ value: c.category_uuid, label: c.name })),
+                { value: 'none', label: t('instructors.no_category', 'No category') },
+              ]}
+            />
+          </>
+        }
+        bulkActions={(rows, clear) => (
+          <>
+            <GhostButton
+              onClick={async () => {
+                await setInstructorStatus(rows, 'active')
+                clear()
+              }}
+            >
+              <Power className="h-3.5 w-3.5" /> {t('administration.common.activate', 'Activate')}
+            </GhostButton>
+            <GhostButton
+              onClick={async () => {
+                await setInstructorStatus(rows, 'inactive')
+                clear()
+              }}
+            >
+              <Power className="h-3.5 w-3.5" /> {t('administration.common.deactivate', 'Deactivate')}
+            </GhostButton>
+          </>
         )}
-        {instructors.map((i: any) => (
-          <AcademicCard
-            key={i.instructor_uuid}
-            orgslug={orgslug}
-            href={'/dash/instructors'}
-            title={nameOf(i)}
-            subtitle={i.user?.email || (i.contact_info?.email ?? '')}
-            badges={badgesFor(i)}
-            onEdit={() => {
-              setEditing(i)
-              setModalOpen(true)
-            }}
-            onDelete={() => handleDelete(i)}
+        empty={
+          <AcademicEmptyState
+            compact
+            title={filtering ? t('administration.common.no_matches', 'No matches') : t('instructors.none', 'No instructors yet')}
+            description={
+              filtering
+                ? t('administration.common.no_matches_hint', 'Try a different search or clear the filters.')
+                : t('instructors.none_desc_assign', 'Create your first instructor to start assigning trainers to courses.')
+            }
+            action={filtering ? undefined : createButton}
           />
-        ))}
-      </AcademicGrid>
+        }
+        columns={[
+          {
+            key: 'name',
+            header: t('instructors.instructor', 'Instructor'),
+            primary: true,
+            width: 'w-[30%]',
+            sortValue: (i: any) => instructorName(i),
+            cell: (i: any) => (
+              <div className="flex min-w-0 items-center gap-3">
+                <PersonAvatar name={instructorName(i)} src={getInstructorImageUrl(org?.org_uuid, i)} />
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{instructorName(i)}</div>
+                  <div className="truncate text-xs text-[hsl(var(--dash-muted))]">
+                    {(i.specializations || []).join(' · ') || i.contact_info?.email || `@${i.user?.username || ''}`}
+                  </div>
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: 'category',
+            header: t('instructors.category', 'Category'),
+            sortValue: (i: any) => i.category?.name,
+            cell: (i: any) => (i.category ? <span className="text-[13px]">{i.category.name}</span> : <span className="text-[hsl(var(--dash-muted))]">—</span>),
+          },
+          {
+            key: 'rate',
+            header: t('instructors.hourly_rate', 'Hourly rate'),
+            align: 'end',
+            sortValue: (i: any) => i.effective_hourly_rate,
+            cell: (i: any) =>
+              i.effective_hourly_rate != null ? (
+                <div className="leading-tight">
+                  <div className="font-medium tabular-nums">{money(i.effective_hourly_rate, i.rate_currency)}</div>
+                  <div className="text-[11px] text-[hsl(var(--dash-muted))]">
+                    {i.rate_source === 'instructor'
+                      ? t('instructors.rate_source_override', 'Personal rate')
+                      : t('instructors.rate_source_category', 'From category')}
+                  </div>
+                </div>
+              ) : (
+                <span className="text-[hsl(var(--dash-muted))]">—</span>
+              ),
+          },
+          {
+            key: 'status',
+            header: t('instructors.status', 'Status'),
+            sortValue: (i: any) => i.status,
+            cell: (i: any) => <StatusPill status={i.status} label={t(`instructors.status_${i.status}`, i.status.replace('_', ' ')) as string} />,
+          },
+          {
+            key: 'courses',
+            header: t('instructors.courses', 'Courses'),
+            align: 'end',
+            sortValue: (i: any) => i.course_count ?? 0,
+            cell: (i: any) => <span className="tabular-nums">{i.course_count ?? 0}</span>,
+          },
+          {
+            key: 'created',
+            header: t('administration.common.created', 'Created'),
+            hideBelow: 'lg',
+            sortValue: (i: any) => i.creation_date,
+            cell: (i: any) => <span className="text-[13px] text-[hsl(var(--dash-muted))]">{formatAdminDate(i.creation_date, i18n.language)}</span>,
+          },
+        ]}
+        actions={(i: any) => [
+          { label: t('instructors.view_profile', 'View profile'), icon: <Eye className="h-3.5 w-3.5" />, href: getUriWithOrg(orgslug, `/dash/instructors/${i.instructor_uuid}`) },
+          { label: t('administration.common.edit', 'Edit'), icon: <Pencil className="h-3.5 w-3.5" />, onSelect: () => openForm(i) },
+          ...(i.status === 'pending_approval'
+            ? [{ label: t('instructors.approve', 'Approve'), icon: <ShieldCheck className="h-3.5 w-3.5" />, onSelect: () => setApproving(i) }]
+            : [
+                {
+                  label: i.status === 'active' ? t('administration.common.deactivate', 'Deactivate') : t('administration.common.activate', 'Activate'),
+                  icon: <Power className="h-3.5 w-3.5" />,
+                  onSelect: () => setInstructorStatus([i], i.status === 'active' ? 'inactive' : 'active'),
+                },
+              ]),
+          { label: t('administration.common.delete', 'Delete'), icon: <Trash2 className="h-3.5 w-3.5" />, tone: 'danger' as const, onSelect: () => remove(i) },
+        ]}
+      />
 
-      <Modal
-        isDialogOpen={modalOpen}
-        onOpenChange={setModalOpen}
-        minWidth="md"
-        dialogTitle={editing ? t('instructors.edit', 'Edit Instructor') : t('instructors.new_instructor', 'New Instructor')}
-        dialogContent={
+      <AdminDrawer
+        icon={<ChalkboardTeacher size={20} weight="duotone" />}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        title={editing ? t('instructors.edit', 'Edit Instructor') : t('instructors.new_instructor', 'New Instructor')}
+        description={editing ? instructorName(editing) : t('instructors.new_desc', 'Add a trainer and set how they are paid.')}
+      >
+        {drawerOpen ? (
           <InstructorForm
             orgId={orgId!}
             access_token={access_token}
             instructor={editing}
-            onDone={() => {
-              setModalOpen(false)
+            onCancel={() => setDrawerOpen(false)}
+            onDone={(saved) => {
+              setDrawerOpen(false)
               refresh()
+              if (saved?.temporary_password) {
+                setTempPassword({ name: instructorName(saved), password: saved.temporary_password })
+              }
             }}
           />
+        ) : null}
+      </AdminDrawer>
+
+      <Modal
+        isDialogOpen={!!approving}
+        onOpenChange={(open) => !open && setApproving(null)}
+        minWidth="sm"
+        dialogTitle={`${t('instructors.approve', 'Approve')} — ${approving ? instructorName(approving) : ''}`}
+        dialogContent={
+          approving && (
+            <ApproveInstructorForm
+              orgId={orgId!}
+              access_token={access_token}
+              instructor={approving}
+              onDone={() => {
+                setApproving(null)
+                refresh()
+              }}
+            />
+          )
         }
       />
+
+      <Modal
+        isDialogOpen={!!tempPassword}
+        onOpenChange={(open) => !open && setTempPassword(null)}
+        minWidth="sm"
+        dialogTitle={t('instructors.account_created', 'Account created')}
+        dialogContent={
+          tempPassword && (
+            <div className="space-y-3 text-sm">
+              <p>
+                {t(
+                  'instructors.temp_password_hint',
+                  'Share this one-time temporary password with the instructor. It will not be shown again; they must change it at first login.'
+                )}
+              </p>
+              <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-canvas))] px-3 py-2 font-mono">
+                <span>{tempPassword.password}</span>
+                <button
+                  type="button"
+                  aria-label={t('instructors.copy', 'Copy')}
+                  onClick={() => {
+                    navigator.clipboard?.writeText(tempPassword.password)
+                    toast.success(t('instructors.copied', 'Copied'))
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )
+        }
+      />
+      {dialog}
     </AcademicPageShell>
-  )
-}
-
-function InstructorForm({
-  orgId,
-  access_token,
-  instructor,
-  onDone,
-}: {
-  orgId: number
-  access_token: string
-  instructor: any
-  onDone: () => void
-}) {
-  const { t } = useTranslation()
-  const isEdit = !!instructor
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ['instructor-categories', orgId],
-    queryFn: () => getInstructorCategories(orgId, access_token),
-    enabled: !!orgId && !!access_token,
-    staleTime: 30_000,
-  })
-
-  const [userUuid, setUserUuid] = useState<string | null>(instructor?.user?.user_uuid || null)
-  const [userLabel, setUserLabel] = useState<string | undefined>(
-    instructor?.user
-      ? `${instructor.user.first_name || ''} ${instructor.user.last_name || ''}`.trim() ||
-          instructor.user.username
-      : undefined
-  )
-  const [categoryUuid, setCategoryUuid] = useState<string>(instructor?.category?.category_uuid || '')
-  const [department, setDepartment] = useState(instructor?.department || '')
-  const [languages, setLanguages] = useState((instructor?.languages || []).join(', '))
-  const [hourlyRate, setHourlyRate] = useState<string>(
-    instructor?.hourly_rate != null ? String(instructor.hourly_rate) : ''
-  )
-  const [phone, setPhone] = useState(instructor?.contact_info?.phone || '')
-  const [email, setEmail] = useState(instructor?.contact_info?.email || '')
-  const [status, setStatus] = useState(instructor?.status || 'active')
-  const [saving, setSaving] = useState(false)
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!isEdit && !userUuid) {
-      toast.error(t('instructors.pick_user', 'Select a user for the instructor'))
-      return
-    }
-    setSaving(true)
-    try {
-      const contact_info: Record<string, string> = {}
-      if (phone) contact_info.phone = phone
-      if (email) contact_info.email = email
-      const langs = languages
-        .split(',')
-        .map((s: string) => s.trim())
-        .filter(Boolean)
-      const payload: any = {
-        category_uuid: categoryUuid || null,
-        department: department || null,
-        languages: langs,
-        contact_info,
-        hourly_rate: hourlyRate === '' ? null : Number(hourlyRate),
-        status,
-      }
-      if (isEdit) {
-        await updateInstructor(instructor.instructor_uuid, payload, access_token)
-        toast.success(t('academic.updated'))
-      } else {
-        await createInstructor(orgId, { ...payload, user_uuid: userUuid }, access_token)
-        toast.success(t('academic.created'))
-      }
-      onDone()
-    } catch (err: any) {
-      toast.error(err?.message || t('academic.create_failed'))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      {!isEdit && (
-        <Field label={t('instructors.user', 'User')}>
-          <CoordinatorPicker
-            orgId={orgId}
-            access_token={access_token}
-            value={userUuid}
-            selectedLabel={userLabel}
-            onChange={(uuid, label) => {
-              setUserUuid(uuid)
-              setUserLabel(label)
-            }}
-          />
-        </Field>
-      )}
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={t('instructors.category', 'Category')}>
-          <select className={inputCls} value={categoryUuid} onChange={(e) => setCategoryUuid(e.target.value)}>
-            <option value="">{t('instructors.no_category', 'No category')}</option>
-            {categories.map((c: any) => (
-              <option key={c.category_uuid} value={c.category_uuid}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t('instructors.status', 'Status')}>
-          <select className={inputCls} value={status} onChange={(e) => setStatus(e.target.value)}>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {t(`instructors.status_${s}`, s) as string}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={t('instructors.department', 'Department')}>
-          <input className={inputCls} value={department} onChange={(e) => setDepartment(e.target.value)} />
-        </Field>
-        <Field label={t('instructors.fallback_rate', 'Fallback hourly rate')}>
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            className={inputCls}
-            value={hourlyRate}
-            onChange={(e) => setHourlyRate(e.target.value)}
-            placeholder={t('instructors.rate_from_category', 'Uses category rate if empty')}
-          />
-        </Field>
-      </div>
-
-      <Field label={t('instructors.languages', 'Languages (comma separated)')}>
-        <input
-          className={inputCls}
-          value={languages}
-          onChange={(e) => setLanguages(e.target.value)}
-          placeholder="English, Arabic"
-        />
-      </Field>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={t('instructors.phone', 'Phone')}>
-          <input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </Field>
-        <Field label={t('instructors.contact_email', 'Contact email')}>
-          <input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />
-        </Field>
-      </div>
-
-      <SubmitRow saving={saving} />
-    </form>
   )
 }
 

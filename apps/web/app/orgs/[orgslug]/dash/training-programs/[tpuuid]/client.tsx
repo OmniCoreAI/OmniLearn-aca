@@ -10,6 +10,10 @@ import AuthenticatedClientElement from '@components/Security/AuthenticatedClient
 import CourseThumbnail, { removeCoursePrefix } from '@components/Objects/Thumbnails/CourseThumbnail'
 import AttachCourseModal from '@components/Dashboard/Pages/Academic/AttachCourseModal'
 import { CourseProfilePanel } from '@components/Dashboard/Pages/Academic/CourseProfilePanel'
+import { Section } from '@components/Dashboard/Pages/Academic/AcademicUI'
+import { AddOnAttachmentsPanel } from '@components/Dashboard/Pages/Administration/AddOnAttachmentsPanel'
+import { AudiencePanel } from '@components/Dashboard/Pages/Administration/AudiencePanel'
+import { NotificationOverridesPanel } from '@components/Dashboard/Pages/Communication/NotificationOverridesPanel'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
@@ -24,7 +28,9 @@ import {
   getTrainingProgramCourses,
   linkCourseToTrainingProgram,
   unlinkCourseFromTrainingProgram,
+  updateTrainingProgram,
 } from '@services/academic/academic'
+import { getCertificateTemplateOptions } from '@services/administration/administration'
 
 function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: string }) {
   const { t } = useTranslation()
@@ -43,6 +49,20 @@ function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: s
     queryFn: () => getTrainingProgram(tp_uuid, access_token),
     enabled: !!access_token,
   })
+  const { data: certificateTemplates = [] } = useQuery({
+    queryKey: ['administration', 'certificate-template-options', orgId],
+    queryFn: () => getCertificateTemplateOptions(orgId!, access_token),
+    enabled: !!orgId && !!access_token,
+  })
+  const setCertificateTemplate = async (template_uuid: string) => {
+    try {
+      await updateTrainingProgram(tp_uuid, { certificate_template_uuid: template_uuid }, access_token)
+      queryClient.invalidateQueries({ queryKey: ['academic', 'training-program', tp_uuid] })
+      toast.success(t('administration.common.updated', 'Saved'))
+    } catch (err: any) {
+      toast.error(err?.message || t('administration.common.save_failed', 'Could not save'))
+    }
+  }
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ['academic', 'training-program-courses', tp_uuid],
     queryFn: () => getTrainingProgramCourses(tp_uuid, access_token),
@@ -85,7 +105,7 @@ function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: s
           <AuthenticatedClientElement checkMethod="roles" action="update" ressourceType="training_programs" orgId={orgId!}>
             <button
               onClick={() => setModalOpen(true)}
-              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] flex items-center gap-2 hover:brightness-110 transition-all"
             >
               <Plus className="w-4 h-4" /> {t('academic.add_course')}
             </button>
@@ -124,6 +144,39 @@ function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: s
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Section
+          title={t('administration.addons.program_addons', 'Program add-ons')}
+          description={t('administration.addons.program_addons_desc', 'Meals, kits and services offered with this program.')}
+        >
+          <AddOnAttachmentsPanel targetType="training_program" targetUuid={tp_uuid} />
+        </Section>
+        <AudiencePanel resourceType="training_program" resourceUuid={tp_uuid} />
+        <Section
+          title={t('delivery.program_messages', 'Messages for this program')}
+          description={t('delivery.program_messages_desc', 'Pick a different email or SMS template for this program and its courses; everything else uses the academy defaults.')}
+        >
+          <NotificationOverridesPanel orgslug={orgslug} resourceType="training_program" resourceUuid={tp_uuid} />
+        </Section>
+        {(certificateTemplates as any[]).length > 0 && (
+          <Section
+            title={t('certificates.program_template', 'Certificate template')}
+            description={t('certificates.program_template_desc', 'Used for this program’s courses unless a course chooses its own.')}
+          >
+            <select
+              className="w-full rounded-lg border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-3 py-2 text-sm"
+              value={program?.certificate_template_uuid || ''}
+              onChange={(e) => setCertificateTemplate(e.target.value)}
+            >
+              <option value="">{t('certificates.academy_default', 'Academy default')}</option>
+              {(certificateTemplates as any[]).map((o) => (
+                <option key={o.template_uuid} value={o.template_uuid}>{o.name}</option>
+              ))}
+            </select>
+          </Section>
+        )}
       </div>
 
       <Modal

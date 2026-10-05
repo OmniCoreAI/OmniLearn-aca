@@ -9,7 +9,6 @@ import { toast } from 'react-hot-toast'
 import { constructAcceptValue } from '@/lib/constants'
 import { updateOrgAuthBrandingConfig, uploadOrgAuthBackground, AuthBrandingConfig } from '@services/settings/org'
 import { cn } from '@/lib/utils'
-import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
 import { Label } from "@components/ui/label"
 import { Textarea } from "@components/ui/textarea"
@@ -18,7 +17,6 @@ import { revalidateTags } from '@services/utils/ts/requests'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query/keys'
 import UnsplashImagePicker, { UnsplashPhotoMeta } from '@components/Dashboard/Pages/Course/EditCourseGeneral/UnsplashImagePicker'
-import { isOSSMode } from '@services/config/config'
 import { usePlan } from '@components/Hooks/usePlan'
 
 const SUPPORTED_FILES = constructAcceptValue(['png', 'jpg', 'webp'])
@@ -84,7 +82,7 @@ export default function AuthBrandingTab() {
       queryClient.invalidateQueries({ queryKey: queryKeys.org.detail(org.slug) })
       toast.success(t('dashboard.organization.auth_branding.save_success'), { id: loadingToast })
       router.refresh()
-    } catch (err) {
+    } catch {
       toast.error(t('dashboard.organization.auth_branding.save_error'), { id: loadingToast })
     } finally {
       setIsSaving(false)
@@ -103,7 +101,7 @@ export default function AuthBrandingTab() {
         setBackgroundType('custom')
         toast.success(t('dashboard.organization.auth_branding.upload_success'), { id: loadingToast })
         queryClient.invalidateQueries({ queryKey: queryKeys.org.detail(org.slug) })
-      } catch (err) {
+      } catch {
         toast.error(t('dashboard.organization.auth_branding.upload_error'), { id: loadingToast })
         setLocalBackgroundPreview(null)
       } finally {
@@ -276,7 +274,7 @@ export default function AuthBrandingTab() {
           <Button
             onClick={handleSave}
             disabled={isSaving || isUploading}
-            className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
+            className="bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))] hover:bg-black/90"
           >
             {isSaving ? t('dashboard.organization.settings.saving') : t('dashboard.organization.settings.save_changes')}
           </Button>

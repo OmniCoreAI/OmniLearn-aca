@@ -1,0 +1,24 @@
+# Instructors & Rates
+
+An **instructor** extends a platform user with a teaching profile: bio, areas of expertise, languages, weekly availability, a photo and a category.
+
+## Categories and rates
+
+Each **instructor category** (for example *Senior Trainer*) has a base hourly rate, optional per-language rates, and a currency. The rate used for a session is chosen in this order:
+
+1. the instructor's own **rate override**, if set (e.g. category 500 EGP, instructor 650 EGP → 650);
+2. the category rate for the session's delivery language;
+3. the category base rate.
+
+Work logs keep the rate they were created with, so changing a rate never rewrites past pay.
+
+## Adding instructors
+
+- **Existing user** — pick any member of the academy.
+- **New person** — enter a name and email; an account is created with a one-time password and the Instructor role.
+
+The instructor page shows the rate breakdown, availability, the courses they teach and their work logs. Courses are assigned from the instructor page or from a course's **Delivery & Resources** tab.
+
+## Instructors proposed by entities
+
+When an entity's coordinator is allowed to propose instructors, the proposal appears with status **Pending approval**. The academy approves it, choosing the category and (optionally) a personal rate; the person then gets the Instructor role. Coordinators never see categories or rates.

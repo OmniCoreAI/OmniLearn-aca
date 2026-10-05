@@ -42,6 +42,22 @@ def _plan_factory(factory_name: str):
     return factory
 
 
+ADMINISTRATION_ROUTER_MODULES = [
+    "lookups",
+    "settings",
+    "overview",
+    "locations",
+    "facilities",
+    "addons",
+    "entities",
+    "positions",
+    "audience",
+    "notifications",
+    "imports",
+    "certificates",
+]
+
+
 def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     def install(name: str, **attrs):
         monkeypatch.setitem(sys.modules, name, _module(name, **attrs))
@@ -68,6 +84,7 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     install_package("src.routers.academic")
     install_package("src.routers.instructors")
     install_package("src.routers.finance")
+    install_package("src.routers.administration")
     install_package("src.routers.cms")
     install_package("src.services")
     install_package("src.services.dev")
@@ -95,6 +112,8 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
         "stream",
         "api_tokens",
         "webhooks",
+        "portal_navigation",
+        "calendar",
     ]:
         install_router_module(f"src.routers.{name}", f"src.routers.{name}")
 
@@ -250,6 +269,8 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     sys.modules["src.routers.academic"].course_profiles = sys.modules[
         "src.routers.academic.course_profiles"
     ]
+    install_router_module("src.routers.academic.core", "src.routers.academic.core")
+    sys.modules["src.routers.academic"].core = sys.modules["src.routers.academic.core"]
 
     install_router_module(
         "src.routers.instructors.instructors", "src.routers.instructors.instructors"
@@ -276,6 +297,12 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     sys.modules["src.routers.finance"].ledger = sys.modules[
         "src.routers.finance.ledger"
     ]
+
+    # Administration & Configuration routers (one module per resource).
+    for admin_module in ADMINISTRATION_ROUTER_MODULES:
+        full_name = f"src.routers.administration.{admin_module}"
+        install_router_module(full_name, full_name)
+        setattr(sys.modules["src.routers.administration"], admin_module, sys.modules[full_name])
 
     install_router_module("src.routers.cms.news", "src.routers.cms.news")
     sys.modules["src.routers.cms"].news = sys.modules["src.routers.cms.news"]

@@ -1,0 +1,192 @@
+/*
+  shadcn "nova" style for the Base UI primitives bundled with the ReUI
+  event calendar (button, calendar, card, dropdown-menu, popover,
+  scroll-area, tooltip). Generated from ReUI registry/styles/style-nova.css,
+  limited to the cn-* classes those primitives use. Colors go through the
+  --color-* theme tokens because this app's raw tokens are HSL triplets.
+*/
+@reference "../../../styles/globals.css";
+
+.cn-button {
+  @apply focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 rounded-lg border border-transparent bg-clip-padding text-sm font-medium focus-visible:ring-3 aria-invalid:ring-3 active:not-aria-[haspopup]:translate-y-px [&_svg:not([class*='size-'])]:size-4;
+}
+
+.cn-button-size-default {
+  @apply h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2;
+}
+
+.cn-button-size-icon {
+  @apply size-8;
+}
+
+.cn-button-size-icon-lg {
+  @apply size-9;
+}
+
+.cn-button-size-icon-sm {
+  @apply size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg;
+}
+
+.cn-button-size-icon-xs {
+  @apply size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3;
+}
+
+.cn-button-size-lg {
+  @apply h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2;
+}
+
+.cn-button-size-sm {
+  @apply h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5;
+}
+
+.cn-button-size-xs {
+  @apply h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3;
+}
+
+.cn-button-variant-default {
+  @apply bg-primary text-primary-foreground hover:bg-primary/80;
+}
+
+.cn-button-variant-destructive {
+  @apply bg-destructive/10 hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/20 text-destructive focus-visible:border-destructive/40 dark:hover:bg-destructive/30;
+}
+
+.cn-button-variant-ghost {
+  @apply hover:bg-muted hover:text-foreground dark:hover:bg-muted/50 aria-expanded:bg-muted aria-expanded:text-foreground;
+}
+
+.cn-button-variant-link {
+  @apply text-primary underline-offset-4 hover:underline;
+}
+
+.cn-button-variant-outline {
+  @apply border-border bg-background hover:bg-muted hover:text-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 aria-expanded:bg-muted aria-expanded:text-foreground;
+}
+
+.cn-button-variant-secondary {
+  @apply bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--color-secondary),var(--color-foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground;
+}
+
+.cn-calendar {
+  @apply p-2 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(7)];
+}
+
+.cn-calendar-caption-label {
+  @apply h-6 pr-1 pl-1.5;
+}
+
+.cn-calendar-dropdown-root {
+  @apply has-focus:border-ring border-input has-focus:ring-ring/50 border has-focus:ring-3;
+}
+
+.cn-card {
+  @apply ring-foreground/10 bg-card text-card-foreground gap-(--card-spacing) overflow-hidden rounded-xl py-(--card-spacing) text-sm ring-1 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl;
+}
+
+.cn-card-content {
+  @apply px-(--card-spacing);
+}
+
+.cn-card-description {
+  @apply text-muted-foreground text-sm;
+}
+
+.cn-card-footer {
+  @apply bg-muted/50 rounded-b-xl border-t p-(--card-spacing);
+}
+
+.cn-card-header {
+  @apply gap-1 rounded-t-xl px-(--card-spacing) [.border-b]:pb-(--card-spacing);
+}
+
+.cn-card-title {
+  @apply text-base leading-snug font-medium group-data-[size=sm]/card:text-sm;
+}
+
+.cn-dropdown-menu-checkbox-item {
+  @apply focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm data-inset:pl-7 [&_svg:not([class*='size-'])]:size-4;
+}
+
+.cn-dropdown-menu-content {
+  @apply data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 bg-popover text-popover-foreground min-w-32 rounded-lg p-1 shadow-md ring-1 duration-100;
+}
+
+.cn-dropdown-menu-content-logical {
+  @apply data-[side=inline-start]:slide-in-from-right-2 data-[side=inline-end]:slide-in-from-left-2;
+}
+
+.cn-dropdown-menu-item {
+  @apply focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:text-destructive not-data-[variant=destructive]:focus:**:text-accent-foreground gap-1.5 rounded-md px-1.5 py-1 text-sm data-inset:pl-7 [&_svg:not([class*='size-'])]:size-4;
+}
+
+.cn-dropdown-menu-item-indicator {
+  @apply absolute right-2 flex items-center justify-center;
+}
+
+.cn-dropdown-menu-label {
+  @apply text-muted-foreground px-1.5 py-1 text-xs font-medium data-inset:pl-7;
+}
+
+.cn-dropdown-menu-radio-item {
+  @apply focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm data-inset:pl-7 [&_svg:not([class*='size-'])]:size-4;
+}
+
+.cn-dropdown-menu-separator {
+  @apply bg-border -mx-1 my-1 h-px;
+}
+
+.cn-dropdown-menu-shortcut {
+  @apply text-muted-foreground group-focus/dropdown-menu-item:text-accent-foreground ml-auto text-xs tracking-widest;
+}
+
+.cn-dropdown-menu-sub-content {
+  @apply data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 bg-popover text-popover-foreground min-w-[96px] rounded-lg p-1 shadow-lg ring-1 duration-100;
+}
+
+.cn-dropdown-menu-sub-trigger {
+  @apply focus:bg-accent focus:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground gap-1.5 rounded-md px-1.5 py-1 text-sm data-inset:pl-7 [&_svg:not([class*='size-'])]:size-4;
+}
+
+.cn-popover-content {
+  @apply bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 flex flex-col gap-2.5 rounded-lg p-2.5 text-sm shadow-md ring-1 duration-100;
+}
+
+.cn-popover-content-logical {
+  @apply data-[side=inline-start]:slide-in-from-right-2 data-[side=inline-end]:slide-in-from-left-2;
+}
+
+.cn-popover-description {
+  @apply text-muted-foreground;
+}
+
+.cn-popover-header {
+  @apply flex flex-col gap-0.5 text-sm;
+}
+
+.cn-popover-title {
+  @apply font-medium;
+}
+
+.cn-scroll-area-scrollbar {
+  @apply data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent;
+}
+
+.cn-scroll-area-thumb {
+  @apply rounded-full;
+}
+
+.cn-tooltip-arrow {
+  @apply size-2.5 translate-y-[calc(-50%-2px)] rotate-45 rounded-[2px];
+}
+
+.cn-tooltip-arrow-logical {
+  @apply data-[side=inline-end]:top-1/2! data-[side=inline-end]:-left-1 data-[side=inline-end]:-translate-y-1/2 data-[side=inline-start]:top-1/2! data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-y-1/2;
+}
+
+.cn-tooltip-content {
+  @apply data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm;
+}
+
+.cn-tooltip-content-logical {
+  @apply data-[side=inline-start]:slide-in-from-right-2 data-[side=inline-end]:slide-in-from-left-2;
+}

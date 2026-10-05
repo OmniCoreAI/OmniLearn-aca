@@ -7,6 +7,12 @@
 
 
 @custom-variant dark (&:is(.dark *));
+/* Viewports big enough to show the whole dashboard home without scrolling */
+@custom-variant fit {
+  @media (min-width: 1280px) and (min-height: 640px) {
+    @slot;
+  }
+}
 
 /* Root layout fade-in (replaces framer-motion) */
 @keyframes fadeIn {
@@ -294,14 +300,14 @@
     border-radius: 0.625rem;
     background: hsl(var(--auth-surface));
     color: hsl(var(--auth-ink));
-    box-shadow: inset 0 0 0 1px hsl(var(--auth-border));
+    box-shadow: inset 0 0 0 1px hsl(var(--auth-border)) !important;
     transition: box-shadow 160ms ease, background 160ms ease;
   }
   .auth-input:hover {
-    box-shadow: inset 0 0 0 1px hsl(40 18% 75%);
+    box-shadow: inset 0 0 0 1px hsl(40 18% 75%) !important;
   }
   .auth-input:focus {
-    box-shadow: inset 0 0 0 1.5px hsl(var(--auth-focus)), 0 0 0 4px hsl(var(--auth-focus) / 0.14);
+    box-shadow: inset 0 0 0 1.5px hsl(var(--auth-focus)), 0 0 0 4px hsl(var(--auth-focus) / 0.14) !important;
   }
 
   .auth-btn-primary {
@@ -318,20 +324,35 @@
     transform: translateY(1px);
   }
 
-  /* Glassmorphism surfaces */
-  .dash-glass {
-    background: linear-gradient(
-      145deg,
-      hsl(0 0% 100% / 0.72),
-      hsl(43 40% 98% / 0.55)
-    );
-    backdrop-filter: blur(18px) saturate(1.25);
-    -webkit-backdrop-filter: blur(18px) saturate(1.25);
-    border: 1px solid hsl(0 0% 100% / 0.7);
+  /* Dashboard card: solid white on the neutral canvas with a hairline border
+     and a soft two-layer shadow. Brand colour lives in the content, not here. */
+  .dash-card {
+    background: hsl(var(--dash-surface));
+    border: 1px solid hsl(var(--dash-border));
     box-shadow:
-      0 1px 0 hsl(0 0% 100% / 0.8) inset,
-      0 10px 36px hsl(0 0% 0% / 0.06),
-      0 0 0 1px hsl(var(--dash-border) / 0.55);
+      0 1px 2px hsl(220 30% 10% / 0.04),
+      0 4px 16px -6px hsl(220 30% 10% / 0.06);
+  }
+
+  /* Frosted panels for the calendar page, on the same neutral canvas as the
+     dashboard: near-opaque white so they read as clean cards, with a light
+     blur and a bright top edge for the glass feel. */
+  .glass-panel {
+    background: linear-gradient(150deg, hsl(0 0% 100% / 0.92), hsl(0 0% 100% / 0.78));
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    border: 1px solid hsl(0 0% 100% / 0.8);
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / 0.9) inset,
+      0 20px 50px -28px hsl(222 40% 18% / 0.35);
+  }
+  /* Small controls on glass (pills, buttons, tiles). */
+  .glass-chip {
+    background: hsl(0 0% 100% / 0.58);
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+    border: 1px solid hsl(0 0% 100% / 0.85);
+    box-shadow: 0 1px 2px hsl(222 40% 18% / 0.06);
   }
 
   .dash-glass-dark {
@@ -349,23 +370,6 @@
   .finance-shell {
     position: relative;
     isolation: isolate;
-  }
-  .finance-shell::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(ellipse 60% 40% at 10% 0%, hsl(var(--dash-accent) / 0.12), transparent 55%),
-      radial-gradient(ellipse 50% 35% at 95% 10%, hsl(var(--dash-warn) / 0.08), transparent 50%),
-      linear-gradient(
-        90deg,
-        hsl(var(--dash-warn) / 0.035) 0%,
-        hsl(0 0% 100% / 0) 12%,
-        hsl(0 0% 100% / 0) 88%,
-        hsl(0 0% 0% / 0.035) 100%
-      );
   }
 
   /* Hide scrollbar while maintaining scroll functionality */
@@ -488,40 +492,43 @@
 
 @layer base {
   :root {
+    /* shadcn base tokens, tuned to the EACA palette: warm neutrals, ink
+       primary (white-on-gold fails contrast at small sizes, so gold is the
+       accent/focus colour), brand red for destructive actions. */
     --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --foreground: 0 0% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 0 0% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
+    --popover-foreground: 0 0% 8%;
     --primary: 0 0% 9%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 0 0% 12%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 43 55% 94%;
+    --accent-foreground: 38 70% 26%;
+    --destructive: 351 84% 44%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --border: 220 13% 91%;
+    --input: 220 13% 88%;
+    --ring: 43 72% 45%;
+    --chart-1: 43 80% 50%;
+    --chart-2: 351 70% 55%;
+    --chart-3: 0 0% 15%;
+    --chart-4: 28 70% 52%;
+    --chart-5: 40 10% 58%;
+    --radius: 0.75rem;
 
     /* EACA brand — gold primary + Egyptian flag (red / white / black) */
-    --dash-canvas: 40 18% 96%;
+    --dash-canvas: 220 14% 96%;
     --dash-sidebar: 0 0% 100%;
     --dash-ink: 0 0% 8%;
-    --dash-muted: 0 0% 38%;
+    --dash-muted: 220 9% 46%;
     --dash-accent: 43 72% 45%;
     --dash-accent-soft: 43 55% 94%;
-    --dash-border: 40 14% 86%;
+    --dash-border: 220 13% 91%;
     --dash-surface: 0 0% 100%;
     --dash-warn: 351 84% 44%;
     --dash-warn-soft: 351 70% 95%;
@@ -712,6 +719,27 @@
 
 .lh-modal-overlay[data-state="closed"] {
   animation: modalOverlayExit 130ms ease-in forwards;
+}
+
+/* Side drawer (components/ui/sheet.tsx): slides in from the inline end. */
+@keyframes sheetEnter {
+  from { transform: translateX(var(--sheet-offset, 100%)); }
+  to   { transform: translateX(0); }
+}
+@keyframes sheetExit {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--sheet-offset, 100%)); }
+}
+[dir="rtl"] .lh-sheet-content { --sheet-offset: -100%; }
+.lh-sheet-content[data-state="open"] {
+  animation: sheetEnter 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.lh-sheet-content[data-state="closed"] {
+  animation: sheetExit 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lh-sheet-content[data-state="open"],
+  .lh-sheet-content[data-state="closed"] { animation-duration: 1ms; }
 }
 
 /* Flipcard 3D Animation Styles */

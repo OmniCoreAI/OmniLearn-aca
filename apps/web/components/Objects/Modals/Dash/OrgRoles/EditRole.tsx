@@ -29,7 +29,7 @@ type EditRoleProps = {
 
 function presetLocaleKey(roleKey: string): string {
     if (roleKey === 'Super Admin') return 'super_admin'
-    if (roleKey === 'Organization Coordinator') return 'maintainer'
+    if (roleKey === 'Entity Coordinator') return 'maintainer'
     if (roleKey === 'Trainee') return 'viewer'
     return roleKey.toLowerCase()
 }
@@ -200,19 +200,19 @@ const predefinedRoles = {
             dashboard: { action_access: true }
         }
     },
-    'Organization Coordinator': {
-        name: 'Organization Coordinator',
-        description: 'Uploads trainee lists (group registration via Excel), follows their organization\'s trainees\' progress and attendance, and receives financial and training reports.',
+    'Entity Coordinator': {
+        name: 'Entity Coordinator',
+        description: 'Manages their own entity: adds and imports members, organizes groups, assigns the training the academy made available, and follows progress. Entity scope comes from being made coordinator of an entity.',
         rights: {
             courses: { action_create: false, action_read: true, action_read_own: true, action_update: false, action_update_own: false, action_delete: false, action_delete_own: false },
-            users: { action_create: true, action_read: true, action_update: true, action_delete: false },
-            usergroups: { action_create: true, action_read: true, action_update: true, action_delete: false },
+            users: { action_create: false, action_read: false, action_update: false, action_delete: false },
+            usergroups: { action_create: false, action_read: false, action_update: false, action_delete: false },
             folders: { action_create: false, action_read: true, action_update: false, action_delete: false },
             media: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            organizations: { action_create: false, action_read: true, action_update: false, action_delete: false },
+            organizations: { action_create: false, action_read: false, action_update: false, action_delete: false },
             coursechapters: { action_create: false, action_read: true, action_update: false, action_delete: false },
             activities: { action_create: false, action_read: true, action_update: false, action_delete: false },
-            roles: { action_create: false, action_read: true, action_update: false, action_delete: false },
+            roles: { action_create: false, action_read: false, action_update: false, action_delete: false },
             dashboard: { action_access: true }
         }
     },

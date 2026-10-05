@@ -4,7 +4,6 @@ import { useOrg } from '@components/Contexts/OrgContext'
 import { signOut } from '@components/Contexts/AuthContext'
 import {
   House,
-  BookOpen,
   Files,
   Users,
   CurrencyCircleDollar,
@@ -13,12 +12,12 @@ import {
   Gear,
   SignOut,
   ChartBar,
+  Chalkboard,
   ChalkboardSimple,
   Cube,
   FolderSimple,
   GraduationCap,
   Certificate,
-  ChalkboardTeacher,
   Newspaper,
   List,
   X,
@@ -27,6 +26,7 @@ import {
   Book,
   CaretDown,
   MagnifyingGlass,
+  IdentificationCard,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import Link from 'next/link'
@@ -44,6 +44,8 @@ import { cn } from '@/lib/utils'
 import { usePlan } from '@components/Hooks/usePlan'
 import { FeedbackModal } from '@components/Objects/Modals/FeedbackModal'
 import { useCommandPalette } from '@components/Dashboard/CommandPalette/CommandPaletteContext'
+import usePortalNavVisibility from '@components/Hooks/usePortalNavVisibility'
+import { ADMIN_NAV_LINKS, isAdminLinkActive } from '@components/Dashboard/Menus/adminNavItems'
 
 function DashMobileMenu() {
   const org = useOrg() as any
@@ -52,6 +54,8 @@ function DashMobileMenu() {
   const pathname = usePathname() || ''
   const plan = usePlan()
   const { toggle: openSearch } = useCommandPalette()
+  // Same role-based visibility as the desktop sidebar (DashLeftMenu).
+  const { isItemVisible } = usePortalNavVisibility()
   const [menuOpen, setMenuOpen] = useState(false)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [langExpanded, setLangExpanded] = useState(false)
@@ -106,19 +110,20 @@ function DashMobileMenu() {
             />
           </Link>
           {/* Progressive reveal — more icons as viewport widens */}
-          <PillLink href="/dash/postgraduate" icon={<GraduationCap size={18} weight="fill" />} active={isActive('/dash/postgraduate')} className="hidden min-[340px]:flex" />
-          <PillLink href="/dash/training-programs" icon={<Certificate size={18} weight="fill" />} active={isActive('/dash/training-programs')} className="hidden min-[360px]:flex" />
-          <PillLink href="/dash/assignments" icon={<Files size={18} weight="fill" />} active={isActive('/dash/assignments')} className="hidden min-[390px]:flex" />
-          <PillLink href="/dash/users/settings/users" icon={<Users size={18} weight="fill" />} active={isActive('/dash/users')} className="hidden min-[430px]:flex" />
-          {isEnabled('boards') && (
+          {isItemVisible('my-entity') && <PillLink href="/dash/my-entity" icon={<IdentificationCard size={18} weight="fill" />} active={isActive('/dash/my-entity')} />}
+          {isItemVisible('postgraduate') && <PillLink href="/dash/postgraduate" icon={<GraduationCap size={18} weight="fill" />} active={isActive('/dash/postgraduate') && !isActive('/dash/postgraduate/teaching')} className="hidden min-[340px]:flex" />}
+          {isItemVisible('training-programs') && <PillLink href="/dash/training-programs" icon={<Certificate size={18} weight="fill" />} active={isActive('/dash/training-programs')} className="hidden min-[360px]:flex" />}
+          {isItemVisible('assignments') && <PillLink href="/dash/assignments" icon={<Files size={18} weight="fill" />} active={isActive('/dash/assignments')} className="hidden min-[390px]:flex" />}
+          {isItemVisible('users') && <PillLink href="/dash/users/settings/users" icon={<Users size={18} weight="fill" />} active={isActive('/dash/users')} className="hidden min-[430px]:flex" />}
+          {isEnabled('boards') && isItemVisible('boards') && (
             <PillLink href="/dash/boards" icon={<ChalkboardSimple size={18} weight="fill" />} active={isActive('/dash/boards')} className="hidden min-[550px]:flex" />
           )}
-          {isEnabled('playgrounds') && (
+          {isEnabled('playgrounds') && isItemVisible('playgrounds') && (
             <PillLink href="/dash/playgrounds" icon={<Cube size={18} weight="fill" />} active={isActive('/dash/playgrounds')} className="hidden min-[590px]:flex" />
           )}
-          <PillLink href="/dash/analytics" icon={<ChartBar size={18} weight="fill" />} active={isActive('/dash/analytics')} className="hidden min-[630px]:flex" />
-          <PillLink href="/dash/org/settings/general" icon={<Buildings size={18} weight="fill" />} active={isActive('/dash/org')} className="hidden min-[670px]:flex" />
-          {isEnabled('payments') && (
+          {isItemVisible('analytics') && <PillLink href="/dash/analytics" icon={<ChartBar size={18} weight="fill" />} active={isActive('/dash/analytics')} className="hidden min-[630px]:flex" />}
+          {isItemVisible('organization') && <PillLink href="/dash/org/settings/general" icon={<Buildings size={18} weight="fill" />} active={isActive('/dash/org')} className="hidden min-[670px]:flex" />}
+          {isEnabled('payments') && isItemVisible('payments') && (
             <PillLink href="/dash/payments/overview" icon={<CurrencyCircleDollar size={18} weight="fill" />} active={isActive('/dash/payments')} className="hidden min-[710px]:flex" />
           )}
 
@@ -140,7 +145,7 @@ function DashMobileMenu() {
             aria-expanded={menuOpen}
             className={cn(
               'p-2.5 rounded-full transition-all duration-200 overflow-hidden',
-              menuOpen ? 'bg-[hsl(var(--dash-accent))] text-white' : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]'
+              menuOpen ? 'bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))]' : 'text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))] hover:bg-[hsl(var(--dash-accent-soft))]'
             )}
           >
             <AnimatePresence mode="wait" initial={false}>
@@ -202,19 +207,23 @@ function DashMobileMenu() {
               {/* Nav items */}
               <div className="py-2 px-2 max-h-[52vh] overflow-y-auto overscroll-contain space-y-px">
                 <PanelItem href="/dash" icon={<House size={15} weight="fill" />} label={t('common.home')} active={isActive('/dash')} onClick={close} />
-                <PanelItem href="/dash/postgraduate" icon={<GraduationCap size={15} weight="fill" />} label={t('academic.postgraduate_studies', 'Postgraduate Studies')} active={isActive('/dash/postgraduate')} onClick={close} />
-                <PanelItem href="/dash/training-programs" icon={<Certificate size={15} weight="fill" />} label={t('academic.training_programs', 'Training Programs')} active={isActive('/dash/training-programs')} onClick={close} />
-                <PanelItem href="/dash/instructors" icon={<ChalkboardTeacher size={15} weight="fill" />} label={t('instructors.title', 'Instructors')} active={isActive('/dash/instructors')} onClick={close} />
-                <PanelItem href="/dash/finance" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.finance', 'Finance')} active={isActive('/dash/finance')} onClick={close} />
-                <PanelItem href="/dash/cms/news" icon={<Newspaper size={15} weight="fill" />} label={t('cms.news.title', 'News')} active={isActive('/dash/cms/news')} onClick={close} />
-                {isEnabled('folders') && <PanelItem href="/dash/library" icon={<FolderSimple size={15} weight="fill" />} label={t('library.library')} active={isActive('/dash/library')} onClick={close} />}
-                <PanelItem href="/dash/assignments" icon={<Files size={15} weight="fill" />} label={t('common.assignments')} active={isActive('/dash/assignments')} onClick={close} />
-                <PanelItem href="/dash/users/settings/users" icon={<Users size={15} weight="fill" />} label={t('common.users')} active={isActive('/dash/users')} onClick={close} />
-                {isEnabled('boards') && <PanelItem href="/dash/boards" icon={<ChalkboardSimple size={15} weight="fill" />} label="Boards" active={isActive('/dash/boards')} onClick={close} />}
-                {isEnabled('playgrounds') && <PanelItem href="/dash/playgrounds" icon={<Cube size={15} weight="fill" />} label="Playgrounds" active={isActive('/dash/playgrounds')} onClick={close} />}
-                {isEnabled('payments') && <PanelItem href="/dash/payments/overview" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.payments')} active={isActive('/dash/payments')} onClick={close} />}
-                <PanelItem href="/dash/analytics" icon={<ChartBar size={15} weight="fill" />} label="Analytics" active={isActive('/dash/analytics')} onClick={close} />
-                <PanelItem href="/dash/org/settings/general" icon={<Buildings size={15} weight="fill" />} label={t('common.organization')} active={isActive('/dash/org')} onClick={close} />
+                {isItemVisible('my-entity') && <PanelItem href="/dash/my-entity" icon={<IdentificationCard size={15} weight="fill" />} label={t('entities.portal.nav', 'My entity')} active={isActive('/dash/my-entity')} onClick={close} />}
+                {isItemVisible('postgraduate') && <PanelItem href="/dash/postgraduate" icon={<GraduationCap size={15} weight="fill" />} label={t('academic.postgraduate_studies', 'Postgraduate Studies')} active={isActive('/dash/postgraduate') && !isActive('/dash/postgraduate/teaching')} onClick={close} />}
+                {isItemVisible('training-programs') && <PanelItem href="/dash/training-programs" icon={<Certificate size={15} weight="fill" />} label={t('academic.training_programs', 'Training Programs')} active={isActive('/dash/training-programs')} onClick={close} />}
+                {isItemVisible('finance') && <PanelItem href="/dash/finance" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.finance', 'Finance')} active={isActive('/dash/finance')} onClick={close} />}
+                {isItemVisible('cms-news') && <PanelItem href="/dash/cms/news" icon={<Newspaper size={15} weight="fill" />} label={t('cms.news.title', 'News')} active={isActive('/dash/cms/news')} onClick={close} />}
+                {isEnabled('folders') && isItemVisible('library') && <PanelItem href="/dash/library" icon={<FolderSimple size={15} weight="fill" />} label={t('library.library')} active={isActive('/dash/library')} onClick={close} />}
+                {isItemVisible('postgraduate-teaching') && <PanelItem href="/dash/postgraduate/teaching" icon={<Chalkboard size={15} weight="fill" />} label={t('academic.my_teaching', 'My Teaching')} active={isActive('/dash/postgraduate/teaching')} onClick={close} />}
+                {isItemVisible('assignments') && <PanelItem href="/dash/assignments" icon={<Files size={15} weight="fill" />} label={t('common.assignments')} active={isActive('/dash/assignments')} onClick={close} />}
+                {isItemVisible('users') && <PanelItem href="/dash/users/settings/users" icon={<Users size={15} weight="fill" />} label={t('common.users')} active={isActive('/dash/users')} onClick={close} />}
+                {isEnabled('boards') && isItemVisible('boards') && <PanelItem href="/dash/boards" icon={<ChalkboardSimple size={15} weight="fill" />} label="Boards" active={isActive('/dash/boards')} onClick={close} />}
+                {isEnabled('playgrounds') && isItemVisible('playgrounds') && <PanelItem href="/dash/playgrounds" icon={<Cube size={15} weight="fill" />} label="Playgrounds" active={isActive('/dash/playgrounds')} onClick={close} />}
+                {isEnabled('payments') && isItemVisible('payments') && <PanelItem href="/dash/payments/overview" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.payments')} active={isActive('/dash/payments')} onClick={close} />}
+                {isItemVisible('analytics') && <PanelItem href="/dash/analytics" icon={<ChartBar size={15} weight="fill" />} label="Analytics" active={isActive('/dash/analytics')} onClick={close} />}
+                {isItemVisible('organization') && <PanelItem href="/dash/org/settings/general" icon={<Buildings size={15} weight="fill" />} label={t('common.academy_settings', 'Academy settings')} active={isActive('/dash/org')} onClick={close} />}
+                {ADMIN_NAV_LINKS.filter((link) => isItemVisible(link.navId)).map((link) => (
+                  <PanelItem key={link.href} href={link.href} icon={link.icon(15)} label={t(link.labelKey, link.fallback)} active={isAdminLinkActive(link, pathname)} onClick={close} />
+                ))}
 
                 <div className="h-px bg-[hsl(var(--dash-canvas))] mx-2 my-1.5" />
 

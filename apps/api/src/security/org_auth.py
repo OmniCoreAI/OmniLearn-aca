@@ -14,7 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.user_organizations import UserOrganization
 from src.db.roles import Role
 from src.security.superadmin import is_user_superadmin
-from src.security.rbac.constants import ADMIN_OR_MAINTAINER_ROLE_IDS
+from src.security.rbac.constants import ACADEMY_ADMIN_ROLE_IDS
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ async def is_org_admin(user_id: int, org_id: int, db_session: AsyncSession) -> b
         logger.debug("Superadmin bypass: user %s accessed org %s", user_id, org_id)
         return True
     user_org = await get_user_org(user_id, org_id, db_session)
-    return user_org is not None and user_org.role_id in ADMIN_OR_MAINTAINER_ROLE_IDS
+    return user_org is not None and user_org.role_id in ACADEMY_ADMIN_ROLE_IDS
 
 
 async def get_user_org_role(user_id: int, org_id: int, db_session: AsyncSession) -> Optional[Role]:
@@ -93,7 +93,7 @@ async def require_org_role_permission(
     db_session: AsyncSession,
     resource: str,
     action: str,
-    fallback_role_ids: frozenset = ADMIN_OR_MAINTAINER_ROLE_IDS,
+    fallback_role_ids: frozenset = ACADEMY_ADMIN_ROLE_IDS,
 ) -> None:
     """
     Check that the user has a specific permission via their org role's rights dict.

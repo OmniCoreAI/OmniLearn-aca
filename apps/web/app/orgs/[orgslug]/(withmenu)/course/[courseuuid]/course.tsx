@@ -15,8 +15,10 @@ import { useOrg } from '@components/Contexts/OrgContext'
 import { CourseProvider } from '@components/Contexts/CourseContext'
 import { useMediaQuery } from 'usehooks-ts'
 import CoursesActions from '@components/Objects/Courses/CourseActions/CoursesActions'
+import CourseCover from '@components/Objects/Thumbnails/CourseCover'
 import CourseActionsMobile from '@components/Objects/Courses/CourseActions/CourseActionsMobile'
 import CourseAuthors from '@components/Objects/Courses/CourseAuthors/CourseAuthors'
+import OptionalAddOnsCard from '@components/Pages/Courses/OptionalAddOnsCard'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -385,15 +387,15 @@ const CourseClient = (props: any) => {
                     );
                   } else if (showImage && course.thumbnail_image) {
                     return (
-                      <div className="relative inset-0 ring-1 ring-inset ring-black/10 rounded-lg shadow-xl w-full h-[200px] md:h-[400px] bg-cover bg-center"
-                        style={{
-                          backgroundImage: `url(${getCourseThumbnailMediaDirectory(
-                            org?.org_uuid,
-                            course?.course_uuid,
-                            course?.thumbnail_image
-                          )})`,
-                        }}
-                      >
+                      <div className="relative w-full h-[200px] md:h-[400px] overflow-hidden rounded-2xl ring-1 ring-inset ring-black/5 shadow-[0_18px_40px_-24px_hsl(220_30%_10%/0.35)]">
+                        {/* Falls back to the generated cover if the image fails to load. */}
+                        <CourseCover
+                          name={course.name}
+                          seed={course.course_uuid}
+                          size="lg"
+                          src={getCourseThumbnailMediaDirectory(org?.org_uuid, course?.course_uuid, course?.thumbnail_image)}
+                          className="absolute inset-0"
+                        />
                         {/* Hidden img with fetchpriority="high" so the browser fetches this LCP image immediately */}
                         { }
                         <img
@@ -434,14 +436,11 @@ const CourseClient = (props: any) => {
                       </div>
                     );
                   } else {
+                    // No thumbnail: the same generated brand cover the course cards use.
                     return (
-                      <div
-                        className="inset-0 ring-1 ring-inset ring-black/10 rounded-lg shadow-xl relative w-full h-[400px] bg-cover bg-center"
-                        style={{
-                          backgroundImage: `url('/empty_thumbnail.png')`,
-                          backgroundSize: 'auto',
-                        }}
-                      ></div>
+                      <div className="relative w-full h-[200px] md:h-[400px] overflow-hidden rounded-2xl ring-1 ring-inset ring-black/5 shadow-[0_18px_40px_-24px_hsl(220_30%_10%/0.35)]">
+                        <CourseCover name={course.name} seed={course.course_uuid} size="lg" />
+                      </div>
                     );
                   }
                 })()}
@@ -474,6 +473,9 @@ const CourseClient = (props: any) => {
               <div className='course_metadata_right w-full md:w-1/4 space-y-4'>
                 {/* Actions Box */}
                 <CoursesActions courseuuid={courseuuid} orgslug={orgslug} course={course} trailData={trailData} />
+
+                {/* Add-ons offered with this course (Administration → Add-ons) */}
+                <OptionalAddOnsCard targetType="course" targetUuid={course.course_uuid} />
                 
                 {/* Authors & Updates Box */}
                 <div className="bg-white shadow-md shadow-gray-300/25 outline outline-1 outline-neutral-200/40 rounded-lg overflow-hidden p-4">

@@ -4,7 +4,6 @@ import { Form, Formik } from 'formik'
 import * as Yup from 'yup'
 import { updateOrganization } from '@services/settings/org'
 import { revalidateTags } from '@services/utils/ts/requests'
-import { useRouter } from 'next/navigation'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { toast } from 'react-hot-toast'
@@ -30,10 +29,6 @@ interface Script {
   content: string
 }
 
-interface OrganizationScripts {
-  scripts: Script[]
-}
-
 const getValidationSchema = (t: any) => Yup.object().shape({
   name: Yup.string().required(t('dashboard.organization.scripts.script_name') + ' is required'),
   content: Yup.string().required(t('dashboard.organization.scripts.script_content') + ' is required')
@@ -41,7 +36,6 @@ const getValidationSchema = (t: any) => Yup.object().shape({
 
 const OrgEditOther: React.FC = () => {
   const { t } = useTranslation()
-  const router = useRouter()
   const session = useLHSession() as any
   const access_token = session?.data?.tokens?.access_token
   const org = useOrg() as any
@@ -212,7 +206,7 @@ const OrgEditOther: React.FC = () => {
                   setCurrentScript(null)
                   setSelectedView('edit')
                 }}
-                className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
+                className="bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))] hover:bg-black/90"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 {t('dashboard.organization.scripts.add_script')}
@@ -330,7 +324,7 @@ const OrgEditOther: React.FC = () => {
                     <Button 
                       type="submit"
                       disabled={isSubmitting}
-                      className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
+                      className="bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))] hover:bg-black/90"
                     >
                       {isSubmitting ? t('dashboard.organization.settings.saving') : t('dashboard.organization.scripts.save_script')}
                     </Button>

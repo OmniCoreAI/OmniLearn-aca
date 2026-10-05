@@ -7,8 +7,7 @@ import { getUriWithOrg } from '@services/config/config'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { getCourseThumbnailMediaDirectory } from '@services/media/media'
 import Link from 'next/link'
-import Image from 'next/image'
-import EmptyThumbnailImage from '../../../public/empty_thumbnail.png'
+import CourseCover from '@components/Objects/Thumbnails/CourseCover'
 import { BookCopy, BrainCircuit, Eye, Globe, GlobeLock, Loader2, Check } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@components/ui/tooltip'
 import { useTranslation } from 'react-i18next'
@@ -157,24 +156,18 @@ export function CourseOverviewTop({
             href={getUriWithOrg(org?.slug, '') + `/course/${params.courseuuid}`}
             className="shrink-0"
           >
-            {courseStructure?.thumbnail_image ? (
-              <img
-                className="w-[72px] sm:w-[100px] h-[41px] sm:h-[57px] rounded-md drop-shadow-md object-cover"
-                src={`${getCourseThumbnailMediaDirectory(
-                  org?.org_uuid,
-                  'course_' + params.courseuuid,
-                  courseStructure.thumbnail_image
-                )}`}
-                alt={courseStructure.name}
+            <span className="block h-[41px] w-[72px] overflow-hidden rounded-lg shadow-[0_4px_12px_-6px_hsl(220_30%_10%/0.4)] sm:h-[57px] sm:w-[100px]">
+              <CourseCover
+                name={courseStructure?.name || ''}
+                seed={'course_' + params.courseuuid}
+                size="xs"
+                src={
+                  courseStructure?.thumbnail_image
+                    ? getCourseThumbnailMediaDirectory(org?.org_uuid, 'course_' + params.courseuuid, courseStructure.thumbnail_image)
+                    : null
+                }
               />
-            ) : (
-              <Image
-                width={100}
-                className="w-[72px] sm:w-[100px] h-[41px] sm:h-[57px] rounded-md drop-shadow-md"
-                src={EmptyThumbnailImage}
-                alt={courseStructure?.name || ''}
-              />
-            )}
+            </span>
           </Link>
           <div className="flex flex-col course_metadata justify-center pl-3 sm:pl-5 min-w-0">
             <div className="text-gray-400 font-semibold text-xs sm:text-sm">{t('dashboard.courses.overview_top.course_label')}</div>
