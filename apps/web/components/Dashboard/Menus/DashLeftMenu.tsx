@@ -38,17 +38,17 @@ import {
   Cube,
   ShoppingBag,
   FolderSimple,
-  GraduationCap,
   Certificate,
   Newspaper,
   CalendarBlank,
+  CalendarDots,
   IdentificationCard,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import CommandPaletteTrigger from '@components/Dashboard/CommandPalette/CommandPaletteTrigger'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import React, { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { LayoutGroup, MotionConfig, motion } from 'motion/react'
 import UserAvatar from '../../Objects/UserAvatar'
 import AdminAuthorization from '@components/Security/AdminAuthorization'
@@ -81,6 +81,9 @@ import PlanBadge from '@components/Dashboard/Shared/PlanRestricted/PlanBadge'
 import { usePlan } from '@components/Hooks/usePlan'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
 import { ADMIN_NAV_LINKS, isAdminLinkActive } from '@components/Dashboard/Menus/adminNavItems'
+import { POSTGRAD_BASE, POSTGRAD_NAV_GROUPS, pickCurrentTerm, termProgress } from '@components/Dashboard/Menus/postgradNavItems'
+import { useQuery } from '@tanstack/react-query'
+import { getApplications, getTerms } from '@services/academic/core'
 
 function DashLeftMenu() {
   const org = useOrg() as any
@@ -152,6 +155,24 @@ function DashLeftMenu() {
   const plan = usePlan()
   // Hooks must run on every render — keep this above the early return.
   const { isItemVisible } = usePortalNavVisibility()
+  const postgrad = usePostgradSignals(org?.id, access_token, isItemVisible('postgraduate') && !isCollapsed)
+  // Keep the current page in view inside the scrolling link list (e.g. a deep link into a long section).
+  // Clicked links are already on screen, so this only moves the list on a fresh load.
+  const navScrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const reveal = () => {
+      const list = navScrollRef.current
+      const current = list?.querySelector<HTMLElement>('a[aria-current="page"]')
+      if (!list || !current) return
+      const box = list.getBoundingClientRect()
+      const item = current.getBoundingClientRect()
+      if (item.top >= box.top && item.bottom <= box.bottom) return
+      list.scrollTo({ top: list.scrollTop + item.top - box.top - (box.height - item.height) / 2 })
+    }
+    // Once after the entrance animations, and again once section heights settle (collapsing unfolds sections).
+    const timers = [setTimeout(reveal, 450), setTimeout(reveal, 1000)]
+    return () => timers.forEach(clearTimeout)
+  }, [pathname, isCollapsed])
 
   if (!org || !session) return null
   // Feature visibility from API resolved_features
@@ -175,7 +196,7 @@ function DashLeftMenu() {
   const showOrganization = isItemVisible('organization')
   const showAnalytics = isItemVisible('analytics')
 
-  const showAcademicSection = showPostgraduate || showTrainingPrograms || showFinance || showCmsNews
+  const showAcademicSection = showTrainingPrograms || showFinance || showCmsNews
   const adminLinks = ADMIN_NAV_LINKS.filter((link) => isItemVisible(link.navId))
   const showTeachingSection = showMyTeaching || showAssignments || showLibrary || showBoards || showPlaygrounds
   // "My Teaching" lives under /dash/postgraduate but is its own sidebar entry.
@@ -428,8 +449,8 @@ function DashLeftMenu() {
 
   const settingsCount = 4
   const deskActive = isActivePath('/dash') || isActivePath('/dash/calendar') || isActivePath('/dash/my-entity')
-  const academicActive =
-    (isActivePath('/dash/postgraduate') && !inMyTeaching) || isActivePath('/dash/training-programs') || isActivePath('/dash/finance') || isActivePath('/dash/cms/news')
+  const academicActive = isActivePath('/dash/training-programs') || isActivePath('/dash/finance') || isActivePath('/dash/cms/news')
+  const postgradActive = isActivePath(POSTGRAD_BASE) && !inMyTeaching
   const classroomActive =
     inMyTeaching || isActivePath('/dash/assignments') || isActivePath('/dash/library') || isActivePath('/dash/boards') || isActivePath('/dash/playgrounds')
   const manageActive = isActivePath('/dash/users') || isActivePath('/dash/payments') || isActivePath('/dash/org') || isActivePath('/dash/analytics')
@@ -479,7 +500,7 @@ function DashLeftMenu() {
           </div>
 
           {/* Navigation */}
-          <div className={cn('flex-1 overflow-y-auto pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden', isCollapsed ? 'px-2' : 'px-3')}>
+          <div ref={navScrollRef} className={cn('flex-1 overflow-y-auto pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden', isCollapsed ? 'px-2' : 'px-3')}>
             <AdminAuthorization authorizationMode="component">
               {(showHome || showCalendar || showMyEntity) && (
                 <NavGroup id="desk" index={0} hasActive={deskActive} label={t('dashboard.home.nav.overview', 'My desk')} count={count(showHome, showCalendar, showMyEntity)} isCollapsed={isCollapsed}>
@@ -509,25 +530,51 @@ function DashLeftMenu() {
                 </NavGroup>
               )}
 
+              {showPostgraduate && (
+                <NavGroup
+                  id="postgraduate"
+                  index={1}
+                  hasActive={postgradActive}
+                  label={t('academic.postgraduate_studies', 'Postgraduate Studies')}
+                  count={POSTGRAD_NAV_GROUPS.reduce((n, group) => n + group.links.length, 0)}
+                  isCollapsed={isCollapsed}
+                >
+                  {!isCollapsed && postgrad.term ? <TermCard term={postgrad.term} /> : null}
+                  {POSTGRAD_NAV_GROUPS.map((group, i) => (
+                    <React.Fragment key={group.key}>
+                      {group.labelKey ? (
+                        <NavSubLabel label={t(group.labelKey, group.fallback)} isCollapsed={isCollapsed} first={i === 0 && !(postgrad.term && !isCollapsed)} />
+                      ) : null}
+                      {group.links.map((link) => {
+                        const active = !inMyTeaching && link.isActive(pathname)
+                        return (
+                          <NavItem
+                            key={link.key}
+                            href={link.href}
+                            icon={icon(link.Icon, active)}
+                            label={t(link.labelKey, link.fallback)}
+                            isCollapsed={isCollapsed}
+                            active={active}
+                            badge={link.key === 'admissions' ? postgrad.pendingApplications : undefined}
+                            badgeLabel={t('academic.nav.pending_review', '{{count}} awaiting review', { count: postgrad.pendingApplications })}
+                            onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: `postgraduate_${link.key}` })}
+                          />
+                        )
+                      })}
+                    </React.Fragment>
+                  ))}
+                </NavGroup>
+              )}
+
               {showAcademicSection && (
                 <NavGroup
                   id="academic"
-                  index={1}
+                  index={2}
                   hasActive={academicActive}
                   label={t('dashboard.home.nav.academic', 'Academic')}
-                  count={count(showPostgraduate, showTrainingPrograms, showFinance, showCmsNews)}
+                  count={count(showTrainingPrograms, showFinance, showCmsNews)}
                   isCollapsed={isCollapsed}
                 >
-                  {showPostgraduate && (
-                    <NavItem
-                      href="/dash/postgraduate"
-                      icon={icon(GraduationCap, isActivePath('/dash/postgraduate') && !inMyTeaching)}
-                      label={t('academic.postgraduate_studies', 'Postgraduate Studies')}
-                      isCollapsed={isCollapsed}
-                      active={isActivePath('/dash/postgraduate') && !inMyTeaching}
-                      onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'postgraduate' })}
-                    />
-                  )}
                   {showTrainingPrograms && (
                     <NavItem
                       href="/dash/training-programs"
@@ -564,7 +611,7 @@ function DashLeftMenu() {
               {showTeachingSection && (
                 <NavGroup
                   id="classroom"
-                  index={2}
+                  index={3}
                   hasActive={classroomActive}
                   label={t('dashboard.home.nav.teaching', 'Classroom')}
                   count={count(showMyTeaching, showAssignments, showLibrary, showBoards, showPlaygrounds)}
@@ -609,7 +656,7 @@ function DashLeftMenu() {
               {showManageSection && (
                 <NavGroup
                   id="manage"
-                  index={3}
+                  index={4}
                   hasActive={manageActive}
                   label={t('dashboard.home.nav.manage', 'Manage')}
                   count={count(showUsers, showPayments, showOrganization, showAnalytics)}
@@ -657,7 +704,7 @@ function DashLeftMenu() {
               {adminLinks.length > 0 && (
                 <NavGroup
                   id="admin"
-                  index={4}
+                  index={5}
                   hasActive={adminActive}
                   label={t('dashboard.home.nav.administration', 'Administration & Configuration')}
                   count={adminLinks.length}
@@ -774,6 +821,8 @@ function NavItem({
   hasMenu = false,
   muted = false,
   asButton = false,
+  badge,
+  badgeLabel,
 }: {
   href: string
   icon: React.ReactNode
@@ -784,7 +833,11 @@ function NavItem({
   hasMenu?: boolean
   muted?: boolean
   asButton?: boolean
+  /** A count of things waiting here (e.g. applications to review); hidden at 0. */
+  badge?: number
+  badgeLabel?: string
 }) {
+  const showBadge = !!badge && badge > 0
   const className = cn(
     'group/item relative flex items-center rounded-xl text-[13px] font-medium transition-colors duration-200',
     isCollapsed ? 'mx-auto h-10 w-10 justify-center' : 'h-9 w-full gap-3 px-3',
@@ -832,14 +885,29 @@ function NavItem({
         />
       )}
       {isCollapsed && hasMenu && <span className="absolute bottom-1.5 end-1.5 h-1 w-1 rounded-full bg-current opacity-40" aria-hidden="true" />}
+      {showBadge && !isCollapsed ? (
+        <span
+          title={badgeLabel}
+          className={cn(
+            'relative shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold tabular-nums',
+            active ? 'bg-[hsl(var(--dash-ink))] text-white' : 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]'
+          )}
+        >
+          {badge > 99 ? '99+' : badge}
+        </span>
+      ) : null}
+      {showBadge && isCollapsed ? (
+        <span className="absolute end-1 top-1 h-2 w-2 rounded-full bg-[hsl(var(--dash-accent))] ring-2 ring-white" aria-hidden="true" />
+      ) : null}
     </>
   )
+  const ariaLabel = showBadge && badgeLabel ? `${label}, ${badgeLabel}` : label
   const element = asButton ? (
     <button type="button" aria-label={label} className={cn(className, 'w-full')}>
       {inner}
     </button>
   ) : (
-    <Link href={href} aria-label={label} aria-current={active ? 'page' : undefined} onClick={onClick} className={className}>
+    <Link href={href} aria-label={ariaLabel} aria-current={active ? 'page' : undefined} onClick={onClick} className={className}>
       {inner}
     </Link>
   )
@@ -852,6 +920,78 @@ function NavItem({
       </TooltipContent>
     </Tooltip>
   )
+}
+
+/** A small heading between groups of links inside a section card (a divider when the panel is collapsed). */
+function NavSubLabel({ label, isCollapsed, first = false }: { label: string; isCollapsed: boolean; first?: boolean }) {
+  if (isCollapsed) return first ? null : <div className="mx-auto my-1.5 h-px w-6 bg-[hsl(var(--dash-border))]" aria-hidden="true" />
+  return (
+    <p className={cn('flex items-center gap-2 px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[hsl(var(--dash-muted))]/80', first ? 'pt-1' : 'pt-3')}>
+      <span className="truncate">{label}</span>
+      <span className="h-px flex-1 bg-[hsl(var(--dash-border))]/70" aria-hidden="true" />
+    </p>
+  )
+}
+
+/** Current academic term at the top of the Postgraduate section: name, week and progress through the term. */
+function TermCard({ term }: { term: any }) {
+  const { t } = useTranslation()
+  const progress = termProgress(term)
+  return (
+    <Link
+      href={`${POSTGRAD_BASE}/calendar`}
+      className="group/term relative mb-1 block overflow-hidden rounded-xl bg-[linear-gradient(135deg,hsl(0_0%_14%),hsl(0_0%_6%))] px-3 py-2.5 text-white transition-transform duration-200 hover:-translate-y-0.5"
+    >
+      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(43_80%_60%/0.6)] to-transparent" />
+      <span className="flex items-center gap-2.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[hsl(43_80%_62%)]">
+          <CalendarDots size={16} weight="duotone" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[10px] font-medium uppercase tracking-[0.12em] text-[hsl(43_80%_64%)]">{t('academic.nav.current_term', 'Current term')}</span>
+          <span className="block truncate text-[13px] font-semibold leading-tight">{term.name}</span>
+        </span>
+        <CaretRight size={12} weight="bold" className="shrink-0 text-white/40 transition-transform group-hover/term:translate-x-0.5 rtl:rotate-180 rtl:group-hover/term:-translate-x-0.5" />
+      </span>
+      {progress ? (
+        <>
+          <span className="mt-2 block h-1 overflow-hidden rounded-full bg-white/10">
+            <span className="block h-full rounded-full bg-[linear-gradient(90deg,hsl(43_85%_60%),hsl(40_78%_49%))]" style={{ width: `${Math.round(progress.ratio * 100)}%` }} />
+          </span>
+          <span className="mt-1 flex items-center justify-between text-[10.5px] text-white/55">
+            <span>{t('academic.nav.week_of', 'Week {{week}} of {{total}}', { week: progress.week, total: progress.totalWeeks })}</span>
+            {term.academic_year_code ? <span className="tabular-nums">{term.academic_year_code}</span> : null}
+          </span>
+        </>
+      ) : null}
+    </Link>
+  )
+}
+
+/**
+ * Live bits of the Postgraduate section: today's term and applications waiting
+ * for review. Fetched only while the section can show them, cached for minutes.
+ */
+function usePostgradSignals(orgId: number | undefined, token: string | undefined, enabled: boolean) {
+  const ready = enabled && !!orgId && !!token
+  const { data: terms } = useQuery({
+    queryKey: ['academic', 'terms', orgId],
+    queryFn: () => getTerms(orgId!, token!),
+    enabled: ready,
+    staleTime: 5 * 60_000,
+    retry: false,
+  })
+  const { data: pending } = useQuery({
+    queryKey: ['academic', 'applications', orgId, 'pending-count'],
+    queryFn: async () => {
+      const lists = await Promise.all(['submitted', 'under_review'].map((status) => getApplications(orgId!, token!, { status })))
+      return lists.reduce((n, list) => n + (Array.isArray(list) ? list.length : 0), 0)
+    },
+    enabled: ready,
+    staleTime: 2 * 60_000,
+    retry: false,
+  })
+  return { term: Array.isArray(terms) ? pickCurrentTerm(terms) : null, pendingApplications: pending ?? 0 }
 }
 
 function GroupLabel({ label, count }: { label: string; count: number }) {

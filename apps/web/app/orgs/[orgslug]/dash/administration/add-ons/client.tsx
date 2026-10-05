@@ -272,6 +272,7 @@ function AddOnsHome({ orgslug }: { orgslug: string }) {
         ]}
       />
       <AdminDrawer
+        icon={<Package size={20} weight="duotone" />}
         open={open}
         onOpenChange={setOpen}
         title={editing ? `${t('administration.common.edit', 'Edit')} ${editing.name}` : t('administration.addons.new', 'New add-on')}

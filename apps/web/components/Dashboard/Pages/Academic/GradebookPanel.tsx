@@ -3,9 +3,10 @@ import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Plus, Pencil, Trash2, RefreshCw, Send, CheckCircle2, Undo2, Lock } from 'lucide-react'
-import Modal from '@components/Objects/StyledElements/Modal/Modal'
-import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
+import { ArrowsClockwise, ArrowUUpLeft, Check, CheckCircle, Exam, Lock, PaperPlaneTilt, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
+import { Field, FormSection, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
+import { PostgradDrawer, useActionDialog } from '@components/Dashboard/Pages/Academic/AcademicDialogs'
+import { cn } from '@/lib/utils'
 import {
   DataTable,
   GhostButton,
@@ -50,6 +51,7 @@ export function GradebookPanel({ offering }: { offering: any }) {
   const queryClient = useQueryClient()
   const offeringUuid = offering.offering_uuid
   const [componentModal, setComponentModal] = useState<null | { component?: any }>(null)
+  const { ask, dialog } = useActionDialog()
   const key = ['academic', 'gradebook', offeringUuid]
 
   const { data: book, error } = useQuery({
@@ -63,6 +65,7 @@ export function GradebookPanel({ offering }: { offering: any }) {
     queryClient.invalidateQueries({ queryKey: key })
     queryClient.invalidateQueries({ queryKey: ['academic', 'offering', offeringUuid] })
     queryClient.invalidateQueries({ queryKey: ['academic', 'offering-roster', offeringUuid] })
+    queryClient.invalidateQueries({ queryKey: ['academic', 'overview'] })
   }
 
   const run = async (fn: () => Promise<any>, ok: string) => {
@@ -90,6 +93,55 @@ export function GradebookPanel({ offering }: { offering: any }) {
   // Approval is for the program office, never for the offering's own teaching staff.
   const canApprove = !!offering.viewer_can_manage && !offering.viewer_teaches
   const weightOk = Math.abs(book.total_weight - 100) < 1e-6
+  const incomplete = book.rows.filter((r: any) => r.enrollment_status === 'registered' && r.passed == null).length
+
+  const submitGrades = async () => {
+    const note = await ask({
+      title: t('academic.gb.submit_title', 'Submit grades for approval?'),
+      message: incomplete
+        ? t('academic.gb.submit_incomplete', '{{count}} students still have missing scores. The coordinator will see them as incomplete.', { count: incomplete })
+        : t('academic.gb.submit_message', 'Scores lock until the coordinator approves them or returns them to you.'),
+      confirmText: t('academic.submit_grades', 'Submit grades'),
+      tone: incomplete ? 'warning' : 'info',
+      noteLabel: t('academic.submit_note', 'Note for the coordinator (optional)'),
+    })
+    if (note !== null) run(() => gradeAction(offeringUuid, 'submit', note || null, access_token), t('academic.grades_submitted_ok', 'Grades submitted for approval'))
+  }
+  const approveGrades = async () => {
+    const ok = await ask({
+      title: t('academic.gb.approve_title', 'Approve these grades?'),
+      message: t('academic.confirm_approve', 'Approve these grades? Results become official and final.'),
+      confirmText: t('academic.approve_grades', 'Approve'),
+      tone: 'success',
+    })
+    if (ok !== null) run(() => gradeAction(offeringUuid, 'approve', null, access_token), t('academic.grades_approved_ok', 'Grades approved'))
+  }
+  const returnGrades = async () => {
+    const note = await ask({
+      title: t('academic.gb.return_title', 'Return grades to the lecturer?'),
+      message: t('academic.gb.return_message', 'Scores unlock so the lecturer can correct them and submit again.'),
+      confirmText: t('academic.return_grades', 'Return'),
+      tone: 'warning',
+      noteLabel: t('academic.return_note', 'What needs to change?'),
+      noteRequired: true,
+    })
+    if (note) run(() => gradeAction(offeringUuid, 'return', note, access_token), t('academic.grades_returned_ok', 'Grades returned to the instructor'))
+  }
+  const removeComponent = async (c: any) => {
+    const ok = await ask({
+      title: t('academic.gb.delete_component', 'Delete “{{name}}”?', { name: c.name }),
+      message: t('academic.gb.delete_component_message', 'Its scores are removed and totals are recalculated.'),
+      confirmText: t('academic.delete', 'Delete'),
+      tone: 'danger',
+    })
+    if (ok !== null) run(() => deleteComponent(offeringUuid, c.component_uuid, access_token), t('academic.deleted'))
+  }
+  const flow = [
+    { key: 'open', label: t('academic.gb.step_grading', 'Grading'), who: t('academic.gb.who_lecturer', 'Lecturer') },
+    { key: 'submitted', label: t('academic.gb.step_submitted', 'Submitted'), who: t('academic.gb.who_coordinator', 'Coordinator reviews') },
+    { key: 'approved', label: t('academic.gb.step_approved', 'Approved'), who: t('academic.gb.who_official', 'Official results') },
+  ]
+  const flowIndex = status === 'approved' ? 2 : status === 'submitted' ? 1 : 0
 
   return (
     <>
@@ -99,54 +151,60 @@ export function GradebookPanel({ offering }: { offering: any }) {
           'academic.gradebook_desc',
           'Weighted assessment scheme for this offering. Scores come from the course’s assignments, quizzes and exams, and can be overridden.'
         )}
+        icon={<Exam size={18} weight="duotone" />}
         action={
           <>
-            <StatusPill status={status} label={String(t(`academic.grades_${status}`, status))} />
             {!locked && (
               <>
                 <GhostButton onClick={() => setComponentModal({})}>
-                  <Plus className="h-3.5 w-3.5" /> {t('academic.add_component', 'Add component')}
+                  <Plus size={14} /> {t('academic.add_component', 'Add component')}
                 </GhostButton>
                 <GhostButton
                   onClick={() => run(() => syncGradebook(offeringUuid, access_token), t('academic.scores_synced', 'Scores synced'))}
                   disabled={!offering.content_course_uuid}
                 >
-                  <RefreshCw className="h-3.5 w-3.5" /> {t('academic.sync_scores', 'Sync from assignments')}
+                  <ArrowsClockwise size={14} /> {t('academic.sync_scores', 'Sync from assignments')}
                 </GhostButton>
-                <GhostButton
-                  onClick={() => {
-                    const note = window.prompt(t('academic.submit_note', 'Note for the coordinator (optional)')) ?? null
-                    run(() => gradeAction(offeringUuid, 'submit', note, access_token), t('academic.grades_submitted_ok', 'Grades submitted for approval'))
-                  }}
-                >
-                  <Send className="h-3.5 w-3.5" /> {t('academic.submit_grades', 'Submit grades')}
+                <GhostButton onClick={submitGrades} disabled={!weightOk || book.rows.length === 0} className="border-[hsl(var(--dash-ink))] bg-[hsl(var(--dash-ink))] text-white hover:bg-[hsl(var(--dash-ink))]/90">
+                  <PaperPlaneTilt size={14} /> {t('academic.submit_grades', 'Submit grades')}
                 </GhostButton>
               </>
             )}
             {status === 'submitted' && canApprove && (
               <>
-                <GhostButton
-                  onClick={() =>
-                    window.confirm(
-                      t('academic.confirm_approve', 'Approve these grades? Results become official and final.')
-                    ) && run(() => gradeAction(offeringUuid, 'approve', null, access_token), t('academic.grades_approved_ok', 'Grades approved'))
-                  }
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" /> {t('academic.approve_grades', 'Approve')}
+                <GhostButton onClick={returnGrades}>
+                  <ArrowUUpLeft size={14} /> {t('academic.return_grades', 'Return')}
                 </GhostButton>
-                <GhostButton
-                  onClick={() => {
-                    const note = window.prompt(t('academic.return_note', 'What needs to change?'))
-                    if (note) run(() => gradeAction(offeringUuid, 'return', note, access_token), t('academic.grades_returned_ok', 'Grades returned to the instructor'))
-                  }}
-                >
-                  <Undo2 className="h-3.5 w-3.5" /> {t('academic.return_grades', 'Return')}
+                <GhostButton onClick={approveGrades} className="border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-600/90">
+                  <CheckCircle size={14} /> {t('academic.approve_grades', 'Approve')}
                 </GhostButton>
               </>
             )}
           </>
         }
       >
+        <ol className="mb-4 grid grid-cols-3 gap-1 rounded-2xl bg-[hsl(var(--dash-canvas))]/60 p-1">
+          {flow.map((step, i) => {
+            const done = i < flowIndex || (i === flowIndex && status === 'approved')
+            const current = i === flowIndex && status !== 'approved'
+            return (
+              <li key={step.key} className={cn('flex items-center gap-2 rounded-xl px-2.5 py-2', current && 'bg-white shadow-[0_1px_2px_hsl(220_30%_20%/0.06)]')}>
+                <span
+                  className={cn(
+                    'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
+                    done ? 'bg-emerald-500 text-white' : current ? (status === 'returned' ? 'bg-orange-500 text-white' : 'bg-[hsl(var(--dash-ink))] text-white') : 'bg-white text-[hsl(var(--dash-muted))]'
+                  )}
+                >
+                  {done ? <Check size={12} weight="bold" /> : i + 1}
+                </span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate text-[12px] font-semibold">{i === 0 && status === 'returned' ? t('academic.grades_returned', 'Returned') : step.label}</span>
+                  <span className="block truncate text-[10.5px] text-[hsl(var(--dash-muted))]">{step.who}</span>
+                </span>
+              </li>
+            )
+          })}
+        </ol>
         {book.grade_note &&
           (status === 'returned' ? (
             <div className="mb-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
@@ -160,7 +218,7 @@ export function GradebookPanel({ offering }: { offering: any }) {
           ))}
         {locked && (
           <div className="mb-3 flex items-center gap-2 text-xs text-[hsl(var(--dash-muted))]">
-            <Lock className="h-3.5 w-3.5" />
+            <Lock size={14} />
             {status === 'approved'
               ? t('academic.grades_locked_approved', 'Results are approved and official.')
               : t('academic.grades_locked_submitted', 'Awaiting approval — scores are locked.')}
@@ -168,66 +226,54 @@ export function GradebookPanel({ offering }: { offering: any }) {
         )}
 
         {/* Assessment scheme */}
-        <div className="mb-4">
-          <div className="mb-2 flex items-center justify-between text-xs">
-            <span className="font-semibold uppercase tracking-wider text-[hsl(var(--dash-muted))]">
-              {t('academic.assessment_scheme', 'Assessment scheme')}
-            </span>
-            <span className={weightOk ? 'text-emerald-700' : 'text-amber-700'}>
-              {t('academic.total_weight', 'Total weight')}: {book.total_weight}%
+        <div className="mb-5">
+          <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+            <span className="font-semibold text-[hsl(var(--dash-ink))]">{t('academic.assessment_scheme', 'Assessment scheme')}</span>
+            <span className={cn('font-semibold tabular-nums', weightOk ? 'text-emerald-700' : 'text-amber-700')}>
+              {book.total_weight}% / 100%
               {!weightOk && ` — ${t('academic.weight_must_100', 'must total 100%')}`}
             </span>
           </div>
-          <DataTable
-            headers={[
-              t('academic.component', 'Component'),
-              t('academic.course_type', 'Type'),
-              t('academic.weight', 'Weight'),
-              t('academic.max_score', 'Max'),
-              t('academic.linked_assignments', 'Linked assignments'),
-              '',
-            ]}
-            empty={t(
-              'academic.no_components_hint',
-              'No assessment components yet. For a single final grade, add one component weighted 100%.'
-            )}
-          >
-            {book.components.map((c: any) => (
-              <tr key={c.component_uuid}>
-                <td className={`${tdCls} font-medium`}>{c.name}</td>
-                <td className={`${tdCls} text-xs`}>{String(t(`academic.comp_${c.component_type}`, c.component_type))}</td>
-                <td className={tdCls}>{c.weight}%</td>
-                <td className={tdCls}>{c.max_score}</td>
-                <td className={`${tdCls} text-xs`}>
-                  {c.source_assignments.map((a: any) => a.title).join(', ') || t('academic.manual_entry', 'Manual entry')}
-                </td>
-                <td className={`${tdCls} whitespace-nowrap text-right`}>
-                  {!locked && (
-                    <>
-                      <IconButton onClick={() => setComponentModal({ component: c })} aria-label={t('academic.edit', 'Edit')}>
-                        <Pencil className="h-4 w-4" />
-                      </IconButton>
-                      <IconButton
-                        tone="danger"
-                        onClick={() =>
-                          window.confirm(t('academic.confirm_delete')) &&
-                          run(() => deleteComponent(offeringUuid, c.component_uuid, access_token), t('academic.deleted'))
-                        }
-                        aria-label={t('academic.delete', 'Delete')}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </IconButton>
-                    </>
-                  )}
-                </td>
-              </tr>
+          <div className="mb-3 flex h-2 gap-0.5 overflow-hidden rounded-full bg-[hsl(var(--dash-canvas))]">
+            {book.components.map((c: any, i: number) => (
+              <span key={c.component_uuid} title={`${c.name} · ${c.weight}%`} className={cn('h-full', ['bg-sky-500', 'bg-violet-500', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500', 'bg-teal-500'][i % 6])} style={{ width: `${Math.min(100, c.weight)}%` }} />
             ))}
-          </DataTable>
+          </div>
+          {book.components.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-[hsl(var(--dash-border))] px-4 py-6 text-center text-sm text-[hsl(var(--dash-muted))]">
+              {t('academic.no_components_hint', 'No assessment components yet. For a single final grade, add one component weighted 100%.')}
+            </p>
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {book.components.map((c: any, i: number) => (
+                <li key={c.component_uuid} className="group flex items-center gap-3 rounded-2xl border border-[hsl(var(--dash-border))]/70 bg-white px-3 py-2.5">
+                  <span className={cn('h-8 w-1.5 shrink-0 rounded-full', ['bg-sky-500', 'bg-violet-500', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500', 'bg-teal-500'][i % 6])} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-medium">{c.name}</p>
+                    <p className="truncate text-[11px] text-[hsl(var(--dash-muted))]">
+                      {String(t(`academic.comp_${c.component_type}`, c.component_type))} · /{c.max_score} · {c.source_assignments.map((a: any) => a.title).join(', ') || t('academic.manual_entry', 'Manual entry')}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold tabular-nums">{c.weight}%</span>
+                  {!locked ? (
+                    <span className="flex shrink-0 opacity-60 transition-opacity group-hover:opacity-100">
+                      <IconButton onClick={() => setComponentModal({ component: c })} aria-label={t('academic.edit', 'Edit')}>
+                        <PencilSimple size={15} />
+                      </IconButton>
+                      <IconButton tone="danger" onClick={() => removeComponent(c)} aria-label={t('academic.delete', 'Delete')}>
+                        <Trash size={15} />
+                      </IconButton>
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Gradebook grid */}
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[hsl(var(--dash-muted))]">
-          {t('academic.scores', 'Scores')} · {book.scale.name}
+        <div className="mb-2 text-xs font-semibold text-[hsl(var(--dash-ink))]">
+          {t('academic.scores', 'Scores')} <span className="font-normal text-[hsl(var(--dash-muted))]">· {book.scale.name}</span>
           {book.scale.pass_mark != null && ` · ${t('academic.pass_mark', 'pass mark')} ${book.scale.pass_mark}`}
         </div>
         <DataTable
@@ -278,7 +324,7 @@ export function GradebookPanel({ offering }: { offering: any }) {
                 ) : row.passed == null ? (
                   <span className="text-xs text-[hsl(var(--dash-muted))]">{t('academic.incomplete', 'Incomplete')}</span>
                 ) : (
-                  <StatusPill status={row.passed ? 'completed' : 'failed'} label={row.passed ? t('academic.pass', 'Pass') : t('academic.fail', 'Fail')} />
+                  <StatusPill status={row.passed ? 'passed' : 'failed'} label={row.passed ? t('academic.pass', 'Pass') : t('academic.fail', 'Fail')} />
                 )}
               </td>
             </tr>
@@ -286,11 +332,12 @@ export function GradebookPanel({ offering }: { offering: any }) {
         </DataTable>
       </Section>
 
-      <Modal
+      <PostgradDrawer
         isDialogOpen={!!componentModal}
         onOpenChange={(o: boolean) => !o && setComponentModal(null)}
-        minWidth="sm"
-        dialogTitle={componentModal?.component ? t('academic.edit', 'Edit') : t('academic.add_component', 'Add component')}
+        icon={<Exam size={20} weight="duotone" />}
+        dialogTitle={componentModal?.component ? `${t('academic.edit', 'Edit')} ${componentModal.component.name}` : t('academic.add_component', 'Add component')}
+        dialogDescription={t('academic.gb.component_desc', 'Part of the final grade, e.g. a midterm worth 30%. Weights must total 100% before grades can be submitted.')}
         dialogContent={
           componentModal && (
             <ComponentForm
@@ -305,6 +352,7 @@ export function GradebookPanel({ offering }: { offering: any }) {
           )
         }
       />
+      {dialog}
     </>
   )
 }
@@ -412,9 +460,9 @@ function ComponentForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={t('academic.name')}>
+    <form onSubmit={submit} className="space-y-6">
+      <FormSection title={t('academic.component', 'Component')}>
+        <Field label={t('academic.name')} required>
           <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required placeholder="Midterm" />
         </Field>
         <Field label={t('academic.course_type', 'Type')}>
@@ -426,9 +474,7 @@ function ComponentForm({
             ))}
           </select>
         </Field>
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        <Field label={`${t('academic.weight', 'Weight')} (%)`}>
+        <Field label={`${t('academic.weight', 'Weight')} (%)`} hint={t('academic.gb.remaining', '{{count}}% left to assign', { count: Math.max(0, remaining) })}>
           <input type="number" min={0.5} max={100} step="0.5" className={inputCls} value={weight} onChange={(e) => setWeight(e.target.value)} required />
         </Field>
         <Field label={t('academic.max_score', 'Max')}>
@@ -437,14 +483,14 @@ function ComponentForm({
         <Field label={t('academic.due_date', 'Due date')}>
           <input type="date" className={inputCls} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
         </Field>
-      </div>
-      <Field label={t('academic.linked_assignments', 'Linked assignments')}>
+      </FormSection>
+      <FormSection title={t('academic.linked_assignments', 'Linked assignments')} description={t('academic.gb.linked_hint', 'Scores sync from these assignments of the content course; leave empty to enter scores by hand.')} columns={1}>
         {!offering.content_course_uuid ? (
           <p className="text-xs text-[hsl(var(--dash-muted))]">
             {t('academic.link_needs_content', 'Link a content course to the offering to pull scores from its assignments.')}
           </p>
         ) : (
-          <div className="max-h-36 space-y-1 overflow-auto rounded-lg border border-[hsl(var(--dash-border))] p-2">
+          <div className="max-h-56 space-y-1 overflow-auto rounded-2xl border border-[hsl(var(--dash-border))] bg-white p-2">
             {(assignments as any[]).length === 0 && (
               <div className="text-xs text-[hsl(var(--dash-muted))]">
                 {t('academic.no_course_assignments', 'The content course has no assignments yet — scores can be entered manually.')}
@@ -466,7 +512,7 @@ function ComponentForm({
             ))}
           </div>
         )}
-      </Field>
+      </FormSection>
       <SubmitRow saving={saving} />
     </form>
   )

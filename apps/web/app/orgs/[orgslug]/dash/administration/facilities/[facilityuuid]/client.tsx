@@ -276,6 +276,7 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
       </div>
 
       <AdminDrawer
+        icon={<Door size={20} weight="duotone" />}
         open={editOpen}
         onOpenChange={setEditOpen}
         width="sm:max-w-[640px]"

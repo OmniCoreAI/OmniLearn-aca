@@ -186,6 +186,7 @@ export function EntityProgressPanel({ entityUuid }: { entityUuid: string }) {
       ) : null}
 
       <AdminDrawer
+        icon={<ChartLineUp size={20} weight="duotone" />}
         open={!!viewing}
         onOpenChange={(open) => !open && setViewing(null)}
         title={viewing ? personName(viewing.user) : ''}

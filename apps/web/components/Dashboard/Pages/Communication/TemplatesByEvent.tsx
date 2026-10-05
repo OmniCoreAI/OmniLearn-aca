@@ -1,4 +1,5 @@
 'use client'
+import { EnvelopeSimple } from '@phosphor-icons/react'
 import React, { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -246,6 +247,7 @@ export function TemplatesByEvent({ channel }: { channel: NotificationChannel }) 
         }
       />
       <AdminDrawer
+        icon={<EnvelopeSimple size={20} weight="duotone" />}
         open={!!editing}
         onOpenChange={(o: boolean) => !o && setEditing(null)}
         width="sm:max-w-[1100px]"

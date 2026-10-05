@@ -194,6 +194,7 @@ function EntityDetail({ orgslug, entityUuid }: { orgslug: string; entityUuid: st
       {tab === 'imports' && <UserImportWizard entityUuid={entityUuid} />}
 
       <AdminDrawer
+        icon={<Buildings size={20} weight="duotone" />}
         open={editOpen}
         onOpenChange={setEditOpen}
         width="sm:max-w-[640px]"

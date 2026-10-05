@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
@@ -7,6 +7,7 @@ import type { TFunction } from 'i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Pencil, Plus, Power, SlidersHorizontal, Tag, Trash2 } from 'lucide-react'
+import { NotePencil } from '@phosphor-icons/react'
 import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import ConfirmationModal from '@components/Objects/StyledElements/ConfirmationModal/ConfirmationModal'
 import DashDataTable, { ToolbarSearch, ToolbarSelect } from '@components/Dashboard/Shared/DataTable/DashDataTable'
@@ -16,7 +17,7 @@ import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
 import { getUriWithOrg } from '@services/config/config'
 import { cn } from '@/lib/utils'
-import { Field, FormActions, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
+import { DrawerFormContext, Field, FormActions, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import { GhostButton, StatusPill, useAcademicContext } from '@components/Dashboard/Pages/Academic/AcademicUI'
 import {
   FinanceDefaults,
@@ -144,11 +145,97 @@ export function useConfirm() {
  * and a full page). The body scrolls; use `<FormActions sticky />` inside the
  * form so Save stays visible.
  */
+/** Chips that jump to each numbered section of the form in a drawer, tracking the one in view. */
+function DrawerSectionNav({ body }: { body: HTMLDivElement | null }) {
+  const [sections, setSections] = useState<{ id: string; title: string }[]>([])
+  const [active, setActive] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!body) return
+    const scan = () => {
+      const next = Array.from(body.querySelectorAll<HTMLElement>('[data-form-section]')).map((el) => ({ id: el.id, title: el.dataset.formSection || '' }))
+      setSections((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
+    }
+    // A timer rather than requestAnimationFrame: rAF doesn't run in background tabs.
+    const timer = setTimeout(scan, 0)
+    const observer = new MutationObserver(scan)
+    observer.observe(body, { childList: true, subtree: true })
+    return () => {
+      clearTimeout(timer)
+      observer.disconnect()
+    }
+  }, [body])
+
+  useEffect(() => {
+    if (!body || sections.length < 2) return
+    const onScroll = () => {
+      const top = body.getBoundingClientRect().top
+      let current = sections[0].id
+      for (const section of sections) {
+        const el = document.getElementById(section.id)
+        if (el && el.getBoundingClientRect().top - top <= 96) current = section.id
+      }
+      // At the very bottom the last section is the one being read.
+      if (body.scrollTop + body.clientHeight >= body.scrollHeight - 4) current = sections[sections.length - 1].id
+      setActive(current)
+    }
+    const timer = setTimeout(onScroll, 0)
+    body.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      clearTimeout(timer)
+      body.removeEventListener('scroll', onScroll)
+    }
+  }, [body, sections])
+
+  if (sections.length < 2) return null
+  return (
+    <nav className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-[hsl(var(--dash-border))]/80 px-6 pb-3 scrollbar-hide" aria-label="Form sections">
+      {sections.map((section, i) => {
+        const isActive = active === section.id
+        return (
+          <button
+            key={section.id}
+            type="button"
+            onClick={() => {
+              // Scroll only the form area; scrollIntoView would also move the drawer panel.
+              const el = document.getElementById(section.id)
+              if (!el || !body) return
+              const top = el.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 16
+              body.scrollTo({ top, behavior: 'smooth' })
+            }}
+            className={cn(
+              'inline-flex shrink-0 items-center gap-1.5 rounded-full py-1 pe-3 ps-1 text-xs font-medium transition-all',
+              isActive
+                ? 'bg-[hsl(var(--dash-ink))] text-white shadow-[0_4px_12px_-4px_hsl(0_0%_8%/0.45)]'
+                : 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-ink))]'
+            )}
+          >
+            <span
+              className={cn(
+                'flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold',
+                isActive ? 'bg-white/15' : 'bg-white text-[hsl(var(--dash-ink))]'
+              )}
+            >
+              {i + 1}
+            </span>
+            {section.title}
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
+
+/**
+ * Side drawer for medium create/edit forms: floating panel, icon header, chips
+ * for the form's sections, numbered section cards, and ⌘/Ctrl+Enter to save.
+ */
 export function AdminDrawer({
   open,
   onOpenChange,
   title,
   description,
+  icon,
   children,
   width,
 }: {
@@ -156,14 +243,40 @@ export function AdminDrawer({
   onOpenChange: (_open: boolean) => void
   title: string
   description?: string
+  icon?: React.ReactNode
   children: React.ReactNode
   width?: string
 }) {
+  const [body, setBody] = useState<HTMLDivElement | null>(null)
+  const submitShortcut = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Enter' || !(e.metaKey || e.ctrlKey)) return
+    const form = (e.target as HTMLElement).closest('form') || body?.querySelector('form')
+    if (form) {
+      e.preventDefault()
+      form.requestSubmit()
+    }
+  }
+  // After a submit that failed validation, bring the first invalid field into view.
+  const revealFirstError = () =>
+    setTimeout(() => {
+      const field = body?.querySelector<HTMLElement>('[aria-invalid="true"]')
+      if (!body || !field) return
+      field.focus({ preventScroll: true })
+      const top = field.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 96
+      body.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+    }, 0)
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent width={width}>
-        <SheetHeader title={title} description={description} />
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-6">{children}</div>
+      <SheetContent width={width} onKeyDown={submitShortcut}>
+        <SheetHeader title={title} description={description} icon={icon ?? <NotePencil size={20} weight="duotone" />} />
+        <DrawerSectionNav body={body} />
+        <div
+          ref={setBody}
+          onSubmitCapture={revealFirstError}
+          className="min-h-0 flex-1 overflow-y-auto border-t border-[hsl(var(--dash-border))]/80 px-6 pb-6 pt-5 [counter-reset:form-section] has-[[data-form-section]]:border-t-0 has-[[data-form-section]]:bg-[hsl(var(--dash-canvas))]/60 has-[[data-sticky-actions]]:pb-0 [&>form]:flex [&>form]:min-h-full [&>form]:flex-col [&>form>[data-sticky-actions]]:!mt-auto [&>form>*:nth-last-child(2)]:mb-6"
+        >
+          <DrawerFormContext.Provider value={true}>{children}</DrawerFormContext.Provider>
+        </div>
       </SheetContent>
     </Sheet>
   )

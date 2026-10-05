@@ -8,6 +8,7 @@ import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
 import { cn } from '@/lib/utils'
+import { POSTGRAD_NAV_LINKS } from '@components/Dashboard/Menus/postgradNavItems'
 
 /* Building blocks shared by the Postgraduate Studies screens. */
 
@@ -18,146 +19,140 @@ export function useAcademicContext() {
   return { org, orgId: org?.id as number, access_token, ready: !!org?.id && !!access_token }
 }
 
-/** Section navigation for the Postgraduate Studies module. */
+/**
+ * Section navigation for the Postgraduate Studies module on phones and tablets.
+ * On desktop the same pages sit in the sidebar's Postgraduate Studies section.
+ */
 export function PostgradTabs({ orgslug }: { orgslug: string }) {
   const { t } = useTranslation()
   const pathname = usePathname() || ''
-  const base = '/dash/postgraduate'
-  const tabs = [
-    { href: base, label: t('academic.tab_programs', 'Programs'), match: (p: string) => isProgramPath(p) },
-    { href: `${base}/admissions`, label: t('academic.tab_admissions', 'Admissions') },
-    { href: `${base}/courses`, label: t('academic.tab_catalog', 'Course Catalog') },
-    { href: `${base}/offerings`, label: t('academic.tab_offerings', 'Course Offerings') },
-    { href: `${base}/students`, label: t('academic.tab_students', 'Students') },
-    { href: `${base}/calendar`, label: t('academic.tab_calendar', 'Academic Calendar') },
-    { href: `${base}/settings`, label: t('academic.tab_settings', 'Settings') },
-  ]
-
-  function isProgramPath(p: string) {
-    const rest = p.split(base)[1] || ''
-    return !['/admissions', '/courses', '/offerings', '/students', '/calendar', '/settings', '/teaching'].some((s) =>
-      rest.startsWith(s)
-    )
-  }
-
   return (
-    <div className={cn(TAB_TRACK, 'mb-6')}>
-      {tabs.map((tab) => {
-        const active = tab.match ? tab.match(pathname) : pathname.includes(tab.href)
+    <nav aria-label={t('academic.postgraduate_studies', 'Postgraduate Studies')} className={cn(TAB_TRACK, 'mb-6 min-[1025px]:hidden')}>
+      {POSTGRAD_NAV_LINKS.map((link) => {
+        const active = link.isActive(pathname)
         return (
           <Link
-            key={tab.href}
-            href={getUriWithOrg(orgslug, tab.href)}
-            className={tabItemClass(active)}
+            key={link.key}
+            href={getUriWithOrg(orgslug, link.href)}
+            aria-current={active ? 'page' : undefined}
+            className={tabItemClass(active, 'inline-flex items-center gap-1.5 px-3.5')}
           >
-            {tab.label}
+            <link.Icon size={15} weight={active ? 'fill' : 'duotone'} />
+            {t(link.labelKey, link.fallback)}
           </Link>
         )
       })}
-    </div>
+    </nav>
   )
 }
 
-const STATUS_TONES: Record<string, string> = {
-  active: 'bg-emerald-100 text-emerald-800',
-  open: 'bg-emerald-100 text-emerald-800',
-  registered: 'bg-emerald-100 text-emerald-800',
-  in_progress: 'bg-sky-100 text-sky-800',
-  registration: 'bg-sky-100 text-sky-800',
-  exams: 'bg-violet-100 text-violet-800',
-  completed: 'bg-slate-200 text-slate-800',
-  graduated: 'bg-violet-100 text-violet-800',
-  planned: 'bg-amber-100 text-amber-800',
-  draft: 'bg-amber-100 text-amber-800',
-  upcoming: 'bg-amber-100 text-amber-800',
-  deferred: 'bg-amber-100 text-amber-800',
-  suspended: 'bg-orange-100 text-orange-800',
-  dropped: 'bg-orange-100 text-orange-800',
-  withdrawn: 'bg-red-100 text-red-800',
-  failed: 'bg-red-100 text-red-800',
-  cancelled: 'bg-red-100 text-red-800',
-  retired: 'bg-slate-200 text-slate-700',
-  closed: 'bg-slate-200 text-slate-700',
-  archived: 'bg-slate-200 text-slate-700',
-  required: 'bg-sky-100 text-sky-800',
-  submitted: 'bg-sky-100 text-sky-800',
-  approved: 'bg-emerald-100 text-emerald-800',
-  returned: 'bg-orange-100 text-orange-800',
-  accepted: 'bg-emerald-100 text-emerald-800',
-  rejected: 'bg-red-100 text-red-800',
-  waitlisted: 'bg-amber-100 text-amber-800',
-  enrolled: 'bg-violet-100 text-violet-800',
-  under_review: 'bg-sky-100 text-sky-800',
-  met: 'bg-emerald-100 text-emerald-800',
-  not_met: 'bg-red-100 text-red-800',
-  pending: 'bg-amber-100 text-amber-800',
-  verified: 'bg-emerald-100 text-emerald-800',
-  passed: 'bg-emerald-100 text-emerald-800',
-  pending_review: 'bg-amber-100 text-amber-800',
-  absent: 'bg-red-100 text-red-800',
-  scheduled: 'bg-sky-100 text-sky-800',
-  no_show: 'bg-red-100 text-red-800',
-  elective: 'bg-violet-100 text-violet-800',
-  inactive: 'bg-slate-100 text-slate-600',
-  on_leave: 'bg-amber-100 text-amber-800',
-  pending_approval: 'bg-orange-100 text-orange-800',
-  maintenance: 'bg-orange-100 text-orange-800',
-  default: 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]',
+type Tone = 'green' | 'sky' | 'violet' | 'amber' | 'orange' | 'red' | 'slate' | 'gold'
+
+const TONE_CLASSES: Record<Tone, { pill: string; dot: string }> = {
+  green: { pill: 'bg-emerald-50 text-emerald-700 ring-emerald-200/70', dot: 'bg-emerald-500' },
+  sky: { pill: 'bg-sky-50 text-sky-700 ring-sky-200/70', dot: 'bg-sky-500' },
+  violet: { pill: 'bg-violet-50 text-violet-700 ring-violet-200/70', dot: 'bg-violet-500' },
+  amber: { pill: 'bg-amber-50 text-amber-800 ring-amber-200/70', dot: 'bg-amber-500' },
+  orange: { pill: 'bg-orange-50 text-orange-700 ring-orange-200/70', dot: 'bg-orange-500' },
+  red: { pill: 'bg-red-50 text-red-700 ring-red-200/70', dot: 'bg-red-500' },
+  slate: { pill: 'bg-slate-50 text-slate-600 ring-slate-200/80', dot: 'bg-slate-400' },
+  gold: { pill: 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))] ring-[hsl(var(--dash-accent))]/20', dot: 'bg-[hsl(var(--dash-accent))]' },
 }
 
-export function StatusPill({ status, label }: { status?: string | null; label?: string }) {
+/** Status → colour. Live/positive states are green, in-flight blue, waiting amber, problems red, finished slate. */
+const STATUS_TONES: Record<string, Tone> = {
+  active: 'green', open: 'green', registered: 'green', approved: 'green', accepted: 'green', met: 'green', verified: 'green', passed: 'green',
+  in_progress: 'sky', registration: 'sky', submitted: 'sky', under_review: 'sky', scheduled: 'sky', required: 'sky',
+  exams: 'violet', graduated: 'violet', enrolled: 'violet', elective: 'violet',
+  planned: 'amber', draft: 'amber', upcoming: 'amber', deferred: 'amber', waitlisted: 'amber', pending: 'amber', pending_review: 'amber', on_leave: 'amber',
+  suspended: 'orange', dropped: 'orange', returned: 'orange', pending_approval: 'orange', maintenance: 'orange',
+  withdrawn: 'red', failed: 'red', cancelled: 'red', rejected: 'red', not_met: 'red', absent: 'red', no_show: 'red',
+  completed: 'slate', retired: 'slate', closed: 'slate', archived: 'slate', inactive: 'slate',
+  default: 'gold',
+}
+
+export function statusTone(status?: string | null): Tone {
+  return STATUS_TONES[String(status || '').toLowerCase()] || 'slate'
+}
+
+/** The dot colour of a status, for legends and bars. */
+export function statusDotClass(status?: string | null): string {
+  return TONE_CLASSES[statusTone(status)].dot
+}
+
+export function StatusPill({ status, label, className }: { status?: string | null; label?: string; className?: string }) {
   const { t } = useTranslation()
   if (!status) return null
   const key = String(status).toLowerCase()
+  const tone = TONE_CLASSES[statusTone(key)]
+  const live = ['active', 'open', 'in_progress', 'under_review'].includes(key)
   return (
     <span
       className={cn(
-        'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize',
-        STATUS_TONES[key] || 'bg-slate-100 text-slate-700'
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset first-letter:uppercase',
+        tone.pill,
+        className
       )}
     >
+      <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', tone.dot, live && 'animate-pulse')} aria-hidden="true" />
       {label || t(`academic.state_${key}`, key.replace(/_/g, ' '))}
     </span>
   )
 }
 
+/** A white card section with an optional icon, count, description and actions. */
 export function Section({
   title,
   description,
   action,
   children,
   className,
+  icon,
+  count,
+  id,
 }: {
   title: string
   description?: string
   action?: React.ReactNode
   children: React.ReactNode
   className?: string
+  icon?: React.ReactNode
+  count?: number
+  id?: string
 }) {
   return (
-    <section
-      className={cn(
-        'rounded-[var(--dash-radius)] border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] p-4 sm:p-5',
-        className
-      )}
-    >
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-[hsl(var(--dash-ink))]">{title}</h2>
-          {description && <p className="text-xs text-[hsl(var(--dash-muted))]">{description}</p>}
+    <section id={id} className={cn('dash-card scroll-mt-6 rounded-[1.25rem] p-4 sm:p-5', className)}>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          {icon ? (
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]/70">{icon}</span>
+          ) : null}
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-[15px] font-semibold text-[hsl(var(--dash-ink))]">
+              {title}
+              {count != null ? (
+                <span className="rounded-full bg-[hsl(var(--dash-ink))]/[0.06] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[hsl(var(--dash-muted))]">{count}</span>
+              ) : null}
+            </h2>
+            {description && <p className="mt-0.5 text-xs leading-relaxed text-[hsl(var(--dash-muted))]">{description}</p>}
+          </div>
         </div>
-        {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
+        {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
       </div>
       {children}
     </section>
   )
 }
 
-export function Stat({ label, value }: { label: string; value: React.ReactNode }) {
+export function Stat({ label, value, hint, icon }: { label: string; value: React.ReactNode; hint?: React.ReactNode; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-canvas))] px-3 py-2">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--dash-muted))]">{label}</div>
-      <div className="mt-0.5 text-sm font-semibold text-[hsl(var(--dash-ink))]">{value ?? '—'}</div>
+    <div className="min-w-0 rounded-2xl bg-[hsl(var(--dash-canvas))]/70 px-3.5 py-2.5">
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-[hsl(var(--dash-muted))]">
+        {icon}
+        <span className="truncate">{label}</span>
+      </div>
+      <div className="mt-0.5 truncate text-sm font-semibold text-[hsl(var(--dash-ink))]">{value ?? '—'}</div>
+      {hint ? <div className="truncate text-[11px] text-[hsl(var(--dash-muted))]">{hint}</div> : null}
     </div>
   )
 }
@@ -169,27 +164,27 @@ export function DataTable({
 }: {
   headers: React.ReactNode[]
   children: React.ReactNode
-  empty?: string
+  empty?: React.ReactNode
 }) {
   const rows = React.Children.toArray(children)
   return (
-    <div className="overflow-x-auto rounded-xl border border-[hsl(var(--dash-border))]">
-      <table className="w-full min-w-[560px] text-left text-sm">
-        <thead className="bg-[hsl(var(--dash-canvas))] text-[11px] uppercase tracking-wider text-[hsl(var(--dash-muted))]">
+    <div className="overflow-x-auto rounded-2xl border border-[hsl(var(--dash-border))]/70 bg-white">
+      <table className="w-full min-w-[560px] text-start text-sm">
+        <thead className="bg-[hsl(var(--dash-canvas))]/70 text-[11px] text-[hsl(var(--dash-muted))]">
           <tr>
             {headers.map((h, i) => (
-              <th key={i} className="px-3 py-2 font-semibold">
+              <th key={i} className="whitespace-nowrap px-3 py-2.5 text-start font-semibold">
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-[hsl(var(--dash-border))]">
+        <tbody className="divide-y divide-[hsl(var(--dash-border))]/60 [&>tr]:transition-colors [&>tr:hover]:bg-[hsl(var(--dash-canvas))]/40">
           {rows.length ? (
             rows
           ) : (
             <tr>
-              <td colSpan={headers.length} className="px-3 py-8 text-center text-sm text-[hsl(var(--dash-muted))]">
+              <td colSpan={headers.length} className="px-3 py-10 text-center text-sm text-[hsl(var(--dash-muted))]">
                 {empty || '—'}
               </td>
             </tr>
@@ -200,13 +195,13 @@ export function DataTable({
   )
 }
 
-export const tdCls = 'px-3 py-2 align-middle text-[hsl(var(--dash-ink))]'
+export const tdCls = 'px-3 py-2.5 align-middle text-[hsl(var(--dash-ink))]'
 
 export function GhostButton({ className, ...props }: React.ComponentProps<'button'>) {
   return (
     <button
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-3 py-1.5 text-xs font-semibold text-[hsl(var(--dash-ink))] transition-colors hover:bg-[hsl(var(--dash-canvas))] disabled:opacity-50',
+        'inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--dash-border))] bg-white px-3 py-1.5 text-xs font-semibold text-[hsl(var(--dash-ink))] shadow-[0_1px_2px_hsl(220_30%_20%/0.05)] transition-all hover:-translate-y-px hover:bg-[hsl(var(--dash-canvas))] disabled:pointer-events-none disabled:opacity-50',
         className
       )}
       {...props}

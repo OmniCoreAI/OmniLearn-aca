@@ -1,31 +1,34 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { GraduationCap, UserPlus, Wand2, Trash2, FileText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+import {
+  ArrowRight,
+  CalendarDots,
+  ChalkboardTeacher,
+  FileText,
+  GraduationCap,
+  ListChecks,
+  MagicWand,
+  Student,
+  UserPlus,
+  UsersThree,
+} from '@phosphor-icons/react'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
-import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import AuthenticatedClientElement from '@components/Security/AuthenticatedClientElement'
 import { getUriWithOrg } from '@services/config/config'
-import { AcademicPageShell, AcademicHeader } from '@components/Dashboard/Pages/Academic/AcademicShared'
-import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
+import { AcademicEmptyState, AcademicPageShell } from '@components/Dashboard/Pages/Academic/AcademicShared'
+import { Field, FormSection, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import { CoordinatorPicker } from '@components/Dashboard/Pages/Academic/AcademicPeople'
 import { OfferingsTable } from '@components/Dashboard/Pages/Academic/OfferingsTable'
 import { TranscriptView } from '@components/Dashboard/Pages/Academic/TranscriptView'
-import {
-  DataTable,
-  GhostButton,
-  IconButton,
-  PostgradTabs,
-  Section,
-  Stat,
-  StatusPill,
-  selectCls,
-  tdCls,
-  useAcademicContext,
-} from '@components/Dashboard/Pages/Academic/AcademicUI'
+import { PostgradDrawer, useActionDialog } from '@components/Dashboard/Pages/Academic/AcademicDialogs'
+import { GhostButton, PostgradTabs, Section, StatusPill, useAcademicContext } from '@components/Dashboard/Pages/Academic/AcademicUI'
+import { PersonAvatar } from '@components/Dashboard/Pages/Administration/AdminUI'
+import DashDataTable, { ToolbarSearch, ToolbarSelect, type DashRowAction } from '@components/Dashboard/Shared/DataTable/DashDataTable'
+import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
 import { getProgram, getCohort, getCohortSemesters } from '@services/academic/academic'
 import {
   addCohortStudent,
@@ -38,10 +41,10 @@ import {
   removeCohortStudent,
   updateCohortStudent,
 } from '@services/academic/core'
+import { cn } from '@/lib/utils'
 
 // Statuses that withdraw current registrations and need a recorded reason.
 const REASON_REQUIRED = ['deferred', 'suspended', 'withdrawn']
-
 const MEMBERSHIP_NEXT: Record<string, string[]> = {
   active: ['deferred', 'suspended', 'withdrawn', 'completed'],
   deferred: ['active', 'withdrawn'],
@@ -50,42 +53,32 @@ const MEMBERSHIP_NEXT: Record<string, string[]> = {
   withdrawn: [],
   graduated: [],
 }
+const GOLD = 'bg-[linear-gradient(135deg,hsl(43_85%_60%),hsl(40_78%_49%))]'
+type Tab = 'students' | 'courses' | 'legacy'
 
-function CohortDetail({
-  orgslug,
-  programuuid,
-  cohortuuid,
-}: {
-  orgslug: string
-  programuuid: string
-  cohortuuid: string
-}) {
-  const { t } = useTranslation()
+function CohortDetail({ orgslug, programuuid, cohortuuid }: { orgslug: string; programuuid: string; cohortuuid: string }) {
+  const { t, i18n } = useTranslation()
   const { orgId, access_token } = useAcademicContext()
   const queryClient = useQueryClient()
+  const { ask, dialog } = useActionDialog()
   const program_uuid = `program_${programuuid}`
   const cohort_uuid = `cohort_${cohortuuid}`
+  const [tab, setTab] = useState<Tab>('students')
   const [addOpen, setAddOpen] = useState(false)
   const [generateOpen, setGenerateOpen] = useState(false)
   const [transcriptFor, setTranscriptFor] = useState<any>(null)
   const [statusChange, setStatusChange] = useState<{ student: any; status: string } | null>(null)
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
 
-  const { data: program } = useQuery({
-    queryKey: ['academic', 'program', program_uuid],
-    queryFn: () => getProgram(program_uuid, access_token),
-    enabled: !!access_token,
-  })
-  const { data: cohort } = useQuery({
-    queryKey: ['academic', 'cohort', cohort_uuid],
-    queryFn: () => getCohort(cohort_uuid, access_token),
-    enabled: !!access_token,
-  })
-  const { data: students = [] } = useQuery({
+  const { data: program } = useQuery({ queryKey: ['academic', 'program', program_uuid], queryFn: () => getProgram(program_uuid, access_token), enabled: !!access_token })
+  const { data: cohort } = useQuery({ queryKey: ['academic', 'cohort', cohort_uuid], queryFn: () => getCohort(cohort_uuid, access_token), enabled: !!access_token })
+  const { data: students = [], isLoading: loadingStudents } = useQuery({
     queryKey: ['academic', 'cohort-students', cohort_uuid],
     queryFn: () => getCohortStudents(cohort_uuid, access_token),
     enabled: !!access_token,
   })
-  const { data: offerings = [] } = useQuery({
+  const { data: offerings = [], isLoading: loadingOfferings } = useQuery({
     queryKey: ['academic', 'offerings', orgId, 'cohort', cohort_uuid],
     queryFn: () => getOfferings(orgId, access_token, { cohort_uuid }),
     enabled: !!orgId && !!access_token,
@@ -100,24 +93,54 @@ function CohortDetail({
     queryClient.invalidateQueries({ queryKey: ['academic', 'cohort', cohort_uuid] })
     queryClient.invalidateQueries({ queryKey: ['academic', 'cohort-students', cohort_uuid] })
     queryClient.invalidateQueries({ queryKey: ['academic', 'offerings', orgId] })
+    queryClient.invalidateQueries({ queryKey: ['academic', 'cohorts', program_uuid] })
+    queryClient.invalidateQueries({ queryKey: ['academic', 'overview'] })
   }
 
-  const act = async (fn: () => Promise<any>, ok = t('academic.updated')) => {
+  const roster = students as any[]
+  const visibleStudents = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return roster.filter((s) => (statusFilter === 'all' || s.status === statusFilter) && (!q || `${displayName(s.user)} ${s.student_number} ${s.user?.email || ''}`.toLowerCase().includes(q)))
+  }, [roster, query, statusFilter])
+  const activeCount = roster.filter((s) => s.status === 'active').length
+  const byTerm = useMemo(() => {
+    const groups: Record<string, any[]> = {}
+    for (const o of offerings as any[]) (groups[o.term_code] ||= []).push(o)
+    return Object.entries(groups)
+  }, [offerings])
+  const fmt = (v?: string) => (v ? new Date(v.length <= 10 ? `${v}T00:00:00` : v).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' }) : '—')
+
+  const removeRecord = async (s: any) => {
+    const ok = await ask({
+      title: t('academic.coh.remove_title', 'Remove {{name}} from this intake?', { name: displayName(s.user) }),
+      message: t('academic.confirm_remove_student', 'Remove this admission record? Use “withdrawn” instead once the student has results.'),
+      confirmText: t('academic.coh.remove', 'Remove'),
+      tone: 'danger',
+    })
+    if (ok === null) return
     try {
-      await fn()
-      toast.success(ok)
+      await removeCohortStudent(cohort_uuid, s.membership_uuid, access_token)
+      toast.success(t('academic.deleted'))
       refresh()
     } catch (err: any) {
-      toast.error(err?.message || t('academic.update_failed'))
+      toast.error(err?.message || t('academic.delete_failed'))
     }
   }
+  const actionsFor = (s: any): DashRowAction[] => [
+    { label: t('academic.transcript', 'Transcript'), icon: <FileText size={14} />, onSelect: () => setTranscriptFor(s) },
+    ...(MEMBERSHIP_NEXT[s.status] || []).map((next) => ({
+      label: t('academic.coh.set_status', 'Mark as {{status}}', { status: String(t(`academic.state_${next}`, next)).toLowerCase() }),
+      onSelect: () => setStatusChange({ student: s, status: next }),
+    })),
+    { label: t('academic.coh.remove', 'Remove'), tone: 'danger' as const, onSelect: () => removeRecord(s) },
+  ]
 
-  // Offerings grouped by term, in term order.
-  const byTerm: Record<string, any[]> = {}
-  offerings.forEach((o: any) => {
-    byTerm[o.term_code] = byTerm[o.term_code] || []
-    byTerm[o.term_code].push(o)
-  })
+  const fill = cohort?.capacity ? Math.min(100, Math.round(((cohort.enrolled_count || 0) / cohort.capacity) * 100)) : null
+  const tabs: { key: Tab; label: string; count: number; Icon: React.ElementType }[] = [
+    { key: 'students', label: t('academic.tab_students', 'Students'), count: roster.length, Icon: Student },
+    { key: 'courses', label: t('academic.coh.courses', 'Courses'), count: (offerings as any[]).length, Icon: ChalkboardTeacher },
+    ...((semesters as any[]).length ? [{ key: 'legacy' as Tab, label: t('academic.legacy_semesters', 'Legacy semesters'), count: (semesters as any[]).length, Icon: ListChecks }] : []),
+  ]
 
   return (
     <AcademicPageShell>
@@ -128,186 +151,216 @@ function CohortDetail({
           { label: cohort?.code || cohort?.name || t('academic.cohort') },
         ]}
       />
-      <AcademicHeader
-        title={cohort ? (cohort.code ? `${cohort.code} · ${cohort.name}` : cohort.name) : t('academic.cohort')}
-        subtitle={program?.name}
-      />
       <PostgradTabs orgslug={orgslug} />
 
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-          <Stat label={t('academic.status')} value={<StatusPill status={cohort?.status} />} />
-          <Stat label={t('academic.cohort_code', 'Cohort code')} value={cohort?.code} />
-          <Stat label={t('academic.intake', 'Intake')} value={cohort?.intake_term_code} />
-          <Stat label={t('academic.academic_year')} value={cohort?.academic_year} />
-          <Stat
-            label={t('academic.curriculum', 'Curriculum')}
-            value={
-              cohort?.curriculum_uuid ? (
+      {/* Header */}
+      <section className="dash-card mb-4 mt-2 rounded-[1.25rem] p-5">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {cohort?.code ? <span className="rounded-md bg-[hsl(var(--dash-canvas))] px-1.5 py-0.5 font-mono text-[11px] text-[hsl(var(--dash-muted))]">{cohort.code}</span> : null}
+              {cohort ? <StatusPill status={cohort.status} label={String(t(`academic.status_${cohort.status}`, cohort.status))} /> : null}
+              {cohort ? (
+                <StatusPill
+                  status={cohort.admission_status === 'open' ? 'open' : 'closed'}
+                  label={cohort.admission_status === 'open' ? t('academic.admissions_open', 'Admissions open') : t('academic.prog.admissions_closed_label', 'Admissions closed')}
+                />
+              ) : null}
+            </div>
+            <h1 className="mt-2 truncate text-xl font-semibold tracking-tight sm:text-2xl">{cohort?.name || '…'}</h1>
+            <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-[hsl(var(--dash-muted))]">
+              <Link href={getUriWithOrg(orgslug, `/dash/postgraduate/${programuuid}`)} className="inline-flex items-center gap-1 hover:text-[hsl(var(--dash-ink))]">
+                <GraduationCap size={14} /> {program?.name}
+              </Link>
+              {cohort?.intake_term_code ? (
+                <span className="inline-flex items-center gap-1">
+                  <CalendarDots size={14} /> {[cohort.intake_term_code, cohort.academic_year].filter(Boolean).join(' · ')}
+                </span>
+              ) : null}
+              {cohort?.curriculum_uuid ? (
                 <Link
-                  className="hover:text-[hsl(var(--dash-accent))]"
-                  href={getUriWithOrg(
-                    orgslug,
-                    `/dash/postgraduate/${programuuid}/curriculum/${cohort.curriculum_uuid.replace('curriculum_', '')}`
-                  )}
+                  href={getUriWithOrg(orgslug, `/dash/postgraduate/${programuuid}/curriculum/${cohort.curriculum_uuid.replace('curriculum_', '')}`)}
+                  className="inline-flex items-center gap-1 hover:text-[hsl(var(--dash-ink))]"
                 >
-                  {cohort.curriculum_version}
+                  <ListChecks size={14} /> {t('academic.curriculum', 'Curriculum')} {cohort.curriculum_version}
                 </Link>
-              ) : (
-                '—'
-              )
-            }
-          />
-          <Stat
-            label={t('academic.tab_students', 'Students')}
-            value={`${cohort?.enrolled_count ?? 0}${cohort?.capacity != null ? `/${cohort.capacity}` : ''}`}
-          />
-          <Stat label={t('academic.offerings_count', 'Offerings')} value={cohort?.offering_count} />
-          <Stat label={t('academic.coordinator')} value={cohort?.coordinator ? displayName(cohort.coordinator) : '—'} />
+              ) : null}
+              {cohort?.coordinator ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <PersonAvatar name={displayName(cohort.coordinator)} size={18} /> {displayName(cohort.coordinator)}
+                </span>
+              ) : null}
+            </p>
+          </div>
+          <div className="grid shrink-0 grid-cols-3 gap-2 lg:w-[380px]">
+            <div className="rounded-2xl bg-[hsl(var(--dash-canvas))]/70 px-3 py-2.5">
+              <p className="text-[11px] text-[hsl(var(--dash-muted))]">{t('academic.tab_students', 'Students')}</p>
+              <p className="text-lg font-semibold tabular-nums">
+                {cohort?.enrolled_count ?? 0}
+                {cohort?.capacity != null ? <span className="text-xs font-normal text-[hsl(var(--dash-muted))]"> / {cohort.capacity}</span> : null}
+              </p>
+              {fill != null ? (
+                <div className="mt-1 h-1 overflow-hidden rounded-full bg-white">
+                  <div className={cn('h-full rounded-full', fill >= 100 ? 'bg-red-400' : GOLD)} style={{ width: `${fill}%` }} />
+                </div>
+              ) : null}
+            </div>
+            <div className="rounded-2xl bg-[hsl(var(--dash-canvas))]/70 px-3 py-2.5">
+              <p className="text-[11px] text-[hsl(var(--dash-muted))]">{t('academic.state_active', 'Active')}</p>
+              <p className="text-lg font-semibold tabular-nums">{activeCount}</p>
+            </div>
+            <div className="rounded-2xl bg-[hsl(var(--dash-canvas))]/70 px-3 py-2.5">
+              <p className="text-[11px] text-[hsl(var(--dash-muted))]">{t('academic.coh.courses', 'Courses')}</p>
+              <p className="text-lg font-semibold tabular-nums">{cohort?.offering_count ?? 0}</p>
+            </div>
+          </div>
         </div>
+      </section>
 
+      <div className={cn(TAB_TRACK, 'mb-5')} role="tablist">
+        {tabs.map(({ key, label, count, Icon }) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)} className={tabItemClass(tab === key, 'inline-flex items-center gap-1.5')}>
+            <Icon size={15} weight={tab === key ? 'fill' : 'duotone'} />
+            {label}
+            <span className={cn('rounded-full px-1.5 text-[10px] tabular-nums', tab === key ? 'bg-white/15' : 'bg-[hsl(var(--dash-canvas))]')}>{count}</span>
+          </button>
+        ))}
+      </div>
+
+      {tab === 'students' ? (
+        <DashDataTable
+          rows={visibleStudents}
+          rowKey={(s: any) => s.membership_uuid}
+          loading={loadingStudents}
+          onRowClick={(s: any) => setTranscriptFor(s)}
+          actions={actionsFor}
+          initialSort={{ key: 'student', dir: 'asc' }}
+          itemLabel={(n) => t('academic.coh.students_count', '{{count}} students', { count: n })}
+          toolbar={
+            <>
+              <ToolbarSearch value={query} onChange={setQuery} placeholder={t('academic.coh.search', 'Name or student number')} />
+              <ToolbarSelect
+                label={t('academic.status')}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[
+                  { value: 'all', label: t('administration.common.all', 'All') },
+                  ...['active', 'deferred', 'suspended', 'withdrawn', 'completed', 'graduated'].map((s) => ({ value: s, label: String(t(`academic.state_${s}`, s)) })),
+                ]}
+              />
+            </>
+          }
+          toolbarEnd={
+            <AuthenticatedClientElement checkMethod="roles" action="update" ressourceType="programs" orgId={orgId!}>
+              <GhostButton onClick={() => setAddOpen(true)}>
+                <UserPlus size={14} /> {t('academic.add_student', 'Add student')}
+              </GhostButton>
+            </AuthenticatedClientElement>
+          }
+          empty={
+            <AcademicEmptyState
+              compact
+              icon={<UsersThree size={24} />}
+              title={query || statusFilter !== 'all' ? t('administration.common.no_matches', 'No matches') : t('academic.no_students_cohort', 'No students in this cohort yet.')}
+              description={t('academic.cohort_students_desc', 'Admitting a student creates their academic record with a student number and registers them in the current required offerings.')}
+            />
+          }
+          columns={[
+            {
+              key: 'student',
+              header: t('academic.student', 'Student'),
+              primary: true,
+              sortValue: (s: any) => displayName(s.user),
+              cell: (s: any) => (
+                <div className="flex min-w-0 items-center gap-3">
+                  <PersonAvatar name={displayName(s.user)} size={32} />
+                  <div className="min-w-0 leading-tight">
+                    <div className="truncate font-medium">{displayName(s.user)}</div>
+                    <div className="truncate font-mono text-[11px] text-[hsl(var(--dash-muted))]">{s.student_number}</div>
+                  </div>
+                </div>
+              ),
+            },
+            { key: 'courses', header: t('academic.current_courses', 'Current courses'), align: 'end', sortValue: (s: any) => s.enrolled_offerings, cell: (s: any) => <span className="tabular-nums">{s.enrolled_offerings}</span> },
+            { key: 'admitted', header: t('academic.admitted', 'Admitted'), hideBelow: 'lg', sortValue: (s: any) => s.admitted_at, cell: (s: any) => <span className="whitespace-nowrap text-[12px] text-[hsl(var(--dash-muted))]">{fmt(s.admitted_at)}</span> },
+            {
+              key: 'status',
+              header: t('academic.status'),
+              sortValue: (s: any) => s.status,
+              cell: (s: any) => (
+                <div className="min-w-0">
+                  <StatusPill status={s.status} />
+                  {s.status_reason ? (
+                    <div className="mt-1 max-w-[14rem] truncate text-[11px] text-[hsl(var(--dash-muted))]" title={s.status_reason}>
+                      {s.status_reason}
+                    </div>
+                  ) : null}
+                </div>
+              ),
+            },
+          ]}
+        />
+      ) : null}
+
+      {tab === 'courses' ? (
         <Section
+          icon={<ChalkboardTeacher size={18} weight="duotone" />}
           title={t('academic.course_offerings', 'Course offerings')}
-          description={t(
-            'academic.cohort_offerings_desc',
-            'Generated from the cohort’s curriculum for each term. Active students are registered in required courses automatically.'
-          )}
+          description={t('academic.cohort_offerings_desc', 'Generated from the cohort’s curriculum for each term. Active students are registered in required courses automatically.')}
           action={
             <AuthenticatedClientElement checkMethod="roles" action="update" ressourceType="programs" orgId={orgId!}>
               <GhostButton onClick={() => setGenerateOpen(true)} disabled={!cohort?.curriculum_uuid}>
-                <Wand2 className="h-3.5 w-3.5" /> {t('academic.generate_offerings', 'Generate from curriculum')}
+                <MagicWand size={14} /> {t('academic.generate_offerings', 'Generate from curriculum')}
               </GhostButton>
             </AuthenticatedClientElement>
           }
         >
-          {!cohort?.curriculum_uuid && (
-            <p className="mb-3 text-sm text-[hsl(var(--dash-muted))]">
+          {!cohort?.curriculum_uuid ? (
+            <p className="mb-3 rounded-2xl bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
               {t('academic.assign_curriculum_first', 'Assign a curriculum version to this cohort (Edit cohort) to generate its offerings.')}
             </p>
-          )}
-          {Object.keys(byTerm).length === 0 ? (
-            <OfferingsTable orgslug={orgslug} offerings={[]} />
+          ) : null}
+          {byTerm.length === 0 ? (
+            <OfferingsTable orgslug={orgslug} offerings={[]} loading={loadingOfferings} showCohort={false} />
           ) : (
-            <div className="space-y-4">
-              {Object.entries(byTerm).map(([term, list]) => (
+            <div className="space-y-5">
+              {byTerm.map(([term, list]) => (
                 <div key={term}>
-                  <div className="mb-2 font-mono text-xs font-semibold text-[hsl(var(--dash-muted))]">{term}</div>
-                  <OfferingsTable orgslug={orgslug} offerings={list} />
+                  <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[hsl(var(--dash-muted))]">
+                    <CalendarDots size={13} /> {term}
+                    <span className="h-px flex-1 bg-[hsl(var(--dash-border))]/70" />
+                  </p>
+                  <OfferingsTable orgslug={orgslug} offerings={list} showCohort={false} />
                 </div>
               ))}
             </div>
           )}
         </Section>
+      ) : null}
 
-        <Section
-          title={t('academic.tab_students', 'Students')}
-          description={t(
-            'academic.cohort_students_desc',
-            'Admitting a student creates their academic record with a student number and registers them in the current required offerings.'
-          )}
-          action={
-            <AuthenticatedClientElement checkMethod="roles" action="update" ressourceType="programs" orgId={orgId!}>
-              <GhostButton onClick={() => setAddOpen(true)}>
-                <UserPlus className="h-3.5 w-3.5" /> {t('academic.add_student', 'Add student')}
-              </GhostButton>
-            </AuthenticatedClientElement>
-          }
-        >
-          <DataTable
-            headers={[
-              t('academic.student_number', 'Student no.'),
-              t('academic.student', 'Student'),
-              t('academic.current_courses', 'Current courses'),
-              t('academic.admitted', 'Admitted'),
-              t('academic.status'),
-              '',
-            ]}
-            empty={t('academic.no_students_cohort', 'No students in this cohort yet.')}
-          >
-            {students.map((s: any) => (
-              <tr key={s.membership_uuid}>
-                <td className={`${tdCls} font-mono text-xs font-semibold`}>{s.student_number}</td>
-                <td className={tdCls}>
-                  <div className="font-medium">{displayName(s.user)}</div>
-                  <div className="text-xs text-[hsl(var(--dash-muted))]">{s.user.email}</div>
-                </td>
-                <td className={tdCls}>{s.enrolled_offerings}</td>
-                <td className={`${tdCls} text-xs`}>{s.admitted_at?.slice(0, 10)}</td>
-                <td className={tdCls}>
-                  <StatusPill status={s.status} />
-                  {s.status_reason && (
-                    <div className="mt-1 max-w-[14rem] truncate text-[11px] text-[hsl(var(--dash-muted))]" title={s.status_reason}>
-                      {s.status_reason}
-                    </div>
-                  )}
-                </td>
-                <td className={`${tdCls} whitespace-nowrap text-right`}>
-                  <IconButton onClick={() => setTranscriptFor(s)} aria-label={t('academic.transcript', 'Transcript')}>
-                    <FileText className="h-4 w-4" />
-                  </IconButton>
-                  {(MEMBERSHIP_NEXT[s.status] || []).length > 0 && (
-                    <select
-                      className={selectCls('py-1 text-xs')}
-                      value=""
-                      onChange={(e) => e.target.value && setStatusChange({ student: s, status: e.target.value })}
-                    >
-                      <option value="">{t('academic.change_status', 'Change status…')}</option>
-                      {MEMBERSHIP_NEXT[s.status].map((st) => (
-                        <option key={st} value={st}>
-                          {t(`academic.state_${st}`, st)}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  <IconButton
-                    tone="danger"
-                    onClick={() =>
-                      window.confirm(
-                        t('academic.confirm_remove_student', 'Remove this admission record? Use “withdrawn” instead once the student has results.')
-                      ) && act(() => removeCohortStudent(cohort_uuid, s.membership_uuid, access_token), t('academic.deleted'))
-                    }
-                    aria-label={t('academic.delete', 'Delete')}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </IconButton>
-                </td>
-              </tr>
+      {tab === 'legacy' ? (
+        <Section title={t('academic.legacy_semesters', 'Legacy semesters')} description={t('academic.legacy_semesters_desc', 'Read-only structure from before course offerings. Its courses were migrated into offerings above.')}>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {(semesters as any[]).map((s) => (
+              <li key={s.semester_uuid}>
+                <Link
+                  className="flex items-center justify-between rounded-2xl border border-[hsl(var(--dash-border))]/70 bg-white px-4 py-3 text-sm font-medium hover:bg-[hsl(var(--dash-canvas))]/60"
+                  href={getUriWithOrg(orgslug, `/dash/postgraduate/${programuuid}/cohort/${cohortuuid}/semester/${s.semester_uuid.replace('semester_', '')}`)}
+                >
+                  {s.name} <ArrowRight size={14} className="text-[hsl(var(--dash-muted))] rtl:rotate-180" />
+                </Link>
+              </li>
             ))}
-          </DataTable>
+          </ul>
         </Section>
+      ) : null}
 
-        {semesters.length > 0 && (
-          <Section
-            title={t('academic.legacy_semesters', 'Legacy semesters')}
-            description={t(
-              'academic.legacy_semesters_desc',
-              'Read-only structure from before course offerings. Its courses were migrated into offerings above.'
-            )}
-          >
-            <ul className="space-y-1 text-sm">
-              {semesters.map((s: any) => (
-                <li key={s.semester_uuid}>
-                  <Link
-                    className="hover:text-[hsl(var(--dash-accent))]"
-                    href={getUriWithOrg(
-                      orgslug,
-                      `/dash/postgraduate/${programuuid}/cohort/${cohortuuid}/semester/${s.semester_uuid.replace('semester_', '')}`
-                    )}
-                  >
-                    {s.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        )}
-      </div>
-
-      <Modal
+      <PostgradDrawer
         isDialogOpen={addOpen}
         onOpenChange={setAddOpen}
-        minWidth="sm"
+        icon={<UserPlus size={20} weight="duotone" />}
         dialogTitle={t('academic.add_student', 'Add student')}
+        dialogDescription={t('academic.coh.add_desc', 'Admits a trainee directly, without an application. Use Admissions for the normal route.')}
         dialogContent={
           <AddStudentForm
             cohortUuid={cohort_uuid}
@@ -318,13 +371,13 @@ function CohortDetail({
           />
         }
       />
-      <Modal
+      <PostgradDrawer
         isDialogOpen={!!statusChange}
         onOpenChange={(o: boolean) => !o && setStatusChange(null)}
-        minWidth="sm"
+        icon={<Student size={20} weight="duotone" />}
         dialogTitle={t('academic.change_student_status', 'Change student status')}
         dialogContent={
-          statusChange && (
+          statusChange ? (
             <StatusChangeForm
               cohortUuid={cohort_uuid}
               student={statusChange.student}
@@ -334,23 +387,26 @@ function CohortDetail({
                 refresh()
               }}
             />
-          )
+          ) : null
         }
       />
-      <Modal
+      <PostgradDrawer
         isDialogOpen={!!transcriptFor}
         onOpenChange={(o: boolean) => !o && setTranscriptFor(null)}
         minWidth="lg"
+        icon={<FileText size={20} weight="duotone" />}
         dialogTitle={t('academic.transcript', 'Transcript')}
-        dialogContent={transcriptFor && <TranscriptView membershipUuid={transcriptFor.membership_uuid} />}
+        dialogDescription={transcriptFor ? `${displayName(transcriptFor.user)} · ${transcriptFor.student_number}` : undefined}
+        dialogContent={transcriptFor ? <TranscriptView membershipUuid={transcriptFor.membership_uuid} /> : null}
       />
-      <Modal
+      <PostgradDrawer
         isDialogOpen={generateOpen}
         onOpenChange={setGenerateOpen}
-        minWidth="sm"
+        icon={<MagicWand size={20} weight="duotone" />}
         dialogTitle={t('academic.generate_offerings', 'Generate from curriculum')}
+        dialogDescription={t('academic.coh.generate_desc', 'Creates the term’s course offerings from the study plan and registers active students in the required ones. Running it again only adds what is missing.')}
         dialogContent={
-          cohort?.curriculum_uuid && (
+          cohort?.curriculum_uuid ? (
             <GenerateForm
               cohortUuid={cohort_uuid}
               curriculumUuid={cohort.curriculum_uuid}
@@ -359,39 +415,27 @@ function CohortDetail({
                 refresh()
               }}
             />
-          )
+          ) : null
         }
       />
+      {dialog}
     </AcademicPageShell>
   )
 }
 
-function StatusChangeForm({
-  cohortUuid,
-  student,
-  status,
-  onDone,
-}: {
-  cohortUuid: string
-  student: any
-  status: string
-  onDone: () => void
-}) {
+function StatusChangeForm({ cohortUuid, student, status, onDone }: { cohortUuid: string; student: any; status: string; onDone: () => void }) {
   const { t } = useTranslation()
   const { access_token } = useAcademicContext()
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
   const needsReason = REASON_REQUIRED.includes(status)
-
+  const paused = t(
+    'academic.status_effect_paused',
+    'Current course registrations are withdrawn and program access is removed. They are restored when the student returns to active.'
+  )
   const consequence: Record<string, string> = {
-    deferred: t(
-      'academic.status_effect_paused',
-      'Current course registrations are withdrawn and program access is removed. They are restored when the student returns to active.'
-    ),
-    suspended: t(
-      'academic.status_effect_paused',
-      'Current course registrations are withdrawn and program access is removed. They are restored when the student returns to active.'
-    ),
+    deferred: paused,
+    suspended: paused,
     withdrawn: t(
       'academic.status_effect_withdrawn',
       'This is final: current course registrations are withdrawn and program access is removed. Results already approved stay on the transcript.'
@@ -418,31 +462,26 @@ function StatusChangeForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="flex items-center gap-2 text-sm">
-        <span className="font-mono text-xs font-semibold">{student.student_number}</span>
-        <span>{displayName(student.user)}</span>
-      </div>
-      <div className="flex items-center gap-2 text-sm">
-        <StatusPill status={student.status} />
-        <span aria-hidden>→</span>
-        <StatusPill status={status} />
-      </div>
-      {consequence[status] && (
-        <p className="rounded-lg bg-[hsl(var(--dash-canvas))] px-3 py-2 text-xs text-[hsl(var(--dash-muted))]">
-          {consequence[status]}
-        </p>
-      )}
-      <Field label={needsReason ? t('academic.status_reason', 'Reason') : t('academic.status_reason_optional', 'Reason (optional)')}>
-        <textarea
-          className={inputCls}
-          rows={3}
-          value={reason}
-          required={needsReason}
-          onChange={(e) => setReason(e.target.value)}
-        />
-      </Field>
-      <SubmitRow saving={saving} />
+    <form onSubmit={submit} className="space-y-6">
+      <FormSection title={t('academic.coh.change', 'Change')} columns={1}>
+        <div className="flex items-center gap-3 rounded-2xl bg-[hsl(var(--dash-canvas))]/70 px-3 py-2.5">
+          <PersonAvatar name={displayName(student.user)} size={32} />
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="truncate text-sm font-medium">{displayName(student.user)}</p>
+            <p className="font-mono text-[11px] text-[hsl(var(--dash-muted))]">{student.student_number}</p>
+          </div>
+          <StatusPill status={student.status} />
+          <ArrowRight size={14} className="text-[hsl(var(--dash-muted))] rtl:rotate-180" />
+          <StatusPill status={status} />
+        </div>
+        {consequence[status] ? (
+          <p className={cn('rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed', status === 'withdrawn' ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-900')}>{consequence[status]}</p>
+        ) : null}
+        <Field label={needsReason ? t('academic.status_reason', 'Reason') : t('academic.status_reason_optional', 'Reason (optional)')} required={needsReason} hint={t('academic.adm.note_hint', 'Kept in the audit trail.')}>
+          <textarea className={inputCls} rows={3} value={reason} required={needsReason} onChange={(e) => setReason(e.target.value)} />
+        </Field>
+      </FormSection>
+      <SubmitRow saving={saving} disabled={needsReason && !reason.trim()} />
     </form>
   )
 }
@@ -470,54 +509,37 @@ function AddStudentForm({ cohortUuid, onDone }: { cohortUuid: string; onDone: ()
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <Field label={t('academic.student', 'Student')}>
-        <CoordinatorPicker
-          orgId={orgId}
-          access_token={access_token}
-          value={user}
-          selectedLabel={label}
-          onlyRoles={['role_global_user']}
-          placeholder={t('academic.search_students', 'Search trainees…')}
-          onChange={(uuid, l) => {
-            setUser(uuid)
-            setLabel(l)
-          }}
-        />
-      </Field>
-      <p className="text-xs text-[hsl(var(--dash-muted))]">
-        {t('academic.student_number_auto', 'The student number is generated automatically.')}
-      </p>
-      <SubmitRow saving={saving} />
+    <form onSubmit={submit} className="space-y-6">
+      <FormSection title={t('academic.student', 'Student')} description={t('academic.student_number_auto', 'The student number is generated automatically.')} columns={1}>
+        <Field label={t('academic.adm.applicant_account', 'Applicant account')} required>
+          <CoordinatorPicker
+            orgId={orgId}
+            access_token={access_token}
+            value={user}
+            selectedLabel={label}
+            onlyRoles={['role_global_user']}
+            placeholder={t('academic.search_students', 'Search trainees…')}
+            onChange={(uuid, l) => {
+              setUser(uuid)
+              setLabel(l)
+            }}
+          />
+        </Field>
+      </FormSection>
+      <SubmitRow saving={saving} disabled={!user} submitLabel={t('academic.coh.admit', 'Admit')} />
     </form>
   )
 }
 
-function GenerateForm({
-  cohortUuid,
-  curriculumUuid,
-  onDone,
-}: {
-  cohortUuid: string
-  curriculumUuid: string
-  onDone: () => void
-}) {
+function GenerateForm({ cohortUuid, curriculumUuid, onDone }: { cohortUuid: string; curriculumUuid: string; onDone: () => void }) {
   const { t } = useTranslation()
   const { orgId, access_token } = useAcademicContext()
   const [term, setTerm] = useState('')
   const [slot, setSlot] = useState('1-1')
   const [saving, setSaving] = useState(false)
 
-  const { data: terms = [] } = useQuery({
-    queryKey: ['academic', 'terms', orgId],
-    queryFn: () => getTerms(orgId, access_token),
-    enabled: !!orgId && !!access_token,
-  })
-  const { data: curriculum } = useQuery({
-    queryKey: ['academic', 'curriculum', curriculumUuid],
-    queryFn: () => getCurriculum(curriculumUuid, access_token),
-    enabled: !!access_token,
-  })
+  const { data: terms = [] } = useQuery({ queryKey: ['academic', 'terms', orgId], queryFn: () => getTerms(orgId, access_token), enabled: !!orgId && !!access_token })
+  const { data: curriculum } = useQuery({ queryKey: ['academic', 'curriculum', curriculumUuid], queryFn: () => getCurriculum(curriculumUuid, access_token), enabled: !!access_token })
   const slots: { key: string; year: number; term: number; courses: any[] }[] = []
   ;(curriculum?.items || []).forEach((i: any) => {
     const key = `${i.year_no}-${i.term_no}`
@@ -528,6 +550,7 @@ function GenerateForm({
     }
     s.courses.push(i)
   })
+  slots.sort((a, b) => a.year - b.year || a.term - b.term)
   const selected = slots.find((s) => s.key === slot)
 
   const submit = async (e: React.FormEvent) => {
@@ -535,11 +558,7 @@ function GenerateForm({
     if (!selected || !term) return
     setSaving(true)
     try {
-      const result = await generateCohortOfferings(
-        cohortUuid,
-        { term_uuid: term, year_no: selected.year, term_no: selected.term },
-        access_token
-      )
+      const result = await generateCohortOfferings(cohortUuid, { term_uuid: term, year_no: selected.year, term_no: selected.term }, access_token)
       toast.success(t('academic.offerings_generated', { count: result.length, defaultValue: `${result.length} offerings ready` }))
       onDone()
     } catch (err: any) {
@@ -550,40 +569,52 @@ function GenerateForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <Field label={t('academic.curriculum_slot', 'Curriculum slot')}>
-        <select className={inputCls} value={slot} onChange={(e) => setSlot(e.target.value)}>
-          {slots.map((s) => (
-            <option key={s.key} value={s.key}>
-              {t('academic.year_n', { n: s.year, defaultValue: `Year ${s.year}` })} ·{' '}
-              {t('academic.term_n', { n: s.term, defaultValue: `Term ${s.term}` })} ({s.courses.length})
-            </option>
-          ))}
-        </select>
-      </Field>
-      {selected && (
-        <ul className="rounded-lg bg-[hsl(var(--dash-canvas))] p-3 text-xs">
-          {selected.courses.map((c) => (
-            <li key={c.curriculum_item_uuid}>
-              <span className="font-mono">{c.course_code}</span> {c.course_name} ·{' '}
-              {t(`academic.state_${c.requirement}`, c.requirement)}
-            </li>
-          ))}
-        </ul>
-      )}
-      <Field label={t('academic.term', 'Term')}>
-        <select className={inputCls} value={term} onChange={(e) => setTerm(e.target.value)} required>
-          <option value="">—</option>
-          {terms
-            .filter((tm: any) => tm.status !== 'closed')
-            .map((tm: any) => (
-              <option key={tm.term_uuid} value={tm.term_uuid}>
-                {tm.code} · {tm.name}
-              </option>
+    <form onSubmit={submit} className="space-y-6">
+      <FormSection title={t('academic.curriculum_slot', 'Curriculum slot')} description={t('academic.coh.slot_hint', 'Which year and term of the study plan to run.')} columns={1}>
+        {slots.length === 0 ? (
+          <p className="text-sm text-[hsl(var(--dash-muted))]">{t('academic.coh.no_slots', 'The curriculum has no courses yet.')}</p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {slots.map((s) => (
+              <label key={s.key} className="cursor-pointer">
+                <input type="radio" name="slot" className="peer sr-only" checked={slot === s.key} onChange={() => setSlot(s.key)} />
+                <span className="block rounded-2xl border border-[hsl(var(--dash-border))] bg-white px-3 py-2.5 transition-all peer-checked:border-[hsl(var(--dash-ink))] peer-checked:shadow-[0_0_0_1px_hsl(var(--dash-ink))]">
+                  <span className="block text-sm font-semibold">
+                    {t('academic.year_n', { n: s.year, defaultValue: `Year ${s.year}` })} · {t('academic.term_n', { n: s.term, defaultValue: `Term ${s.term}` })}
+                  </span>
+                  <span className="block text-[11.5px] text-[hsl(var(--dash-muted))]">{t('academic.coh.n_courses', '{{count}} courses', { count: s.courses.length })}</span>
+                </span>
+              </label>
             ))}
-        </select>
-      </Field>
-      <SubmitRow saving={saving} />
+          </div>
+        )}
+        {selected ? (
+          <ul className="divide-y divide-[hsl(var(--dash-border))]/60 overflow-hidden rounded-2xl border border-[hsl(var(--dash-border))]/70">
+            {selected.courses.map((c) => (
+              <li key={c.curriculum_item_uuid} className="flex items-center gap-2 bg-white px-3 py-2 text-[13px]">
+                <span className="rounded-md bg-[hsl(var(--dash-canvas))] px-1.5 py-0.5 font-mono text-[10.5px] text-[hsl(var(--dash-muted))]">{c.course_code}</span>
+                <span className="min-w-0 flex-1 truncate">{c.course_name}</span>
+                <StatusPill status={c.requirement} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </FormSection>
+      <FormSection title={t('academic.term', 'Term')} columns={1}>
+        <Field label={t('academic.term', 'Term')} required>
+          <select className={inputCls} value={term} onChange={(e) => setTerm(e.target.value)} required>
+            <option value="">—</option>
+            {(terms as any[])
+              .filter((tm) => tm.status !== 'closed')
+              .map((tm) => (
+                <option key={tm.term_uuid} value={tm.term_uuid}>
+                  {tm.code} · {tm.name}
+                </option>
+              ))}
+          </select>
+        </Field>
+      </FormSection>
+      <SubmitRow saving={saving} disabled={!selected || !term} submitLabel={t('academic.coh.generate', 'Generate')} />
     </form>
   )
 }

@@ -40,7 +40,7 @@ missing from the transcript but still unlocked prerequisites), and deleting a pr
 | X4 | P1 | Deleting a user account (`user.id ON DELETE CASCADE`) deletes their academic records too. Transcripts normally outlive accounts. | Needs a data-retention decision |
 | X5 | P1 | The UI ignores roles. Approve/Return, offering status buttons, delete icons and status selects are shown to everyone, so a lecturer sees "Approve" and gets a 403. | **Partly fixed** (offering page and gradebook follow the viewer's rights) |
 | X6 | P1 | No notifications: decisions, grades submitted/returned/approved, instructor assignment and results all happen silently. | Phase 4 |
-| X7 | P2 | 19 native `window.confirm/prompt` dialogs, including for reasons stored in the audit trail. | Partly fixed (student status); Phase 4 |
+| X7 | P2 | 19 native `window.confirm/prompt` dialogs, including for reasons stored in the audit trail. | **Fixed** (Phase 4, part 1) |
 | X8 | P2 | Pickers are inconsistent. Students are limited to the Trainee role in the UI only, instructors can be *any* user, and the Instructor registry (categories, rates, work logs) is not used for offerings. | **Fixed** (Phase 1) |
 
 ### 2.2 Admin / coordinator
@@ -57,7 +57,7 @@ missing from the transcript but still unlocked prerequisites), and deleting a pr
 | AD8 | P1 | A replaced instructor kept maintainer rights on the content course. | **Fixed** |
 | AD9 | P1 | Changing a section could create a duplicate offering code (DB error). | **Fixed** |
 | AD10 | P2 | Program `status`, `published`, `public` and `in_plan` overlap. The form offers statuses the server then rejects. Program capacity and dates duplicate the cohort's. | Phase 4 |
-| AD11 | P2 | Tabs don't follow the setup order, and there is no overview or readiness checklist (why is "Generate" disabled?). | Phase 4 |
+| AD11 | P2 | Tabs don't follow the setup order, and there is no overview or readiness checklist (why is "Generate" disabled?). | **Fixed** (Phase 4, part 1) |
 | AD12 | P2 | The legacy Semester page is still a second way to attach courses. | Phase 4 |
 | AD13 | P2 | The Students tab is org-admin only, so program coordinators can't use it. | Phase 1 |
 
@@ -91,7 +91,7 @@ missing from the transcript but still unlocked prerequisites), and deleting a pr
 | AP3 | P1 | No "applicant accepts the offer" step before enrollment. | Phase 3 |
 | AP4 | P1 | A withdrawn applicant could never apply to the same intake again. | **Fixed** |
 | AP5 | P1 | Eligibility is recalculated live, so changing requirements rewrites decided applications. | Phase 3 |
-| AP6 | P2 | Tests and interviews can be scheduled while "submitted", but a decision needs "under review". The extra step isn't explained. | Phase 4 |
+| AP6 | P2 | Tests and interviews can be scheduled while "submitted", but a decision needs "under review". The extra step isn't explained. | **Fixed** (the application's next-step panel explains it) |
 
 ---
 
@@ -128,6 +128,21 @@ Tests: `tests/services/test_academic_{core,grading,admissions}.py` (+17 tests fo
 
 Tests: `tests/services/test_academic_teaching.py`.
 
+### Phase 4, part 1: Graduate Studies Office redesign (delivered)
+
+The flow was re-tested end to end over HTTP and in the UI, from application to an approved result on the transcript, in English and Arabic. The backend held; the gaps were in the screens.
+
+| Area | What changed | Where |
+|---|---|---|
+| Navigation | Postgraduate Studies is its own sidebar section, grouped as Academic affairs, Student affairs and Registrar, with the current term and a badge for applications awaiting review. The page tabs only show on phones and tablets. | `Menus/DashLeftMenu.tsx`, `Menus/postgradNavItems.tsx` |
+| Overview | New Graduate Studies Office page: current term, KPIs, a "needs your attention" list (new or in-review applications, offers to enroll, grades to approve, courses without a lecturer, this week's interviews), the setup checklist (AD11) and status breakdowns. | `GET /academic-overview` (`services/academic/overview.py`), `postgraduate/overview` |
+| Admissions | Stage strip and pipeline board. The application page has a progress stepper, a "next step" panel and decision choice cards. Withdraw, enroll and document rejection use in-app dialogs with recorded reasons. | `postgraduate/admissions/**` |
+| Program, intakes, curriculum | Program workspace with a readiness checklist and tabs. Admissions open or close from the intake card. Credits are shown against the program minimum, and the study plan is a year × term board. | `postgraduate/[programuuid]/**`, `AdmissionSettings.tsx` |
+| Offerings and gradebook | Lifecycle bar with the next step (Open registration → Start teaching → Complete). The gradebook shows its workflow and weights; submit, return and approve use dialogs (return needs a note). `results_count` on offering reads, so finished courses no longer show 0 students. | `postgraduate/offerings/**`, `GradebookPanel.tsx`, `OfferingsTable.tsx` |
+| Everything else | Catalog, students, calendar (term timeline), grading settings (band bar and validation) and My Teaching restyled. Every `window.confirm/prompt` (X7, 19 of them) replaced by `useActionDialog`. Forms open in the side drawer with numbered sections and a sticky save bar. | `AcademicDialogs.tsx`, `AcademicUI.tsx`, `AcademicForm.tsx` |
+
+Tests: `tests/services/test_academic_overview.py`, plus a `results_count` assertion in `test_academic_grading.py`.
+
 ---
 
 ## 4. Target experience and roadmap
@@ -150,10 +165,10 @@ Tests: `tests/services/test_academic_teaching.py`.
    release date.
 3. **Phase 3 — Apply.** Applicant portal. An `offer_accepted` step before enrollment. Eligibility snapshot at
    decision time. Waitlist ranking and promotion when a seat frees up.
-4. **Phase 4 — Admin polish.** Overview and checklist, tabs in setup order, one shared confirm/reason dialog
-   replacing every `window.confirm/prompt`, a program form showing only allowed next statuses (merging
-   `published/public` into status), a grade amendment flow with reason, attendance and clash detection,
-   notifications, and retiring the legacy semester pages.
+4. **Phase 4 — Admin polish.** Delivered so far (part 1, §3): overview and checklist, setup-ordered navigation,
+   one shared confirm/reason dialog replacing every `window.confirm/prompt`. Still open: a program form showing
+   only allowed next statuses (merging `published/public` into status), a grade amendment flow with reason,
+   attendance and clash detection, notifications, and retiring the legacy semester pages.
 
 Open product decisions: account deletion vs academic-record retention (X4), the meaning of `in_plan`, and
 whether rejected applicants may re-apply to the same intake (currently no).

@@ -74,6 +74,10 @@ export function getProgramThumbnailMediaDirectory(
   return `${getMediaUrl()}content/orgs/${orgUUID}/programs/${programUUID}/thumbnails/${fileId}`
 }
 
+export function getProgramBannerMediaDirectory(orgUUID: string, programUUID: string, fileId: string) {
+  return `${getMediaUrl()}content/orgs/${orgUUID}/programs/${programUUID}/banners/${fileId}`
+}
+
 export function getTrainingProgramThumbnailMediaDirectory(
   orgUUID: string,
   trainingProgramUUID: string,

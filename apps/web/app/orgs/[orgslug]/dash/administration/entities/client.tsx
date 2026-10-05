@@ -266,6 +266,7 @@ function EntitiesHome({ orgslug }: { orgslug: string }) {
       />
 
       <AdminDrawer
+        icon={<Buildings size={20} weight="duotone" />}
         open={open}
         onOpenChange={setOpen}
         width="sm:max-w-[640px]"

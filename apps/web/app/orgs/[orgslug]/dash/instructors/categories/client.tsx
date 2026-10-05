@@ -208,6 +208,7 @@ function InstructorCategoriesHome({ orgslug }: { orgslug: string }) {
       />
 
       <AdminDrawer
+        icon={<Tag size={20} weight="duotone" />}
         open={open}
         onOpenChange={setOpen}
         title={editing ? `${t('administration.common.edit', 'Edit')} ${editing.name}` : t('instructors.new_category', 'New Category')}

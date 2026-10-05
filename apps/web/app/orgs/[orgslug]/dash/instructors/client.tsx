@@ -4,7 +4,7 @@ import { Copy, Eye, Pencil, Plus, Power, ShieldCheck, Trash2 } from 'lucide-reac
 import { useTranslation } from 'react-i18next'
 import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
 import DashDataTable, { ToolbarSearch, ToolbarSelect } from '@components/Dashboard/Shared/DataTable/DashDataTable'
-import { ChalkboardTeacher as ChalkboardTeacherIcon, CheckCircle, Pause, Tag } from '@phosphor-icons/react'
+import { ChalkboardTeacher, ChalkboardTeacher as ChalkboardTeacherIcon, CheckCircle, Pause, Tag } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import Modal from '@components/Objects/StyledElements/Modal/Modal'
@@ -314,6 +314,7 @@ function InstructorsHome({ orgslug }: { orgslug: string }) {
       />
 
       <AdminDrawer
+        icon={<ChalkboardTeacher size={20} weight="duotone" />}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title={editing ? t('instructors.edit', 'Edit Instructor') : t('instructors.new_instructor', 'New Instructor')}

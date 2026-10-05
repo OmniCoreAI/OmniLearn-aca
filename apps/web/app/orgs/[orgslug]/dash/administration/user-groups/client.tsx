@@ -289,6 +289,7 @@ function UserGroupsHome({ orgslug }: { orgslug: string }) {
       />
 
       <AdminDrawer
+        icon={<UsersThree size={20} weight="duotone" />}
         open={!!open}
         onOpenChange={(o) => !o && setOpen(null)}
         title={open?.name || ''}

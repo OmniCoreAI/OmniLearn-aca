@@ -32,6 +32,9 @@ function qs(params: Record<string, string | number | boolean | undefined | null>
 
 // ----------------------------- Calendar -----------------------------
 
+/** Graduate Studies Office landing: counts, items waiting for action and the setup checklist. */
+export const getAcademicOverview = (org_id: number, token: string) => call('GET', `academic-overview${qs({ org_id })}`, token)
+
 export const getAcademicYears = (org_id: number, token: string) =>
   call('GET', `academic-years${qs({ org_id })}`, token)
 export const createAcademicYear = (org_id: number, data: any, token: string) =>

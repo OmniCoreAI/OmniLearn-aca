@@ -355,6 +355,7 @@ function FacilitiesHome({ orgslug }: { orgslug: string }) {
       )}
 
       <AdminDrawer
+        icon={<Door size={20} weight="duotone" />}
         open={open}
         onOpenChange={setOpen}
         width="sm:max-w-[640px]"

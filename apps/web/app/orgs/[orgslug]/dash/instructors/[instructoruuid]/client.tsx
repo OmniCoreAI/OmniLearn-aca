@@ -1,4 +1,5 @@
 'use client'
+import { ChalkboardTeacher } from '@phosphor-icons/react'
 import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -422,6 +423,7 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
       ) : null}
 
       <AdminDrawer
+        icon={<ChalkboardTeacher size={20} weight="duotone" />}
         open={editOpen}
         onOpenChange={setEditOpen}
         title={t('instructors.edit', 'Edit Instructor')}

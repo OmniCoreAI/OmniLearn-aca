@@ -1,4 +1,5 @@
 'use client'
+import { MapPin as DrawerMapPin } from '@phosphor-icons/react'
 import React, { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -229,6 +230,7 @@ function LocationsPage({ orgslug }: { orgslug: string }) {
       />
 
       <AdminDrawer
+        icon={<DrawerMapPin size={20} weight="duotone" />}
         open={open}
         onOpenChange={setOpen}
         title={editing ? `${t('administration.common.edit', 'Edit')} ${editing.name}` : t('administration.facilities.new_location', 'New location')}

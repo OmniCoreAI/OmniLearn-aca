@@ -104,16 +104,18 @@ export function InstructorSelect({
  */
 export async function saveWithConflictCheck<T>(
   save: (_allowConflict: boolean) => Promise<T>,
-  confirmText: string
+  confirmText: string,
+  /** In-app confirmation (e.g. useActionDialog); falls back to the browser dialog. */
+  confirmConflict?: (_message: string) => Promise<boolean>
 ): Promise<T | null> {
   try {
     return await save(false)
   } catch (err: any) {
     if (err?.status === 409 && String(err?.message || '').startsWith('Facility conflict')) {
-      if (typeof window !== 'undefined' && window.confirm(`${err.message}\n\n${confirmText}`)) {
-        return await save(true)
-      }
-      return null
+      const go = confirmConflict
+        ? await confirmConflict(String(err.message))
+        : typeof window !== 'undefined' && window.confirm(`${err.message}\n\n${confirmText}`)
+      return go ? await save(true) : null
     }
     throw err
   }
