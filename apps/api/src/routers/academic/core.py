@@ -51,6 +51,7 @@ from src.services.academic import calendar as calendar_svc
 from src.services.academic import catalog as catalog_svc
 from src.services.academic import curricula as curricula_svc
 from src.services.academic import offerings as offerings_svc
+from src.services.academic import overview as overview_svc
 from src.services.academic import students as students_svc
 
 router = APIRouter()
@@ -444,6 +445,12 @@ async def api_generate_offerings(
     return await offerings_svc.generate_cohort_offerings(
         request, cohort_uuid, data.term_uuid, data.year_no, data.term_no, current_user, db_session
     )
+
+
+@router.get("/academic-overview", response_model=overview_svc.AcademicOverview, tags=["academic-overview"])
+async def api_academic_overview(org_id: int, db_session: AsyncSession = Session, current_user: PublicUser = User):
+    """Graduate Studies Office landing: counts, items waiting for action and the setup checklist."""
+    return await overview_svc.get_overview(org_id, current_user, db_session)
 
 
 @router.get("/cohorts/{cohort_uuid}/students", response_model=List[CohortMembershipRead], tags=["academic-students"])

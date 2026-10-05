@@ -300,12 +300,12 @@ async def delete_offering_group(db_session: AsyncSession, offering: CourseOfferi
 # Reads
 # ---------------------------------------------------------------------------
 
-async def _enrolled_count(db_session: AsyncSession, offering_id: int) -> int:
+async def _enrolled_count(db_session: AsyncSession, offering_id: int, statuses=(EnrollmentStatus.REGISTERED,)) -> int:
     return int(
         (
             await db_session.execute(
                 select(func.count()).select_from(Enrollment).where(
-                    Enrollment.offering_id == offering_id, Enrollment.status == EnrollmentStatus.REGISTERED
+                    Enrollment.offering_id == offering_id, Enrollment.status.in_(statuses)  # type: ignore[attr-defined]
                 )
             )
         ).scalar()
@@ -336,6 +336,7 @@ async def to_read(db_session: AsyncSession, offering: CourseOffering) -> CourseO
         content_course_uuid=content.course_uuid if content else None,
         content_course_name=content.name if content else None,
         enrolled_count=await _enrolled_count(db_session, offering.id),  # type: ignore[arg-type]
+        results_count=await _enrolled_count(db_session, offering.id, (EnrollmentStatus.COMPLETED, EnrollmentStatus.FAILED)),  # type: ignore[arg-type]
         facility=await facility_ref(db_session, offering.facility_id),
     )
 

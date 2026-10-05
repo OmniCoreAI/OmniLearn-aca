@@ -153,6 +153,8 @@ class CourseOfferingRead(CourseOfferingBase):
     content_course_uuid: Optional[str] = None
     content_course_name: Optional[str] = None
     enrolled_count: int = 0
+    # Students with an official result (completed or failed); with enrolled_count, everyone taking or who took it.
+    results_count: int = 0
     grade_status: str = "open"
     grade_note: Optional[str] = None
     facility: Optional[FacilityRef] = None

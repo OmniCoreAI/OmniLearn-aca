@@ -180,6 +180,8 @@ class TestGradebookWorkflow:
         assert book.grade_status == "approved"
         assert book.rows[0].enrollment_status == EnrollmentStatus.COMPLETED.value
         assert book.rows[0].letter_grade == "A-"  # 0.4*80 + 0.6*95 = 89
+        read = await offerings_svc.get_offering(mock_request, offering.offering_uuid, admin_user, db)
+        assert read.enrolled_count == 0 and read.results_count == 1
 
         transcript = await grading_svc.get_student_transcript(mock_request, student.membership_uuid, admin_user, db)
         assert transcript.credits_earned == 3 and transcript.cgpa == 3.7
