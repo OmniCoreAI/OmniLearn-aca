@@ -85,6 +85,8 @@ from src.services.academic.common import (
     require_academic_member,
 )
 from src.services.academic.validation import resolve_org_user
+from src.services.notifications import inbox
+from src.services.notifications.assignments import slug
 
 OPEN_STATES = {
     ApplicationStatus.DRAFT,
@@ -108,6 +110,48 @@ DOCUMENT_TYPES = [
     "photo",
     "other",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+
+DECISION_TITLES = {
+    ApplicationStatus.ACCEPTED: "You have been accepted to {program}",
+    ApplicationStatus.REJECTED: "Your application to {program} was not successful",
+    ApplicationStatus.WAITLISTED: "You are on the waiting list for {program}",
+}
+
+
+async def _notify(
+    db_session: AsyncSession,
+    application: AdmissionApplication,
+    type: str,
+    title: str,
+    current_user: Principal,
+    *,
+    body: Optional[str] = None,
+    staff: bool = False,
+    extra: Optional[dict] = None,
+) -> None:
+    """In-app notice to the applicant, or with ``staff`` to the program
+    coordinator. The person who made the change is never told about it."""
+    program = await db_session.get(Program, application.program_id)
+    name = program.name if program else application.application_number
+    key = slug(application.application_uuid, "application_")
+    if staff:
+        recipient = program.coordinator_id if program else None
+        link = f"/dash/postgraduate/admissions/{key}"
+    else:
+        recipient = application.applicant_id
+        link = f"/admissions/{key}"
+    if not recipient or recipient == resolve_acting_user_id(current_user):
+        return
+    await inbox.push(
+        db_session, application.org_id, [recipient], type, title.format(program=name, number=application.application_number),
+        body=body, link=link,
+        payload={"application_uuid": application.application_uuid, "name": name, "number": application.application_number, **(extra or {})},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -905,6 +949,7 @@ async def submit_application(
     application.submitted_at = now()
     await _set_status(db_session, application, current_user, ApplicationStatus.SUBMITTED, action="submitted")
     await db_session.commit()
+    await _notify(db_session, application, "application_submitted", "New application {number} for {program}", current_user, staff=True)
     await db_session.refresh(application)
     return await _read_for(db_session, application, staff)
 
@@ -1021,6 +1066,9 @@ async def decide(
         action="decision_override" if data.override_requirements and data.decision == ApplicationStatus.ACCEPTED else "decision",
     )
     await db_session.commit()
+    await _notify(
+        db_session, application, f"application_{data.decision.value}", DECISION_TITLES[data.decision], current_user, body=data.note
+    )
     await db_session.refresh(application)
     return await _read(db_session, application)
 
@@ -1042,6 +1090,10 @@ async def enroll_applicant(
         note=f"Student number {membership.student_number}",
     )
     await db_session.commit()
+    await _notify(
+        db_session, application, "application_enrolled", "You are now a student of {program}", current_user,
+        body=f"Your student number is {membership.student_number}", extra={"student_number": membership.student_number},
+    )
     await db_session.refresh(application)
     return await _read(db_session, application)
 
@@ -1055,6 +1107,7 @@ async def withdraw_application(
         raise conflict("This application is already closed")
     await _set_status(db_session, application, current_user, ApplicationStatus.WITHDRAWN, note=note, action="withdrawn")
     await db_session.commit()
+    await _notify(db_session, application, "application_withdrawn", "Your application to {program} was withdrawn", current_user, body=note)
     await db_session.refresh(application)
     return await _read_for(db_session, application, staff)
 
@@ -1157,6 +1210,12 @@ async def review_document(
         note=f"{document.document_type}: {data.note or ''}".strip(": "),
     )
     await db_session.commit()
+    if data.status == DocumentStatus.REJECTED:
+        await _notify(
+            db_session, application, "application_document_rejected",
+            f"Please upload a new {document.document_type.replace('_', ' ')} for {{program}}", current_user, body=data.note,
+            extra={"document_type": document.document_type},
+        )
     return await _read(db_session, application)
 
 
@@ -1311,6 +1370,11 @@ async def schedule_interview(
     db_session.add(interview)
     await _log(db_session, application, current_user, "interview_scheduled", note=data.scheduled_at)
     await db_session.commit()
+    when = " · ".join(filter(None, [str(data.scheduled_at).replace("T", " ")[:16], data.location]))
+    await _notify(
+        db_session, application, "application_interview", "Interview scheduled for {program}", current_user,
+        body=when, extra={"when": when},
+    )
     return await _read(db_session, application)
 
 

@@ -4,7 +4,18 @@ import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { Bell, BookOpen, ChalkboardTeacher, PencilSimple, UsersThree } from '@phosphor-icons/react'
+import {
+  Bell,
+  BookOpen,
+  CalendarCheck,
+  ChalkboardTeacher,
+  Exam,
+  FileX,
+  GraduationCap,
+  PencilSimple,
+  Seal,
+  UsersThree,
+} from '@phosphor-icons/react'
 import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
@@ -16,8 +27,18 @@ type Item = {
   notification_uuid: string
   type: string
   title: string
+  body?: string | null
   link?: string | null
-  payload?: { role?: string; name?: string; kind?: string; due_date?: string } | null
+  payload?: {
+    role?: string
+    name?: string
+    kind?: string
+    due_date?: string
+    number?: string
+    student_number?: string
+    document_type?: string
+    when?: string
+  } | null
   read_at?: string | null
   creation_date: string
 }
@@ -27,7 +48,32 @@ const ICONS: Record<string, React.ElementType> = {
   coordination_assigned: UsersThree,
   contributor_added: PencilSimple,
   course_assigned: BookOpen,
+  grades_submitted: Exam,
+  grades_returned: Exam,
+  grades_approved: Seal,
+  result_published: Seal,
+  application_submitted: GraduationCap,
+  application_accepted: GraduationCap,
+  application_rejected: GraduationCap,
+  application_waitlisted: GraduationCap,
+  application_enrolled: GraduationCap,
+  application_withdrawn: GraduationCap,
+  application_document_rejected: FileX,
+  application_interview: CalendarCheck,
 }
+
+// Types whose message only needs {{name}} / {{number}} from the payload.
+const SIMPLE = new Set([
+  'grades_submitted',
+  'grades_returned',
+  'grades_approved',
+  'result_published',
+  'application_submitted',
+  'application_accepted',
+  'application_rejected',
+  'application_waitlisted',
+  'application_withdrawn',
+])
 
 /** Render a notification in the viewer's language from its type + payload. */
 function message(t: TFunction, item: Item): string {
@@ -43,13 +89,26 @@ function message(t: TFunction, item: Item): string {
       return p.due_date
         ? t('inbox.course_assigned_due', 'New training assigned: {{name}} (due {{date}})', { name: p.name, date: p.due_date })
         : t('inbox.course_assigned', 'New training assigned: {{name}}', { name: p.name })
+    case 'application_enrolled':
+      return t('inbox.application_enrolled', 'You are now a student of {{name}} (student no. {{number}})', {
+        name: p.name,
+        number: p.student_number,
+      })
+    case 'application_document_rejected':
+      return t('inbox.application_document_rejected', 'Please upload a new {{document}} for {{name}}', {
+        name: p.name,
+        document: String(t(`academic.doc_${p.document_type}`, (p.document_type || '').replace(/_/g, ' '))),
+      })
+    case 'application_interview':
+      return t('inbox.application_interview', 'Interview scheduled for {{name}}: {{when}}', { name: p.name, when: p.when })
     default:
-      return item.title
+      return SIMPLE.has(item.type) ? t(`inbox.${item.type}`, item.title, { name: p.name, number: p.number }) : item.title
   }
 }
 
 function ago(value: string, locale: string): string {
   const then = new Date(value.replace(' ', 'T'))
+  if (Number.isNaN(then.getTime())) return ''
   const minutes = Math.round((Date.now() - then.getTime()) / 60000)
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
   if (Math.abs(minutes) < 60) return rtf.format(-minutes, 'minute')
@@ -156,6 +215,9 @@ export default function NotificationBell({
                       <span className={cn('block text-[13px] leading-snug', item.read_at ? 'text-[hsl(var(--dash-muted))]' : 'font-semibold text-[hsl(var(--dash-ink))]')}>
                         {message(t, item)}
                       </span>
+                      {item.body && item.type !== 'application_interview' && item.type !== 'application_enrolled' ? (
+                        <span className="mt-0.5 line-clamp-2 block text-xs text-[hsl(var(--dash-muted))]">{item.body}</span>
+                      ) : null}
                       <span className="mt-0.5 block text-[11px] text-[hsl(var(--dash-muted))]">{ago(item.creation_date, i18n.language)}</span>
                     </span>
                     {!item.read_at && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[hsl(var(--dash-accent))]" aria-hidden="true" />}

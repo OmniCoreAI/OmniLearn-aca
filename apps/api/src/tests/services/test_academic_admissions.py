@@ -32,7 +32,8 @@ from src.db.academic.admissions import (
 )
 from src.db.academic.cohorts import CohortCreate, CohortUpdate
 from src.db.academic.offerings import CohortMembership
-from src.db.academic.programs import ProgramCreate, ProgramLevel
+from src.db.academic.programs import Program, ProgramCreate, ProgramLevel
+from src.db.notification_inbox import Notification
 from src.services.academic import admissions as admissions_svc
 from src.services.academic import cohorts as cohorts_svc
 from src.services.academic import programs as programs_svc
@@ -225,6 +226,33 @@ class TestDecisions:
             CheckOverride(status=CheckStatus.MET, note="Interviewed at open day"), admin_user, db,
         )
         assert _check(app, "Interview").overridden is True
+
+    @pytest.mark.asyncio
+    async def test_each_side_is_notified(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
+        program, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
+        row = (await db.execute(select(Program).where(Program.program_uuid == program.program_uuid))).scalars().one()
+        row.coordinator_id = admin_user.id
+        db.add(row)
+        await db.commit()
+
+        async def inbox_of(user_id):
+            rows = (await db.execute(select(Notification).where(Notification.user_id == user_id).order_by(Notification.id))).scalars().all()
+            return [(n.type, n.title, n.body) for n in rows]
+
+        app = await _apply(db, cohort, regular_user, mock_request)
+        assert [t for t, *_ in await inbox_of(admin_user.id)] == ["application_submitted"]
+        await admissions_svc.start_review(mock_request, app.application_uuid, admin_user, db)
+        await admissions_svc.decide(
+            mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.WAITLISTED, note="Capacity"), admin_user, db
+        )
+        await admissions_svc.decide(mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.ACCEPTED), admin_user, db)
+        enrolled = await admissions_svc.enroll_applicant(mock_request, app.application_uuid, admin_user, db)
+        assert await inbox_of(regular_user.id) == [
+            ("application_waitlisted", "You are on the waiting list for MSc AI", "Capacity"),
+            ("application_accepted", "You have been accepted to MSc AI", None),
+            ("application_enrolled", "You are now a student of MSc AI", f"Your student number is {enrolled.student_number}"),
+        ]
+        assert len(await inbox_of(admin_user.id)) == 1  # never told about their own decisions
 
     @pytest.mark.asyncio
     async def test_applicant_withdraws(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
