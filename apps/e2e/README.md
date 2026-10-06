@@ -64,6 +64,11 @@ cd apps/e2e && E2E_BASE_URL=http://localhost:3002 E2E_API_URL=http://localhost:1
   bunx playwright test -c playwright.roles.config.ts
 ```
 
+`tests/sweep.spec.ts` also crawls every dashboard and learner page as each
+role and writes `test-results/sweep-report.json` (server errors, API failures,
+crashes, console errors, error screens). It fails on 5xx / crashes / error
+screens; `SWEEP_STRICT=1` also fails on 4xx and console errors.
+
 ## Running locally
 
 Requires Docker running, plus Node 20+ / bun.
