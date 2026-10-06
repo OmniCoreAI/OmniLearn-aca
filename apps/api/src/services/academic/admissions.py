@@ -1120,13 +1120,14 @@ async def serve_document(
 ):
     from src.services.courses.transfer.storage_utils import get_content_delivery_type
     from src.services.media.media_serve import _headers, _mime_for, _serve_fs, _serve_s3
+    from src.services.utils.http_headers import content_disposition
 
     application = await _get(db_session, application_uuid)
     await _require_applicant_or_staff(request, db_session, current_user, application, write=False)
     document = await _get_document(db_session, application, document_uuid)
     mime = document.mime_type or _mime_for(document.storage_key)
     headers = _headers(mime, False)
-    headers["Content-Disposition"] = f'inline; filename="{document.original_name.replace(chr(34), "")}"'
+    headers["Content-Disposition"] = content_disposition(document.original_name)
     if get_content_delivery_type() == "s3api":
         return _serve_s3(document.storage_key, mime, headers, None, False)
     return _serve_fs(document.storage_key, mime, headers, None, False)

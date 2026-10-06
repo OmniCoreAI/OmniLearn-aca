@@ -233,7 +233,7 @@ function MyApplication({ orgslug, applicationuuid }: { orgslug: string; applicat
                 </td>
                 <td className={`${tdCls} text-right`}>
                   <IconButton
-                    onClick={() => openApplicationDocument(uuid, d.document_uuid, access_token).catch((e) => toast.error(e.message))}
+                    onClick={() => openApplicationDocument(uuid, d.document_uuid, access_token, d.original_name).catch((e) => toast.error(e.message))}
                     aria-label={t('academic.open', 'Open')}
                   >
                     <Eye className="h-4 w-4" />

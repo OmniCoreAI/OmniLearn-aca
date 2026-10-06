@@ -296,16 +296,35 @@ export async function uploadApplicationDocument(uuid: string, document_type: str
   return errorHandling(result)
 }
 
-/** Documents are private: fetch with the session token and open as a blob. */
-export async function openApplicationDocument(uuid: string, document_uuid: string, token: string) {
-  const result = await fetch(`${getAPIUrl()}admissions/applications/${uuid}/documents/${document_uuid}/file`, {
-    headers: { Authorization: `Bearer ${token}` },
-    credentials: 'include',
-  })
-  if (!result.ok) throw new Error('Could not open the document')
-  const url = URL.createObjectURL(await result.blob())
-  window.open(url, '_blank', 'noopener')
-  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+/**
+ * Documents are private: fetch with the session token and show the file in a
+ * new tab. The tab is opened synchronously in the click handler — opened after
+ * the download, browsers (Safari especially) treat it as a pop-up and block it.
+ * If even that is blocked, the file is downloaded instead.
+ */
+export async function openApplicationDocument(uuid: string, document_uuid: string, token: string, filename?: string) {
+  const tab = window.open('', '_blank')
+  try {
+    const result = await fetch(`${getAPIUrl()}admissions/applications/${uuid}/documents/${document_uuid}/file`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
+    })
+    if (!result.ok) throw new Error('Could not open the document')
+    const url = URL.createObjectURL(await result.blob())
+    if (tab) {
+      tab.opener = null
+      tab.location.href = url
+    } else {
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename || 'document'
+      link.click()
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch (error) {
+    tab?.close()
+    throw error
+  }
 }
 
 export const DOCUMENT_TYPES = [
