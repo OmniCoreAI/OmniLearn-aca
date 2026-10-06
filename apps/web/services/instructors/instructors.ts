@@ -205,3 +205,12 @@ export function getInstructorImageUrl(orgUUID: string, instructor: any): string 
   if (!instructor?.profile_image) return null
   return getOrgContentUrl(orgUUID, `instructors/${instructor.instructor_uuid}/images/${instructor.profile_image}`)
 }
+
+/** Courses and training programs the signed-in user is assigned to (any org member). */
+export async function getMyAssignments(org_id: number, access_token: string) {
+  const result = await fetch(
+    `${getAPIUrl()}instructors/org/${org_id}/me/assignments`,
+    RequestBodyWithAuthHeader('GET', null, null, access_token)
+  )
+  return errorHandling(result)
+}

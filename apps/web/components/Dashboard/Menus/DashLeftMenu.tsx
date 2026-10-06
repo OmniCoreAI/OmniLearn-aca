@@ -52,6 +52,7 @@ import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore }
 import { LayoutGroup, MotionConfig, motion } from 'motion/react'
 import UserAvatar from '../../Objects/UserAvatar'
 import AdminAuthorization from '@components/Security/AdminAuthorization'
+import useAdminStatus from '@components/Hooks/useAdminStatus'
 import usePortalNavVisibility from '@components/Hooks/usePortalNavVisibility'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
@@ -155,6 +156,9 @@ function DashLeftMenu() {
   const plan = usePlan()
   // Hooks must run on every render — keep this above the early return.
   const { isItemVisible } = usePortalNavVisibility()
+  // Only roles that may create courses get the "Create new course" shortcut.
+  const { rights } = useAdminStatus() as any
+  const canCreateCourses = rights?.courses?.action_create === true
   const postgrad = usePostgradSignals(org?.id, access_token, isItemVisible('postgraduate') && !isCollapsed)
   // Keep the current page in view inside the scrolling link list (e.g. a deep link into a long section).
   // Clicked links are already on screen, so this only moves the list on a fresh load.
@@ -757,7 +761,7 @@ function DashLeftMenu() {
                 </SettingsButton>
               </div>
             </div>
-            <CreateCard plan={plan} orgSlug={org?.slug} isCollapsed={isCollapsed} />
+            {canCreateCourses && <CreateCard plan={plan} orgSlug={org?.slug} isCollapsed={isCollapsed} />}
 
             {/* Signed-in person */}
             <HoverMenu align="end" content={accountMenu}>

@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'next/navigation'
 import { AcademicPageShell, AcademicHeader, AcademicEmptyState } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { Section, Stat } from '@components/Dashboard/Pages/Academic/AcademicUI'
 import { inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
@@ -17,6 +18,7 @@ import { EntityInstructorsPanel } from '@components/Dashboard/Pages/Entities/Ent
 import { getEntityLearning, getMyEntities } from '@services/administration/administration'
 
 type Tab = 'overview' | 'members' | 'groups' | 'training' | 'progress' | 'import' | 'instructors'
+const TABS: Tab[] = ['overview', 'members', 'groups', 'training', 'progress', 'import', 'instructors']
 
 function PortalOverview({ entity }: { entity: any }) {
   const { t } = useTranslation()
@@ -57,7 +59,9 @@ function MyEntityPortal({ orgslug: _orgslug }: { orgslug: string }) {
   const { t, i18n } = useTranslation()
   const { orgId, access_token, ready } = useAdminContext()
   const [selected, setSelected] = useState('')
-  const [tab, setTab] = useState<Tab>('overview')
+  // `?tab=` lets the dashboard home deep-link to a section (e.g. Training).
+  const requestedTab = useSearchParams().get('tab') as Tab | null
+  const [tab, setTab] = useState<Tab>(requestedTab && TABS.includes(requestedTab) ? requestedTab : 'overview')
   const { data: entities = [], isLoading } = useQuery({
     queryKey: ['entities', 'mine', orgId],
     queryFn: () => getMyEntities(orgId, access_token),

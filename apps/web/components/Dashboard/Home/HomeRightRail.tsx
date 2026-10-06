@@ -479,7 +479,8 @@ function RecentActivities() {
 
 /* --------------------------------------------------------------------- rail */
 
-export default function HomeRightRail() {
+/** `showActivity` is off for workspace homes: the activity feed is academy-wide. */
+export default function HomeRightRail({ showActivity = true }: { showActivity?: boolean }) {
   const today = useMemo(() => startOfDay(new Date()), [])
   const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [selected, setSelected] = useState(today)
@@ -513,7 +514,7 @@ export default function HomeRightRail() {
           <DayAgenda selected={selected} byDay={byDay} upcoming={upcoming} isLoading={isLoading} />
         </div>
       </section>
-      <RecentActivities />
+      {showActivity ? <RecentActivities /> : null}
     </div>
   )
 }

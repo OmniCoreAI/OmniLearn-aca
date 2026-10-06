@@ -2,6 +2,7 @@ import { getAPIUrl } from './services/config/config'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { isLocalhost as isLocalhostCheck } from './services/utils/ts/hostUtils'
+import { isSafeLandingPath } from './lib/auth/landing'
 
 // =============================================================================
 // Tenancy
@@ -351,15 +352,20 @@ export default async function proxy(req: NextRequest) {
   // 8. Auth redirect bridge (cross-domain return path)
   // -------------------------------------------------------------------------
   if (pathname === '/redirect_from_auth') {
-    const queryString = req.nextUrl.searchParams.toString()
+    const params = new URLSearchParams(req.nextUrl.searchParams)
+    // Optional landing page chosen by the login form (e.g. /dash for staff).
+    const to = params.get('to')
+    params.delete('to')
+    const landing = to && isSafeLandingPath(to) ? to : '/'
+    const queryString = params.toString()
     const customDomain = req.cookies.get('OL_custom_domain')?.value
 
     let redirectUrl: URL
     if (customDomain) {
       const protocol = req.nextUrl.protocol + '//'
-      redirectUrl = new URL(`${protocol}${customDomain}/`)
+      redirectUrl = new URL(landing, `${protocol}${customDomain}/`)
     } else {
-      redirectUrl = new URL('/', req.url)
+      redirectUrl = new URL(landing, req.url)
     }
     if (queryString) {
       redirectUrl.search = queryString

@@ -23,7 +23,6 @@ import {
   ChatCircle,
   SquaresFour,
   ChalkboardSimple,
-  Signpost,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import {
@@ -190,27 +189,6 @@ export const OrgMenu = (props: any) => {
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Progress / Trail */}
-            <AuthenticatedClientElement checkMethod="authentication">
-              <div className="hidden md:flex">
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link
-                        href={getUriWithOrg(orgslug, '/trail')}
-                        className={`p-2 rounded-lg transition-colors ${colors.iconBtn}`}
-                        aria-label={t('courses.progress')}
-                      >
-                        <Signpost size={20} weight="fill" />
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">
-                      {t('courses.progress')}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </AuthenticatedClientElement>
             {/* Boards */}
             {rf?.boards?.enabled && (
               <AuthenticatedClientElement checkMethod="authentication">
