@@ -57,6 +57,14 @@ STAFF_VARIABLES = [
 ]
 
 
+ADMISSION_VARIABLES = [
+    Variable("program_name", "Program applied to", "MSc Artificial Intelligence"),
+    Variable("application_number", "Application number", "APP-MSC-AI-2026-0007"),
+    Variable("decision_note", "Note from the admissions team", "Welcome to the fall intake."),
+    Variable("application_url", "Link to the application", "https://academy.example.com/admissions/7f3a"),
+]
+
+
 def _msg(subject: str, heading: str, text: str, cta: Optional[str] = None, link_var: str = "course_url", sms: str = "") -> BuiltinMessage:
     button = (
         f'<p><a href="{{{{{link_var}}}}}" style="display:inline-block;padding:12px 28px;background:#000;color:#fff;'
@@ -228,6 +236,50 @@ EVENTS: List[EventDef] = [
         builtin={
             "en": _msg("You can now edit {{item_name}}", "You're a contributor", "You can now edit the content of <strong>{{item_name}}</strong>.", "Open course", "item_url", "{{org_name}}: you can now edit {{item_name}}. {{item_url}}"),
             "ar": _msg("يمكنك الآن تعديل {{item_name}}", "أصبحت مساهمًا", "يمكنك الآن تعديل محتوى <strong>{{item_name}}</strong>.", "فتح الدورة", "item_url", "{{org_name}}: يمكنك الآن تعديل {{item_name}}. {{item_url}}"),
+        },
+    ),
+    EventDef(
+        key="application_accepted",
+        label="Admission: accepted",
+        label_ar="القبول: مقبول",
+        description="An applicant was accepted to a postgraduate program.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES],
+        builtin={
+            "en": _msg("You have been accepted to {{program_name}}", "Congratulations, {{user_first_name}}!", "Your application <strong>{{application_number}}</strong> to <strong>{{program_name}}</strong> has been accepted. The admissions team will complete your enrolment shortly.</p><p>{{decision_note}}", "View application", "application_url", "{{org_name}}: you have been accepted to {{program_name}} ({{application_number}}). {{application_url}}"),
+            "ar": _msg("تم قبولك في {{program_name}}", "تهانينا يا {{user_first_name}}!", "تم قبول طلبك <strong>{{application_number}}</strong> في <strong>{{program_name}}</strong>. سيستكمل فريق القبول تسجيلك قريبًا.</p><p>{{decision_note}}", "عرض الطلب", "application_url", "{{org_name}}: تم قبولك في {{program_name}} ({{application_number}}). {{application_url}}"),
+        },
+    ),
+    EventDef(
+        key="application_waitlisted",
+        label="Admission: waiting list",
+        label_ar="القبول: قائمة الانتظار",
+        description="An applicant was placed on a program's waiting list.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES],
+        builtin={
+            "en": _msg("Your application to {{program_name}} is on the waiting list", "You're on the waiting list", "Your application <strong>{{application_number}}</strong> to <strong>{{program_name}}</strong> is on the waiting list. We will let you know as soon as a place opens.</p><p>{{decision_note}}", "View application", "application_url", "{{org_name}}: your application to {{program_name}} ({{application_number}}) is on the waiting list. {{application_url}}"),
+            "ar": _msg("طلبك في {{program_name}} على قائمة الانتظار", "طلبك على قائمة الانتظار", "طلبك <strong>{{application_number}}</strong> في <strong>{{program_name}}</strong> على قائمة الانتظار. سنبلغك فور توفر مقعد.</p><p>{{decision_note}}", "عرض الطلب", "application_url", "{{org_name}}: طلبك في {{program_name}} ({{application_number}}) على قائمة الانتظار. {{application_url}}"),
+        },
+    ),
+    EventDef(
+        key="application_rejected",
+        label="Admission: not accepted",
+        label_ar="القبول: غير مقبول",
+        description="An application to a postgraduate program was not successful.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES],
+        builtin={
+            "en": _msg("Your application to {{program_name}}", "Application decision", "We are sorry, {{user_first_name}}. Your application <strong>{{application_number}}</strong> to <strong>{{program_name}}</strong> was not successful.</p><p>{{decision_note}}", "View application", "application_url", "{{org_name}}: your application to {{program_name}} ({{application_number}}) was not successful. {{application_url}}"),
+            "ar": _msg("طلبك في {{program_name}}", "قرار الطلب", "نأسف يا {{user_first_name}}، لم يتم قبول طلبك <strong>{{application_number}}</strong> في <strong>{{program_name}}</strong>.</p><p>{{decision_note}}", "عرض الطلب", "application_url", "{{org_name}}: لم يتم قبول طلبك في {{program_name}} ({{application_number}}). {{application_url}}"),
+        },
+    ),
+    EventDef(
+        key="application_enrolled",
+        label="Admission: enrolled as student",
+        label_ar="القبول: تسجيل كطالب",
+        description="An accepted applicant was enrolled and given a student number.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES, Variable("student_number", "Student number", "MSC-AI-2026-014"), Variable("academics_url", "Link to My academics", "https://academy.example.com/academics")],
+        builtin={
+            "en": _msg("Welcome to {{program_name}}", "You're now a student, {{user_first_name}}", "You are enrolled in <strong>{{program_name}}</strong>. Your student number is <strong>{{student_number}}</strong>.", "My academics", "academics_url", "{{org_name}}: you are enrolled in {{program_name}}. Student number: {{student_number}}"),
+            "ar": _msg("مرحبًا بك في {{program_name}}", "أصبحت طالبًا يا {{user_first_name}}", "تم تسجيلك في <strong>{{program_name}}</strong>. رقمك الجامعي هو <strong>{{student_number}}</strong>.", "شؤوني الأكاديمية", "academics_url", "{{org_name}}: تم تسجيلك في {{program_name}}. الرقم الجامعي: {{student_number}}"),
         },
     ),
 ]

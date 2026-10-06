@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException
 from sqlmodel import select
 
+from src.db.administration.notifications import NotificationLog
 from src.db.academic.admissions import (
     AdmissionRequirementCreate,
     ApplicantProfile,
@@ -38,6 +39,7 @@ from src.services.academic import admissions as admissions_svc
 from src.services.academic import cohorts as cohorts_svc
 from src.services.academic import programs as programs_svc
 from src.services.academic import students as students_svc
+from src.services.notifications import dispatcher
 
 
 @pytest.fixture
@@ -253,6 +255,34 @@ class TestDecisions:
             ("application_enrolled", "You are now a student of MSc AI", f"Your student number is {enrolled.student_number}"),
         ]
         assert len(await inbox_of(admin_user.id)) == 1  # never told about their own decisions
+
+    @pytest.mark.asyncio
+    async def test_decisions_and_enrolment_are_emailed(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac, monkeypatch):
+        sent = []
+        monkeypatch.setattr(dispatcher, "email_transport", lambda to, subject, html, sender_name: sent.append((to, subject, html)) or {"id": "ok"})
+        _, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
+        app = await _apply(db, cohort, regular_user, mock_request)
+        await admissions_svc.start_review(mock_request, app.application_uuid, admin_user, db)
+        await admissions_svc.decide(
+            mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.WAITLISTED, note="<b>Capacity</b>"), admin_user, db
+        )
+        await admissions_svc.decide(mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.ACCEPTED), admin_user, db)
+        enrolled = await admissions_svc.enroll_applicant(mock_request, app.application_uuid, admin_user, db)
+
+        logs = (await db.execute(select(NotificationLog).order_by(NotificationLog.id))).scalars().all()
+        assert [(log.event_key, log.channel, log.status) for log in logs] == [
+            ("application_waitlisted", "email", "sent"),
+            ("application_accepted", "email", "sent"),
+            ("application_enrolled", "email", "sent"),
+        ]
+        assert {to for to, *_ in sent} == {"regular@test.com"}
+        assert [subject for _, subject, _ in sent] == [
+            "Your application to MSc AI is on the waiting list",
+            "You have been accepted to MSc AI",
+            "Welcome to MSc AI",
+        ]
+        assert "&lt;b&gt;Capacity&lt;/b&gt;" in sent[0][2]  # staff notes are escaped
+        assert enrolled.student_number in sent[2][2]
 
     @pytest.mark.asyncio
     async def test_applicant_withdraws(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):

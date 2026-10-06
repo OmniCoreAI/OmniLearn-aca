@@ -87,6 +87,7 @@ from src.services.academic.common import (
 from src.services.academic.validation import resolve_org_user
 from src.services.notifications import inbox
 from src.services.notifications.assignments import slug
+from src.services.notifications.dispatcher import notify, org_variables
 
 OPEN_STATES = {
     ApplicationStatus.DRAFT,
@@ -121,6 +122,9 @@ DECISION_TITLES = {
     ApplicationStatus.REJECTED: "Your application to {program} was not successful",
     ApplicationStatus.WAITLISTED: "You are on the waiting list for {program}",
 }
+# Inbox types that also go out by email / SMS (catalog events of the same key,
+# switchable in the academy's Communication settings).
+EMAILED = {"application_accepted", "application_rejected", "application_waitlisted", "application_enrolled"}
 
 
 async def _notify(
@@ -135,7 +139,8 @@ async def _notify(
     extra: Optional[dict] = None,
 ) -> None:
     """In-app notice to the applicant, or with ``staff`` to the program
-    coordinator. The person who made the change is never told about it."""
+    coordinator. The person who made the change is never told about it.
+    Decisions and enrolment are also emailed (see ``EMAILED``)."""
     program = await db_session.get(Program, application.program_id)
     name = program.name if program else application.application_number
     key = slug(application.application_uuid, "application_")
@@ -152,6 +157,19 @@ async def _notify(
         body=body, link=link,
         payload={"application_uuid": application.application_uuid, "name": name, "number": application.application_number, **(extra or {})},
     )
+    if type in EMAILED:
+        base = (await org_variables(db_session, application.org_id)).get("platform_url", "")
+        await notify(
+            db_session, application.org_id, type, [recipient],
+            {
+                "program_name": name,
+                "application_number": application.application_number,
+                "decision_note": body if type != "application_enrolled" else "",
+                "application_url": f"{base}{link}" if base else "",
+                "academics_url": f"{base}/academics" if base else "",
+                "student_number": (extra or {}).get("student_number", ""),
+            },
+        )
 
 
 # ---------------------------------------------------------------------------
