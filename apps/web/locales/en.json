@@ -8059,6 +8059,7 @@
     "application_withdrawn": "Your application to {{name}} was withdrawn",
     "application_document_rejected": "Please upload a new {{document}} for {{name}}",
     "application_interview": "Interview scheduled for {{name}}: {{when}}",
+    "application_interview_moved": "Your interview for {{name}} was moved: {{when}}",
     "roles": {
       "course_instructor": "course instructor",
       "lecturer": "lecturer",

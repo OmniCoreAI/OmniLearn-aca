@@ -285,6 +285,49 @@ class TestDecisions:
         assert enrolled.student_number in sent[2][2]
 
     @pytest.mark.asyncio
+    async def test_rejected_documents_and_interviews_are_emailed(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac, monkeypatch
+    ):
+        sent = []
+        monkeypatch.setattr(dispatcher, "email_transport", lambda to, subject, html, sender_name: sent.append((subject, html)) or {"id": "ok"})
+        _, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
+        app = await _apply(db, cohort, regular_user, mock_request)
+        application = await admissions_svc._get(db, app.application_uuid)
+        db.add(ApplicationDocument(
+            application_id=application.id, org_id=org.id, document_type="transcript", original_name="t.pdf",
+            storage_key="orgs/x/admissions/y/t.pdf", document_uuid="admdoc_1", creation_date="",
+        ))
+        await db.commit()
+        await admissions_svc.review_document(
+            mock_request, app.application_uuid, "admdoc_1", DocumentReview(status=DocumentStatus.REJECTED, note="Page 2 is missing"),
+            admin_user, db,
+        )
+        # No date yet: in-app only, nothing to email.
+        app = await admissions_svc.schedule_interview(mock_request, app.application_uuid, InterviewCreate(location="Room 204"), admin_user, db)
+        interview = app.interviews[0].interview_uuid
+        await admissions_svc.update_interview(
+            mock_request, app.application_uuid, interview, InterviewUpdate(scheduled_at="2026-08-01T10:00"), admin_user, db
+        )
+        # Saving the same time again is not a move.
+        await admissions_svc.update_interview(
+            mock_request, app.application_uuid, interview, InterviewUpdate(scheduled_at="2026-08-01T10:00"), admin_user, db
+        )
+
+        assert [subject for subject, _ in sent] == [
+            "Please upload a new transcript for MSc AI",
+            "Your interview for MSc AI: 2026-08-01 10:00",
+        ]
+        assert "Page 2 is missing" in sent[0][1] and "Room 204" in sent[1][1]
+        titles = (await db.execute(
+            select(Notification.title).where(Notification.user_id == regular_user.id).order_by(Notification.id)
+        )).scalars().all()
+        assert titles == [
+            "Please upload a new transcript for MSc AI",
+            "Interview scheduled for MSc AI",
+            "Your interview for MSc AI was moved",
+        ]
+
+    @pytest.mark.asyncio
     async def test_applicant_withdraws(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
         _, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
         app = await _apply(db, cohort, regular_user, mock_request)

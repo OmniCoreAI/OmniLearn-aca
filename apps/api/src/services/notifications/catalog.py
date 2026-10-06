@@ -282,6 +282,28 @@ EVENTS: List[EventDef] = [
             "ar": _msg("مرحبًا بك في {{program_name}}", "أصبحت طالبًا يا {{user_first_name}}", "تم تسجيلك في <strong>{{program_name}}</strong>. رقمك الجامعي هو <strong>{{student_number}}</strong>.", "شؤوني الأكاديمية", "academics_url", "{{org_name}}: تم تسجيلك في {{program_name}}. الرقم الجامعي: {{student_number}}"),
         },
     ),
+    EventDef(
+        key="application_document_rejected",
+        label="Admission: document rejected",
+        label_ar="القبول: رفض مستند",
+        description="A document an applicant uploaded was rejected and needs to be uploaded again.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES, Variable("document_name", "Document", "Transcript")],
+        builtin={
+            "en": _msg("Please upload a new {{document_name}} for {{program_name}}", "A document needs your attention", "The admissions team could not accept the <strong>{{document_name}}</strong> you uploaded for application <strong>{{application_number}}</strong> ({{program_name}}). Please upload a new copy.</p><p>{{decision_note}}", "Upload a new file", "application_url", "{{org_name}}: please upload a new {{document_name}} for your application {{application_number}}. {{application_url}}"),
+            "ar": _msg("يرجى رفع {{document_name}} جديد في {{program_name}}", "مستند يحتاج إلى انتباهك", "لم يتمكن فريق القبول من قبول <strong>{{document_name}}</strong> الذي رفعته في الطلب <strong>{{application_number}}</strong> ({{program_name}}). يرجى رفع نسخة جديدة.</p><p>{{decision_note}}", "رفع ملف جديد", "application_url", "{{org_name}}: يرجى رفع {{document_name}} جديد لطلبك {{application_number}}. {{application_url}}"),
+        },
+    ),
+    EventDef(
+        key="application_interview",
+        label="Admission: interview scheduled",
+        label_ar="القبول: موعد المقابلة",
+        description="An admission interview was scheduled or moved to a new time or place.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES, Variable("interview_date", "Date", "2026-10-20"), Variable("interview_time", "Time", "10:00"), Variable("interview_location", "Place or meeting link", "Building B, room 204")],
+        builtin={
+            "en": _msg("Your interview for {{program_name}}: {{interview_date}} {{interview_time}}", "Your admission interview", "Your interview for <strong>{{program_name}}</strong> (application {{application_number}}) is on <strong>{{interview_date}}</strong> at <strong>{{interview_time}}</strong>.</p><p>{{interview_location}}", "View application", "application_url", "{{org_name}}: interview for {{program_name}} on {{interview_date}} {{interview_time}}, {{interview_location}}"),
+            "ar": _msg("مقابلتك في {{program_name}}: {{interview_date}} {{interview_time}}", "مقابلة القبول", "موعد مقابلتك في <strong>{{program_name}}</strong> (الطلب {{application_number}}) يوم <strong>{{interview_date}}</strong> الساعة <strong>{{interview_time}}</strong>.</p><p>{{interview_location}}", "عرض الطلب", "application_url", "{{org_name}}: مقابلة {{program_name}} يوم {{interview_date}} الساعة {{interview_time}}، {{interview_location}}"),
+        },
+    ),
 ]
 
 EVENTS_BY_KEY: Dict[str, EventDef] = {e.key: e for e in EVENTS}

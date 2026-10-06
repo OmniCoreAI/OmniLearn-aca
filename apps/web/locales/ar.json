@@ -7986,6 +7986,7 @@
     "application_withdrawn": "تم سحب طلبك في {{name}}",
     "application_document_rejected": "يرجى رفع {{document}} جديد في {{name}}",
     "application_interview": "تم تحديد موعد مقابلة في {{name}}: {{when}}",
+    "application_interview_moved": "تم تغيير موعد مقابلتك في {{name}}: {{when}}",
     "roles": {
       "course_instructor": "محاضر المقرر",
       "lecturer": "محاضر",

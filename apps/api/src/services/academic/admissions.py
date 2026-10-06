@@ -87,7 +87,7 @@ from src.services.academic.common import (
 from src.services.academic.validation import resolve_org_user
 from src.services.notifications import inbox
 from src.services.notifications.assignments import slug
-from src.services.notifications.dispatcher import notify, org_variables
+from src.services.notifications.dispatcher import notify, org_language, org_variables
 
 OPEN_STATES = {
     ApplicationStatus.DRAFT,
@@ -124,7 +124,29 @@ DECISION_TITLES = {
 }
 # Inbox types that also go out by email / SMS (catalog events of the same key,
 # switchable in the academy's Communication settings).
-EMAILED = {"application_accepted", "application_rejected", "application_waitlisted", "application_enrolled"}
+EMAILED = {
+    "application_accepted",
+    "application_rejected",
+    "application_waitlisted",
+    "application_enrolled",
+    "application_document_rejected",
+    "application_interview",
+}
+# Events whose ``body`` is a note from staff, shown in the email.
+DECISION_NOTE_EVENTS = {"application_accepted", "application_rejected", "application_waitlisted", "application_document_rejected"}
+DOCUMENT_LABELS = {
+    "degree_certificate": ("degree certificate", "شهادة التخرج"),
+    "transcript": ("transcript", "كشف الدرجات"),
+    "national_id": ("national ID", "بطاقة الرقم القومي"),
+    "passport": ("passport", "جواز السفر"),
+    "language_certificate": ("language certificate", "شهادة اللغة"),
+    "cv": ("CV", "السيرة الذاتية"),
+    "recommendation_letter": ("recommendation letter", "خطاب التوصية"),
+    "statement_of_purpose": ("statement of purpose", "خطاب الغرض"),
+    "experience_letter": ("experience letter", "شهادة الخبرة"),
+    "photo": ("photo", "الصورة الشخصية"),
+    "other": ("document", "المستند"),
+}
 
 
 async def _notify(
@@ -137,10 +159,12 @@ async def _notify(
     body: Optional[str] = None,
     staff: bool = False,
     extra: Optional[dict] = None,
+    email: bool = True,
 ) -> None:
     """In-app notice to the applicant, or with ``staff`` to the program
     coordinator. The person who made the change is never told about it.
-    Decisions and enrolment are also emailed (see ``EMAILED``)."""
+    Decisions, enrolment, rejected documents and interviews are also
+    emailed (see ``EMAILED``)."""
     program = await db_session.get(Program, application.program_id)
     name = program.name if program else application.application_number
     key = slug(application.application_uuid, "application_")
@@ -157,17 +181,24 @@ async def _notify(
         body=body, link=link,
         payload={"application_uuid": application.application_uuid, "name": name, "number": application.application_number, **(extra or {})},
     )
-    if type in EMAILED:
+    if email and type in EMAILED:
+        extra = extra or {}
         base = (await org_variables(db_session, application.org_id)).get("platform_url", "")
+        document = DOCUMENT_LABELS.get(extra.get("document_type", ""))
+        language = await org_language(db_session, application.org_id)
         await notify(
             db_session, application.org_id, type, [recipient],
             {
                 "program_name": name,
                 "application_number": application.application_number,
-                "decision_note": body if type != "application_enrolled" else "",
+                "decision_note": body if type in DECISION_NOTE_EVENTS else "",
                 "application_url": f"{base}{link}" if base else "",
                 "academics_url": f"{base}/academics" if base else "",
-                "student_number": (extra or {}).get("student_number", ""),
+                "student_number": extra.get("student_number", ""),
+                "document_name": (document[1] if language == "ar" else document[0]) if document else "",
+                "interview_date": extra.get("date", ""),
+                "interview_time": extra.get("time", ""),
+                "interview_location": extra.get("location") or "",
             },
         )
 
@@ -1368,6 +1399,19 @@ async def _panel_ids(db_session: AsyncSession, org_id: int, uuids: List[str]) ->
     return ids
 
 
+async def _notify_interview(
+    db_session: AsyncSession, application: AdmissionApplication, interview: AdmissionInterview, current_user: Principal, *, moved: bool = False
+) -> None:
+    title = "Your interview for {program} was moved" if moved else "Interview scheduled for {program}"
+    at = (interview.scheduled_at or "").replace("T", " ")
+    when = " · ".join(filter(None, [at[:16], interview.location]))
+    await _notify(
+        db_session, application, "application_interview", title, current_user, body=when,
+        extra={"when": when, "date": at[:10], "time": at[11:16], "location": interview.location, "moved": moved},
+        email=bool(at),  # no email until there is a date to give
+    )
+
+
 async def schedule_interview(
     request: Request, application_uuid: str, data: InterviewCreate, current_user: Principal, db_session: AsyncSession
 ) -> ApplicationRead:
@@ -1388,11 +1432,7 @@ async def schedule_interview(
     db_session.add(interview)
     await _log(db_session, application, current_user, "interview_scheduled", note=data.scheduled_at)
     await db_session.commit()
-    when = " · ".join(filter(None, [str(data.scheduled_at).replace("T", " ")[:16], data.location]))
-    await _notify(
-        db_session, application, "application_interview", "Interview scheduled for {program}", current_user,
-        body=when, extra={"when": when},
-    )
+    await _notify_interview(db_session, application, interview, current_user)
     return await _read(db_session, application)
 
 
@@ -1412,6 +1452,7 @@ async def update_interview(
     if interview.application_id != application.id:
         raise bad_request("Interview does not belong to this application")
     update = data.model_dump(exclude_unset=True)
+    moved = any(k in update and update[k] != getattr(interview, k) for k in ("scheduled_at", "location"))
     if "panel_uuids" in update:
         interview.panel = await _panel_ids(db_session, application.org_id, update.pop("panel_uuids") or [])
     if update.get("score") is not None and not (0 <= update["score"] <= 100):
@@ -1430,6 +1471,8 @@ async def update_interview(
             + (f", score {interview.score:g}" if interview.score is not None else ""),
         )
     await db_session.commit()
+    if moved and interview.status == InterviewStatus.SCHEDULED:
+        await _notify_interview(db_session, application, interview, current_user, moved=True)
     return await _read(db_session, application)
 
 

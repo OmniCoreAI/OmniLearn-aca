@@ -38,6 +38,7 @@ type Item = {
     student_number?: string
     document_type?: string
     when?: string
+    moved?: boolean
   } | null
   read_at?: string | null
   creation_date: string
@@ -100,7 +101,9 @@ function message(t: TFunction, item: Item): string {
         document: String(t(`academic.doc_${p.document_type}`, (p.document_type || '').replace(/_/g, ' '))),
       })
     case 'application_interview':
-      return t('inbox.application_interview', 'Interview scheduled for {{name}}: {{when}}', { name: p.name, when: p.when })
+      return p.moved
+        ? t('inbox.application_interview_moved', 'Your interview for {{name}} was moved: {{when}}', { name: p.name, when: p.when })
+        : t('inbox.application_interview', 'Interview scheduled for {{name}}: {{when}}', { name: p.name, when: p.when })
     default:
       return SIMPLE.has(item.type) ? t(`inbox.${item.type}`, item.title, { name: p.name, number: p.number }) : item.title
   }
