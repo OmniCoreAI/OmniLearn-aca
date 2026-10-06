@@ -190,7 +190,18 @@
     "paid_instructors": "Instructors with hours",
     "search_logs": "Search instructor or note",
     "no_logs_title": "No work logs yet",
-    "no_logs_hint": "Log delivered hours to track what each instructor is owed."
+    "no_logs_hint": "Log delivered hours to track what each instructor is owed.",
+    "tab_assignments": "Programs & schedule",
+    "assigned_offerings": "Postgraduate offerings",
+    "assigned_offerings_desc": "Set from the offering page (Teaching staff).",
+    "no_offerings": "Not teaching any offering.",
+    "assigned_programs_desc": "Coordinator, or trainer of one of the program’s courses.",
+    "upcoming_sessions": "Upcoming sessions",
+    "upcoming_sessions_desc": "Course sessions they teach, including guest sessions in other courses.",
+    "no_upcoming_sessions": "Nothing scheduled.",
+    "guest_session": "Guest session",
+    "assigned_programs": "Training programs",
+    "no_programs": "No training programs assigned."
   },
   "cms": {
     "news": {
@@ -1261,7 +1272,11 @@
     "tch": {
       "save_evaluation": "Save evaluation",
       "your_evaluation": "Your evaluation"
-    }
+    },
+    "taught_by": "Taught by",
+    "session_course_instructor": "Course instructor teaches it",
+    "lecturer_registry_required": "No active instructors yet.",
+    "add_instructors": "Add instructors"
   },
   "common": {
     "hello": "Hello",
@@ -3508,7 +3523,8 @@
           "remove_success": "Successfully removed {{count}} contributor(s)",
           "remove_failed": "Failed to remove contributors",
           "cannot_modify_creator": "Cannot modify a creator's role or status"
-        }
+        },
+        "teaching_note": "Contributors can edit this course’s content. To choose who teaches it, use"
       },
       "seo": {
         "title": "SEO Settings",
@@ -7847,7 +7863,21 @@
     "drafts": "Drafts",
     "hidden_hint": "Hidden from learners",
     "any_price": "Any price",
-    "all_types": "All types"
+    "all_types": "All types",
+    "staff": "Staff",
+    "staff_desc": "Who runs this program and who teaches each course. Trainers come from Administration → Instructors.",
+    "coordinator": "Coordinator",
+    "trainers": "Trainers by course",
+    "courses_without_trainer_one": "{{count}} without a trainer",
+    "courses_without_trainer_other": "{{count}} without a trainer",
+    "add_courses_first": "Add courses to assign their trainers.",
+    "no_sessions": "No sessions scheduled",
+    "n_sessions_one": "{{count}} session",
+    "n_sessions_other": "{{count}} sessions",
+    "next_session": "next {{when}}",
+    "n_guest_sessions_one": "{{count}} with a guest trainer",
+    "n_guest_sessions_other": "{{count}} with a guest trainer",
+    "no_trainer": "No trainer yet"
   },
   "postgrad": {
     "subtitle": "PhD, master’s and diploma programs — structure, intake, fees and coordination.",
@@ -7942,6 +7972,7 @@
     "nothing_assigned_n_other": "{{count}} learners have nothing assigned",
     "everyone_started": "Everyone with assigned training has started.",
     "n_assigned_one": "{{count}} assigned",
-    "n_assigned_other": "{{count}} assigned"
+    "n_assigned_other": "{{count}} assigned",
+    "role_trainer": "Trainer"
   }
 }

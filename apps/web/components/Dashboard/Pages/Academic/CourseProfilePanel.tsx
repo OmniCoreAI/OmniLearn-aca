@@ -256,6 +256,7 @@ function SessionsEditor({
   const [end, setEnd] = useState('')
   const [location, setLocation] = useState('')
   const [facilityUuid, setFacilityUuid] = useState('')
+  const [instructorUuid, setInstructorUuid] = useState('')
   const [busy, setBusy] = useState(false)
 
   const refresh = () =>
@@ -275,6 +276,7 @@ function SessionsEditor({
               end_date: end || null,
               location: location || null,
               facility_uuid: facilityUuid || null,
+              instructor_uuid: instructorUuid || null,
               allow_conflict,
             },
             access_token
@@ -287,6 +289,7 @@ function SessionsEditor({
       setEnd('')
       setLocation('')
       setFacilityUuid('')
+      setInstructorUuid('')
       refresh()
     } catch (err: any) {
       toast.error(err?.message || t('academic.session_failed'))
@@ -324,6 +327,11 @@ function SessionsEditor({
                 <span className="text-gray-400 text-xs">
                   {' '}
                   · {[s.start_date?.replace('T', ' '), s.facility?.name, s.location].filter(Boolean).join(' · ')}
+                </span>
+              )}
+              {s.instructor && (
+                <span className="ms-2 rounded-full bg-[hsl(var(--dash-accent-soft))] px-2 py-0.5 text-[11px] font-semibold text-[hsl(var(--dash-tile-mint-fg))]">
+                  {t('academic.taught_by', 'Taught by')} {instructorLabel(s.instructor)}
                 </span>
               )}
             </span>
@@ -367,6 +375,12 @@ function SessionsEditor({
           className={inputCls}
           value={end}
           onChange={(e) => setEnd(e.target.value)}
+        />
+        <InstructorSelect
+          className={inputCls}
+          value={instructorUuid}
+          onChange={setInstructorUuid}
+          emptyLabel={t('academic.session_course_instructor', 'Course instructor teaches it')}
         />
       </div>
       <button

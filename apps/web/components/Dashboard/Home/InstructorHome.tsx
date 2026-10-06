@@ -197,7 +197,11 @@ export default function InstructorHome() {
                       meta={dates || t('workspace.no_dates', 'No dates yet')}
                       badge={
                         <WorkBadge tone={p.role === 'coordinator' ? 'accent' : 'muted'}>
-                          {p.role === 'coordinator' ? t('workspace.role_coordinator', 'Coordinator') : t('workspace.role_staff', 'Team')}
+                          {p.role === 'coordinator'
+                            ? t('workspace.role_coordinator', 'Coordinator')
+                            : p.role === 'trainer'
+                              ? t('workspace.role_trainer', 'Trainer')
+                              : t('workspace.role_staff', 'Team')}
                         </WorkBadge>
                       }
                     />

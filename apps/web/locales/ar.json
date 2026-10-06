@@ -1886,7 +1886,8 @@
           "remove_success": "تم إزالة {{count}} مساهم بنجاح",
           "remove_failed": "فشل إزالة المساهمين",
           "cannot_modify_creator": "لا يمكن تعديل دور أو حالة المنشئ"
-        }
+        },
+        "teaching_note": "يمكن للمساهمين تعديل محتوى هذا المقرر. لاختيار من يدرّسه استخدم"
       },
       "certification": {
         "title": "شهادات الدورة",
@@ -6571,7 +6572,11 @@
     "tch": {
       "save_evaluation": "حفظ التقييم",
       "your_evaluation": "تقييمك"
-    }
+    },
+    "taught_by": "يقدّمها",
+    "session_course_instructor": "يقدّمها محاضر المقرر",
+    "lecturer_registry_required": "لا يوجد محاضرون نشطون بعد.",
+    "add_instructors": "إضافة محاضرين"
   },
   "instructors": {
     "title": "المحاضرون",
@@ -6750,7 +6755,18 @@
     "paid_instructors": "محاضرون لديهم ساعات",
     "search_categories": "ابحث في الفئات",
     "search_logs": "ابحث عن محاضر أو ملاحظة",
-    "section_rates": "الأسعار"
+    "section_rates": "الأسعار",
+    "tab_assignments": "البرامج والجدول",
+    "assigned_offerings": "مقررات الدراسات العليا",
+    "assigned_offerings_desc": "تُحدَّد من صفحة الطرح (هيئة التدريس).",
+    "no_offerings": "لا يدرّس أي طرح حاليًا.",
+    "assigned_programs_desc": "منسق، أو مدرب لأحد مقررات البرنامج.",
+    "upcoming_sessions": "الجلسات القادمة",
+    "upcoming_sessions_desc": "جلسات المقررات التي يدرّسها، بما فيها الجلسات كضيف في مقررات أخرى.",
+    "no_upcoming_sessions": "لا يوجد شيء مجدول.",
+    "guest_session": "جلسة ضيف",
+    "assigned_programs": "البرامج التدريبية",
+    "no_programs": "لا توجد برامج تدريبية مسندة."
   },
   "calendar": {
     "title": "التقويم",
@@ -7787,7 +7803,18 @@
     "drafts": "المسودات",
     "hidden_hint": "مخفية عن المتدربين",
     "any_price": "أي سعر",
-    "all_types": "كل الأنواع"
+    "all_types": "كل الأنواع",
+    "staff": "فريق العمل",
+    "staff_desc": "من يدير هذا البرنامج ومن يدرّس كل مقرر. يُختار المدربون من الإدارة ← المحاضرون.",
+    "coordinator": "المنسق",
+    "trainers": "المدربون حسب المقرر",
+    "courses_without_trainer": "{{count}} بلا مدرب",
+    "add_courses_first": "أضف مقررات لتحديد مدربيها.",
+    "no_sessions": "لا توجد جلسات مجدولة",
+    "n_sessions": "{{count}} جلسة",
+    "next_session": "التالية {{when}}",
+    "n_guest_sessions": "{{count}} بمدرب ضيف",
+    "no_trainer": "لا يوجد مدرب بعد"
   },
   "postgrad": {
     "subtitle": "برامج الدكتوراه والماجستير والدبلوم — الهيكل والقبول والرسوم والتنسيق.",
@@ -7876,6 +7903,7 @@
     "not_started": "لم يبدأوا بعد",
     "nothing_assigned_n": "{{count}} متدرب بلا تدريب مسند",
     "everyone_started": "بدأ كل من لديهم تدريب مسند.",
-    "n_assigned": "{{count}} مسند"
+    "n_assigned": "{{count}} مسند",
+    "role_trainer": "مدرب"
   }
 }

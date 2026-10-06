@@ -1,5 +1,6 @@
 'use client'
 import React, { useState } from 'react'
+import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -11,6 +12,8 @@ import {
   unenrollUserFromCohort,
 } from '@services/academic/academic'
 import { getTeachingStaff } from '@services/academic/core'
+import { getUriWithOrg } from '@services/config/config'
+import { useOrg } from '@components/Contexts/OrgContext'
 
 const inputCls =
   'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]'
@@ -109,15 +112,10 @@ export function CoordinatorPicker({
   )
 }
 
-// Staff roles offered when the instructor registry is still empty (never trainees,
-// never entity coordinators — they only manage their own entity).
-const STAFF_ROLES = ['role_global_admin', 'role_global_instructor']
-
 /**
  * Pick the lecturer (or teaching assistant) of an offering from the active
  * instructor registry, so teaching assignments line up with instructor
- * records and work logs. While the registry is empty it falls back to
- * organization staff (admins, coordinators, instructors), never trainees.
+ * records and work logs.
  */
 export function LecturerPicker({
   orgId,
@@ -133,6 +131,7 @@ export function LecturerPicker({
   onChange: (_uuid: string | null, _label?: string) => void
 }) {
   const { t } = useTranslation()
+  const org = useOrg() as any
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const { data: staff, isLoading } = useQuery({
@@ -151,23 +150,13 @@ export function LecturerPicker({
 
   const list = (staff || []) as any[]
   if (list.length === 0) {
+    // Teaching staff come only from the registry (the API rejects anyone else).
     return (
-      <div className="space-y-1">
-        <CoordinatorPicker
-          orgId={orgId}
-          access_token={access_token}
-          value={value}
-          selectedLabel={selectedLabel}
-          onChange={onChange}
-          onlyRoles={STAFF_ROLES}
-          placeholder={t('academic.search_staff', 'Search staff…')}
-        />
-        <p className="text-[11px] text-gray-500">
-          {t(
-            'academic.lecturer_registry_empty',
-            'No lecturers in the Instructors registry yet; showing organization staff. Add lecturers under Instructors to link teaching to their records.'
-          )}
-        </p>
+      <div className={`${inputCls} text-[13px] text-gray-500`}>
+        {t('academic.lecturer_registry_required', 'No active instructors yet.')}{' '}
+        <Link href={getUriWithOrg(org?.slug, '/dash/instructors')} className="font-semibold text-[hsl(var(--dash-ink))] underline">
+          {t('academic.add_instructors', 'Add instructors')}
+        </Link>
       </div>
     )
   }

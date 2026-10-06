@@ -26,6 +26,7 @@ import {
 } from '@components/Dashboard/Pages/Administration/AdminUI'
 import { InstructorForm, WEEKDAYS } from '@components/Dashboard/Pages/Instructors/InstructorForm'
 import { ApproveInstructorForm } from '@components/Dashboard/Pages/Instructors/ApproveInstructorForm'
+import { InstructorAssignmentsPanel } from '@components/Dashboard/Pages/Instructors/InstructorAssignmentsPanel'
 import {
   assignInstructorCourse,
   getInstructor,
@@ -39,7 +40,7 @@ import { getOrgLmsCourses } from '@services/academic/core'
 import { cn } from '@/lib/utils'
 
 const nameOf = (i: any) => `${i?.user?.first_name || ''} ${i?.user?.last_name || ''}`.trim() || i?.user?.username || '—'
-const TABS = ['overview', 'courses', 'availability', 'activity'] as const
+const TABS = ['overview', 'courses', 'assignments', 'availability', 'activity'] as const
 type Tab = (typeof TABS)[number]
 
 function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instructorUuid: string }) {
@@ -153,6 +154,7 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
   const tabLabels: Record<Tab, string> = {
     overview: t('instructors.tab_overview', 'Overview'),
     courses: t('instructors.tab_courses', 'Courses ({{count}})', { count: (courses as any[]).length }),
+    assignments: t('instructors.tab_assignments', 'Programs & schedule'),
     availability: t('instructors.availability', 'Availability'),
     activity: t('instructors.tab_activity', 'Activity'),
   }
@@ -357,6 +359,10 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
               : []
           }
         />
+      ) : null}
+
+      {tab === 'assignments' ? (
+        <InstructorAssignmentsPanel orgslug={orgslug} instructorUuid={instructorUuid} access_token={access_token} />
       ) : null}
 
       {tab === 'availability' ? (

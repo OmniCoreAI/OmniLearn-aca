@@ -221,3 +221,31 @@ Then I signed in as each account and walked its portal. The super-admin console 
   - The unlabeled Signpost icon was replaced.
 
 **Not done yet in Phase 1:** a learner "Programs" page, which needs the scoped visibility from Phase 3.
+
+## 7. Delivered (2026-10-06): Phase 2 — one staffing model
+
+- **One rule for teaching staff (`resolve_teaching_staff`).** Course instructors, offering lecturers and TAs, and session instructors must be **active instructors in the registry**. Anyone else gets a 400 that points to Administration → Instructors.
+  - Re-saving an unchanged assignment still works after that instructor goes inactive.
+  - The lecturer picker no longer falls back to "any staff" when the registry is empty; it links to Instructors instead.
+- **Session instructor.** A course session can have its own instructor (guest or substitute). Otherwise the course instructor teaches it. Model, API, Delivery tab picker, and a "Taught by" label. Migration `ad8c9d0e1f2a` adds the column where it is missing.
+- **Calendar.**
+  - Guest instructors see only their own session; the course's deadlines stay hidden from them.
+  - A session shows its own instructor.
+  - Teaching assistants now count as teaching the offering.
+- **Training program → Staff section.**
+  - The coordinator picker has moved onto the program page.
+  - Each course's trainer is the course instructor, picked from the registry.
+  - Each course shows its session count, next date and guest sessions.
+  - A badge counts courses without a trainer.
+  - Admins can edit; everyone else sees it read-only.
+- **Assignments API.**
+  - `GET /instructors/org/{org}/me/assignments` and `GET /instructors/{uuid}/assignments` return:
+    - courses
+    - offerings (lecturer or assistant)
+    - training programs (coordinator, **trainer** via a linked course, or staff)
+    - upcoming sessions (course or guest)
+  - The instructor profile has a new **Programs & schedule** tab.
+- **Access follows assignment.** Anyone who coordinates a training program, or teaches an offering, gets Training Programs or My Teaching in the sidebar, and the route guard allows it, whatever their role's defaults.
+- **Contributors tab.** It now explains that contributors edit content, and links to Delivery & Resources for choosing who teaches.
+
+**Spun off:** deleting a training program leaves its authorship rows behind (7 orphans in dev).

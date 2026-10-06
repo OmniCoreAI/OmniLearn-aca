@@ -214,3 +214,12 @@ export async function getMyAssignments(org_id: number, access_token: string) {
   )
   return errorHandling(result)
 }
+
+/** Offerings, training programs and upcoming sessions of one instructor (admins). */
+export async function getInstructorAssignments(instructor_uuid: string, access_token: string) {
+  const result = await fetch(
+    `${getAPIUrl()}instructors/${instructor_uuid}/assignments`,
+    RequestBodyWithAuthHeader('GET', null, null, access_token)
+  )
+  return errorHandling(result)
+}
