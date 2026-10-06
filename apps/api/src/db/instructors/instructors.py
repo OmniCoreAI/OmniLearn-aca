@@ -248,3 +248,21 @@ class InstructorCourseRead(SQLModel):
     published: bool = False
     # profile (course instructor) | offering (offering instructor/TA) | author
     source: str
+
+
+class MyTrainingProgramRead(SQLModel):
+    trainingprogram_uuid: str
+    name: str
+    training_type: Optional[str] = None
+    published: bool = False
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    # coordinator | staff (creator / maintainer / contributor)
+    role: str
+
+
+class MyAssignmentsRead(SQLModel):
+    """Everything the signed-in staff member is assigned to in one org."""
+
+    courses: List[InstructorCourseRead] = []
+    training_programs: List[MyTrainingProgramRead] = []

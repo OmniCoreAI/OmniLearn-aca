@@ -2,7 +2,7 @@ from typing import List, Optional
 from uuid import uuid4
 from datetime import datetime
 from fastapi import HTTPException, Request
-from sqlmodel import select
+from sqlmodel import or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.users import PublicUser, AnonymousUser, APITokenUser
@@ -15,6 +15,10 @@ from src.db.academic.training_programs import (
     TrainingProgramUpdate,
 )
 from src.db.academic.links import TrainingProgramCourse, TrainingProgramCourseRead
+from src.db.resource_authors import ResourceAuthor, ResourceAuthorshipStatusEnum
+from src.db.user_organizations import UserOrganization
+from src.security.rbac.constants import ACADEMY_ADMIN_ROLE_IDS
+from src.security.superadmin import is_user_superadmin
 from src.security.auth import resolve_acting_user_id
 from src.security.org_auth import require_org_membership
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
@@ -130,6 +134,23 @@ async def get_training_program(
     return await _to_read(db_session, tp)
 
 
+async def _sees_all_training_programs(
+    db_session: AsyncSession, user_id: int, org_id: int
+) -> bool:
+    """Academy admins and superadmins see every program, drafts included."""
+    if await is_user_superadmin(user_id, db_session):
+        return True
+    role_id = (
+        await db_session.execute(
+            select(UserOrganization.role_id).where(
+                UserOrganization.user_id == user_id,
+                UserOrganization.org_id == org_id,
+            )
+        )
+    ).scalars().first()
+    return role_id in ACADEMY_ADMIN_ROLE_IDS
+
+
 async def get_training_programs_by_org(
     request: Request,
     org_id: int,
@@ -142,10 +163,24 @@ async def get_training_programs_by_org(
         resolve_acting_user_id(current_user), org_id, db_session
     )
 
+    statement = select(TrainingProgram).where(TrainingProgram.org_id == org_id)
+    user_id = resolve_acting_user_id(current_user)
+    if not await _sees_all_training_programs(db_session, user_id, org_id):
+        # Drafts stay with academy admins and the program's own staff
+        # (coordinator, creator, maintainers).
+        staff_of = select(ResourceAuthor.resource_uuid).where(
+            ResourceAuthor.user_id == user_id,
+            ResourceAuthor.authorship_status == ResourceAuthorshipStatusEnum.ACTIVE,
+        )
+        statement = statement.where(
+            or_(
+                TrainingProgram.published == True,  # noqa: E712
+                TrainingProgram.coordinator_id == user_id,
+                TrainingProgram.trainingprogram_uuid.in_(staff_of),  # type: ignore[attr-defined]
+            )
+        )
     statement = (
-        select(TrainingProgram)
-        .where(TrainingProgram.org_id == org_id)
-        .order_by(TrainingProgram.creation_date.desc())  # type: ignore
+        statement.order_by(TrainingProgram.creation_date.desc())  # type: ignore
         .offset((page - 1) * limit)
         .limit(limit)
     )

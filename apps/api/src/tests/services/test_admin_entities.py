@@ -33,6 +33,7 @@ from src.security.rbac.rbac import check_usergroup_access
 from src.services.academic import training_programs as tp_svc
 from src.services.administration import audience as aud_svc
 from src.services.administration import entities as ent_svc
+from src.services.administration import entity_coordination as coordination_svc
 from src.services.administration.authz import authorize_admin
 from src.services.administration.overview import get_overview
 from src.services.finance.authz import authorize_finance_management
@@ -393,6 +394,29 @@ class TestAudience:
         assert links == []
 
     @pytest.mark.asyncio
+    async def test_entity_assignment_skips_coordinators(self, db, org, admin_user, regular_user, coordinator_role):
+        course = await _restricted_course(db, org)
+        entity, coord = await _coordinated_entity(db, admin_user, org, coordinator_role)
+        await _add_member(db, admin_user, entity, regular_user)
+
+        with _provisioning_patches():
+            assignment = await aud_svc.create_assignment(
+                db, admin_user, _assign(course.course_uuid, "entity", entity.entity_uuid, auto_enroll=True)
+            )
+        # Coordinators manage the entity's learning; only members are enrolled.
+        assert assignment.member_count == 1
+        assert await check_usergroup_access(course.course_uuid, coord.id, db) is False
+        runs = (await db.execute(select(TrailRun).where(TrailRun.course_id == course.id))).scalars().all()
+        assert [r.user_id for r in runs] == [regular_user.id]
+        progress = await coordination_svc.get_entity_progress(db, admin_user, entity.entity_uuid)
+        assert [m.user.user_uuid for m in progress.members] == [regular_user.user_uuid]
+
+        # Back to a regular member: entity-wide learning applies again.
+        with _provisioning_patches():
+            await ent_svc.remove_coordinator(db, admin_user, entity.entity_uuid, coord.user_uuid)
+        assert await check_usergroup_access(course.course_uuid, coord.id, db) is True
+
+    @pytest.mark.asyncio
     async def test_inactive_group_stops_granting_access(self, db, org, admin_user, regular_user):
         course = await _restricted_course(db, org)
         entity = await _entity(db, admin_user, org)
@@ -539,3 +563,26 @@ class TestCoordinatorAssignments:
         assert await aud_svc.list_entity_learning(db, admin_user, entity.entity_uuid) == []
         links = (await db.execute(select(UserGroupResource).where(UserGroupResource.resource_uuid == course.course_uuid))).scalars().all()
         assert links == []
+
+
+class TestTrainingProgramVisibility:
+    @pytest.mark.asyncio
+    async def test_drafts_only_for_admins_and_program_staff(self, db, org, admin_user, regular_user):
+        coordinator = await _make_user(db, org, 30, "tpcoord", role_id=3)
+        for uuid, name, published, coordinator_id in (
+            ("trainingprogram_live", "Live", True, None),
+            ("trainingprogram_draft", "Draft", False, None),
+            ("trainingprogram_mine", "Mine", False, coordinator.id),
+        ):
+            db.add(TrainingProgram(
+                name=name, org_id=org.id, trainingprogram_uuid=uuid, published=published,
+                public=False, coordinator_id=coordinator_id, creation_date="", update_date="",
+            ))
+        await db.commit()
+
+        async def names(user):
+            return {tp.name for tp in await tp_svc.get_training_programs_by_org(MagicMock(), org.id, user, db)}
+
+        assert await names(admin_user) == {"Live", "Draft", "Mine"}
+        assert await names(coordinator) == {"Live", "Mine"}
+        assert await names(regular_user) == {"Live"}

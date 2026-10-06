@@ -425,7 +425,36 @@ class TestAddBulkCourseContributors:
         ).scalars().first()
         assert created is not None
         assert created.authorship == ResourceAuthorshipEnum.CONTRIBUTOR
-        assert created.authorship_status == ResourceAuthorshipStatusEnum.PENDING
+        # Added by an owner/admin, so no approval step.
+        assert created.authorship_status == ResourceAuthorshipStatusEnum.ACTIVE
+
+    @pytest.mark.asyncio
+    async def test_add_bulk_course_contributors_approves_pending_application(
+        self, db, course, admin_user, mock_request
+    ):
+        dana = await _make_user(db, user_id=44, username="dana")
+        application = await _make_contributor(
+            db, course, dana.id, status=ResourceAuthorshipStatusEnum.PENDING
+        )
+
+        with patch(
+            "src.services.courses.contributors.authorization_verify_if_user_is_anon",
+            new_callable=AsyncMock,
+        ), patch(
+            "src.services.courses.contributors.check_resource_access",
+            new_callable=AsyncMock,
+        ), patch(
+            "src.services.courses.contributors.dispatch_webhooks",
+            new_callable=AsyncMock,
+        ):
+            result = await add_bulk_course_contributors(
+                mock_request, course.course_uuid, ["dana"], admin_user, db
+            )
+
+        assert result["successful"] == [{"username": "dana", "user_id": dana.id}]
+        assert result["failed"] == []
+        await db.refresh(application)
+        assert application.authorship_status == ResourceAuthorshipStatusEnum.ACTIVE
 
     @pytest.mark.asyncio
     async def test_add_bulk_course_contributors_exception_branch(

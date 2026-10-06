@@ -200,9 +200,11 @@ async def install_default_elements(db_session: AsyncSession):
         id=3,
         role_type=RoleTypeEnum.TYPE_GLOBAL,
         role_uuid="role_global_instructor",
+        # Creating courses and (training) programs is academy-admin only;
+        # instructors edit what they are assigned to (the *_own rights).
         rights=Rights(
             courses=PermissionsWithOwn(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_read_own=True,
                 action_update=False,
@@ -310,7 +312,7 @@ async def install_default_elements(db_session: AsyncSession):
                 action_delete_own=True,
             ),
             programs=PermissionsWithOwn(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_read_own=True,
                 action_update=False,
@@ -319,7 +321,7 @@ async def install_default_elements(db_session: AsyncSession):
                 action_delete_own=True,
             ),
             training_programs=PermissionsWithOwn(
-                action_create=True,
+                action_create=False,
                 action_read=True,
                 action_read_own=True,
                 action_update=False,

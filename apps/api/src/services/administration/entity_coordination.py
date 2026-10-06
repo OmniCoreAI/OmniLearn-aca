@@ -79,7 +79,12 @@ async def get_entity_progress(
     stmt = (
         select(EntityMember, User)
         .join(User, User.id == EntityMember.user_id)  # type: ignore[arg-type]
-        .where(EntityMember.entity_id == entity.id, EntityMember.status == ConfigStatus.ACTIVE.value)
+        .where(
+            EntityMember.entity_id == entity.id,
+            EntityMember.status == ConfigStatus.ACTIVE.value,
+            # Coordinators run the entity's learning, they aren't tracked as learners.
+            EntityMember.is_coordinator == False,  # noqa: E712
+        )
     )
     if group_uuid:
         group = await _entity_group_or_404(db_session, entity, group_uuid)

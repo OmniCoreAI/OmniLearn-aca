@@ -563,6 +563,34 @@ class TestInstructorCourses:
         assert profile.instructor_id is None
 
     @pytest.mark.asyncio
+    async def test_my_assignments(self, db, org, admin_user, regular_user, course):
+        from src.db.academic.training_programs import TrainingProgram
+        from src.db.resource_authors import ResourceAuthorshipEnum, ResourceAuthorshipStatusEnum
+
+        inst = await _make_instructor(db, admin_user, org, regular_user)
+        await inst_svc.assign_instructor_course(db, admin_user, inst.instructor_uuid, course.course_uuid)
+        db.add(TrainingProgram(
+            name="Coordinated", org_id=org.id, trainingprogram_uuid="trainingprogram_coord",
+            coordinator_id=regular_user.id, creation_date="", update_date="",
+        ))
+        db.add(TrainingProgram(
+            name="Other", org_id=org.id, trainingprogram_uuid="trainingprogram_other",
+            creation_date="", update_date="",
+        ))
+        # A pending application is not an assignment.
+        db.add(ResourceAuthor(
+            resource_uuid="trainingprogram_other", user_id=regular_user.id,
+            authorship=ResourceAuthorshipEnum.CONTRIBUTOR,
+            authorship_status=ResourceAuthorshipStatusEnum.PENDING,
+            creation_date="", update_date="",
+        ))
+        await db.commit()
+
+        mine = await inst_svc.list_my_assignments(db, regular_user, org.id)
+        assert [(c.course_uuid, c.source) for c in mine.courses] == [(course.course_uuid, "profile")]
+        assert [(p.name, p.role) for p in mine.training_programs] == [("Coordinated", "coordinator")]
+
+    @pytest.mark.asyncio
     async def test_inactive_instructor_cannot_be_assigned(self, db, org, admin_user, regular_user, course):
         inst = await _make_instructor(db, admin_user, org, regular_user)
         await inst_svc.update_instructor(

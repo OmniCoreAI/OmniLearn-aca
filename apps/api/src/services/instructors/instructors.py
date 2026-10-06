@@ -16,6 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.academic.course_profiles import CourseAcademicProfile
 from src.db.academic.offerings import CourseOffering
+from src.db.academic.training_programs import TrainingProgram
 from src.db.courses.courses import Course
 from src.db.instructors.instructors import (
     Instructor,
@@ -27,9 +28,11 @@ from src.db.instructors.instructors import (
     InstructorRead,
     InstructorStatus,
     InstructorUpdate,
+    MyAssignmentsRead,
+    MyTrainingProgramRead,
 )
 from src.db.organizations import Organization
-from src.db.resource_authors import ResourceAuthor
+from src.db.resource_authors import ResourceAuthor, ResourceAuthorshipStatusEnum
 from src.db.user_organizations import UserOrganization
 from src.db.users import AnonymousUser, APITokenUser, PublicUser, User
 from src.security.rbac.constants import INSTRUCTOR_ROLE_ID, TRAINEE_ROLE_ID
@@ -415,15 +418,10 @@ async def delete_instructor(
 # ---------------------------------------------------------------------------
 
 
-async def list_instructor_courses(
-    db_session: AsyncSession,
-    current_user: AnyUser,
-    instructor_uuid: str,
+async def _courses_for_user(
+    db_session: AsyncSession, user_id: int, org_id: int
 ) -> List[InstructorCourseRead]:
-    """Courses the instructor teaches (profile/offering) or co-authors."""
-    instructor = await _get_instructor_or_404(db_session, instructor_uuid)
-    await authorize_instructor_management(db_session, current_user, instructor.org_id, "read")
-    user_id = instructor.user_id
+    """Courses the user teaches (profile/offering) or co-authors in ``org_id``."""
     seen: dict[str, InstructorCourseRead] = {}
 
     def add(course: Course, source: str) -> None:
@@ -439,7 +437,7 @@ async def list_instructor_courses(
         await db_session.execute(
             select(Course)
             .join(CourseAcademicProfile, CourseAcademicProfile.course_id == Course.id)  # type: ignore[arg-type]
-            .where(CourseAcademicProfile.instructor_id == user_id, Course.org_id == instructor.org_id)
+            .where(CourseAcademicProfile.instructor_id == user_id, Course.org_id == org_id)
         )
     ).scalars().all():
         add(course, "profile")
@@ -451,7 +449,7 @@ async def list_instructor_courses(
             .where(
                 (CourseOffering.instructor_id == user_id)
                 | (CourseOffering.teaching_assistant_id == user_id),
-                Course.org_id == instructor.org_id,
+                Course.org_id == org_id,
             )
         )
     ).scalars().all():
@@ -461,12 +459,65 @@ async def list_instructor_courses(
         await db_session.execute(
             select(Course)
             .join(ResourceAuthor, ResourceAuthor.resource_uuid == Course.course_uuid)  # type: ignore[arg-type]
-            .where(ResourceAuthor.user_id == user_id, Course.org_id == instructor.org_id)
+            .where(
+                ResourceAuthor.user_id == user_id,
+                # A pending contributor application isn't an assignment yet.
+                ResourceAuthor.authorship_status == ResourceAuthorshipStatusEnum.ACTIVE,
+                Course.org_id == org_id,
+            )
         )
     ).scalars().all():
         add(course, "author")
 
     return sorted(seen.values(), key=lambda c: c.name.lower())
+
+
+async def list_instructor_courses(
+    db_session: AsyncSession,
+    current_user: AnyUser,
+    instructor_uuid: str,
+) -> List[InstructorCourseRead]:
+    """Courses the instructor teaches (profile/offering) or co-authors."""
+    instructor = await _get_instructor_or_404(db_session, instructor_uuid)
+    await authorize_instructor_management(db_session, current_user, instructor.org_id, "read")
+    return await _courses_for_user(db_session, instructor.user_id, instructor.org_id)
+
+
+async def list_my_assignments(
+    db_session: AsyncSession, current_user: AnyUser, org_id: int
+) -> MyAssignmentsRead:
+    """The caller's own courses and training programs (their workspace home)."""
+    user_id = await require_org_member(db_session, current_user, org_id)
+    staff_of = select(ResourceAuthor.resource_uuid).where(
+        ResourceAuthor.user_id == user_id,
+        ResourceAuthor.authorship_status == ResourceAuthorshipStatusEnum.ACTIVE,
+    )
+    programs = (
+        await db_session.execute(
+            select(TrainingProgram)
+            .where(
+                TrainingProgram.org_id == org_id,
+                (TrainingProgram.coordinator_id == user_id)
+                | TrainingProgram.trainingprogram_uuid.in_(staff_of),  # type: ignore[attr-defined]
+            )
+            .order_by(TrainingProgram.start_date.desc().nulls_last(), TrainingProgram.name)  # type: ignore[union-attr]
+        )
+    ).scalars().all()
+    return MyAssignmentsRead(
+        courses=await _courses_for_user(db_session, user_id, org_id),
+        training_programs=[
+            MyTrainingProgramRead(
+                trainingprogram_uuid=tp.trainingprogram_uuid,
+                name=tp.name,
+                training_type=tp.training_type.value if tp.training_type else None,
+                published=bool(tp.published),
+                start_date=tp.start_date,
+                end_date=tp.end_date,
+                role="coordinator" if tp.coordinator_id == user_id else "staff",
+            )
+            for tp in programs
+        ],
+    )
 
 
 async def _course_in_org_or_404(db_session: AsyncSession, course_uuid: str, org_id: int) -> Course:

@@ -761,7 +761,12 @@ async def upsert_member(
     member.update_date = now()
     db_session.add(member)
     members_group_id = await _ensure_members_group(db_session, entity)
-    await _add_to_group(db_session, members_group_id, entity.org_id, user.id)
+    if member.is_coordinator:
+        # Coordinators manage the entity's learning; they aren't learners in
+        # it, so entity-wide assignments must not enroll them.
+        await _remove_from_groups(db_session, [members_group_id], user.id)
+    else:
+        await _add_to_group(db_session, members_group_id, entity.org_id, user.id)
     for group_id in group_ids:
         await _add_to_group(db_session, group_id, entity.org_id, user.id)
     await db_session.flush()
@@ -945,7 +950,10 @@ async def update_member(
             raise HTTPException(status_code=403, detail="Only the academy can deactivate a coordinator")
         member.status = data["status"]
         if member.status == ConfigStatus.ACTIVE.value:
-            await _add_to_group(db_session, await _ensure_members_group(db_session, entity), entity.org_id, member.user_id)
+            if not member.is_coordinator:
+                await _add_to_group(
+                    db_session, await _ensure_members_group(db_session, entity), entity.org_id, member.user_id
+                )
         else:
             # Inactive members lose every entity-granted access.
             await _remove_from_groups(db_session, await _group_ids_of_entity(db_session, entity), member.user_id)
@@ -1071,10 +1079,16 @@ async def remove_coordinator(
     member.is_coordinator = False
     member.update_date = now()
     db_session.add(member)
+    if member.status == ConfigStatus.ACTIVE.value:
+        # Back to a regular member: entity-wide learning applies again.
+        await _add_to_group(db_session, await _ensure_members_group(db_session, entity), entity.org_id, member.user_id)
     await db_session.flush()
     await _maybe_demote_coordinator(db_session, entity.org_id, member.user_id)
     await db_session.commit()
     await db_session.refresh(member)
+    from src.services.administration.audience import resync_affected
+
+    await resync_affected(db_session, entity.org_id, entity_ids=[entity.id], user_ids=[member.user_id])
     return await _member_read(db_session, member)
 
 
