@@ -2,7 +2,7 @@ from typing import List, Optional
 from uuid import uuid4
 from datetime import datetime
 from fastapi import HTTPException, Request
-from sqlmodel import select
+from sqlmodel import or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.users import PublicUser, AnonymousUser, APITokenUser
@@ -14,7 +14,9 @@ from src.db.academic.programs import (
     ProgramUpdate,
 )
 from src.security.auth import resolve_acting_user_id
-from src.security.org_auth import require_org_membership
+from src.security.org_auth import is_org_admin, require_org_membership
+from src.db.academic.cohorts import Cohort
+from src.db.resource_authors import ResourceAuthor, ResourceAuthorshipStatusEnum
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import (
     build_creator_author,
@@ -157,10 +159,25 @@ async def get_programs_by_org(
         resolve_acting_user_id(current_user), org_id, db_session
     )
 
+    statement = select(Program).where(Program.org_id == org_id)
+    user_id = resolve_acting_user_id(current_user)
+    if not await is_org_admin(user_id, org_id, db_session):
+        # Management list: program / cohort coordinators and the program's
+        # authors only. Applicants use the admissions catalog instead.
+        staff_of = select(ResourceAuthor.resource_uuid).where(
+            ResourceAuthor.user_id == user_id,
+            ResourceAuthor.authorship_status == ResourceAuthorshipStatusEnum.ACTIVE,
+        )
+        coordinates_cohort = select(Cohort.program_id).where(Cohort.coordinator_id == user_id)
+        statement = statement.where(
+            or_(
+                Program.coordinator_id == user_id,
+                Program.program_uuid.in_(staff_of),  # type: ignore[attr-defined]
+                Program.id.in_(coordinates_cohort),  # type: ignore[union-attr]
+            )
+        )
     statement = (
-        select(Program)
-        .where(Program.org_id == org_id)
-        .order_by(Program.creation_date.desc())  # type: ignore
+        statement.order_by(Program.creation_date.desc())  # type: ignore
         .offset((page - 1) * limit)
         .limit(limit)
     )

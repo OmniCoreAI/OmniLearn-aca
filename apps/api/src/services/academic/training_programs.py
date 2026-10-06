@@ -13,14 +13,17 @@ from src.db.academic.training_programs import (
     TrainingProgramCreate,
     TrainingProgramRead,
     TrainingProgramUpdate,
+    CatalogCourse,
+    TrainingProgramCatalogItem,
 )
+from src.db.academic.course_profiles import CourseAcademicProfile
 from src.db.academic.links import TrainingProgramCourse, TrainingProgramCourseRead
+from src.db.usergroup_resources import UserGroupResource
+from src.db.usergroup_user import UserGroupUser
+from src.db.usergroups import UserGroup
 from src.db.resource_authors import ResourceAuthor, ResourceAuthorshipStatusEnum
-from src.db.user_organizations import UserOrganization
-from src.security.rbac.constants import ACADEMY_ADMIN_ROLE_IDS
-from src.security.superadmin import is_user_superadmin
 from src.security.auth import resolve_acting_user_id
-from src.security.org_auth import require_org_membership
+from src.security.org_auth import is_org_admin, require_org_membership
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import (
     build_creator_author,
@@ -134,23 +137,6 @@ async def get_training_program(
     return await _to_read(db_session, tp)
 
 
-async def _sees_all_training_programs(
-    db_session: AsyncSession, user_id: int, org_id: int
-) -> bool:
-    """Academy admins and superadmins see every program, drafts included."""
-    if await is_user_superadmin(user_id, db_session):
-        return True
-    role_id = (
-        await db_session.execute(
-            select(UserOrganization.role_id).where(
-                UserOrganization.user_id == user_id,
-                UserOrganization.org_id == org_id,
-            )
-        )
-    ).scalars().first()
-    return role_id in ACADEMY_ADMIN_ROLE_IDS
-
-
 async def get_training_programs_by_org(
     request: Request,
     org_id: int,
@@ -165,18 +151,24 @@ async def get_training_programs_by_org(
 
     statement = select(TrainingProgram).where(TrainingProgram.org_id == org_id)
     user_id = resolve_acting_user_id(current_user)
-    if not await _sees_all_training_programs(db_session, user_id, org_id):
-        # Drafts stay with academy admins and the program's own staff
-        # (coordinator, creator, maintainers).
+    if not await is_org_admin(user_id, org_id, db_session):
+        # This is the management list: besides academy admins, people only see
+        # the programs they run or teach (coordinator, creator / maintainers,
+        # trainers of a linked course). Learners use the catalog instead.
         staff_of = select(ResourceAuthor.resource_uuid).where(
             ResourceAuthor.user_id == user_id,
             ResourceAuthor.authorship_status == ResourceAuthorshipStatusEnum.ACTIVE,
         )
+        trains = (
+            select(TrainingProgramCourse.training_program_id)
+            .join(CourseAcademicProfile, CourseAcademicProfile.course_id == TrainingProgramCourse.course_id)  # type: ignore[arg-type]
+            .where(CourseAcademicProfile.instructor_id == user_id)
+        )
         statement = statement.where(
             or_(
-                TrainingProgram.published == True,  # noqa: E712
                 TrainingProgram.coordinator_id == user_id,
                 TrainingProgram.trainingprogram_uuid.in_(staff_of),  # type: ignore[attr-defined]
+                TrainingProgram.id.in_(trains),  # type: ignore[union-attr]
             )
         )
     statement = (
@@ -187,6 +179,98 @@ async def get_training_programs_by_org(
     tps = (await db_session.execute(statement)).scalars().all()
 
     return [await _to_read(db_session, tp) for tp in tps]
+
+
+async def get_training_program_catalog(
+    org_id: int,
+    current_user: PublicUser | AnonymousUser,
+    db_session: AsyncSession,
+) -> List[TrainingProgramCatalogItem]:
+    """Published programs a member may join: public ones, ones not restricted to
+    any audience, and ones assigned to them (via a group, entity, cohort…)."""
+    user_id = resolve_acting_user_id(current_user)
+    await require_org_membership(user_id, org_id, db_session)
+
+    programs = (
+        await db_session.execute(
+            select(TrainingProgram)
+            .where(TrainingProgram.org_id == org_id, TrainingProgram.published == True)  # noqa: E712
+            .order_by(TrainingProgram.start_date.desc().nulls_last(), TrainingProgram.name)  # type: ignore[union-attr]
+        )
+    ).scalars().all()
+    if not programs:
+        return []
+    uuids = [tp.trainingprogram_uuid for tp in programs]
+    restricted = set(
+        (
+            await db_session.execute(
+                select(UserGroupResource.resource_uuid).where(UserGroupResource.resource_uuid.in_(uuids))  # type: ignore[attr-defined]
+            )
+        ).scalars().all()
+    )
+    assigned = set(
+        (
+            await db_session.execute(
+                select(UserGroupResource.resource_uuid)
+                .join(UserGroup, UserGroup.id == UserGroupResource.usergroup_id)  # type: ignore[arg-type]
+                .join(UserGroupUser, UserGroupUser.usergroup_id == UserGroup.id)  # type: ignore[arg-type]
+                .where(
+                    UserGroupResource.resource_uuid.in_(uuids),  # type: ignore[attr-defined]
+                    UserGroupUser.user_id == user_id,
+                    UserGroup.status != "inactive",
+                )
+            )
+        ).scalars().all()
+    )
+    visible = [
+        tp for tp in programs
+        if tp.public or tp.trainingprogram_uuid not in restricted or tp.trainingprogram_uuid in assigned
+    ]
+    if not visible:
+        return []
+
+    course_rows = (
+        await db_session.execute(
+            select(TrainingProgramCourse.training_program_id, Course)
+            .join(Course, Course.id == TrainingProgramCourse.course_id)  # type: ignore[arg-type]
+            .where(
+                TrainingProgramCourse.training_program_id.in_([tp.id for tp in visible]),  # type: ignore[attr-defined]
+                Course.published == True,  # noqa: E712
+            )
+            .order_by(TrainingProgramCourse.order)
+        )
+    ).all()
+    courses_by_program: dict[int, List[CatalogCourse]] = {}
+    for program_id, course in course_rows:
+        courses_by_program.setdefault(program_id, []).append(
+            CatalogCourse(
+                course_uuid=course.course_uuid,
+                name=course.name,
+                description=course.description,
+                thumbnail_image=course.thumbnail_image,
+            )
+        )
+
+    return [
+        TrainingProgramCatalogItem(
+            trainingprogram_uuid=tp.trainingprogram_uuid,
+            name=tp.name,
+            description=tp.description,
+            about=tp.about,
+            training_type=tp.training_type.value if tp.training_type else None,
+            start_date=tp.start_date,
+            end_date=tp.end_date,
+            location=tp.location,
+            capacity=tp.capacity,
+            is_paid=bool(tp.is_paid),
+            price=tp.price,
+            currency=tp.currency,
+            thumbnail_image=tp.thumbnail_image,
+            assigned=tp.trainingprogram_uuid in assigned,
+            courses=courses_by_program.get(tp.id, []),
+        )
+        for tp in visible
+    ]
 
 
 async def update_training_program(

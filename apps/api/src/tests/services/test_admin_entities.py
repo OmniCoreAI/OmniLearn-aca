@@ -7,6 +7,7 @@ import pytest
 from fastapi import HTTPException
 from sqlmodel import select
 
+from src.db.academic.course_profiles import CourseAcademicProfile
 from src.db.academic.links import TrainingProgramCourse
 from src.db.academic.training_programs import TrainingProgram
 from src.db.administration.audience import AudienceAssignmentCreate
@@ -567,8 +568,9 @@ class TestCoordinatorAssignments:
 
 class TestTrainingProgramVisibility:
     @pytest.mark.asyncio
-    async def test_drafts_only_for_admins_and_program_staff(self, db, org, admin_user, regular_user):
+    async def test_management_list_is_admins_and_program_staff(self, db, org, admin_user, regular_user):
         coordinator = await _make_user(db, org, 30, "tpcoord", role_id=3)
+        trainer = await _make_user(db, org, 31, "tptrainer", role_id=3)
         for uuid, name, published, coordinator_id in (
             ("trainingprogram_live", "Live", True, None),
             ("trainingprogram_draft", "Draft", False, None),
@@ -579,10 +581,71 @@ class TestTrainingProgramVisibility:
                 public=False, coordinator_id=coordinator_id, creation_date="", update_date="",
             ))
         await db.commit()
+        # The trainer teaches a course linked to "Draft".
+        course = await _restricted_course(db, org)
+        draft = (await db.execute(select(TrainingProgram).where(TrainingProgram.name == "Draft"))).scalar_one()
+        db.add(TrainingProgramCourse(training_program_id=draft.id, course_id=course.id, org_id=org.id))
+        db.add(CourseAcademicProfile(course_id=course.id, org_id=org.id, instructor_id=trainer.id, profile_uuid="profile_t"))
+        await db.commit()
 
         async def names(user):
             return {tp.name for tp in await tp_svc.get_training_programs_by_org(MagicMock(), org.id, user, db)}
 
         assert await names(admin_user) == {"Live", "Draft", "Mine"}
-        assert await names(coordinator) == {"Live", "Mine"}
-        assert await names(regular_user) == {"Live"}
+        assert await names(coordinator) == {"Mine"}
+        assert await names(trainer) == {"Draft"}
+        # Learners use the catalog, not the management list.
+        assert await names(regular_user) == set()
+
+    @pytest.mark.asyncio
+    async def test_catalog_shows_open_and_assigned_published_programs(self, db, org, admin_user, regular_user):
+        outsider = await _make_user(db, org, 32, "outsider2")
+        for uuid, name, published, public in (
+            ("trainingprogram_open", "Open", True, False),
+            ("trainingprogram_assigned", "Assigned", True, False),
+            ("trainingprogram_public", "Public", True, True),
+            ("trainingprogram_unpublished", "Unpublished", False, False),
+        ):
+            db.add(TrainingProgram(
+                name=name, org_id=org.id, trainingprogram_uuid=uuid, published=published,
+                public=public, creation_date="", update_date="",
+            ))
+        await db.commit()
+        entity = await _entity(db, admin_user, org)
+        await _add_member(db, admin_user, entity, regular_user)
+        await aud_svc.create_assignment(
+            db, admin_user,
+            _assign("trainingprogram_assigned", "entity", entity.entity_uuid, resource_type="training_program"),
+        )
+
+        mine = {p.name: p.assigned for p in await tp_svc.get_training_program_catalog(org.id, regular_user, db)}
+        assert mine == {"Open": False, "Assigned": True, "Public": False}
+        theirs = {p.name for p in await tp_svc.get_training_program_catalog(org.id, outsider, db)}
+        assert theirs == {"Open", "Public"}
+
+
+class TestProgramListVisibility:
+    @pytest.mark.asyncio
+    async def test_program_list_is_admins_and_coordinators(self, db, org, admin_user, regular_user):
+        from src.db.academic.cohorts import Cohort
+        from src.db.academic.programs import Program
+        from src.services.academic import programs as programs_svc
+
+        program_coord = await _make_user(db, org, 40, "pcoord", role_id=3)
+        cohort_coord = await _make_user(db, org, 41, "ccoord", role_id=3)
+        db.add(Program(name="MSc AI", org_id=org.id, program_uuid="program_ai", coordinator_id=program_coord.id,
+                       creation_date="", update_date=""))
+        db.add(Program(name="MSc Data", org_id=org.id, program_uuid="program_data", creation_date="", update_date=""))
+        await db.commit()
+        data = (await db.execute(select(Program).where(Program.program_uuid == "program_data"))).scalar_one()
+        db.add(Cohort(name="2026", org_id=org.id, program_id=data.id, coordinator_id=cohort_coord.id,
+                      cohort_uuid="cohort_2026", creation_date="", update_date=""))
+        await db.commit()
+
+        async def names(user):
+            return {p.name for p in await programs_svc.get_programs_by_org(MagicMock(), org.id, user, db, 1, 50)}
+
+        assert await names(admin_user) == {"MSc AI", "MSc Data"}
+        assert await names(program_coord) == {"MSc AI"}
+        assert await names(cohort_coord) == {"MSc Data"}
+        assert await names(regular_user) == set()

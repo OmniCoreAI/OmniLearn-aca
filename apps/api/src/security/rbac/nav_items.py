@@ -62,11 +62,11 @@ NAV_ITEM_IDS: frozenset[str] = frozenset(item.id for item in NAV_ITEMS)
 _ALL_ITEM_IDS = tuple(item.id for item in NAV_ITEMS)
 
 # Teaching-oriented subset for the Instructor default — no finance, no
-# users/org-settings, no cross-org analytics.
+# users/org-settings, no cross-org analytics. Training Programs is added by
+# assignment (coordinator / trainer), see the web usePortalNavVisibility hook.
 _INSTRUCTOR_DEFAULT_ITEM_IDS = (
     "home",
     "calendar",
-    "training-programs",
     "postgraduate-teaching",
     "assignments",
     "library",
