@@ -1128,7 +1128,8 @@
       "discussions": "مناقشات",
       "playgrounds": "ساحات تجريب",
       "podcasts": "بودكاست"
-    }
+    },
+    "min_length": "اكتب {{count}} أحرف على الأقل للبحث."
   },
   "ai": {
     "ask_ai": "اسأل الذكاء الاصطناعي",
@@ -6576,7 +6577,25 @@
     "taught_by": "يقدّمها",
     "session_course_instructor": "يقدّمها محاضر المقرر",
     "lecturer_registry_required": "لا يوجد محاضرون نشطون بعد.",
-    "add_instructors": "إضافة محاضرين"
+    "add_instructors": "إضافة محاضرين",
+    "docs": {
+      "bad_type": "ارفع ملف PDF أو Word أو صورة.",
+      "too_big": "حجم الملف أكبر من 15 ميجابايت.",
+      "state_missing_required": "مطلوب — لم يُرفع بعد",
+      "state_missing": "لم يُرفع",
+      "state_pending": "تم الرفع — بانتظار المراجعة",
+      "state_verified": "معتمد",
+      "state_rejected": "مرفوض — يرجى رفع ملف جديد",
+      "required": "مطلوب",
+      "uploading": "جارٍ الرفع…",
+      "replace": "رفع ملف جديد",
+      "choose": "اختر ملفًا أو اسحبه هنا",
+      "uploaded_named": "تم رفع {{name}}",
+      "progress": "تم رفع {{done}} من {{total}} من المستندات المطلوبة",
+      "add_other": "إضافة مستند آخر"
+    },
+    "apply_again": "التقديم مرة أخرى",
+    "application_reopened": "تمت إعادة فتح الطلب — أكمله ثم أرسله"
   },
   "instructors": {
     "title": "المحاضرون",

@@ -147,7 +147,24 @@ function ApplyPortal({ orgslug }: { orgslug: string }) {
               )}
 
               <div className="mt-4">
-                {mine ? (
+                {mine && mine.status === 'withdrawn' ? (
+                  <div className="flex flex-wrap gap-2">
+                    {/* A withdrawn application can be reopened (same number, history kept). */}
+                    <button
+                      disabled={busy === intake.cohort_uuid}
+                      onClick={() => apply(intake.cohort_uuid)}
+                      className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-[hsl(var(--dash-ink))] disabled:opacity-50"
+                    >
+                      {busy === intake.cohort_uuid ? '…' : t('academic.apply_again', 'Apply again')}
+                    </button>
+                    <button
+                      onClick={() => goTo(mine)}
+                      className="rounded-full border border-[hsl(var(--dash-border))] px-5 py-2 text-sm font-semibold"
+                    >
+                      {t('academic.view_application', 'View application')}
+                    </button>
+                  </div>
+                ) : mine ? (
                   <button
                     onClick={() => goTo(mine)}
                     className="rounded-full border border-[hsl(var(--dash-border))] px-5 py-2 text-sm font-semibold"

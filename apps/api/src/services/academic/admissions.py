@@ -520,6 +520,7 @@ async def evaluate_checks(db_session: AsyncSession, application: AdmissionApplic
                 status=status,
                 detail=detail,
                 overridden=overridden,
+                document_type=cfg.get("document_type") if rtype == RequirementType.DOCUMENT else None,
             )
         )
     return checks

@@ -446,6 +446,8 @@ class RequirementCheck(SQLModel):
     status: CheckStatus
     detail: Optional[str] = None
     overridden: bool = False
+    # For document requirements: which document type satisfies it.
+    document_type: Optional[str] = None
 
 
 class CheckOverride(SQLModel):

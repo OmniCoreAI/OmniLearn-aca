@@ -1276,7 +1276,25 @@
     "taught_by": "Taught by",
     "session_course_instructor": "Course instructor teaches it",
     "lecturer_registry_required": "No active instructors yet.",
-    "add_instructors": "Add instructors"
+    "add_instructors": "Add instructors",
+    "docs": {
+      "bad_type": "Upload a PDF, Word document or image.",
+      "too_big": "The file is larger than 15 MB.",
+      "state_missing_required": "Required — not uploaded yet",
+      "state_missing": "Not uploaded",
+      "state_pending": "Uploaded — waiting for review",
+      "state_verified": "Verified",
+      "state_rejected": "Rejected — please upload a new file",
+      "required": "Required",
+      "uploading": "Uploading…",
+      "replace": "Upload a new file",
+      "choose": "Choose a file or drop it here",
+      "uploaded_named": "{{name}} uploaded",
+      "progress": "{{done}} of {{total}} required documents uploaded",
+      "add_other": "Add another document"
+    },
+    "apply_again": "Apply again",
+    "application_reopened": "Application reopened — complete it and submit"
   },
   "common": {
     "hello": "Hello",
@@ -2746,7 +2764,8 @@
       "podcasts": "Podcasts"
     },
     "course": "Course",
-    "user": "Member"
+    "user": "Member",
+    "min_length": "Type at least {{count}} characters to search."
   },
   "ai": {
     "ask_ai": "Ask AI",
