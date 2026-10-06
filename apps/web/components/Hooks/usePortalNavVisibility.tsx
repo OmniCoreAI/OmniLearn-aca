@@ -59,6 +59,8 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
     const items: string[] = []
     if (assignments?.training_programs?.length) items.push('training-programs')
     if (assignments?.offerings?.length) items.push('postgraduate-teaching')
+    // Program / cohort coordinators work in the Postgraduate Studies office pages.
+    if (assignments?.programs?.length) items.push('postgraduate')
     return items
   }, [assignments])
 

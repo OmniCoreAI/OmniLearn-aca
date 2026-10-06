@@ -7942,6 +7942,28 @@
     "edit_hint": "تنطبق التغييرات على هذا الدور في كل الأكاديميات على المنصة.",
     "readonly_hint": "لا يمكن تغييرها إلا لمدير المنصة.",
     "preview": "معاينة القائمة الجانبية",
-    "no_sidebar": "لا توجد قائمة جانبية — هذا الدور يستخدم موقع المتدرب فقط."
+    "no_sidebar": "لا توجد قائمة جانبية — هذا الدور يستخدم موقع المتدرب فقط.",
+    "when_program": "عند تنسيق برنامج دراسات عليا أو دفعة"
+  },
+  "inbox": {
+    "title": "الإشعارات",
+    "title_unread": "الإشعارات ({{count}} غير مقروءة)",
+    "mark_all_read": "تحديد الكل كمقروء",
+    "empty": "لا توجد إشعارات بعد.",
+    "assigned": "أصبحت {{role}} في {{name}}",
+    "contributor_added": "يمكنك الآن تعديل {{name}}",
+    "course_assigned": "تم إسناد تدريب جديد: {{name}}",
+    "course_assigned_due": "تم إسناد تدريب جديد: {{name}} (الموعد {{date}})",
+    "roles": {
+      "course_instructor": "محاضر المقرر",
+      "lecturer": "محاضر",
+      "assistant": "معيد",
+      "session_instructor": "محاضر الجلسة",
+      "training_coordinator": "منسق",
+      "program_coordinator": "منسق البرنامج",
+      "cohort_coordinator": "منسق الدفعة",
+      "entity_coordinator": "منسق الجهة",
+      "contributor": "مساهم"
+    }
   }
 }

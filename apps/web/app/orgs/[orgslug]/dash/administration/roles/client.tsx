@@ -66,6 +66,7 @@ const ROLES: RoleInfo[] = [
 const ASSIGNMENT_ITEMS = [
   { id: 'training-programs', key: 'roles_page.when_programs', fallback: 'when they coordinate or train a training program' },
   { id: 'postgraduate-teaching', key: 'roles_page.when_teaching', fallback: 'when they teach or assist a course offering' },
+  { id: 'postgraduate', key: 'roles_page.when_program', fallback: 'when they coordinate a postgraduate program or cohort' },
 ]
 
 /**

@@ -8014,6 +8014,29 @@
     "edit_hint": "Changes apply to this role in every academy on the platform.",
     "readonly_hint": "Only a platform superadmin can change these.",
     "preview": "Sidebar preview",
-    "no_sidebar": "No dashboard sidebar — this role only uses the learner site."
+    "no_sidebar": "No dashboard sidebar — this role only uses the learner site.",
+    "when_program": "when they coordinate a postgraduate program or cohort"
+  },
+  "inbox": {
+    "title": "Notifications",
+    "title_unread_one": "Notifications ({{count}} unread)",
+    "title_unread_other": "Notifications ({{count}} unread)",
+    "mark_all_read": "Mark all as read",
+    "empty": "No notifications yet.",
+    "assigned": "You are now {{role}} of {{name}}",
+    "contributor_added": "You can now edit {{name}}",
+    "course_assigned": "New training assigned: {{name}}",
+    "course_assigned_due": "New training assigned: {{name}} (due {{date}})",
+    "roles": {
+      "course_instructor": "course instructor",
+      "lecturer": "lecturer",
+      "assistant": "teaching assistant",
+      "session_instructor": "session instructor",
+      "training_coordinator": "coordinator",
+      "program_coordinator": "program coordinator",
+      "cohort_coordinator": "cohort coordinator",
+      "entity_coordinator": "entity coordinator",
+      "contributor": "contributor"
+    }
   }
 }

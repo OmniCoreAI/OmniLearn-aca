@@ -8,6 +8,7 @@ import { getUriWithOrg } from '@services/config/config'
 import { fetchRAGChatSessions, RAGChatSession } from '@services/ai/ai'
 import { HeaderProfileBox } from '@components/Security/HeaderProfileBox'
 import MenuLinks from './OrgMenuLinks'
+import NotificationBell from '@components/Objects/Notifications/NotificationBell'
 import { getOrgLogoMediaDirectory } from '@services/media/media'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { useOrg } from '@components/Contexts/OrgContext'
@@ -189,6 +190,12 @@ export const OrgMenu = (props: any) => {
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* Notifications */}
+            <AuthenticatedClientElement checkMethod="authentication">
+              <div className="hidden md:flex">
+                <NotificationBell triggerClassName={`p-2 rounded-lg transition-colors ${colors.iconBtn}`} />
+              </div>
+            </AuthenticatedClientElement>
             {/* Boards */}
             {rf?.boards?.enabled && (
               <AuthenticatedClientElement checkMethod="authentication">

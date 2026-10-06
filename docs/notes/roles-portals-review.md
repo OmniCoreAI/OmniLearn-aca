@@ -266,3 +266,24 @@ Then I signed in as each account and walked its portal. The super-admin console 
 - **Postgraduate programs list.** Academy admins see all; others see only programs they coordinate or author, or where they coordinate a cohort. Applicants keep using the admissions catalog.
 - **Roles & portals (Administration).** Per role: where they land after sign-in, their home page, the learner header (for trainees), the sidebar toggles, and a live sidebar preview including the assignment-based extras. Academy admins can look; only a superadmin can change toggles (they are platform-wide).
   - Built here because `/admin` (the super-admin console with Portal access) shows "Not available in OSS mode" in this deployment.
+
+## 9. Delivered (2026-10-06): Phase 4 — assignment notifications
+
+- **New catalog events, editable under Communication:**
+  - `teaching_assigned`: course instructor, offering lecturer or TA, session instructor
+  - `coordination_assigned`: training-program, program, cohort or entity coordinator
+  - `contributor_added`: off by email by default, in-app only
+
+  Each has EN/AR built-in texts and `role_label`, `item_name` and `item_url` variables.
+- **When it fires:** only on a real change, after the change is saved.
+  - Never to the person who made the change.
+  - Never when an unchanged assignment is re-saved.
+  - All hooks route through `services/notifications/assignments.staff_assigned`.
+- **In-app inbox.**
+  - Model `Notification` (table `notification`; migration `ad9d0e1f2a3b` creates it where missing).
+  - API: `GET /inbox/org/{org}`, `PUT /inbox/{uuid}/read`, `PUT /inbox/org/{org}/read-all`.
+  - Learners' existing "training assigned" now also lands in the inbox, and its program link points to `/programs` (it used to point to a page that doesn't exist).
+- **Bell** (unread badge, latest 30, mark read / all read, refreshes every minute) in the dashboard sidebar's settings row and in the learner header. Text is rendered in the viewer's language from type + payload.
+- **Access follows assignment, extended:** program or cohort coordinators also get the Postgraduate Studies section (`MyAssignmentsRead.programs`). Shown in Roles & portals.
+- **Already covered elsewhere:** per-role "needs attention" — instructor home (grades, returned gradebooks, interviews) and coordinator home (training to assign, members who haven't started).
+- **Not done:** overdue-training alerts for coordinators; the bell on the mobile dashboard menu.
