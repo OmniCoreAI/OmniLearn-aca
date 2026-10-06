@@ -257,12 +257,37 @@ class MyTrainingProgramRead(SQLModel):
     published: bool = False
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    # coordinator | staff (creator / maintainer / contributor)
+    # coordinator | trainer (teaches one of its courses) | staff (creator / maintainer / contributor)
+    role: str
+
+
+class MyOfferingRead(SQLModel):
+    offering_uuid: str
+    code: str
+    course_code: str
+    course_name: str
+    term_code: Optional[str] = None
+    status: str
+    # lecturer | assistant
+    role: str
+
+
+class MySessionRead(SQLModel):
+    session_uuid: str
+    title: str
+    course_uuid: str
+    course_name: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    location: Optional[str] = None
+    # course (they teach the course) | guest (they teach this session only)
     role: str
 
 
 class MyAssignmentsRead(SQLModel):
-    """Everything the signed-in staff member is assigned to in one org."""
+    """Everything a staff member is assigned to teach or run in one org."""
 
     courses: List[InstructorCourseRead] = []
+    offerings: List[MyOfferingRead] = []
     training_programs: List[MyTrainingProgramRead] = []
+    upcoming_sessions: List[MySessionRead] = []

@@ -15,6 +15,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.academic.cohorts import CohortStatus
 from src.db.academic.programs import Program, ProgramStatus
 from src.db.academic.training_programs import TrainingProgram
+from src.db.instructors.instructors import Instructor, InstructorStatus
 from src.db.user_organizations import UserOrganization
 from src.db.users import User
 
@@ -182,6 +183,39 @@ async def resolve_org_user(
         raise _bad(f"{label} must be a member of the organization")
 
     return user.id
+
+
+async def resolve_teaching_staff(
+    db_session: AsyncSession,
+    org_id: int,
+    user_uuid: Optional[str],
+    label: str = "Instructor",
+    keep_id: Optional[int] = None,
+) -> Optional[int]:
+    """Resolve someone who will teach: an active instructor from the org's registry.
+
+    The registry (Administration → Instructors) is the single source of teaching
+    staff for courses, offerings, sessions and training programs. ``keep_id`` is
+    the currently assigned user: re-saving an unchanged assignment is allowed even
+    if that instructor has since gone inactive.
+    """
+    user_id = await resolve_org_user(db_session, org_id, user_uuid, label=label)
+    if user_id is None or user_id == keep_id:
+        return user_id
+    active = (
+        await db_session.execute(
+            select(Instructor.id).where(
+                Instructor.org_id == org_id,
+                Instructor.user_id == user_id,
+                Instructor.status == InstructorStatus.ACTIVE,
+            )
+        )
+    ).first()
+    if not active:
+        raise _bad(
+            f"{label} must be an active instructor. Add them under Administration → Instructors first."
+        )
+    return user_id
 
 
 async def resolve_coordinator(

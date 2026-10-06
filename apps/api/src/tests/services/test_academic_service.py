@@ -43,6 +43,7 @@ from src.services.academic import semesters as semesters_svc
 from src.services.academic import training_programs as tp_svc
 from src.services.academic import course_profiles as course_profiles_svc
 from src.services.academic.authors import get_resource_authors
+from src.tests.conftest import register_instructor
 
 
 @pytest.fixture
@@ -368,6 +369,7 @@ class TestCourseAcademicProfile:
     async def test_upsert_get_and_instructor_authorship(
         self, db, org, course, admin_user, regular_user, mock_request, bypass_academic_rbac
     ):
+        await register_instructor(db, org.id, admin_user.id, regular_user.id)
         profile = await course_profiles_svc.upsert_course_academic_profile(
             mock_request,
             course.course_uuid,

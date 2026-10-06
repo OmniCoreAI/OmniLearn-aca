@@ -38,7 +38,7 @@ from src.services.administration.facilities import (
     facility_ref,
     resolve_facility_id,
 )
-from src.services.academic.validation import resolve_org_user
+from src.services.academic.validation import resolve_teaching_staff
 
 
 async def _get_course_or_404(db_session: AsyncSession, course_uuid: str) -> Course:
@@ -73,7 +73,9 @@ async def _sessions_read(
 
 async def _session_read(db_session: AsyncSession, session: CourseScheduleSession) -> CourseScheduleSessionRead:
     return CourseScheduleSessionRead(
-        **session.model_dump(), facility=await facility_ref(db_session, session.facility_id)
+        **session.model_dump(),
+        facility=await facility_ref(db_session, session.facility_id),
+        instructor=await get_user_author(db_session, session.instructor_id),
     )
 
 
@@ -169,8 +171,13 @@ async def upsert_course_academic_profile(
     instructor_changed = "instructor_uuid" in data
     instructor_id = None
     if instructor_changed:
-        instructor_id = await resolve_org_user(
-            db_session, course.org_id, data.pop("instructor_uuid"), label="Instructor"
+        existing = await _get_profile(db_session, course.id)
+        instructor_id = await resolve_teaching_staff(
+            db_session,
+            course.org_id,
+            data.pop("instructor_uuid"),
+            label="Instructor",
+            keep_id=existing.instructor_id if existing else None,
         )
 
     allow_conflict = bool(data.pop("allow_conflict", False))
@@ -283,6 +290,9 @@ async def create_session(
     )
     profile = await _ensure_profile(db_session, course)
     facility_id = await resolve_facility_id(db_session, course.org_id, payload.facility_uuid)
+    instructor_id = await resolve_teaching_staff(
+        db_session, course.org_id, payload.instructor_uuid, label="Session instructor"
+    )
     await check_session_booking(
         db_session,
         facility_id or profile.facility_id,
@@ -295,10 +305,11 @@ async def create_session(
         profile_id=profile.id,
         org_id=course.org_id,
         facility_id=facility_id,
+        instructor_id=instructor_id,
         session_uuid=f"session_{uuid4()}",
         creation_date=str(datetime.now()),
         update_date=str(datetime.now()),
-        **payload.model_dump(exclude={"facility_uuid", "allow_conflict"}),
+        **payload.model_dump(exclude={"facility_uuid", "allow_conflict", "instructor_uuid"}),
     )
     db_session.add(session)
     await db_session.commit()
@@ -344,6 +355,11 @@ async def update_session(
     if "facility_uuid" in data:
         session.facility_id = await resolve_facility_id(db_session, course.org_id, data.pop("facility_uuid"))
         data["facility_id"] = session.facility_id
+    if "instructor_uuid" in data:
+        session.instructor_id = await resolve_teaching_staff(
+            db_session, course.org_id, data.pop("instructor_uuid"), label="Session instructor",
+            keep_id=session.instructor_id,
+        )
     for key, value in data.items():
         setattr(session, key, value)
     if {"facility_id", "start_date", "end_date"} & set(data):

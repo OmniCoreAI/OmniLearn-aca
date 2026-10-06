@@ -61,7 +61,7 @@ from src.services.academic.common import (
     require_academic_manager,
     require_academic_member,
 )
-from src.services.academic.validation import assert_status_transition, resolve_org_user
+from src.services.academic.validation import assert_status_transition, resolve_org_user, resolve_teaching_staff
 
 logger = logging.getLogger(__name__)
 
@@ -570,8 +570,8 @@ async def create_offering(
 
     if data.capacity is not None and data.capacity < 0:
         raise bad_request("Capacity cannot be negative")
-    instructor_id = await resolve_org_user(db_session, org_id, data.instructor_uuid, label="Instructor")
-    ta_id = await resolve_org_user(db_session, org_id, data.teaching_assistant_uuid, label="Teaching assistant")
+    instructor_id = await resolve_teaching_staff(db_session, org_id, data.instructor_uuid, label="Instructor")
+    ta_id = await resolve_teaching_staff(db_session, org_id, data.teaching_assistant_uuid, label="Teaching assistant")
     content_course_id = await _resolve_content_course(db_session, org_id, data.content_course_uuid)
     facility_id = await resolve_facility_id(db_session, org_id, data.facility_uuid)
 
@@ -622,12 +622,14 @@ async def update_offering(
     previous_staff = [offering.instructor_id, offering.teaching_assistant_id]
     previous_content_id = offering.content_course_id
     if "instructor_uuid" in update:
-        offering.instructor_id = await resolve_org_user(
-            db_session, offering.org_id, update.pop("instructor_uuid"), label="Instructor"
+        offering.instructor_id = await resolve_teaching_staff(
+            db_session, offering.org_id, update.pop("instructor_uuid"), label="Instructor",
+            keep_id=offering.instructor_id,
         )
     if "teaching_assistant_uuid" in update:
-        offering.teaching_assistant_id = await resolve_org_user(
-            db_session, offering.org_id, update.pop("teaching_assistant_uuid"), label="Teaching assistant"
+        offering.teaching_assistant_id = await resolve_teaching_staff(
+            db_session, offering.org_id, update.pop("teaching_assistant_uuid"), label="Teaching assistant",
+            keep_id=offering.teaching_assistant_id,
         )
     allow_conflict = bool(update.pop("allow_conflict", False))
     if "facility_uuid" in update:

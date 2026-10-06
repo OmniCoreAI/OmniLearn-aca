@@ -21,6 +21,7 @@ from src.services.instructors.instructors import (
     create_instructor,
     delete_instructor,
     get_instructor,
+    list_instructor_assignments,
     list_instructor_courses,
     list_instructor_options,
     list_instructors,
@@ -146,6 +147,19 @@ async def api_instructor_courses(
     current_user: PublicUser = Depends(get_current_user),
 ) -> List[InstructorCourseRead]:
     return await list_instructor_courses(db_session, current_user, instructor_uuid)
+
+
+@router.get(
+    "/{instructor_uuid}/assignments",
+    response_model=MyAssignmentsRead,
+    summary="Everything the instructor teaches or runs: courses, offerings, programs, sessions",
+)
+async def api_instructor_assignments(
+    instructor_uuid: str,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> MyAssignmentsRead:
+    return await list_instructor_assignments(db_session, current_user, instructor_uuid)
 
 
 @router.post(

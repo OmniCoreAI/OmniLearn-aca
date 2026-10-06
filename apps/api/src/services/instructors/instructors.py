@@ -14,7 +14,10 @@ from fastapi import HTTPException, UploadFile
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.db.academic.course_profiles import CourseAcademicProfile
+from src.db.academic.calendar import AcademicTerm
+from src.db.academic.catalog import AcademicCourse
+from src.db.academic.course_profiles import CourseAcademicProfile, CourseScheduleSession
+from src.db.academic.links import TrainingProgramCourse
 from src.db.academic.offerings import CourseOffering
 from src.db.academic.training_programs import TrainingProgram
 from src.db.courses.courses import Course
@@ -29,6 +32,8 @@ from src.db.instructors.instructors import (
     InstructorStatus,
     InstructorUpdate,
     MyAssignmentsRead,
+    MyOfferingRead,
+    MySessionRead,
     MyTrainingProgramRead,
 )
 from src.db.organizations import Organization
@@ -483,28 +488,86 @@ async def list_instructor_courses(
     return await _courses_for_user(db_session, instructor.user_id, instructor.org_id)
 
 
-async def list_my_assignments(
-    db_session: AsyncSession, current_user: AnyUser, org_id: int
-) -> MyAssignmentsRead:
-    """The caller's own courses and training programs (their workspace home)."""
-    user_id = await require_org_member(db_session, current_user, org_id)
+async def _assignments_for_user(db_session: AsyncSession, user_id: int, org_id: int) -> MyAssignmentsRead:
+    """Courses, offerings, training programs and upcoming sessions a user teaches or runs."""
+    courses = await _courses_for_user(db_session, user_id, org_id)
+
+    offerings = [
+        MyOfferingRead(
+            offering_uuid=o.offering_uuid,
+            code=o.code,
+            course_code=ac.code,
+            course_name=ac.name,
+            term_code=term.code if term else None,
+            status=o.status.value if hasattr(o.status, "value") else str(o.status),
+            role="lecturer" if o.instructor_id == user_id else "assistant",
+        )
+        for o, ac, term in (
+            await db_session.execute(
+                select(CourseOffering, AcademicCourse, AcademicTerm)
+                .join(AcademicCourse, AcademicCourse.id == CourseOffering.academic_course_id)  # type: ignore[arg-type]
+                .outerjoin(AcademicTerm, AcademicTerm.id == CourseOffering.term_id)  # type: ignore[arg-type]
+                .where(
+                    CourseOffering.org_id == org_id,
+                    (CourseOffering.instructor_id == user_id) | (CourseOffering.teaching_assistant_id == user_id),
+                )
+                .order_by(CourseOffering.creation_date.desc())  # type: ignore[union-attr]
+            )
+        ).all()
+    ]
+
     staff_of = select(ResourceAuthor.resource_uuid).where(
         ResourceAuthor.user_id == user_id,
         ResourceAuthor.authorship_status == ResourceAuthorshipStatusEnum.ACTIVE,
     )
+    # A trainer teaches one of the program's courses (the course instructor).
+    trains = (
+        select(TrainingProgramCourse.training_program_id)
+        .join(CourseAcademicProfile, CourseAcademicProfile.course_id == TrainingProgramCourse.course_id)  # type: ignore[arg-type]
+        .where(CourseAcademicProfile.instructor_id == user_id)
+    )
+    trainer_ids = set((await db_session.execute(trains)).scalars().all())
     programs = (
         await db_session.execute(
             select(TrainingProgram)
             .where(
                 TrainingProgram.org_id == org_id,
                 (TrainingProgram.coordinator_id == user_id)
-                | TrainingProgram.trainingprogram_uuid.in_(staff_of),  # type: ignore[attr-defined]
+                | TrainingProgram.trainingprogram_uuid.in_(staff_of)  # type: ignore[attr-defined]
+                | TrainingProgram.id.in_(trainer_ids or {-1}),  # type: ignore[union-attr]
             )
             .order_by(TrainingProgram.start_date.desc().nulls_last(), TrainingProgram.name)  # type: ignore[union-attr]
         )
     ).scalars().all()
+
+    def program_role(tp: TrainingProgram) -> str:
+        if tp.coordinator_id == user_id:
+            return "coordinator"
+        return "trainer" if tp.id in trainer_ids else "staff"
+
+    today = datetime.now().date().isoformat()
+    sessions = (
+        await db_session.execute(
+            select(CourseScheduleSession, CourseAcademicProfile, Course)
+            .join(CourseAcademicProfile, CourseAcademicProfile.id == CourseScheduleSession.profile_id)  # type: ignore[arg-type]
+            .join(Course, Course.id == CourseAcademicProfile.course_id)  # type: ignore[arg-type]
+            .where(
+                CourseScheduleSession.org_id == org_id,
+                CourseScheduleSession.start_date >= today,  # type: ignore[operator]
+                (CourseScheduleSession.instructor_id == user_id)
+                | (
+                    CourseScheduleSession.instructor_id.is_(None)  # type: ignore[union-attr]
+                    & (CourseAcademicProfile.instructor_id == user_id)
+                ),
+            )
+            .order_by(CourseScheduleSession.start_date)
+            .limit(20)
+        )
+    ).all()
+
     return MyAssignmentsRead(
-        courses=await _courses_for_user(db_session, user_id, org_id),
+        courses=courses,
+        offerings=offerings,
         training_programs=[
             MyTrainingProgramRead(
                 trainingprogram_uuid=tp.trainingprogram_uuid,
@@ -513,11 +576,41 @@ async def list_my_assignments(
                 published=bool(tp.published),
                 start_date=tp.start_date,
                 end_date=tp.end_date,
-                role="coordinator" if tp.coordinator_id == user_id else "staff",
+                role=program_role(tp),
             )
             for tp in programs
         ],
+        upcoming_sessions=[
+            MySessionRead(
+                session_uuid=sess.session_uuid,
+                title=sess.title,
+                course_uuid=course.course_uuid,
+                course_name=course.name,
+                start_date=sess.start_date,
+                end_date=sess.end_date,
+                location=sess.location or profile.classroom,
+                role="guest" if sess.instructor_id == user_id and profile.instructor_id != user_id else "course",
+            )
+            for sess, profile, course in sessions
+        ],
     )
+
+
+async def list_my_assignments(
+    db_session: AsyncSession, current_user: AnyUser, org_id: int
+) -> MyAssignmentsRead:
+    """The caller's own teaching and coordination work (their workspace home)."""
+    user_id = await require_org_member(db_session, current_user, org_id)
+    return await _assignments_for_user(db_session, user_id, org_id)
+
+
+async def list_instructor_assignments(
+    db_session: AsyncSession, current_user: AnyUser, instructor_uuid: str
+) -> MyAssignmentsRead:
+    """Everything an instructor is assigned to (Administration → Instructors → profile)."""
+    instructor = await _get_instructor_or_404(db_session, instructor_uuid)
+    await authorize_instructor_management(db_session, current_user, instructor.org_id, "read")
+    return await _assignments_for_user(db_session, instructor.user_id, instructor.org_id)
 
 
 async def _course_in_org_or_404(db_session: AsyncSession, course_uuid: str, org_id: int) -> Course:

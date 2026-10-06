@@ -36,6 +36,7 @@ from src.services.academic import grading as grading_svc
 from src.services.academic import offerings as offerings_svc
 from src.services.academic import programs as programs_svc
 from src.services.academic import students as students_svc
+from src.tests.conftest import register_instructor
 
 
 @pytest.fixture
@@ -229,6 +230,7 @@ class TestGradebookWorkflow:
 
     @pytest.mark.asyncio
     async def test_instructor_cannot_approve_own_grades(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
+        await register_instructor(db, org.id, admin_user.id, regular_user.id)
         *_, offering, _, _ = await _setup(db, org, admin_user, regular_user, mock_request)
         await offerings_svc.update_offering(
             mock_request, offering.offering_uuid, CourseOfferingUpdate(instructor_uuid=admin_user.user_uuid), admin_user, db

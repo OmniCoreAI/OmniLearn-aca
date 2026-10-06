@@ -43,6 +43,7 @@ from src.services.academic import grading as grading_svc
 from src.services.academic import offerings as offerings_svc
 from src.services.academic import programs as programs_svc
 from src.services.academic import students as students_svc
+from src.tests.conftest import register_instructor
 
 
 @pytest.fixture
@@ -362,6 +363,7 @@ class TestContentCourseReuse:
     async def test_open_publishes_and_staff_become_maintainers(
         self, db, org, course, admin_user, regular_user, mock_request, bypass_program_rbac
     ):
+        await register_instructor(db, org.id, admin_user.id, regular_user.id)
         from src.db.academic.offerings import CourseOfferingUpdate
         from src.db.courses.courses import Course
         from src.db.resource_authors import ResourceAuthor, ResourceAuthorshipEnum
@@ -595,6 +597,7 @@ class TestFlowIntegrity:
     async def test_replaced_instructor_loses_course_rights(
         self, db, org, course, admin_user, regular_user, mock_request, bypass_program_rbac
     ):
+        await register_instructor(db, org.id, admin_user.id, regular_user.id)
         from src.db.academic.offerings import CourseOfferingUpdate
         from src.db.resource_authors import ResourceAuthor
 

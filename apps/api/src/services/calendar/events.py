@@ -212,7 +212,8 @@ async def get_calendar_events(
             (
                 await db.execute(
                     select(CourseOffering.id).where(
-                        CourseOffering.org_id == org_id, CourseOffering.instructor_id == user_id
+                        CourseOffering.org_id == org_id,
+                        (CourseOffering.instructor_id == user_id) | (CourseOffering.teaching_assistant_id == user_id),
                     )
                 )
             ).scalars().all()
@@ -246,7 +247,32 @@ async def get_calendar_events(
             else:
                 enrolled_course_ids.add(o.content_course_id)
 
-    course_ids = taught_course_ids | enrolled_course_ids
+    # Guest / substitute sessions: the course is shown only for those sessions.
+    guest_profile_ids: set[int] = set()
+    if not see_all:
+        guest_profile_ids = set(
+            (
+                await db.execute(
+                    select(CourseScheduleSession.profile_id).where(
+                        CourseScheduleSession.org_id == org_id, CourseScheduleSession.instructor_id == user_id
+                    )
+                )
+            ).scalars().all()
+        )
+    guest_course_ids: set[int] = set()
+    if guest_profile_ids:
+        guest_course_ids = set(
+            (
+                await db.execute(
+                    select(CourseAcademicProfile.course_id).where(
+                        CourseAcademicProfile.id.in_(guest_profile_ids)  # type: ignore[attr-defined]
+                    )
+                )
+            ).scalars().all()
+        )
+
+    guest_only_course_ids = guest_course_ids - taught_course_ids - enrolled_course_ids
+    course_ids = taught_course_ids | enrolled_course_ids | guest_course_ids
     course_stmt = select(Course.id, Course.course_uuid, Course.name).where(Course.org_id == org_id)
     if not see_all:
         course_stmt = course_stmt.where(Course.id.in_(course_ids or {-1}))  # type: ignore[union-attr]
@@ -263,21 +289,26 @@ async def get_calendar_events(
             )
         ).scalars().all()
     }
-    users = await _users(
-        db,
-        [p.instructor_id for p in profiles.values()] + [o.instructor_id for o, _ in offerings.values()],
-    )
-
-    # --- Class sessions of LMS courses -------------------------------------------
-    for sess in (
+    class_sessions = (
         await db.execute(
             select(CourseScheduleSession).where(
                 CourseScheduleSession.org_id == org_id,
                 CourseScheduleSession.profile_id.in_(list(profiles) or [-1]),  # type: ignore[attr-defined]
             )
         )
-    ).scalars().all():
+    ).scalars().all()
+    users = await _users(
+        db,
+        [p.instructor_id for p in profiles.values()]
+        + [o.instructor_id for o, _ in offerings.values()]
+        + [sess.instructor_id for sess in class_sessions],
+    )
+
+    # --- Class sessions of LMS courses -------------------------------------------
+    for sess in class_sessions:
         profile = profiles[sess.profile_id]
+        if profile.course_id in guest_only_course_ids and sess.instructor_id != user_id:
+            continue
         cuuid, cname = courses.get(profile.course_id, (None, None))
         feed.add(
             event_id=f"class:{sess.session_uuid or sess.id}",
@@ -288,7 +319,7 @@ async def get_calendar_events(
             start=sess.start_date,
             end=sess.end_date,
             location=sess.location or profile.classroom,
-            instructor=_name(users.get(profile.instructor_id or 0)),
+            instructor=_name(users.get(sess.instructor_id or profile.instructor_id or 0)),
             refs={"course_uuid": cuuid},
         )
 
@@ -321,7 +352,11 @@ async def get_calendar_events(
     assignment_stmt = (
         select(Assignment, Activity.activity_uuid)
         .join(Activity, Activity.id == Assignment.activity_id, isouter=True)  # type: ignore[arg-type]
-        .where(Assignment.org_id == org_id, Assignment.course_id.in_(list(courses) or [-1]))  # type: ignore[attr-defined]
+        .where(
+            Assignment.org_id == org_id,
+            # Guest-session courses only contribute that session, not deadlines.
+            Assignment.course_id.in_([c for c in courses if c not in guest_only_course_ids] or [-1]),  # type: ignore[attr-defined]
+        )
     )
     assignments = (await db.execute(assignment_stmt)).all()
     submissions: dict[int, str] = {}
