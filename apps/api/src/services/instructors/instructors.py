@@ -33,6 +33,7 @@ from src.db.instructors.instructors import (
     InstructorUpdate,
     MyAssignmentsRead,
     MyOfferingRead,
+    MyProgramRead,
     MySessionRead,
     MyTrainingProgramRead,
 )
@@ -45,6 +46,7 @@ from src.services.academic.authors import ensure_coordinator_authorship, get_use
 from src.services.academic.validation import resolve_org_user
 from src.services.administration.authz import require_org_member
 from src.services.instructors.authz import authorize_instructor_management
+from src.services.notifications.assignments import slug, staff_assigned
 from src.services.instructors.categories import _to_read as _category_to_read
 from src.services.instructors.validation import (
     resolve_effective_rate,
@@ -565,8 +567,33 @@ async def _assignments_for_user(db_session: AsyncSession, user_id: int, org_id: 
         )
     ).all()
 
+    from src.db.academic.cohorts import Cohort
+    from src.db.academic.programs import Program
+
+    cohort_program_ids = set(
+        (await db_session.execute(select(Cohort.program_id).where(Cohort.org_id == org_id, Cohort.coordinator_id == user_id))).scalars().all()
+    )
+    coordinated = (
+        await db_session.execute(
+            select(Program)
+            .where(
+                Program.org_id == org_id,
+                (Program.coordinator_id == user_id) | Program.id.in_(cohort_program_ids or {-1}),  # type: ignore[union-attr]
+            )
+            .order_by(Program.name)
+        )
+    ).scalars().all()
+
     return MyAssignmentsRead(
         courses=courses,
+        programs=[
+            MyProgramRead(
+                program_uuid=p.program_uuid,
+                name=p.name,
+                role="coordinator" if p.coordinator_id == user_id else "cohort_coordinator",
+            )
+            for p in coordinated
+        ],
         offerings=offerings,
         training_programs=[
             MyTrainingProgramRead(
@@ -647,11 +674,18 @@ async def assign_instructor_course(
             profile_uuid=f"courseprofile_{uuid4()}",
             creation_date=str(datetime.now()),
         )
+    previous_id = profile.instructor_id
     profile.instructor_id = instructor.user_id
     profile.update_date = str(datetime.now())
     db_session.add(profile)
     await ensure_coordinator_authorship(db_session, course.course_uuid, instructor.user_id)
     await db_session.commit()
+    if previous_id != instructor.user_id:
+        await staff_assigned(
+            db_session, instructor.org_id, [instructor.user_id], "course_instructor", course.name,
+            f"/dash/courses/course/{slug(course.course_uuid, 'course_')}/content",
+            actor_id=getattr(current_user, "id", None), resource=("course", course.course_uuid),
+        )
     return await list_instructor_courses(db_session, current_user, instructor_uuid)
 
 

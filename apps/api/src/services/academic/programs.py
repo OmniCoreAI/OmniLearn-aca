@@ -25,6 +25,7 @@ from src.services.academic.authors import (
     get_user_author,
 )
 from src.services.academic.common import normalize_code
+from src.services.notifications.assignments import slug, staff_assigned
 from src.services.academic.validation import (
     assert_program_code_unique,
     assert_status_transition,
@@ -124,7 +125,18 @@ async def create_program(
         await db_session.rollback()
         raise
 
+    await _notify_coordinator(db_session, program, None, current_user)
     return await _to_read(db_session, program)
+
+
+async def _notify_coordinator(db_session: AsyncSession, program: Program, previous_id: Optional[int], current_user) -> None:
+    if program.coordinator_id and program.coordinator_id != previous_id:
+        await staff_assigned(
+            db_session, program.org_id, [program.coordinator_id], "program_coordinator", program.name,
+            f"/dash/postgraduate/{slug(program.program_uuid, 'program_')}",
+            actor_id=resolve_acting_user_id(current_user), resource=("program", program.program_uuid),
+        )
+        await db_session.refresh(program)
 
 
 async def get_program(
@@ -220,6 +232,7 @@ async def update_program(
         )
 
     new_coordinator_id = None
+    previous_coordinator_id = program.coordinator_id
     coordinator_changed = "coordinator_uuid" in update_data
     if coordinator_changed:
         coordinator_uuid = update_data.pop("coordinator_uuid")
@@ -245,6 +258,7 @@ async def update_program(
     await db_session.commit()
     await db_session.refresh(program)
 
+    await _notify_coordinator(db_session, program, previous_coordinator_id, current_user)
     return await _to_read(db_session, program)
 
 

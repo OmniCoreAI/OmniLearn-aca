@@ -114,6 +114,7 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
         "webhooks",
         "portal_navigation",
         "calendar",
+        "inbox",
     ]:
         install_router_module(f"src.routers.{name}", f"src.routers.{name}")
 

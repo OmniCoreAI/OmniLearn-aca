@@ -50,6 +50,13 @@ COURSE_VARIABLES = [
 ]
 
 
+STAFF_VARIABLES = [
+    Variable("role_label", "Their role", "Course instructor"),
+    Variable("item_name", "What they were assigned to", "Cybersecurity Fundamentals"),
+    Variable("item_url", "Link to it", "https://academy.example.com/dash/courses/course/cyber"),
+]
+
+
 def _msg(subject: str, heading: str, text: str, cta: Optional[str] = None, link_var: str = "course_url", sms: str = "") -> BuiltinMessage:
     button = (
         f'<p><a href="{{{{{link_var}}}}}" style="display:inline-block;padding:12px 28px;background:#000;color:#fff;'
@@ -187,6 +194,40 @@ EVENTS: List[EventDef] = [
         builtin={
             "en": _msg("Due soon: {{exam_name}}", "Due soon", "<strong>{{exam_name}}</strong> in {{course_name}} is due on {{due_date}}.", "Open course", sms="Due {{due_date}}: {{exam_name}} ({{course_name}})"),
             "ar": _msg("موعد قريب: {{exam_name}}", "الموعد يقترب", "موعد تسليم <strong>{{exam_name}}</strong> في {{course_name}} هو {{due_date}}.", "فتح الدورة", sms="الموعد {{due_date}}: {{exam_name}} ({{course_name}})"),
+        },
+    ),
+    EventDef(
+        key="teaching_assigned",
+        label="Teaching assigned",
+        label_ar="إسناد تدريس",
+        description="Someone was made the instructor, lecturer, teaching assistant or session instructor of a course or offering.",
+        variables=[*COMMON_VARIABLES, *STAFF_VARIABLES],
+        builtin={
+            "en": _msg("You're teaching {{item_name}}", "New teaching assignment", "You are now <strong>{{role_label}}</strong> of <strong>{{item_name}}</strong>.", "Open", "item_url", "{{org_name}}: you are now {{role_label}} of {{item_name}}. {{item_url}}"),
+            "ar": _msg("إسناد تدريس: {{item_name}}", "إسناد تدريس جديد", "أصبحت <strong>{{role_label}}</strong> في <strong>{{item_name}}</strong>.", "فتح", "item_url", "{{org_name}}: أصبحت {{role_label}} في {{item_name}}. {{item_url}}"),
+        },
+    ),
+    EventDef(
+        key="coordination_assigned",
+        label="Coordinator appointed",
+        label_ar="تعيين منسق",
+        description="Someone was made coordinator of a training program, postgraduate program, cohort or entity.",
+        variables=[*COMMON_VARIABLES, *STAFF_VARIABLES],
+        builtin={
+            "en": _msg("You're coordinating {{item_name}}", "You're the coordinator", "You are now <strong>{{role_label}}</strong> of <strong>{{item_name}}</strong>.", "Open", "item_url", "{{org_name}}: you are now {{role_label}} of {{item_name}}. {{item_url}}"),
+            "ar": _msg("تعيينك منسقًا: {{item_name}}", "تم تعيينك منسقًا", "أصبحت <strong>{{role_label}}</strong> لـ <strong>{{item_name}}</strong>.", "فتح", "item_url", "{{org_name}}: أصبحت {{role_label}} لـ {{item_name}}. {{item_url}}"),
+        },
+    ),
+    EventDef(
+        key="contributor_added",
+        label="Added as contributor",
+        label_ar="إضافة كمساهم",
+        description="Someone was given access to edit a course's content.",
+        variables=[*COMMON_VARIABLES, *STAFF_VARIABLES],
+        default_channels={"email": False, "sms": False},
+        builtin={
+            "en": _msg("You can now edit {{item_name}}", "You're a contributor", "You can now edit the content of <strong>{{item_name}}</strong>.", "Open course", "item_url", "{{org_name}}: you can now edit {{item_name}}. {{item_url}}"),
+            "ar": _msg("يمكنك الآن تعديل {{item_name}}", "أصبحت مساهمًا", "يمكنك الآن تعديل محتوى <strong>{{item_name}}</strong>.", "فتح الدورة", "item_url", "{{org_name}}: يمكنك الآن تعديل {{item_name}}. {{item_url}}"),
         },
     ),
 ]

@@ -62,6 +62,7 @@ from src.services.academic.common import (
     require_academic_member,
 )
 from src.services.academic.validation import assert_status_transition, resolve_org_user, resolve_teaching_staff
+from src.services.notifications.assignments import slug, staff_assigned
 
 logger = logging.getLogger(__name__)
 
@@ -604,7 +605,30 @@ async def create_offering(
     )
     await db_session.commit()
     await db_session.refresh(offering)
+    await _notify_offering_staff(db_session, offering, current_user, previous=(None, None))
     return await to_read(db_session, offering)
+
+
+async def _notify_offering_staff(
+    db_session: AsyncSession, offering: CourseOffering, current_user: Principal, previous: tuple
+) -> None:
+    """Tell a newly assigned lecturer / teaching assistant (after commit)."""
+    new_staff = [
+        (offering.instructor_id, previous[0], "lecturer"),
+        (offering.teaching_assistant_id, previous[1], "assistant"),
+    ]
+    if not any(uid and uid != before for uid, before, _ in new_staff):
+        return
+    course = await db_session.get(AcademicCourse, offering.academic_course_id)
+    name = f"{course.code} · {course.name}" if course else offering.code
+    for uid, before, role in new_staff:
+        if uid and uid != before:
+            await staff_assigned(
+                db_session, offering.org_id, [uid], role, name,
+                f"/dash/postgraduate/teaching/offerings/{slug(offering.offering_uuid, 'offering_')}",
+                actor_id=resolve_acting_user_id(current_user), resource=("offering", offering.offering_uuid),
+            )
+    await db_session.refresh(offering)
 
 
 async def update_offering(
@@ -690,6 +714,7 @@ async def update_offering(
     await _sync_content_course(db_session, offering)
     await db_session.commit()
     await db_session.refresh(offering)
+    await _notify_offering_staff(db_session, offering, current_user, previous=tuple(previous_staff))
     return await to_read(db_session, offering)
 
 

@@ -39,6 +39,8 @@ from src.services.administration.facilities import (
     resolve_facility_id,
 )
 from src.services.academic.validation import resolve_teaching_staff
+from src.services.notifications.assignments import slug, staff_assigned
+from src.security.auth import resolve_acting_user_id
 
 
 async def _get_course_or_404(db_session: AsyncSession, course_uuid: str) -> Course:
@@ -170,8 +172,10 @@ async def upsert_course_academic_profile(
 
     instructor_changed = "instructor_uuid" in data
     instructor_id = None
+    previous_instructor_id = None
     if instructor_changed:
         existing = await _get_profile(db_session, course.id)
+        previous_instructor_id = existing.instructor_id if existing else None
         instructor_id = await resolve_teaching_staff(
             db_session,
             course.org_id,
@@ -233,6 +237,14 @@ async def upsert_course_academic_profile(
         await ensure_coordinator_authorship(db_session, course.course_uuid, instructor_id)
     await db_session.commit()
     await db_session.refresh(profile)
+
+    if instructor_changed and instructor_id and instructor_id != previous_instructor_id:
+        await staff_assigned(
+            db_session, course.org_id, [instructor_id], "course_instructor", course.name,
+            f"/dash/courses/course/{slug(course.course_uuid, 'course_')}/content",
+            actor_id=resolve_acting_user_id(current_user), resource=("course", course.course_uuid),
+        )
+        await db_session.refresh(profile)
 
     return await build_profile_read(db_session, course, profile)
 
@@ -314,7 +326,20 @@ async def create_session(
     db_session.add(session)
     await db_session.commit()
     await db_session.refresh(session)
+    await _notify_session_instructor(db_session, course, session, None, current_user)
     return await _session_read(db_session, session)
+
+
+async def _notify_session_instructor(
+    db_session: AsyncSession, course: Course, session: CourseScheduleSession, previous_id: Optional[int], current_user
+) -> None:
+    if session.instructor_id and session.instructor_id != previous_id:
+        await staff_assigned(
+            db_session, course.org_id, [session.instructor_id], "session_instructor",
+            f"{session.title} · {course.name}", "/dash/calendar",
+            actor_id=resolve_acting_user_id(current_user), resource=("course", course.course_uuid),
+        )
+        await db_session.refresh(session)
 
 
 async def _get_session_or_404(
@@ -355,6 +380,7 @@ async def update_session(
     if "facility_uuid" in data:
         session.facility_id = await resolve_facility_id(db_session, course.org_id, data.pop("facility_uuid"))
         data["facility_id"] = session.facility_id
+    previous_instructor_id = session.instructor_id
     if "instructor_uuid" in data:
         session.instructor_id = await resolve_teaching_staff(
             db_session, course.org_id, data.pop("instructor_uuid"), label="Session instructor",
@@ -376,6 +402,7 @@ async def update_session(
     db_session.add(session)
     await db_session.commit()
     await db_session.refresh(session)
+    await _notify_session_instructor(db_session, course, session, previous_instructor_id, current_user)
     return await _session_read(db_session, session)
 
 

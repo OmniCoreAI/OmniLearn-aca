@@ -284,10 +284,19 @@ class MySessionRead(SQLModel):
     role: str
 
 
+class MyProgramRead(SQLModel):
+    program_uuid: str
+    name: str
+    # coordinator (of the program) | cohort_coordinator
+    role: str
+
+
 class MyAssignmentsRead(SQLModel):
     """Everything a staff member is assigned to teach or run in one org."""
 
     courses: List[InstructorCourseRead] = []
+    # Postgraduate programs they coordinate (program or one of its cohorts).
+    programs: List[MyProgramRead] = []
     offerings: List[MyOfferingRead] = []
     training_programs: List[MyTrainingProgramRead] = []
     upcoming_sessions: List[MySessionRead] = []

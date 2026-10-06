@@ -32,6 +32,7 @@ from src.services.academic.authors import (
     get_user_author,
 )
 from src.services.academic.course_profiles import get_profile_read_for_course
+from src.services.notifications.assignments import slug, staff_assigned
 from src.services.administration.certificates import resolve_template_id, template_uuid_for
 from src.services.administration.facilities import facility_ref, resolve_facility_id
 from src.services.academic.validation import (
@@ -116,7 +117,20 @@ async def create_training_program(
         await db_session.rollback()
         raise
 
+    await _notify_coordinator(db_session, tp, None, current_user)
     return await _to_read(db_session, tp)
+
+
+async def _notify_coordinator(
+    db_session: AsyncSession, tp: TrainingProgram, previous_id: Optional[int], current_user
+) -> None:
+    if tp.coordinator_id and tp.coordinator_id != previous_id:
+        await staff_assigned(
+            db_session, tp.org_id, [tp.coordinator_id], "training_coordinator", tp.name,
+            f"/dash/training-programs/{slug(tp.trainingprogram_uuid, 'trainingprogram_')}",
+            actor_id=resolve_acting_user_id(current_user), resource=("training_program", tp.trainingprogram_uuid),
+        )
+        await db_session.refresh(tp)
 
 
 async def get_training_program(
@@ -297,6 +311,7 @@ async def update_training_program(
         )
 
     new_coordinator_id = None
+    previous_coordinator_id = tp.coordinator_id
     coordinator_changed = "coordinator_uuid" in update_data
     if coordinator_changed:
         coordinator_uuid = update_data.pop("coordinator_uuid")
@@ -324,6 +339,7 @@ async def update_training_program(
     await db_session.commit()
     await db_session.refresh(tp)
 
+    await _notify_coordinator(db_session, tp, previous_coordinator_id, current_user)
     return await _to_read(db_session, tp)
 
 
@@ -341,6 +357,7 @@ async def set_training_program_coordinator(
     )
 
     coordinator_id = await resolve_coordinator(db_session, tp.org_id, coordinator_uuid)
+    previous_id = tp.coordinator_id
     tp.coordinator_id = coordinator_id
     tp.update_date = str(datetime.now())
 
@@ -348,6 +365,7 @@ async def set_training_program_coordinator(
     await ensure_coordinator_authorship(db_session, tp.trainingprogram_uuid, coordinator_id)
     await db_session.commit()
     await db_session.refresh(tp)
+    await _notify_coordinator(db_session, tp, previous_id, current_user)
     return await _to_read(db_session, tp)
 
 

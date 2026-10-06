@@ -1048,6 +1048,11 @@ async def assign_coordinator(
         )
     else:
         raise bad_request("Choose an existing user or enter a new user's details")
+    already = (
+        await db_session.execute(
+            select(EntityMember.is_coordinator).where(EntityMember.entity_id == entity.id, EntityMember.user_id == user.id)
+        )
+    ).scalars().first()
     await _promote_to_coordinator(db_session, entity.org_id, user.id)
     member, _ = await upsert_member(db_session, entity, user, is_coordinator=True)
     await db_session.commit()
@@ -1055,6 +1060,14 @@ async def assign_coordinator(
     from src.services.administration.audience import resync_affected
 
     await resync_affected(db_session, entity.org_id, entity_ids=[entity.id], user_ids=[user.id])
+    if not already:
+        from src.services.notifications.assignments import staff_assigned
+
+        await staff_assigned(
+            db_session, entity.org_id, [user.id], "entity_coordinator", entity.name, "/dash/my-entity",
+            actor_id=getattr(current_user, "id", None), resource=("entity", entity.entity_uuid),
+        )
+        await db_session.refresh(member)
     return await _member_read(db_session, member, user, temporary_password)
 
 

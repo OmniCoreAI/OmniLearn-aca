@@ -304,6 +304,16 @@ async def add_bulk_course_contributors(
             results["successful"] = []
 
     if results["successful"]:
+        from src.services.notifications.assignments import slug, staff_assigned
+
+        await staff_assigned(
+            db_session, course.org_id, [item["user_id"] for item in results["successful"]], "contributor", course.name,
+            f"/dash/courses/course/{slug(course.course_uuid, 'course_')}/content",
+            actor_id=resolve_acting_user_id(current_user), resource=("course", course.course_uuid),
+        )
+        await db_session.refresh(course)
+
+    if results["successful"]:
         await dispatch_webhooks(
             event_name="course_contributor_added",
             org_id=course.org_id,
