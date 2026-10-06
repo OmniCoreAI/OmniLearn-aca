@@ -249,3 +249,20 @@ Then I signed in as each account and walked its portal. The super-admin console 
 - **Contributors tab.** It now explains that contributors edit content, and links to Delivery & Resources for choosing who teaches.
 
 **Spun off:** deleting a training program leaves its authorship rows behind (7 orphans in dev).
+
+## 8. Delivered (2026-10-06): Phase 3 — scoped visibility
+
+- **Training programs, management list.**
+  - Academy admins see everything.
+  - Everyone else sees only the programs they run or teach (coordinator, creator / maintainer, trainer of a linked course), whatever the status.
+  - Training Programs left the Instructor role's default sidebar; it now comes from assignment.
+- **Training programs, learner catalog.**
+  - `GET /training-programs/org/{org}/catalog` lists published programs that are public, open (no audience restriction), or assigned to the learner, with their published courses and an `assigned` flag.
+  - "Available" (coordinator-assignable) programs don't grant access until assigned.
+- **Learner Programs page (`/programs`).**
+  - Cards with type, dates, venue, price and courses, plus All / Assigned-to-me filters.
+  - Header item **Programs**, shown only when there is something to show.
+  - With more than four header items, the bar shows icons only below 1280px (labels stay as tooltips), so it never wraps.
+- **Postgraduate programs list.** Academy admins see all; others see only programs they coordinate or author, or where they coordinate a cohort. Applicants keep using the admissions catalog.
+- **Roles & portals (Administration).** Per role: where they land after sign-in, their home page, the learner header (for trainees), the sidebar toggles, and a live sidebar preview including the assignment-based extras. Academy admins can look; only a superadmin can change toggles (they are platform-wide).
+  - Built here because `/admin` (the super-admin console with Portal access) shows "Not available in OSS mode" in this deployment.

@@ -6964,7 +6964,8 @@
       "entities": "Organizations",
       "communication": "Communication",
       "certificates": "Certificates",
-      "user_groups": "User groups"
+      "user_groups": "User groups",
+      "roles": "Roles & portals"
     },
     "common": {
       "add": "Add",
@@ -7974,5 +7975,45 @@
     "n_assigned_one": "{{count}} assigned",
     "n_assigned_other": "{{count}} assigned",
     "role_trainer": "Trainer"
+  },
+  "portal": {
+    "programs": {
+      "nav": "Programs",
+      "title": "Training programs",
+      "subtitle": "Programs assigned to you and the ones open to join.",
+      "all_one": "All ({{count}})",
+      "all_other": "All ({{count}})",
+      "assigned_one": "Assigned to me ({{count}})",
+      "assigned_other": "Assigned to me ({{count}})",
+      "none_assigned": "Nothing assigned to you yet.",
+      "none": "No training programs are open right now.",
+      "assigned_badge": "Assigned to you",
+      "dates_tbc": "Dates to be announced",
+      "free": "Free",
+      "courses_one": "Courses ({{count}})",
+      "courses_other": "Courses ({{count}})",
+      "courses_soon": "Courses will appear here soon."
+    }
+  },
+  "roles_page": {
+    "subtitle": "See exactly what each role gets: where they land, their home page and their sidebar.",
+    "role_admin": "Academy Admin",
+    "role_coordinator": "Entity Coordinator",
+    "role_instructor": "Instructor",
+    "role_trainee": "Trainee",
+    "home_admin": "Academy dashboard: KPIs, performance, top courses and instructors, activity and items that need attention.",
+    "home_coordinator": "My organization: learners, learning now, completion rate, training to assign, quick actions and who hasn’t started.",
+    "home_instructor": "My work: grades to submit, interviews, offerings they teach, their courses and training programs, and their calendar.",
+    "home_trainee": "Learner home: continue learning, what’s coming up, and the courses and programs open to them.",
+    "header_trainee": "Header: Courses · Programs · My learning · My calendar · My academics · Library (Programs and My academics only when there is something to show).",
+    "when_programs": "when they coordinate or train a training program",
+    "when_teaching": "when they teach or assist a course offering",
+    "after_sign_in": "After sign-in",
+    "home": "Home page",
+    "sidebar_items": "Sidebar items",
+    "edit_hint": "Changes apply to this role in every academy on the platform.",
+    "readonly_hint": "Only a platform superadmin can change these.",
+    "preview": "Sidebar preview",
+    "no_sidebar": "No dashboard sidebar — this role only uses the learner site."
   }
 }

@@ -1,13 +1,14 @@
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
-import { Books, FolderSimple, Cube, ShoppingBag, GraduationCap, CalendarBlank, Signpost } from '@phosphor-icons/react'
+import { Books, FolderSimple, Cube, ShoppingBag, GraduationCap, CalendarBlank, Signpost, Certificate } from '@phosphor-icons/react'
 import { menuIcon } from '@components/Objects/Menus/menuIcons'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getMyAcademicRecord, getMyApplications, getOpenIntakes } from '@services/academic/core'
+import { getTrainingProgramCatalog } from '@services/academic/academic'
 import { useTranslation } from 'react-i18next'
 import { getMenuColorClasses } from '@services/utils/ts/colorUtils'
 
@@ -17,6 +18,8 @@ const BUILTIN: Record<string, Builtin> = {
   courses: { feature: 'courses', link: '/courses', labelKey: 'courses.courses', Icon: Books },
   // The learner's progress and certificates; signed-in users only.
   learning: { feature: '', link: '/trail', labelKey: 'workspace.my_learning', Icon: Signpost },
+  // Training programs assigned to / open to the learner; signed-in users only.
+  programs: { feature: '', link: '/programs', labelKey: 'portal.programs.nav', Icon: Certificate },
   library: { feature: 'folders', link: '/library', labelKey: 'library.library', Icon: FolderSimple },
   playgrounds: { feature: 'playgrounds', link: '/playgrounds', labelKey: 'common.playgrounds', Icon: Cube },
   store: { feature: 'payments', link: '/store', labelKey: 'common.store', Icon: ShoppingBag },
@@ -27,12 +30,12 @@ const BUILTIN: Record<string, Builtin> = {
 }
 
 // Default order when an org has no custom menu config.
-const DEFAULT_ORDER = ['courses', 'learning', 'calendar', 'academics', 'library', 'playgrounds', 'store']
+const DEFAULT_ORDER = ['courses', 'programs', 'learning', 'calendar', 'academics', 'library', 'playgrounds', 'store']
 // Signed-in pages added after an org saved its menu: appended unless the
 // saved menu lists them (enabled or not).
-const SIGNED_IN_ITEMS = ['learning', 'calendar', 'academics']
+const SIGNED_IN_ITEMS = ['programs', 'learning', 'calendar', 'academics']
 
-function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
+function MenuLinks(props: { orgslug: string; primaryColor?: string; inBar?: boolean }) {
   const { t } = useTranslation()
   const org = useOrg() as any
   const session = useLHSession() as any
@@ -49,8 +52,10 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
   const { data: record } = useQuery({ queryKey: ['portal', 'record', orgId], queryFn: () => getMyAcademicRecord(orgId!, token!), ...portalQuery })
   const { data: applications } = useQuery({ queryKey: ['portal', 'applications', orgId], queryFn: () => getMyApplications(orgId!, token!), ...portalQuery })
   const { data: intakes } = useQuery({ queryKey: ['portal', 'intakes', orgId], queryFn: () => getOpenIntakes(orgId!, token!), ...portalQuery })
+  const { data: programs } = useQuery({ queryKey: ['portal', 'training-programs', orgId], queryFn: () => getTrainingProgramCatalog(orgId!, token!), ...portalQuery })
   const listed = (v: any) => (Array.isArray(v) ? v.length > 0 : false)
   const showAcademics = listed(record?.memberships) || listed(applications) || listed(intakes)
+  const showPrograms = listed(programs)
 
   const rf = org?.config?.config?.resolved_features
   const isEnabled = (feature: string) => rf?.[feature]?.enabled === true
@@ -90,6 +95,7 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
       if (!item.enabled) return null
       if (meta.feature ? !isEnabled(meta.feature) : !signedIn) return null // plan/feature (or sign-in) gating
       if (item.type === 'academics' && !showAcademics) return null
+      if (item.type === 'programs' && !showPrograms) return null
       return {
         key: item.type,
         label: item.label || t(meta.labelKey),
@@ -105,6 +111,9 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
     return path !== '/' && (pathname === path || pathname.startsWith(path + '/'))
   }
 
+  // Many links: icons only below xl (labels stay as tooltips) so the bar never wraps.
+  const compact = !!props.inBar && rendered.length > 4
+
   return (
     <div className="ps-1">
       <ul className="flex items-center gap-1">
@@ -114,8 +123,8 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
             <li
               className={
                 branded
-                  ? `flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${colors.text} ${colors.hoverBg} ${active ? 'bg-black/10' : ''}`
-                  : `flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                  ? `flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${colors.text} ${colors.hoverBg} ${active ? 'bg-black/10' : ''}`
+                  : `flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                       active
                         ? 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-ink))]'
                         : 'text-[hsl(var(--dash-ink))]/70 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]'
@@ -127,13 +136,13 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
                 weight={active ? 'fill' : 'regular'}
                 className={!branded && active ? 'text-[hsl(var(--dash-accent))]' : undefined}
               />
-              <span>{it.label}</span>
+              <span className={compact ? 'hidden xl:inline' : undefined}>{it.label}</span>
             </li>
           )
           return it.external ? (
-            <a key={it.key} href={it.href} target="_blank" rel="noopener noreferrer">{content}</a>
+            <a key={it.key} href={it.href} target="_blank" rel="noopener noreferrer" title={it.label} aria-label={it.label}>{content}</a>
           ) : (
-            <Link key={it.key} href={it.href}>{content}</Link>
+            <Link key={it.key} href={it.href} title={it.label} aria-label={it.label}>{content}</Link>
           )
         })}
       </ul>

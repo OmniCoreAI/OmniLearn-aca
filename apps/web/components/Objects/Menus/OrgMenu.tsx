@@ -179,7 +179,7 @@ export const OrgMenu = (props: any) => {
               </Link>
             </div>
             <div className="hidden md:flex">
-              <MenuLinks orgslug={orgslug} primaryColor={primaryColor} />
+              <MenuLinks orgslug={orgslug} primaryColor={primaryColor} inBar />
             </div>
           </div>
 

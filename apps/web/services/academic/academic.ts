@@ -426,3 +426,12 @@ export async function unlinkCourseFromTrainingProgram(
   )
   return errorHandling(result)
 }
+
+/** Published training programs the signed-in member may join (learner catalog). */
+export async function getTrainingProgramCatalog(org_id: number, access_token: string) {
+  const result = await fetch(
+    `${getAPIUrl()}training-programs/org/${org_id}/catalog`,
+    RequestBodyWithAuthHeader('GET', null, null, access_token)
+  )
+  return errorHandling(result)
+}
