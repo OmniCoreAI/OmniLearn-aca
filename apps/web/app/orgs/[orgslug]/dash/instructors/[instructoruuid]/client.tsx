@@ -251,7 +251,7 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
                   ) : null}
                 </DetailItem>
                 <DetailItem label={t('instructors.languages_short', 'Languages')}>{(instructor.languages || []).join(', ')}</DetailItem>
-                {instructor.entity_name ? <DetailItem label={t('instructors.entity', 'Organization')}>{instructor.entity_name}</DetailItem> : null}
+                {instructor.entity_name ? <DetailItem label={t('instructors.entity', 'Entity')}>{instructor.entity_name}</DetailItem> : null}
                 <DetailItem label={t('administration.common.created', 'Created')}>{formatAdminDate(instructor.creation_date, i18n.language)}</DetailItem>
               </dl>
             </AdminCard>

@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLHSession } from '@components/Contexts/LHSessionContext';
 import useAdminStatus from '@components/Hooks/useAdminStatus';
@@ -64,12 +65,13 @@ const AdminAuthorization: React.FC<AuthorizationProps> = ({ children, authorizat
         setIsAuthorized(true);
       } else {
         setIsAuthorized(false);
-        router.push('/dash');
+        // Staff go back to their dashboard; people without one (learners) to the learner home.
+        router.push(hasAnyPortalAccess ? '/dash' : getUriWithOrg(org?.slug, '/'));
       }
     } else if (authorizationMode === 'component') {
       setIsAuthorized(hasAnyPortalAccess);
     }
-  }, [loading, navLoading, isUserAuthenticated, isPathAuthorized, hasAnyPortalAccess, authorizationMode, router]);
+  }, [loading, navLoading, isUserAuthenticated, isPathAuthorized, hasAnyPortalAccess, authorizationMode, router, org?.slug]);
 
   useEffect(() => {
     authorizeUser();
@@ -85,8 +87,14 @@ const AdminAuthorization: React.FC<AuthorizationProps> = ({ children, authorizat
 
   if (authorizationMode === 'page' && !isAuthorized) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <h1 className="text-2xl">You are not authorized to access this page</h1>
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-[hsl(var(--dash-canvas))] px-4 text-center">
+        <h1 className="text-xl font-semibold text-[hsl(var(--dash-ink))]">You are not authorized to access this page</h1>
+        <Link
+          href={hasAnyPortalAccess ? '/dash' : getUriWithOrg(org?.slug, '/')}
+          className="rounded-full bg-[hsl(var(--dash-ink))] px-5 py-2 text-sm font-semibold text-white"
+        >
+          {hasAnyPortalAccess ? 'Back to your dashboard' : 'Go to the homepage'}
+        </Link>
       </div>
     );
   }

@@ -101,7 +101,7 @@ function MyPrograms({ orgslug }: { orgslug: string }) {
                   <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
                     {p.training_type ? (
                       <span className="rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-semibold text-[hsl(var(--dash-ink))]">
-                        {t(`academic.type_${p.training_type}`, p.training_type)}
+                        {String(t(`academic.type_${p.training_type}`, { defaultValue: p.training_type }))}
                       </span>
                     ) : <span />}
                     {p.assigned ? (

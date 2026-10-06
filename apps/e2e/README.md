@@ -49,6 +49,21 @@ feature-local things relatively. Specs never reach into another feature.
    - Reuse the shared sessions: `import { ADMIN_STATE, STUDENT_STATE } from '../../../core/sharedAuth'` then `test.use({ storageState: ADMIN_STATE })` (teacher) or `STUDENT_STATE` (student). This keeps the suite under the login rate limit.
 6. That's it — `playwright.config.ts` (`testDir: './features'`) discovers the new specs automatically.
 
+## Role portals (this fork)
+
+`features/roles/` checks what each role gets — landing page, home, navigation,
+blocked areas and assignment notifications — against an **already running**
+instance (local dev or staging). It has its own config, with no self-host boot
+and no global setup, and uses the QA personas from
+`apps/api/scripts/seed_qa_personas.py`. That script writes their credentials to
+`.env.test.local` at the repo root; override the path with `E2E_QA_ENV_FILE`.
+
+```bash
+cd apps/api && uv run python scripts/seed_qa_personas.py --yes
+cd apps/e2e && E2E_BASE_URL=http://localhost:3002 E2E_API_URL=http://localhost:1338/api/v1 \
+  bunx playwright test -c playwright.roles.config.ts
+```
+
 ## Running locally
 
 Requires Docker running, plus Node 20+ / bun.

@@ -2,5 +2,6 @@ node_modules/
 .auth/
 test-results/
 playwright-report/
+playwright-report-roles/
 playwright/.cache/
 *.log

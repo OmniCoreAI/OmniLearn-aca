@@ -64,7 +64,7 @@ function AdministrationOverview({ orgslug }: { orgslug: string }) {
   const areas: DashStat[] = [
     { key: 'instructors', label: t('administration.nav.instructors', 'Instructors / Trainers'), value: count('instructors'), hint: t('administration.overview.categories_hint', '{{count}} categories', { count: count('instructor_categories') }), icon: ChalkboardTeacher, tone: 'rose', href: '/dash/instructors' },
     { key: 'facilities', label: t('administration.nav.facilities', 'Facilities & Rooms'), value: count('facilities'), hint: t('administration.overview.locations_hint', '{{count}} locations', { count: count('locations') }), icon: Door, tone: 'stone', href: '/dash/administration/facilities' },
-    { key: 'entities', label: t('administration.nav.entities', 'Organizations'), value: count('entities'), hint: t('administration.overview.positions_hint', '{{count}} positions', { count: count('positions') }), icon: Buildings, tone: 'gold', href: '/dash/administration/entities' },
+    { key: 'entities', label: t('administration.nav.entities', 'Entities'), value: count('entities'), hint: t('administration.overview.positions_hint', '{{count}} positions', { count: count('positions') }), icon: Buildings, tone: 'gold', href: '/dash/administration/entities' },
     { key: 'usergroups', label: t('administration.nav.user_groups', 'User groups'), value: count('usergroups'), icon: UsersThree, tone: 'sand', href: '/dash/administration/user-groups' },
     { key: 'addons', label: t('administration.nav.addons', 'Add-ons'), value: count('addons'), icon: Package, tone: 'rose', href: '/dash/administration/add-ons' },
     { key: 'email_templates', label: t('administration.overview.email_templates', 'Email templates'), value: count('email_templates'), hint: t('administration.overview.custom_hint', 'Customized'), icon: EnvelopeSimple, tone: 'stone', href: '/dash/administration/communication' },
@@ -161,7 +161,7 @@ function AdministrationOverview({ orgslug }: { orgslug: string }) {
             </p>
             <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
               {[
-                t('administration.overview.chain_entity', 'Organization'),
+                t('administration.overview.chain_entity', 'Entity'),
                 t('administration.overview.chain_group', 'User group'),
                 t('administration.overview.chain_course', 'Course / program'),
                 t('administration.overview.chain_instructor', 'Instructor'),

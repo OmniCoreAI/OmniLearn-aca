@@ -287,3 +287,23 @@ Then I signed in as each account and walked its portal. The super-admin console 
 - **Access follows assignment, extended:** program or cohort coordinators also get the Postgraduate Studies section (`MyAssignmentsRead.programs`). Shown in Roles & portals.
 - **Already covered elsewhere:** per-role "needs attention" — instructor home (grades, returned gradebooks, interviews) and coordinator home (training to assign, members who haven't started).
 - **Not done:** overdue-training alerts for coordinators; the bell on the mobile dashboard menu.
+
+## 10. Delivered (2026-10-06): Phase 5 — naming, cleanup and tests
+
+- **D3 answered: "Entity".**
+  - 55 English strings that meant الجهة now say *entity*: sidebar "Entities", "My entity", the "Entity Coordinator" role and its preset, the entity screens, audience panels, user-group help and the admin overview.
+  - The matching in-code fallback texts were updated too.
+  - Arabic already used الجهة throughout.
+- **Legacy tables.** Migration `adae1f2a3b4c` drops `programinstructor`, `trainingprograminstructor` and `room` (along with the foreign keys pointing at them), but only when they are empty; otherwise it keeps them and logs a warning. Applied to the dev DB.
+- **QA personas.**
+  - `apps/api/scripts/seed_qa_personas.py --yes` creates or refreshes one account per role: admin, registry instructor, entity coordinator of "QA Ministry of Health", and a trainee member. It uses the app's own entity services.
+  - All four share one password, written to `.env.test.local` as `QA_PASSWORD` plus `QA_<ROLE>_EMAIL`.
+  - Re-running resets the passwords and clears forced password changes.
+- **Role e2e checks** (`apps/e2e/features/roles`, config `playwright.roles.config.ts`), run against a live instance, 6 tests:
+  - landing page and home for each role
+  - no create-course link for instructors
+  - Administration blocked for instructors and coordinators
+  - learners sent from `/dash` to the learner home
+  - bell notification on a coordinator appointment, with click-through to the program
+  - no notification for your own change
+- **Fix found by the e2e checks.** The dashboard guard sent people it blocked to `/dash`, which for learners showed a bare "not authorized" page. People without dashboard access now go to the learner home, and the fallback screen has a link back.

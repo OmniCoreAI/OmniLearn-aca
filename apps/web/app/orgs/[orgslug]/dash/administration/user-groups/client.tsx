@@ -174,7 +174,7 @@ function UserGroupsHome({ orgslug }: { orgslug: string }) {
       <AdminBreadcrumbs orgslug={orgslug} items={[{ label: t('usergroups.title', 'User groups') }]} />
       <AcademicHeader
         title={t('usergroups.title', 'User groups')}
-        subtitle={t('usergroups.subtitle', 'Every group in the academy — academy-wide and per organization — with its people and the courses assigned to it.')}
+        subtitle={t('usergroups.subtitle', 'Every group in the academy — academy-wide and per entity — with its people and the courses assigned to it.')}
       />
 
       <DashStatCards
@@ -238,7 +238,7 @@ function UserGroupsHome({ orgslug }: { orgslug: string }) {
             description={
               filtering
                 ? t('administration.common.no_matches_hint', 'Try a different search or clear the filters.')
-                : t('usergroups.none_desc', 'Create groups inside an organization (departments, cohorts) or academy-wide under Users → User groups.')
+                : t('usergroups.none_desc', 'Create groups inside an entity (departments, cohorts) or academy-wide under Users → User groups.')
             }
           />
         }

@@ -526,7 +526,7 @@ function DashLeftMenu() {
                     <NavItem
                       href="/dash/my-entity"
                       icon={icon(IdentificationCard, isActivePath('/dash/my-entity'))}
-                      label={t('entities.portal.nav', 'My organization')}
+                      label={t('entities.portal.nav', 'My entity')}
                       isCollapsed={isCollapsed}
                       active={isActivePath('/dash/my-entity')}
                       onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'my-entity' })}
