@@ -297,6 +297,8 @@ class FacilityReservationCreate(SQLModel):
 
 
 class FacilityReservationUpdate(SQLModel):
+    # Move the booking to another room of the same organization.
+    facility_uuid: Optional[str] = None
     title: Optional[str] = None
     kind: Optional[ReservationKind] = None
     start: Optional[str] = None
@@ -315,8 +317,12 @@ class FacilityBooking(SQLModel):
     facility_uuid: Optional[str] = None
     facility_name: Optional[str] = None
     title: Optional[str] = None
+    # As entered on the session (may be date-only); see starts_at / ends_at.
     start: Optional[str] = None
     end: Optional[str] = None
+    # The occupied range, always "YYYY-MM-DDTHH:MM" (end exclusive).
+    starts_at: Optional[str] = None
+    ends_at: Optional[str] = None
     parent_name: Optional[str] = None
     parent_uuid: Optional[str] = None
     # True when the room comes from the parent's default, not the session.
@@ -336,3 +342,38 @@ class FacilityRef(SQLModel):
     name: str
     capacity: Optional[int] = None
     location_name: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Smart suggestions
+# ---------------------------------------------------------------------------
+
+
+class SuggestionReason(SQLModel):
+    """Why a room ranks where it does; ``code`` is translated by the client.
+
+    Codes: fits, roomy, seats, capacity_unknown, same_room, same_location,
+    nearby, equipment, quiet_day, busy_day.
+    """
+
+    code: str
+    params: dict = {}
+
+
+class RoomSuggestion(SQLModel):
+    """A room that is free for the requested time, ranked by fit (no costs)."""
+
+    facility_uuid: str
+    name: str
+    code: str = ""
+    capacity: Optional[int] = None
+    facility_type_name: Optional[str] = None
+    location_uuid: Optional[str] = None
+    location_name: Optional[str] = None
+    score: int = 0  # 0–100
+    reasons: List[SuggestionReason] = []
+
+
+class FreeSlot(SQLModel):
+    start: str
+    end: str

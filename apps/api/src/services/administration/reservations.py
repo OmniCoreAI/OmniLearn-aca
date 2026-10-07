@@ -60,7 +60,7 @@ ScheduleSession = Union[CourseScheduleSession, OfferingSession]
 # ---------------------------------------------------------------------------
 
 
-def _parse(value: Optional[str]) -> Optional[datetime]:
+def parse_datetime(value: Optional[str]) -> Optional[datetime]:
     if not value:
         return None
     try:
@@ -72,11 +72,11 @@ def _parse(value: Optional[str]) -> Optional[datetime]:
 
 def session_window(start: Optional[str], end: Optional[str]) -> Optional[Window]:
     """Occupied time range of a session. Date-only values cover whole days."""
-    begin = _parse(start)
+    begin = parse_datetime(start)
     if begin is None:
         return None
     start_is_date = len(str(start).strip()) <= 10
-    finish = _parse(end)
+    finish = parse_datetime(end)
     if finish is None:
         finish = begin + (timedelta(days=1) if start_is_date else timedelta(hours=1))
     elif len(str(end).strip()) <= 10:
@@ -86,11 +86,11 @@ def session_window(start: Optional[str], end: Optional[str]) -> Optional[Window]
     return begin, finish
 
 
-def _overlaps(a: Window, b: Window) -> bool:
+def overlaps(a: Window, b: Window) -> bool:
     return a[0] < b[1] and b[0] < a[1]
 
 
-def _fmt(value: datetime) -> str:
+def format_minute(value: datetime) -> str:
     return value.isoformat(timespec="minutes")
 
 
@@ -99,14 +99,14 @@ def _fmt(value: datetime) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _availability_reasons(facility: Facility, window: Window) -> List[str]:
+def availability_reasons(facility: Facility, window: Window) -> List[str]:
     reasons = []
     if facility.status != FacilityStatus.ACTIVE.value or not facility.is_bookable:
         reasons.append(f"{facility.name} is not available for booking")
     availability = facility.availability or {}
     for blackout in availability.get("blackout_dates") or []:
         blackout_window = session_window(blackout.get("start"), blackout.get("end") or blackout.get("start"))
-        if blackout_window and _overlaps(window, blackout_window):
+        if blackout_window and overlaps(window, blackout_window):
             reason = blackout.get("reason") or "unavailable"
             reasons.append(f"{facility.name} is blocked ({reason}) {blackout.get('start')}")
     # Opening hours only apply to timed bookings within a single day.
@@ -140,7 +140,7 @@ async def find_conflicts(
     db_session: AsyncSession, facility: Facility, window: Window, exclude_id: Optional[int] = None
 ) -> List[str]:
     """Human-readable reasons this time range cannot use the facility."""
-    reasons = _availability_reasons(facility, window)
+    reasons = availability_reasons(facility, window)
     clashes = await _overlapping(db_session, facility.id, window, exclude_id)
     for booking in await _bookings_read(db_session, clashes):
         label = " — ".join(part for part in (booking.parent_name, booking.title) if part)
@@ -176,14 +176,26 @@ async def check_facility(
     window = session_window(start, end)
     if window is None:
         raise bad_request("A valid start date/time is required")
-    exclude_id = None
-    if exclude_uuid:
-        exclude_id = (
-            await db_session.execute(
-                select(FacilityReservation.id).where(FacilityReservation.reservation_uuid == exclude_uuid)
-            )
-        ).scalar()
+    exclude_id = await resolve_exclude(db_session, facility.org_id, exclude_uuid)
     return await find_conflicts(db_session, facility, window, exclude_id)
+
+
+async def resolve_exclude(db_session: AsyncSession, org_id: int, ref: Optional[str]) -> Optional[int]:
+    """Reservation id to ignore: the booking (or session) being edited."""
+    if not ref:
+        return None
+    query = select(FacilityReservation.id).where(FacilityReservation.org_id == org_id)
+    if ref.startswith("offeringsession_"):
+        query = query.join(OfferingSession, OfferingSession.id == FacilityReservation.offering_session_id).where(  # type: ignore[arg-type]
+            OfferingSession.session_uuid == ref
+        )
+    elif ref.startswith("session_"):
+        query = query.join(CourseScheduleSession, CourseScheduleSession.id == FacilityReservation.course_session_id).where(  # type: ignore[arg-type]
+            CourseScheduleSession.session_uuid == ref
+        )
+    else:
+        query = query.where(FacilityReservation.reservation_uuid == ref)
+    return (await db_session.execute(query)).scalar()
 
 
 # ---------------------------------------------------------------------------
@@ -322,8 +334,10 @@ async def _bookings_read(db_session: AsyncSession, rows: List[FacilityReservatio
             facility_uuid=facility.facility_uuid if facility else None,
             facility_name=facility.name if facility else None,
             title=row.title,
-            start=_fmt(row.starts_at),
-            end=_fmt(row.ends_at),
+            start=format_minute(row.starts_at),
+            end=format_minute(row.ends_at),
+            starts_at=format_minute(row.starts_at),
+            ends_at=format_minute(row.ends_at),
             kind=row.kind,
             status=row.status,
             attendees=row.attendees,
@@ -358,10 +372,10 @@ async def _list(
     query = select(FacilityReservation).where(*conditions)
     if not include_cancelled:
         query = query.where(FacilityReservation.status == ReservationStatus.APPROVED.value)
-    if _parse(since):
-        query = query.where(FacilityReservation.ends_at >= _parse(since))
-    if _parse(until):
-        query = query.where(FacilityReservation.starts_at <= _parse(until))
+    if parse_datetime(since):
+        query = query.where(FacilityReservation.ends_at >= parse_datetime(since))
+    if parse_datetime(until):
+        query = query.where(FacilityReservation.starts_at <= parse_datetime(until))
     rows = (await db_session.execute(query.order_by(FacilityReservation.starts_at))).scalars().all()
     return await _bookings_read(db_session, list(rows))
 
@@ -407,7 +421,7 @@ def _validate_manual(facility: Facility, data: dict) -> Window:
     data["title"] = title
     if not data.get("start") or not data.get("end"):
         raise bad_request("Start and end are required")
-    begin, finish = _parse(data["start"]), _parse(data["end"])
+    begin, finish = parse_datetime(data["start"]), parse_datetime(data["end"])
     if begin is None or finish is None:
         raise bad_request("Start and end must be ISO dates or date-times")
     # A date-only end is inclusive (same-day allowed); a timed end must be later.
@@ -490,11 +504,19 @@ async def update_reservation(
         raise bad_request("A cancelled booking cannot be changed")
     update = payload.model_dump(exclude_unset=True)
     allow_conflict = bool(update.pop("allow_conflict", False))
+    moved = False
+    target_uuid = update.pop("facility_uuid", None)
+    if target_uuid and target_uuid != facility.facility_uuid:  # type: ignore[union-attr]
+        facility = await get_facility_by_uuid(db_session, target_uuid)
+        if facility.org_id != reservation.org_id:
+            raise bad_request("Facility belongs to a different organization")
+        _assert_bookable(facility, update.get("kind") or reservation.kind)
+        moved = True
     data = {
         "title": reservation.title,
         "kind": reservation.kind,
-        "start": _fmt(reservation.starts_at),
-        "end": _fmt(reservation.ends_at),
+        "start": format_minute(reservation.starts_at),
+        "end": format_minute(reservation.ends_at),
         "attendees": reservation.attendees,
         "notes": reservation.notes,
         **update,
@@ -503,10 +525,11 @@ async def update_reservation(
     if "kind" in update:
         _assert_bookable(facility, data["kind"])  # type: ignore[arg-type]
     window = _validate_manual(facility, data)  # type: ignore[arg-type]
-    if window != (reservation.starts_at, reservation.ends_at):
+    if moved or window != (reservation.starts_at, reservation.ends_at):
         reasons = await find_conflicts(db_session, facility, window, reservation.id)  # type: ignore[arg-type]
         if reasons and not allow_conflict:
             raise conflict_error(reasons)
+        reservation.facility_id = facility.id  # type: ignore[union-attr]
         reservation.starts_at, reservation.ends_at = window
         reservation.conflict_override = bool(reasons)
     for key in ("title", "kind", "attendees", "notes"):
@@ -569,7 +592,7 @@ def backfill_reservations(connection) -> int:
         taken: Dict[int, List[Window]] = {}
         stamp = now()
         for facility_id, window, org_id, source, session_id in candidates:
-            clash = any(_overlaps(window, other) for other in taken.get(facility_id, []))
+            clash = any(overlaps(window, other) for other in taken.get(facility_id, []))
             if not clash:
                 taken.setdefault(facility_id, []).append(window)
             column = "course_session_id" if source == ReservationSource.COURSE_SESSION else "offering_session_id"

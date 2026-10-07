@@ -88,6 +88,93 @@ export const createFacility = (org_id: number, data: any, token: string) =>
 export const updateFacility = (uuid: string, data: any, token: string) => call('PUT', `facilities/${uuid}`, token, data)
 export const deleteFacility = (uuid: string, token: string) => call('DELETE', `facilities/${uuid}`, token)
 
+// ----------------------------- Hall bookings & suggestions -----------------------------
+
+export type BookingKind = 'event' | 'exam' | 'meeting' | 'maintenance' | 'other'
+export const BOOKING_KINDS: BookingKind[] = ['event', 'exam', 'meeting', 'maintenance', 'other']
+
+export interface FacilityBooking {
+  booking_uuid: string
+  source: 'course_session' | 'offering_session' | 'manual'
+  session_uuid?: string | null
+  facility_uuid?: string | null
+  facility_name?: string | null
+  title?: string | null
+  start?: string | null
+  end?: string | null
+  /** The occupied range, always "YYYY-MM-DDTHH:MM" (end exclusive). */
+  starts_at?: string | null
+  ends_at?: string | null
+  parent_name?: string | null
+  parent_uuid?: string | null
+  inherited: boolean
+  kind: BookingKind | 'session'
+  status: 'approved' | 'cancelled'
+  attendees?: number | null
+  notes?: string | null
+  double_booked: boolean
+}
+
+export interface SuggestionReason {
+  code: string
+  params: Record<string, any>
+}
+
+export interface RoomSuggestion {
+  facility_uuid: string
+  name: string
+  code: string
+  capacity?: number | null
+  facility_type_name?: string | null
+  location_uuid?: string | null
+  location_name?: string | null
+  score: number
+  reasons: SuggestionReason[]
+}
+
+export interface FreeSlot {
+  start: string
+  end: string
+}
+
+export const getOrgFacilityBookings = (org_id: number, token: string, since?: string, until?: string) =>
+  call('GET', `facilities/org/${org_id}/bookings${qs({ since, until })}`, token) as Promise<FacilityBooking[]>
+export const createFacilityBooking = (facility_uuid: string, data: any, token: string) =>
+  call('POST', `facilities/${facility_uuid}/bookings`, token, data) as Promise<FacilityBooking>
+export const updateFacilityBooking = (booking_uuid: string, data: any, token: string) =>
+  call('PUT', `facilities/bookings/${booking_uuid}`, token, data) as Promise<FacilityBooking>
+export const cancelFacilityBooking = (booking_uuid: string, token: string) =>
+  call('POST', `facilities/bookings/${booking_uuid}/cancel`, token) as Promise<FacilityBooking>
+/** Why start–end cannot use the room (empty when free). `exclude`: booking or session uuid being edited. */
+export const getFacilityConflicts = (facility_uuid: string, token: string, start: string, end?: string, exclude?: string) =>
+  call('GET', `facilities/${facility_uuid}/conflicts${qs({ start, end, exclude })}`, token) as Promise<string[]>
+
+export function getRoomSuggestions(
+  org_id: number,
+  token: string,
+  params: {
+    start: string
+    end?: string
+    attendees?: number | null
+    equipment?: string[]
+    location?: string
+    near?: string
+    exclude?: string
+    limit?: number
+  }
+) {
+  const { equipment = [], ...rest } = params
+  let query = qs(rest)
+  for (const uuid of equipment) query += `${query ? '&' : '?'}equipment=${encodeURIComponent(uuid)}`
+  return call('GET', `facilities/org/${org_id}/suggestions${query}`, token) as Promise<RoomSuggestion[]>
+}
+
+export const getFacilityFreeSlots = (
+  facility_uuid: string,
+  token: string,
+  params: { start: string; duration: number; days?: number; around?: string; exclude?: string; limit?: number }
+) => call('GET', `facilities/${facility_uuid}/free-slots${qs(params)}`, token) as Promise<FreeSlot[]>
+
 export async function uploadFacilityImage(uuid: string, file: File, token: string) {
   const form = new FormData()
   form.append('image', file)

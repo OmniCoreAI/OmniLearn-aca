@@ -18,6 +18,7 @@ import {
   createCourseSession,
   deleteCourseSession,
 } from '@services/academic/academic'
+import { RoomAssist } from '@components/Dashboard/Pages/Administration/HallBooking/RoomAssist'
 import {
   FacilitySelect,
   InstructorSelect,
@@ -235,6 +236,8 @@ export function CourseProfilePanel({
         courseUuid={courseUuid}
         access_token={access_token}
         sessions={sessions as any[]}
+        defaultRoom={profile?.facility || null}
+        attendees={profile?.capacity ?? null}
       />
     </div>
   )
@@ -244,10 +247,15 @@ function SessionsEditor({
   courseUuid,
   access_token,
   sessions,
+  defaultRoom,
+  attendees,
 }: {
   courseUuid: string
   access_token: string
   sessions: any[]
+  /** The course room, used by sessions without their own. */
+  defaultRoom?: { facility_uuid: string; name: string } | null
+  attendees?: number | null
 }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -383,6 +391,19 @@ function SessionsEditor({
           emptyLabel={t('academic.session_course_instructor', 'Course instructor teaches it')}
         />
       </div>
+      <RoomAssist
+        className="mt-2.5"
+        start={start}
+        end={end}
+        room={facilityUuid}
+        defaultRoom={defaultRoom}
+        attendees={attendees}
+        onPickRoom={setFacilityUuid}
+        onPickTime={(s, e) => {
+          setStart(s)
+          setEnd(e)
+        }}
+      />
       <button
         onClick={add}
         disabled={busy || !title.trim()}
