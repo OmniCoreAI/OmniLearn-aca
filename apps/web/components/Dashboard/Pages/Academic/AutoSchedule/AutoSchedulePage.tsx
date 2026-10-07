@@ -567,12 +567,14 @@ export default function AutoSchedulePage({ orgslug }: { orgslug: string }) {
                                 </span>
                               ))}
                             </div>
-                            <div className="w-40 text-end text-xs leading-tight">
+                            <div className="w-44 text-end text-xs leading-tight">
                               <p className="truncate font-medium">{ms[0].facility_name}</p>
                               <p className="text-[11px] text-[hsl(var(--dash-muted))]">
                                 {ms[0].size != null && ms[0].facility_capacity != null
                                   ? t('academic.auto.fit', '{{size}} in {{capacity}} seats', { size: ms[0].size, capacity: ms[0].facility_capacity })
-                                  : t('academic.auto.sessions_n', '{{count}} sessions', { count: ms.reduce((n, m) => n + m.dates.length, 0) })}
+                                  : ms[0].size == null
+                                    ? t('academic.auto.size_unknown', 'Class size unknown — larger room chosen')
+                                    : t('academic.auto.sessions_n', '{{count}} sessions', { count: ms.reduce((n, m) => n + m.dates.length, 0) })}
                               </p>
                             </div>
                           </div>

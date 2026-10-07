@@ -102,6 +102,15 @@ class TestPlan:
         assert plan.sessions_to_create == 30
 
     @pytest.mark.asyncio
+    async def test_unknown_class_size_prefers_the_larger_room(self, db, org, admin_user, mock_request, bypass_rbac):
+        await _rooms(db, org, admin_user, Tiny=10, Hall=48, Mid=30)
+        # No seat limit and nobody registered: the size is unknown.
+        term, _ = await _setup(db, org, admin_user, mock_request, [None])
+        plan = await planner.plan_term(mock_request, term.term_uuid, _request(), admin_user, db)
+        assert {m.facility_name for m in plan.meetings} == {"Hall"}
+        assert all(m.size is None for m in plan.meetings)
+
+    @pytest.mark.asyncio
     async def test_unplaceable_offerings_are_explained(self, db, org, admin_user, mock_request, bypass_rbac):
         await _rooms(db, org, admin_user, Small=30)
         term, offerings = await _setup(db, org, admin_user, mock_request, [100, 20])

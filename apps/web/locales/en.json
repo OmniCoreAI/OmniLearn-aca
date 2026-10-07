@@ -328,6 +328,7 @@
       "reason_not_schedulable": "Its status does not allow scheduling",
       "include": "Include",
       "fit": "{{size}} in {{capacity}} seats",
+      "size_unknown": "Class size unknown — larger room chosen",
       "sessions_n": "{{count}} sessions",
       "skipped_n": "{{count}} dates skipped",
       "apply_hint": "Untick an offering to leave it out. Every date is checked again when you create the sessions.",

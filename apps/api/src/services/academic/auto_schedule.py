@@ -9,9 +9,10 @@ cohort is double-booked:
   different days (and, by default, at the same time); no overlaps per room,
   per person and per cohort.
 * Goals, in two passes: first place as many offerings as possible; then,
-  keeping that many, prefer the tightest room that seats the class, the
-  offering's own default room, no meetings on consecutive days and earlier
-  starts.
+  keeping that many, prefer the tightest room that seats the class (the
+  largest room when the class size is unknown — no seat limit and nobody
+  registered yet), the offering's own default room, no meetings on
+  consecutive days and earlier starts.
 
 Existing commitments come from the facility reservations and the schedule
 sessions of other offerings and courses inside the teaching weeks. Those that
@@ -557,6 +558,7 @@ def _solve(
             costs.append(late)
 
         room_vars = {}
+        largest = max((r.capacity for r in candidates[oid] if r.capacity), default=0)
         for room in candidates[oid]:
             use = model.NewBoolVar(f"room_{oid}_{room.id}")
             room_vars[room.id] = use
@@ -568,7 +570,11 @@ def _solve(
                 if len(allowed) < len(days) * len(starts):
                     model.AddLinearExpressionInDomain(start, cp_model.Domain.FromValues(allowed)).OnlyEnforceIf(use)
             if room.capacity and item.size:
+                # Known class size: the tighter the fit, the better.
                 fit = round(100 * (room.capacity - item.size) / room.capacity)
+            elif room.capacity and largest:
+                # Unknown class size: prefer the larger room, so nobody is left standing.
+                fit = round(100 * (largest - room.capacity) / largest)
             else:
                 fit = UNKNOWN_FIT_PENALTY
             if item.row.facility_id and room.id != item.row.facility_id:
