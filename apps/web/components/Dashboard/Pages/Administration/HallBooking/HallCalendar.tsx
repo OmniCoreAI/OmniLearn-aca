@@ -54,7 +54,7 @@ const KIND_COLORS: Record<string, string> = {
 }
 const DOUBLE_BOOKED_COLOR = 'hsl(351 82% 48%)'
 
-const CALENDAR_THEME = [
+export const CALENDAR_THEME = [
   '[--color-primary:hsl(var(--dash-accent))]',
   '[--color-primary-foreground:hsl(var(--dash-ink))]',
   '[--color-foreground:hsl(var(--dash-ink))]',
@@ -62,7 +62,7 @@ const CALENDAR_THEME = [
   '[--color-border:hsl(222_25%_60%/0.18)]',
 ].join(' ')
 
-const CALENDAR_CLASSES: EventCalendarClassNames = {
+export const CALENDAR_CLASSES: EventCalendarClassNames = {
   event: cn(
     'rounded-md text-[11.5px]',
     'not-data-[view=agenda]:rounded-lg not-data-[view=agenda]:border-s-[3px] not-data-[view=agenda]:border-(--ec-event-color)',
@@ -73,7 +73,7 @@ const CALENDAR_CLASSES: EventCalendarClassNames = {
   timeGutterLabel: 'text-[11px] tabular-nums',
   agendaDayHeader: 'bg-white/40 text-[13px]',
 }
-const TODAY_CLASS = 'bg-[linear-gradient(180deg,hsl(43_90%_60%/0.16),hsl(43_90%_60%/0.04))]'
+export const TODAY_CLASS = 'bg-[linear-gradient(180deg,hsl(43_90%_60%/0.16),hsl(43_90%_60%/0.04))]'
 
 type Pending = Record<string, { start: string; end: string; facility_uuid: string }>
 

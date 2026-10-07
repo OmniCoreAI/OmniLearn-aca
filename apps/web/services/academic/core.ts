@@ -52,6 +52,66 @@ export const updateTerm = (uuid: string, data: any, token: string) =>
   call('PUT', `terms/${uuid}`, token, data)
 export const deleteTerm = (uuid: string, token: string) => call('DELETE', `terms/${uuid}`, token)
 
+// ----------------------------- Term auto-scheduling -----------------------------
+
+export interface AutoScheduleRequest {
+  offerings?: { offering_uuid: string; meetings_per_week?: number; duration_minutes?: number }[] | null
+  days: string[]
+  day_start: string
+  day_end: string
+  meetings_per_week: number
+  duration_minutes: number
+  step_minutes?: number
+  same_time?: boolean
+  time_limit_seconds?: number
+}
+
+export interface PlannedMeeting {
+  offering_uuid: string
+  offering_code: string
+  course_name?: string | null
+  cohort_name?: string | null
+  day: string
+  start: string
+  end: string
+  facility_uuid: string
+  facility_name: string
+  facility_capacity?: number | null
+  size?: number | null
+  dates: string[]
+  skipped: { date: string; reasons: string[] }[]
+}
+
+export interface AutoSchedulePlan {
+  status: 'optimal' | 'feasible' | 'timeout' | 'empty'
+  term_uuid: string
+  term_name?: string | null
+  teaching_start: string
+  teaching_end: string
+  weeks: number
+  meetings: PlannedMeeting[]
+  unplaced: { offering_uuid: string; offering_code: string; course_name?: string | null; reason: string; params: Record<string, any> }[]
+  sessions_to_create: number
+  solve_ms: number
+}
+
+export interface AutoScheduleApplyResult {
+  offerings: number
+  created: number
+  skipped: { offering_code: string; date: string; reasons: string[] }[]
+  already_scheduled: string[]
+}
+
+/** Draft a clash-free weekly timetable for the term (nothing is saved). */
+export const planTermSchedule = (term_uuid: string, data: AutoScheduleRequest, token: string) =>
+  call('POST', `terms/${term_uuid}/auto-schedule`, token, data) as Promise<AutoSchedulePlan>
+/** Create the sessions of a reviewed plan. */
+export const applyTermSchedule = (
+  term_uuid: string,
+  meetings: Pick<PlannedMeeting, 'offering_uuid' | 'day' | 'start' | 'end' | 'facility_uuid'>[],
+  token: string
+) => call('POST', `terms/${term_uuid}/auto-schedule/apply`, token, { meetings }) as Promise<AutoScheduleApplyResult>
+
 // ----------------------------- Catalog -----------------------------
 
 export const getAcademicCourses = (org_id: number, token: string, q?: string) =>

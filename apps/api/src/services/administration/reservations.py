@@ -142,7 +142,7 @@ async def find_conflicts(
     """Human-readable reasons this time range cannot use the facility."""
     reasons = availability_reasons(facility, window)
     clashes = await _overlapping(db_session, facility.id, window, exclude_id)
-    for booking in await _bookings_read(db_session, clashes):
+    for booking in await bookings_read(db_session, clashes):
         label = " — ".join(part for part in (booking.parent_name, booking.title) if part)
         reasons.append(f"{facility.name} is already booked by {label} ({booking.start})")
     return reasons
@@ -299,7 +299,7 @@ async def release_offering(db_session: AsyncSession, offering_id: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def _bookings_read(db_session: AsyncSession, rows: List[FacilityReservation]) -> List[FacilityBooking]:
+async def bookings_read(db_session: AsyncSession, rows: List[FacilityReservation]) -> List[FacilityBooking]:
     course_ids = [r.course_session_id for r in rows if r.course_session_id]
     offering_ids = [r.offering_session_id for r in rows if r.offering_session_id]
     facility_ids = list({r.facility_id for r in rows})
@@ -377,7 +377,7 @@ async def _list(
     if parse_datetime(until):
         query = query.where(FacilityReservation.starts_at <= parse_datetime(until))
     rows = (await db_session.execute(query.order_by(FacilityReservation.starts_at))).scalars().all()
-    return await _bookings_read(db_session, list(rows))
+    return await bookings_read(db_session, list(rows))
 
 
 async def list_bookings(
@@ -491,7 +491,7 @@ async def create_reservation(
     await _flush_or_conflict(db_session, facility.name)
     await db_session.commit()
     await db_session.refresh(reservation)
-    return (await _bookings_read(db_session, [reservation]))[0]
+    return (await bookings_read(db_session, [reservation]))[0]
 
 
 async def update_reservation(
@@ -539,7 +539,7 @@ async def update_reservation(
     await _flush_or_conflict(db_session, facility.name)  # type: ignore[union-attr]
     await db_session.commit()
     await db_session.refresh(reservation)
-    return (await _bookings_read(db_session, [reservation]))[0]
+    return (await bookings_read(db_session, [reservation]))[0]
 
 
 async def cancel_reservation(db_session: AsyncSession, current_user: AnyUser, booking_uuid: str) -> FacilityBooking:
@@ -550,7 +550,7 @@ async def cancel_reservation(db_session: AsyncSession, current_user: AnyUser, bo
     db_session.add(reservation)
     await db_session.commit()
     await db_session.refresh(reservation)
-    return (await _bookings_read(db_session, [reservation]))[0]
+    return (await bookings_read(db_session, [reservation]))[0]
 
 
 # ---------------------------------------------------------------------------

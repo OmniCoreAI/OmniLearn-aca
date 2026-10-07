@@ -337,6 +337,11 @@ async def to_read(db_session: AsyncSession, offering: CourseOffering) -> CourseO
         enrolled_count=await _enrolled_count(db_session, offering.id),  # type: ignore[arg-type]
         results_count=await _enrolled_count(db_session, offering.id, (EnrollmentStatus.COMPLETED, EnrollmentStatus.FAILED)),  # type: ignore[arg-type]
         facility=await facility_ref(db_session, offering.facility_id),
+        session_count=(
+            await db_session.execute(
+                select(func.count(OfferingSession.id)).where(OfferingSession.offering_id == offering.id)
+            )
+        ).scalar() or 0,
     )
 
 

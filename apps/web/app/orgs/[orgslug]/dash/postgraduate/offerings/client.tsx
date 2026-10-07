@@ -1,9 +1,10 @@
 'use client'
 import React, { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Archive, ChalkboardTeacher, CheckCircle, Exam, GraduationCap, NotePencil, PlayCircle, Plus, SquaresFour, Warning, XCircle } from '@phosphor-icons/react'
+import { Archive, ChalkboardTeacher, CheckCircle, Exam, GraduationCap, MagicWand, NotePencil, PlayCircle, Plus, SquaresFour, Warning, XCircle } from '@phosphor-icons/react'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
 import { getUriWithOrg } from '@services/config/config'
 import { AcademicPageShell, AcademicHeader, AcademicPrimaryButton } from '@components/Dashboard/Pages/Academic/AcademicShared'
@@ -75,9 +76,17 @@ function OfferingsList({ orgslug }: { orgslug: string }) {
         title={t('academic.tab_offerings', 'Course Offerings')}
         subtitle={t('academic.offerings_desc', 'Each offering is one delivery of a catalog course in a term, with its own instructor, schedule, roster and materials.')}
         action={
-          <AcademicPrimaryButton onClick={() => setOpen(true)}>
-            <Plus size={16} weight="bold" /> {t('academic.new_offering', 'New offering')}
-          </AcademicPrimaryButton>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={getUriWithOrg(orgslug, '/dash/postgraduate/offerings/auto-schedule')}
+              className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--dash-border))] bg-white px-4 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] transition-colors hover:bg-[hsl(var(--dash-canvas))]"
+            >
+              <MagicWand size={16} weight="bold" /> {t('academic.auto.title', 'Auto-schedule')}
+            </Link>
+            <AcademicPrimaryButton onClick={() => setOpen(true)}>
+              <Plus size={16} weight="bold" /> {t('academic.new_offering', 'New offering')}
+            </AcademicPrimaryButton>
+          </div>
         }
       />
       <PostgradTabs orgslug={orgslug} />

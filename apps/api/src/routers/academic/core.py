@@ -21,6 +21,12 @@ from src.db.academic.catalog import (
     AcademicCourseUpdate,
     PrerequisiteSet,
 )
+from src.db.academic.scheduling import (
+    AutoScheduleApply,
+    AutoScheduleApplyResult,
+    AutoSchedulePlan,
+    AutoScheduleRequest,
+)
 from src.db.academic.curricula import (
     CurriculumClone,
     CurriculumCreate,
@@ -47,6 +53,7 @@ from src.db.academic.offerings import (
 )
 from src.db.users import PublicUser
 from src.security.auth import get_current_user
+from src.services.academic import auto_schedule as auto_schedule_svc
 from src.services.academic import calendar as calendar_svc
 from src.services.academic import catalog as catalog_svc
 from src.services.academic import curricula as curricula_svc
@@ -122,6 +129,38 @@ async def api_update_term(
 @router.delete("/terms/{term_uuid}", tags=["academic-calendar"])
 async def api_delete_term(term_uuid: str, db_session: AsyncSession = Session, current_user: PublicUser = User) -> str:
     return await calendar_svc.delete_term(term_uuid, current_user, db_session)
+
+
+@router.post(
+    "/terms/{term_uuid}/auto-schedule",
+    response_model=AutoSchedulePlan,
+    tags=["academic-calendar"],
+    summary="Propose a clash-free weekly timetable (days, times, rooms) for the term's offerings — a draft",
+)
+async def api_plan_term(
+    request: Request,
+    term_uuid: str,
+    data: AutoScheduleRequest,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await auto_schedule_svc.plan_term(request, term_uuid, data, current_user, db_session)
+
+
+@router.post(
+    "/terms/{term_uuid}/auto-schedule/apply",
+    response_model=AutoScheduleApplyResult,
+    tags=["academic-calendar"],
+    summary="Create the sessions of a reviewed timetable (re-checks every date)",
+)
+async def api_apply_term_plan(
+    request: Request,
+    term_uuid: str,
+    data: AutoScheduleApply,
+    db_session: AsyncSession = Session,
+    current_user: PublicUser = User,
+):
+    return await auto_schedule_svc.apply_plan(request, term_uuid, data, current_user, db_session)
 
 
 # ---------------------------------------------------------------------------
