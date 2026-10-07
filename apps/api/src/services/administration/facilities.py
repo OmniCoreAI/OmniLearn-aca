@@ -1,37 +1,34 @@
-"""Locations & facilities service, plus facility booking / conflict helpers.
+"""Locations & facilities service.
 
 Other modules attach a facility by uuid through ``resolve_facility_id`` and
-embed it with ``facility_ref``. Schedule sessions call ``check_session_booking``
-before saving: it rejects (409) overlaps with other sessions in the same room
-and blackout periods, unless the caller explicitly allows the conflict.
+embed it with ``facility_ref``. Bookings and conflict checks live in
+``reservations``.
 """
-from datetime import datetime, timedelta
-from typing import List, Optional, Tuple
+from datetime import datetime
+from typing import List, Optional
 from uuid import uuid4
 
-from fastapi import HTTPException, UploadFile
-from sqlmodel import and_, func, or_, select
+from fastapi import UploadFile
+from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.db.academic.course_profiles import CourseAcademicProfile, CourseScheduleSession
-from src.db.academic.offerings import CourseOffering, OfferingSession
 from src.db.administration.facilities import (
     Facility,
-    FacilityBooking,
     FacilityCreate,
     FacilityEquipmentRead,
     FacilityOption,
     FacilityRead,
     FacilityRef,
+    FacilityReservation,
     FacilityStatus,
     FacilityUpdate,
     Location,
     LocationCreate,
     LocationRead,
     LocationUpdate,
+    ReservationStatus,
 )
 from src.db.administration.lookups import ConfigLookup, ConfigLookupOption, LookupKind
-from src.db.courses.courses import Course
 from src.db.organizations import Organization
 from src.services.administration.authz import AnyUser, authorize_admin, require_org_member
 from src.services.administration.common import (
@@ -232,7 +229,15 @@ async def _equipment_read(db_session: AsyncSession, equipment: Optional[list]) -
 
 async def _facility_read(db_session: AsyncSession, facility: Facility) -> FacilityRead:
     location = await db_session.get(Location, facility.location_id) if facility.location_id else None
-    bookings = await list_bookings_internal(db_session, facility, datetime.now(), None)
+    upcoming = (
+        await db_session.execute(
+            select(func.count(FacilityReservation.id)).where(
+                FacilityReservation.facility_id == facility.id,
+                FacilityReservation.status == ReservationStatus.APPROVED.value,
+                FacilityReservation.ends_at >= datetime.now(),
+            )
+        )
+    ).scalar() or 0
     data = facility.model_dump(exclude={"equipment"})
     return FacilityRead(
         **data,
@@ -240,7 +245,7 @@ async def _facility_read(db_session: AsyncSession, facility: Facility) -> Facili
         location_uuid=location.location_uuid if location else None,
         location_name=location.name if location else None,
         equipment=await _equipment_read(db_session, facility.equipment),
-        upcoming_bookings=len(bookings),
+        upcoming_bookings=upcoming,
     )
 
 
@@ -374,7 +379,12 @@ async def upload_facility_image(
 async def delete_facility(db_session: AsyncSession, current_user: AnyUser, facility_uuid: str) -> str:
     facility = await get_facility_by_uuid(db_session, facility_uuid)
     await authorize_admin(db_session, current_user, facility.org_id, "configuration", "delete", WHAT)
-    # Courses/sessions keep existing; their facility_id becomes NULL (FK rule).
+    # Courses/sessions keep existing; their facility_id becomes NULL (FK rule)
+    # and the room's reservations go with it.
+    for reservation in (
+        await db_session.execute(select(FacilityReservation).where(FacilityReservation.facility_id == facility.id))
+    ).scalars().all():
+        await db_session.delete(reservation)
     await db_session.delete(facility)
     await db_session.commit()
     return "Facility deleted"
@@ -415,176 +425,3 @@ async def facility_ref(db_session: AsyncSession, facility_id: Optional[int]) -> 
         capacity=facility.capacity,
         location_name=location.name if location else None,
     )
-
-
-# ---------------------------------------------------------------------------
-# Bookings & conflicts
-# ---------------------------------------------------------------------------
-
-
-def _parse(value: Optional[str]) -> Optional[datetime]:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return parsed.replace(tzinfo=None)
-
-
-def session_window(start: Optional[str], end: Optional[str]) -> Optional[Tuple[datetime, datetime]]:
-    """Occupied time range of a session. Date-only values cover whole days."""
-    begin = _parse(start)
-    if begin is None:
-        return None
-    start_is_date = len(str(start).strip()) <= 10
-    finish = _parse(end)
-    if finish is None:
-        finish = begin + (timedelta(days=1) if start_is_date else timedelta(hours=1))
-    elif len(str(end).strip()) <= 10:
-        finish = finish + timedelta(days=1)  # an end *date* is inclusive
-    if finish <= begin:
-        finish = begin + timedelta(hours=1)
-    return begin, finish
-
-
-def _overlaps(a: Tuple[datetime, datetime], b: Tuple[datetime, datetime]) -> bool:
-    return a[0] < b[1] and b[0] < a[1]
-
-
-async def _facility_sessions(db_session: AsyncSession, facility_id: int) -> List[Tuple[FacilityBooking, Optional[Tuple[datetime, datetime]], Tuple[str, int]]]:
-    """Every session occupying the facility, directly or via its parent default."""
-    out = []
-    course_rows = (
-        await db_session.execute(
-            select(CourseScheduleSession, CourseAcademicProfile, Course)
-            .join(CourseAcademicProfile, CourseAcademicProfile.id == CourseScheduleSession.profile_id)  # type: ignore[arg-type]
-            .join(Course, Course.id == CourseAcademicProfile.course_id)  # type: ignore[arg-type]
-            .where(
-                or_(
-                    CourseScheduleSession.facility_id == facility_id,
-                    and_(
-                        CourseScheduleSession.facility_id.is_(None),  # type: ignore[union-attr]
-                        CourseAcademicProfile.facility_id == facility_id,
-                    ),
-                )
-            )
-        )
-    ).all()
-    for session, _profile, course in course_rows:
-        booking = FacilityBooking(
-            source="course_session",
-            session_uuid=session.session_uuid,
-            title=session.title,
-            start=session.start_date,
-            end=session.end_date,
-            parent_name=course.name,
-            parent_uuid=course.course_uuid,
-            inherited=session.facility_id is None,
-        )
-        out.append((booking, session_window(session.start_date, session.end_date), ("course_session", session.id)))
-
-    offering_rows = (
-        await db_session.execute(
-            select(OfferingSession, CourseOffering)
-            .join(CourseOffering, CourseOffering.id == OfferingSession.offering_id)  # type: ignore[arg-type]
-            .where(
-                or_(
-                    OfferingSession.facility_id == facility_id,
-                    and_(
-                        OfferingSession.facility_id.is_(None),  # type: ignore[union-attr]
-                        CourseOffering.facility_id == facility_id,
-                    ),
-                )
-            )
-        )
-    ).all()
-    for session, offering in offering_rows:
-        booking = FacilityBooking(
-            source="offering_session",
-            session_uuid=session.session_uuid,
-            title=session.title or session.session_type,
-            start=session.start_datetime,
-            end=session.end_datetime,
-            parent_name=offering.code,
-            parent_uuid=offering.offering_uuid,
-            inherited=session.facility_id is None,
-        )
-        out.append((booking, session_window(session.start_datetime, session.end_datetime), ("offering_session", session.id)))
-    return out
-
-
-async def list_bookings_internal(
-    db_session: AsyncSession, facility: Facility, since: Optional[datetime], until: Optional[datetime]
-) -> List[FacilityBooking]:
-    bookings = []
-    for booking, window, _ in await _facility_sessions(db_session, facility.id):
-        if window is None:
-            continue
-        if since and window[1] < since:
-            continue
-        if until and window[0] > until:
-            continue
-        bookings.append((window[0], booking))
-    return [b for _, b in sorted(bookings, key=lambda item: item[0])]
-
-
-async def list_bookings(
-    db_session: AsyncSession,
-    current_user: AnyUser,
-    facility_uuid: str,
-    since: Optional[str] = None,
-    until: Optional[str] = None,
-) -> List[FacilityBooking]:
-    facility = await get_facility_by_uuid(db_session, facility_uuid)
-    await require_org_member(db_session, current_user, facility.org_id)
-    return await list_bookings_internal(db_session, facility, _parse(since), _parse(until))
-
-
-async def find_conflicts(
-    db_session: AsyncSession,
-    facility_id: int,
-    start: Optional[str],
-    end: Optional[str],
-    exclude: Optional[Tuple[str, int]] = None,
-) -> List[str]:
-    """Human-readable reasons this time range cannot use the facility."""
-    window = session_window(start, end)
-    if window is None:
-        return []
-    facility = await db_session.get(Facility, facility_id)
-    if not facility:
-        return []
-    reasons = []
-    for blackout in (facility.availability or {}).get("blackout_dates") or []:
-        blackout_window = session_window(blackout.get("start"), blackout.get("end") or blackout.get("start"))
-        if blackout_window and _overlaps(window, blackout_window):
-            reason = blackout.get("reason") or "unavailable"
-            reasons.append(f"{facility.name} is blocked ({reason}) {blackout.get('start')}")
-    for booking, other, key in await _facility_sessions(db_session, facility_id):
-        if exclude and key == exclude:
-            continue
-        if other and _overlaps(window, other):
-            label = " — ".join(part for part in (booking.parent_name, booking.title) if part)
-            reasons.append(f"{facility.name} is already booked by {label} ({booking.start})")
-    return reasons
-
-
-async def check_session_booking(
-    db_session: AsyncSession,
-    facility_id: Optional[int],
-    start: Optional[str],
-    end: Optional[str],
-    exclude: Optional[Tuple[str, int]] = None,
-    allow_conflict: bool = False,
-) -> None:
-    """Raise 409 when the session would double-book its (effective) facility."""
-    if not facility_id or allow_conflict:
-        return
-    reasons = await find_conflicts(db_session, facility_id, start, end, exclude)
-    if reasons:
-        raise HTTPException(
-            status_code=409,
-            detail="Facility conflict: " + "; ".join(reasons[:3])
-            + " (save again with allow_conflict to book anyway)",
-        )

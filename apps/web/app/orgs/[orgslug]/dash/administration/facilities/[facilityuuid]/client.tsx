@@ -206,10 +206,10 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
         <div className="lg:col-span-2">
           <DashDataTable
             rows={bookings as any[]}
-            rowKey={(b: any) => b.session_uuid}
+            rowKey={(b: any) => b.booking_uuid}
             loading={bookingsLoading}
             pageSize={15}
-            itemLabel={(n) => t('administration.facilities.bookings_count', '{{count}} sessions', { count: n })}
+            itemLabel={(n) => t('administration.facilities.bookings_count', '{{count}} bookings', { count: n })}
             toolbar={
               <>
                 <span className="me-1 text-sm font-semibold text-[hsl(var(--dash-ink))]">{t('administration.facilities.bookings', 'Bookings')}</span>
@@ -228,8 +228,8 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
               <AcademicEmptyState
                 compact
                 icon={<CalendarClock className="h-6 w-6" />}
-                title={t('administration.facilities.no_bookings', 'No sessions booked')}
-                description={t('administration.facilities.bookings_desc', 'Sessions scheduled in this room, directly or through their course default.')}
+                title={t('administration.facilities.no_bookings', 'Nothing booked')}
+                description={t('administration.facilities.bookings_desc', 'Sessions scheduled in this room (directly or through their course default) and hall bookings such as events and exams.')}
               />
             }
             columns={[
@@ -245,7 +245,20 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
                   </div>
                 ),
               },
-              { key: 'session', header: t('administration.facilities.session', 'Session'), cell: (b: any) => <span className="line-clamp-1 text-[13px]">{b.title || '—'}</span> },
+              {
+                key: 'session',
+                header: t('administration.facilities.session', 'Session'),
+                cell: (b: any) => (
+                  <div className="min-w-0 leading-tight">
+                    <span className="line-clamp-1 text-[13px]">{b.title || '—'}</span>
+                    {b.double_booked ? (
+                      <span className="mt-0.5 inline-block rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
+                        {t('administration.facilities.double_booked', 'Double-booked')}
+                      </span>
+                    ) : null}
+                  </div>
+                ),
+              },
               {
                 key: 'parent',
                 header: t('administration.facilities.booked_by', 'Course / offering'),
@@ -262,6 +275,10 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
                         <Link className="line-clamp-1 text-[13px] font-medium hover:underline" href={getUriWithOrg(orgslug, href)} onClick={(e) => e.stopPropagation()}>
                           {b.parent_name}
                         </Link>
+                      ) : b.source === 'manual' ? (
+                        <span className="line-clamp-1 text-[13px]">
+                          {t('administration.facilities.hall_booking', 'Hall booking')} · {String(t(`administration.facilities.kind_${b.kind}`, b.kind))}
+                        </span>
                       ) : (
                         <span className="line-clamp-1 text-[13px]">{b.parent_name || '—'}</span>
                       )}

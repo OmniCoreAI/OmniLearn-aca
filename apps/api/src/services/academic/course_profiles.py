@@ -33,11 +33,8 @@ from src.db.academic.course_profiles import (
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import ensure_coordinator_authorship, get_user_author
 from src.services.administration.addons import course_addons_as_legacy, sync_legacy_course_addons
-from src.services.administration.facilities import (
-    check_session_booking,
-    facility_ref,
-    resolve_facility_id,
-)
+from src.services.administration.facilities import facility_ref, resolve_facility_id
+from src.services.administration.reservations import book_session, release_session
 from src.services.academic.validation import resolve_teaching_staff
 from src.services.notifications.assignments import slug, staff_assigned
 from src.security.auth import resolve_acting_user_id
@@ -213,8 +210,8 @@ async def upsert_course_academic_profile(
     if add_ons is not None:
         await sync_legacy_course_addons(db_session, course.org_id, course.course_uuid, add_ons)
     if facility_changed:
-        if facility_id and profile.id and not allow_conflict:
-            # Sessions without their own room move to the new default: check them.
+        if profile.id and facility_id != profile.facility_id:
+            # Sessions without their own room move to the new default.
             inheriting = (
                 await db_session.execute(
                     select(CourseScheduleSession).where(
@@ -224,10 +221,7 @@ async def upsert_course_academic_profile(
                 )
             ).scalars().all()
             for session in inheriting:
-                await check_session_booking(
-                    db_session, facility_id, session.start_date, session.end_date,
-                    exclude=("course_session", session.id),
-                )
+                await book_session(db_session, session, facility_id, allow_conflict=allow_conflict)
         profile.facility_id = facility_id
     profile.update_date = str(datetime.now())
 
@@ -305,14 +299,6 @@ async def create_session(
     instructor_id = await resolve_teaching_staff(
         db_session, course.org_id, payload.instructor_uuid, label="Session instructor"
     )
-    await check_session_booking(
-        db_session,
-        facility_id or profile.facility_id,
-        payload.start_date,
-        payload.end_date,
-        allow_conflict=payload.allow_conflict,
-    )
-
     session = CourseScheduleSession(
         profile_id=profile.id,
         org_id=course.org_id,
@@ -322,6 +308,9 @@ async def create_session(
         creation_date=str(datetime.now()),
         update_date=str(datetime.now()),
         **payload.model_dump(exclude={"facility_uuid", "allow_conflict", "instructor_uuid"}),
+    )
+    await book_session(
+        db_session, session, facility_id or profile.facility_id, allow_conflict=payload.allow_conflict
     )
     db_session.add(session)
     await db_session.commit()
@@ -389,13 +378,8 @@ async def update_session(
     for key, value in data.items():
         setattr(session, key, value)
     if {"facility_id", "start_date", "end_date"} & set(data):
-        await check_session_booking(
-            db_session,
-            session.facility_id or profile.facility_id,
-            session.start_date,
-            session.end_date,
-            exclude=("course_session", session.id),
-            allow_conflict=allow_conflict,
+        await book_session(
+            db_session, session, session.facility_id or profile.facility_id, allow_conflict=allow_conflict
         )
     session.update_date = str(datetime.now())
 
@@ -422,6 +406,7 @@ async def delete_session(
         raise HTTPException(status_code=404, detail="Session not found")
 
     session = await _get_session_or_404(db_session, profile.id, session_uuid)
+    await release_session(db_session, session)
     await db_session.delete(session)
     await db_session.commit()
     return "Session deleted"
