@@ -52,6 +52,66 @@ export const updateTerm = (uuid: string, data: any, token: string) =>
   call('PUT', `terms/${uuid}`, token, data)
 export const deleteTerm = (uuid: string, token: string) => call('DELETE', `terms/${uuid}`, token)
 
+// ----------------------------- Term auto-scheduling -----------------------------
+
+export interface AutoScheduleRequest {
+  offerings?: { offering_uuid: string; meetings_per_week?: number; duration_minutes?: number }[] | null
+  days: string[]
+  day_start: string
+  day_end: string
+  meetings_per_week: number
+  duration_minutes: number
+  step_minutes?: number
+  same_time?: boolean
+  time_limit_seconds?: number
+}
+
+export interface PlannedMeeting {
+  offering_uuid: string
+  offering_code: string
+  course_name?: string | null
+  cohort_name?: string | null
+  day: string
+  start: string
+  end: string
+  facility_uuid: string
+  facility_name: string
+  facility_capacity?: number | null
+  size?: number | null
+  dates: string[]
+  skipped: { date: string; reasons: string[] }[]
+}
+
+export interface AutoSchedulePlan {
+  status: 'optimal' | 'feasible' | 'timeout' | 'empty'
+  term_uuid: string
+  term_name?: string | null
+  teaching_start: string
+  teaching_end: string
+  weeks: number
+  meetings: PlannedMeeting[]
+  unplaced: { offering_uuid: string; offering_code: string; course_name?: string | null; reason: string; params: Record<string, any> }[]
+  sessions_to_create: number
+  solve_ms: number
+}
+
+export interface AutoScheduleApplyResult {
+  offerings: number
+  created: number
+  skipped: { offering_code: string; date: string; reasons: string[] }[]
+  already_scheduled: string[]
+}
+
+/** Draft a clash-free weekly timetable for the term (nothing is saved). */
+export const planTermSchedule = (term_uuid: string, data: AutoScheduleRequest, token: string) =>
+  call('POST', `terms/${term_uuid}/auto-schedule`, token, data) as Promise<AutoSchedulePlan>
+/** Create the sessions of a reviewed plan. */
+export const applyTermSchedule = (
+  term_uuid: string,
+  meetings: Pick<PlannedMeeting, 'offering_uuid' | 'day' | 'start' | 'end' | 'facility_uuid'>[],
+  token: string
+) => call('POST', `terms/${term_uuid}/auto-schedule/apply`, token, { meetings }) as Promise<AutoScheduleApplyResult>
+
 // ----------------------------- Catalog -----------------------------
 
 export const getAcademicCourses = (org_id: number, token: string, q?: string) =>
@@ -296,16 +356,35 @@ export async function uploadApplicationDocument(uuid: string, document_type: str
   return errorHandling(result)
 }
 
-/** Documents are private: fetch with the session token and open as a blob. */
-export async function openApplicationDocument(uuid: string, document_uuid: string, token: string) {
-  const result = await fetch(`${getAPIUrl()}admissions/applications/${uuid}/documents/${document_uuid}/file`, {
-    headers: { Authorization: `Bearer ${token}` },
-    credentials: 'include',
-  })
-  if (!result.ok) throw new Error('Could not open the document')
-  const url = URL.createObjectURL(await result.blob())
-  window.open(url, '_blank', 'noopener')
-  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+/**
+ * Documents are private: fetch with the session token and show the file in a
+ * new tab. The tab is opened synchronously in the click handler — opened after
+ * the download, browsers (Safari especially) treat it as a pop-up and block it.
+ * If even that is blocked, the file is downloaded instead.
+ */
+export async function openApplicationDocument(uuid: string, document_uuid: string, token: string, filename?: string) {
+  const tab = window.open('', '_blank')
+  try {
+    const result = await fetch(`${getAPIUrl()}admissions/applications/${uuid}/documents/${document_uuid}/file`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
+    })
+    if (!result.ok) throw new Error('Could not open the document')
+    const url = URL.createObjectURL(await result.blob())
+    if (tab) {
+      tab.opener = null
+      tab.location.href = url
+    } else {
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename || 'document'
+      link.click()
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch (error) {
+    tab?.close()
+    throw error
+  }
 }
 
 export const DOCUMENT_TYPES = [

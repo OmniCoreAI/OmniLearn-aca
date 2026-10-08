@@ -5,6 +5,7 @@ import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import useAdminStatus from '@components/Hooks/useAdminStatus'
 import { getPortalNavigation, PortalNavigationResponse } from '@services/portal-navigation/portal-navigation'
+import { getMyAssignments } from '@services/instructors/instructors'
 import { DASH_NAV_ITEM_IDS } from '@/lib/dash-nav-items'
 
 const SYSTEM_ROLE_UUIDS = new Set([
@@ -40,6 +41,29 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
   )
   const data: PortalNavigationResponse | undefined = rawResponse?.data ?? rawResponse
 
+  // Access follows assignment: whoever coordinates or teaches something gets
+  // its section, whatever their role's default sidebar. Academy admins
+  // already see everything, so they skip the lookup.
+  const heldRoleUuids: string[] = (userRoles || [])
+    .filter((r: any) => r.org?.id === org?.id)
+    .map((r: any) => r.role?.role_uuid)
+    .filter(Boolean)
+  const needsAssignments = !!org?.id && !isSuperadmin && !heldRoleUuids.includes('role_global_admin')
+  const { data: rawAssignments, isLoading: assignmentsLoading } = useSWR(
+    access_token && needsAssignments ? ['my-assignments', org?.id] : null,
+    () => getMyAssignments(org.id, access_token),
+    { revalidateOnFocus: false }
+  )
+  const assignments: any = rawAssignments?.data ?? rawAssignments
+  const assignedItems = useMemo(() => {
+    const items: string[] = []
+    if (assignments?.training_programs?.length) items.push('training-programs')
+    if (assignments?.offerings?.length) items.push('postgraduate-teaching')
+    // Program / cohort coordinators work in the Postgraduate Studies office pages.
+    if (assignments?.programs?.length) items.push('postgraduate')
+    return items
+  }, [assignments])
+
   const visibleItemIds = useMemo(() => {
     if (isSuperadmin) return new Set(DASH_NAV_ITEM_IDS)
     if (!data?.visibility || !org?.id) return null
@@ -60,8 +84,9 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
       const items = data.visibility[uuid] || []
       items.forEach((id: string) => union.add(id))
     })
+    assignedItems.forEach((id) => union.add(id))
     return union
-  }, [data, org?.id, userRoles, isSuperadmin])
+  }, [data, org?.id, userRoles, isSuperadmin, assignedItems])
 
   const isItemVisible = (itemId: string) => {
     if (visibleItemIds === null) return isAdmin === true
@@ -69,7 +94,9 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
   }
 
   return {
-    loading: adminStatusLoading || isLoading,
+    // The route guard must wait for assignments too, or a deep link to an
+    // assigned section bounces before they arrive.
+    loading: adminStatusLoading || isLoading || assignmentsLoading,
     visibleItemIds,
     isItemVisible,
   }

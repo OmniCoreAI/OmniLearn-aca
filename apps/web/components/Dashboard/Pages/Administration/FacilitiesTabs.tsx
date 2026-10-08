@@ -11,6 +11,7 @@ export function FacilitiesTabs({ orgslug }: { orgslug: string }) {
       orgslug={orgslug}
       tabs={[
         { href: base, label: t('administration.facilities.tab_facilities', 'Facilities'), exact: true },
+        { href: `${base}/calendar`, label: t('administration.halls.calendar', 'Hall calendar') },
         { href: `${base}/locations`, label: t('administration.facilities.tab_locations', 'Locations') },
         { href: `${base}/types`, label: t('administration.lookups.kind_facility_type', 'Facility types') },
         { href: `${base}/equipment`, label: t('administration.lookups.kind_equipment', 'Equipment') },

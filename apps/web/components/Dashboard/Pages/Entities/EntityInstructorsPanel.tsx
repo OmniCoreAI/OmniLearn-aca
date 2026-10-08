@@ -60,7 +60,7 @@ export function EntityInstructorsPanel({ entityUuid }: { entityUuid: string }) {
             <AcademicEmptyState
               compact
               icon={<ChalkboardTeacher size={24} />}
-              title={t('entities.no_instructors', 'No instructors linked to this organization.')}
+              title={t('entities.no_instructors', 'No instructors linked to this entity.')}
               description={t('entities.instructors.invite_desc', 'The academy reviews the proposal, sets the category and rate, then activates the instructor.')}
             />
           }

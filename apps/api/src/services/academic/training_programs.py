@@ -2,7 +2,7 @@ from typing import List, Optional
 from uuid import uuid4
 from datetime import datetime
 from fastapi import HTTPException, Request
-from sqlmodel import select
+from sqlmodel import or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.users import PublicUser, AnonymousUser, APITokenUser
@@ -13,10 +13,17 @@ from src.db.academic.training_programs import (
     TrainingProgramCreate,
     TrainingProgramRead,
     TrainingProgramUpdate,
+    CatalogCourse,
+    TrainingProgramCatalogItem,
 )
+from src.db.academic.course_profiles import CourseAcademicProfile
 from src.db.academic.links import TrainingProgramCourse, TrainingProgramCourseRead
+from src.db.usergroup_resources import UserGroupResource
+from src.db.usergroup_user import UserGroupUser
+from src.db.usergroups import UserGroup
+from src.db.resource_authors import ResourceAuthor, ResourceAuthorshipStatusEnum
 from src.security.auth import resolve_acting_user_id
-from src.security.org_auth import require_org_membership
+from src.security.org_auth import is_org_admin, require_org_membership
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import (
     build_creator_author,
@@ -25,6 +32,7 @@ from src.services.academic.authors import (
     get_user_author,
 )
 from src.services.academic.course_profiles import get_profile_read_for_course
+from src.services.notifications.assignments import slug, staff_assigned
 from src.services.administration.certificates import resolve_template_id, template_uuid_for
 from src.services.administration.facilities import facility_ref, resolve_facility_id
 from src.services.academic.validation import (
@@ -109,7 +117,20 @@ async def create_training_program(
         await db_session.rollback()
         raise
 
+    await _notify_coordinator(db_session, tp, None, current_user)
     return await _to_read(db_session, tp)
+
+
+async def _notify_coordinator(
+    db_session: AsyncSession, tp: TrainingProgram, previous_id: Optional[int], current_user
+) -> None:
+    if tp.coordinator_id and tp.coordinator_id != previous_id:
+        await staff_assigned(
+            db_session, tp.org_id, [tp.coordinator_id], "training_coordinator", tp.name,
+            f"/dash/training-programs/{slug(tp.trainingprogram_uuid, 'trainingprogram_')}",
+            actor_id=resolve_acting_user_id(current_user), resource=("training_program", tp.trainingprogram_uuid),
+        )
+        await db_session.refresh(tp)
 
 
 async def get_training_program(
@@ -142,16 +163,128 @@ async def get_training_programs_by_org(
         resolve_acting_user_id(current_user), org_id, db_session
     )
 
+    statement = select(TrainingProgram).where(TrainingProgram.org_id == org_id)
+    user_id = resolve_acting_user_id(current_user)
+    if not await is_org_admin(user_id, org_id, db_session):
+        # This is the management list: besides academy admins, people only see
+        # the programs they run or teach (coordinator, creator / maintainers,
+        # trainers of a linked course). Learners use the catalog instead.
+        staff_of = select(ResourceAuthor.resource_uuid).where(
+            ResourceAuthor.user_id == user_id,
+            ResourceAuthor.authorship_status == ResourceAuthorshipStatusEnum.ACTIVE,
+        )
+        trains = (
+            select(TrainingProgramCourse.training_program_id)
+            .join(CourseAcademicProfile, CourseAcademicProfile.course_id == TrainingProgramCourse.course_id)  # type: ignore[arg-type]
+            .where(CourseAcademicProfile.instructor_id == user_id)
+        )
+        statement = statement.where(
+            or_(
+                TrainingProgram.coordinator_id == user_id,
+                TrainingProgram.trainingprogram_uuid.in_(staff_of),  # type: ignore[attr-defined]
+                TrainingProgram.id.in_(trains),  # type: ignore[union-attr]
+            )
+        )
     statement = (
-        select(TrainingProgram)
-        .where(TrainingProgram.org_id == org_id)
-        .order_by(TrainingProgram.creation_date.desc())  # type: ignore
+        statement.order_by(TrainingProgram.creation_date.desc())  # type: ignore
         .offset((page - 1) * limit)
         .limit(limit)
     )
     tps = (await db_session.execute(statement)).scalars().all()
 
     return [await _to_read(db_session, tp) for tp in tps]
+
+
+async def get_training_program_catalog(
+    org_id: int,
+    current_user: PublicUser | AnonymousUser,
+    db_session: AsyncSession,
+) -> List[TrainingProgramCatalogItem]:
+    """Published programs a member may join: public ones, ones not restricted to
+    any audience, and ones assigned to them (via a group, entity, cohort…)."""
+    user_id = resolve_acting_user_id(current_user)
+    await require_org_membership(user_id, org_id, db_session)
+
+    programs = (
+        await db_session.execute(
+            select(TrainingProgram)
+            .where(TrainingProgram.org_id == org_id, TrainingProgram.published == True)  # noqa: E712
+            .order_by(TrainingProgram.start_date.desc().nulls_last(), TrainingProgram.name)  # type: ignore[union-attr]
+        )
+    ).scalars().all()
+    if not programs:
+        return []
+    uuids = [tp.trainingprogram_uuid for tp in programs]
+    restricted = set(
+        (
+            await db_session.execute(
+                select(UserGroupResource.resource_uuid).where(UserGroupResource.resource_uuid.in_(uuids))  # type: ignore[attr-defined]
+            )
+        ).scalars().all()
+    )
+    assigned = set(
+        (
+            await db_session.execute(
+                select(UserGroupResource.resource_uuid)
+                .join(UserGroup, UserGroup.id == UserGroupResource.usergroup_id)  # type: ignore[arg-type]
+                .join(UserGroupUser, UserGroupUser.usergroup_id == UserGroup.id)  # type: ignore[arg-type]
+                .where(
+                    UserGroupResource.resource_uuid.in_(uuids),  # type: ignore[attr-defined]
+                    UserGroupUser.user_id == user_id,
+                    UserGroup.status != "inactive",
+                )
+            )
+        ).scalars().all()
+    )
+    visible = [
+        tp for tp in programs
+        if tp.public or tp.trainingprogram_uuid not in restricted or tp.trainingprogram_uuid in assigned
+    ]
+    if not visible:
+        return []
+
+    course_rows = (
+        await db_session.execute(
+            select(TrainingProgramCourse.training_program_id, Course)
+            .join(Course, Course.id == TrainingProgramCourse.course_id)  # type: ignore[arg-type]
+            .where(
+                TrainingProgramCourse.training_program_id.in_([tp.id for tp in visible]),  # type: ignore[attr-defined]
+                Course.published == True,  # noqa: E712
+            )
+            .order_by(TrainingProgramCourse.order)
+        )
+    ).all()
+    courses_by_program: dict[int, List[CatalogCourse]] = {}
+    for program_id, course in course_rows:
+        courses_by_program.setdefault(program_id, []).append(
+            CatalogCourse(
+                course_uuid=course.course_uuid,
+                name=course.name,
+                description=course.description,
+                thumbnail_image=course.thumbnail_image,
+            )
+        )
+
+    return [
+        TrainingProgramCatalogItem(
+            trainingprogram_uuid=tp.trainingprogram_uuid,
+            name=tp.name,
+            description=tp.description,
+            about=tp.about,
+            training_type=tp.training_type.value if tp.training_type else None,
+            start_date=tp.start_date,
+            end_date=tp.end_date,
+            location=tp.location,
+            capacity=tp.capacity,
+            is_paid=bool(tp.is_paid),
+            price=tp.price,
+            currency=tp.currency,
+            thumbnail_image=tp.thumbnail_image,
+            assigned=tp.trainingprogram_uuid in assigned,
+            courses=courses_by_program.get(tp.id, []),
+        )
+        for tp in visible
+    ]
 
 
 async def update_training_program(
@@ -178,6 +311,7 @@ async def update_training_program(
         )
 
     new_coordinator_id = None
+    previous_coordinator_id = tp.coordinator_id
     coordinator_changed = "coordinator_uuid" in update_data
     if coordinator_changed:
         coordinator_uuid = update_data.pop("coordinator_uuid")
@@ -205,6 +339,7 @@ async def update_training_program(
     await db_session.commit()
     await db_session.refresh(tp)
 
+    await _notify_coordinator(db_session, tp, previous_coordinator_id, current_user)
     return await _to_read(db_session, tp)
 
 
@@ -222,6 +357,7 @@ async def set_training_program_coordinator(
     )
 
     coordinator_id = await resolve_coordinator(db_session, tp.org_id, coordinator_uuid)
+    previous_id = tp.coordinator_id
     tp.coordinator_id = coordinator_id
     tp.update_date = str(datetime.now())
 
@@ -229,6 +365,7 @@ async def set_training_program_coordinator(
     await ensure_coordinator_authorship(db_session, tp.trainingprogram_uuid, coordinator_id)
     await db_session.commit()
     await db_session.refresh(tp)
+    await _notify_coordinator(db_session, tp, previous_id, current_user)
     return await _to_read(db_session, tp)
 
 

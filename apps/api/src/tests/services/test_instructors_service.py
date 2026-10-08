@@ -563,6 +563,82 @@ class TestInstructorCourses:
         assert profile.instructor_id is None
 
     @pytest.mark.asyncio
+    async def test_my_assignments(self, db, org, admin_user, regular_user, course):
+        from src.db.academic.training_programs import TrainingProgram
+        from src.db.resource_authors import ResourceAuthorshipEnum, ResourceAuthorshipStatusEnum
+
+        inst = await _make_instructor(db, admin_user, org, regular_user)
+        await inst_svc.assign_instructor_course(db, admin_user, inst.instructor_uuid, course.course_uuid)
+        db.add(TrainingProgram(
+            name="Coordinated", org_id=org.id, trainingprogram_uuid="trainingprogram_coord",
+            coordinator_id=regular_user.id, creation_date="", update_date="",
+        ))
+        db.add(TrainingProgram(
+            name="Other", org_id=org.id, trainingprogram_uuid="trainingprogram_other",
+            creation_date="", update_date="",
+        ))
+        # A pending application is not an assignment.
+        db.add(ResourceAuthor(
+            resource_uuid="trainingprogram_other", user_id=regular_user.id,
+            authorship=ResourceAuthorshipEnum.CONTRIBUTOR,
+            authorship_status=ResourceAuthorshipStatusEnum.PENDING,
+            creation_date="", update_date="",
+        ))
+        await db.commit()
+
+        mine = await inst_svc.list_my_assignments(db, regular_user, org.id)
+        assert [(c.course_uuid, c.source) for c in mine.courses] == [(course.course_uuid, "profile")]
+        assert [(p.name, p.role) for p in mine.training_programs] == [("Coordinated", "coordinator")]
+
+    @pytest.mark.asyncio
+    async def test_assignments_cover_offerings_trainer_programs_and_sessions(
+        self, db, org, admin_user, regular_user, course
+    ):
+        from src.db.academic.calendar import AcademicTerm, AcademicYear
+        from src.db.academic.catalog import AcademicCourse
+        from src.db.academic.course_profiles import CourseAcademicProfile, CourseScheduleSession
+        from src.db.academic.links import TrainingProgramCourse
+        from src.db.academic.offerings import CourseOffering
+        from src.db.academic.training_programs import TrainingProgram
+
+        inst = await _make_instructor(db, admin_user, org, regular_user)
+        # Course instructor of a course that belongs to a training program → trainer.
+        await inst_svc.assign_instructor_course(db, admin_user, inst.instructor_uuid, course.course_uuid)
+        tp = TrainingProgram(name="Bootcamp", org_id=org.id, trainingprogram_uuid="trainingprogram_boot",
+                             creation_date="", update_date="")
+        db.add(tp)
+        await db.commit()
+        db.add(TrainingProgramCourse(training_program_id=tp.id, course_id=course.id, org_id=org.id))
+        profile = (await db.execute(select(CourseAcademicProfile))).scalars().one()
+        db.add_all([
+            CourseScheduleSession(profile_id=profile.id, org_id=org.id, title="Upcoming", start_date="2999-01-01",
+                                  session_uuid="session_next"),
+            CourseScheduleSession(profile_id=profile.id, org_id=org.id, title="Past", start_date="2000-01-01",
+                                  session_uuid="session_past"),
+            # Taught by someone else: not theirs.
+            CourseScheduleSession(profile_id=profile.id, org_id=org.id, title="Guest slot", start_date="2999-02-01",
+                                  session_uuid="session_guest", instructor_id=admin_user.id),
+        ])
+        year = AcademicYear(name="2026/27", code="2026-27", org_id=org.id, academic_year_uuid="ay_x")
+        db.add(year)
+        await db.commit()
+        term = AcademicTerm(name="Fall", code="FALL", org_id=org.id, academic_year_id=year.id, term_uuid="term_x")
+        ac = AcademicCourse(code="AI-1", name="AI", org_id=org.id, academic_course_uuid="ac_x")
+        db.add_all([term, ac])
+        await db.commit()
+        db.add(CourseOffering(org_id=org.id, academic_course_id=ac.id, term_id=term.id, section="A", code="AI-1-FALL-A",
+                              teaching_assistant_id=regular_user.id, offering_uuid="offering_x"))
+        await db.commit()
+
+        mine = await inst_svc.list_instructor_assignments(db, admin_user, inst.instructor_uuid)
+        assert [(p.name, p.role) for p in mine.training_programs] == [("Bootcamp", "trainer")]
+        assert [(o.offering_uuid, o.role, o.term_code) for o in mine.offerings] == [("offering_x", "assistant", "FALL")]
+        assert [(x.session_uuid, x.role) for x in mine.upcoming_sessions] == [("session_next", "course")]
+        # The guest sees only their own slot, flagged as a guest session.
+        guest = await inst_svc._assignments_for_user(db, admin_user.id, org.id)
+        assert [(x.session_uuid, x.role) for x in guest.upcoming_sessions] == [("session_guest", "guest")]
+
+    @pytest.mark.asyncio
     async def test_inactive_instructor_cannot_be_assigned(self, db, org, admin_user, regular_user, course):
         inst = await _make_instructor(db, admin_user, org, regular_user)
         await inst_svc.update_instructor(

@@ -155,6 +155,8 @@ class CourseOfferingRead(CourseOfferingBase):
     enrolled_count: int = 0
     # Students with an official result (completed or failed); with enrolled_count, everyone taking or who took it.
     results_count: int = 0
+    # Schedule sessions already created (0 = not scheduled yet).
+    session_count: int = 0
     grade_status: str = "open"
     grade_note: Optional[str] = None
     facility: Optional[FacilityRef] = None

@@ -50,6 +50,21 @@ COURSE_VARIABLES = [
 ]
 
 
+STAFF_VARIABLES = [
+    Variable("role_label", "Their role", "Course instructor"),
+    Variable("item_name", "What they were assigned to", "Cybersecurity Fundamentals"),
+    Variable("item_url", "Link to it", "https://academy.example.com/dash/courses/course/cyber"),
+]
+
+
+ADMISSION_VARIABLES = [
+    Variable("program_name", "Program applied to", "MSc Artificial Intelligence"),
+    Variable("application_number", "Application number", "APP-MSC-AI-2026-0007"),
+    Variable("decision_note", "Note from the admissions team", "Welcome to the fall intake."),
+    Variable("application_url", "Link to the application", "https://academy.example.com/admissions/7f3a"),
+]
+
+
 def _msg(subject: str, heading: str, text: str, cta: Optional[str] = None, link_var: str = "course_url", sms: str = "") -> BuiltinMessage:
     button = (
         f'<p><a href="{{{{{link_var}}}}}" style="display:inline-block;padding:12px 28px;background:#000;color:#fff;'
@@ -187,6 +202,106 @@ EVENTS: List[EventDef] = [
         builtin={
             "en": _msg("Due soon: {{exam_name}}", "Due soon", "<strong>{{exam_name}}</strong> in {{course_name}} is due on {{due_date}}.", "Open course", sms="Due {{due_date}}: {{exam_name}} ({{course_name}})"),
             "ar": _msg("موعد قريب: {{exam_name}}", "الموعد يقترب", "موعد تسليم <strong>{{exam_name}}</strong> في {{course_name}} هو {{due_date}}.", "فتح الدورة", sms="الموعد {{due_date}}: {{exam_name}} ({{course_name}})"),
+        },
+    ),
+    EventDef(
+        key="teaching_assigned",
+        label="Teaching assigned",
+        label_ar="إسناد تدريس",
+        description="Someone was made the instructor, lecturer, teaching assistant or session instructor of a course or offering.",
+        variables=[*COMMON_VARIABLES, *STAFF_VARIABLES],
+        builtin={
+            "en": _msg("You're teaching {{item_name}}", "New teaching assignment", "You are now <strong>{{role_label}}</strong> of <strong>{{item_name}}</strong>.", "Open", "item_url", "{{org_name}}: you are now {{role_label}} of {{item_name}}. {{item_url}}"),
+            "ar": _msg("إسناد تدريس: {{item_name}}", "إسناد تدريس جديد", "أصبحت <strong>{{role_label}}</strong> في <strong>{{item_name}}</strong>.", "فتح", "item_url", "{{org_name}}: أصبحت {{role_label}} في {{item_name}}. {{item_url}}"),
+        },
+    ),
+    EventDef(
+        key="coordination_assigned",
+        label="Coordinator appointed",
+        label_ar="تعيين منسق",
+        description="Someone was made coordinator of a training program, postgraduate program, cohort or entity.",
+        variables=[*COMMON_VARIABLES, *STAFF_VARIABLES],
+        builtin={
+            "en": _msg("You're coordinating {{item_name}}", "You're the coordinator", "You are now <strong>{{role_label}}</strong> of <strong>{{item_name}}</strong>.", "Open", "item_url", "{{org_name}}: you are now {{role_label}} of {{item_name}}. {{item_url}}"),
+            "ar": _msg("تعيينك منسقًا: {{item_name}}", "تم تعيينك منسقًا", "أصبحت <strong>{{role_label}}</strong> لـ <strong>{{item_name}}</strong>.", "فتح", "item_url", "{{org_name}}: أصبحت {{role_label}} لـ {{item_name}}. {{item_url}}"),
+        },
+    ),
+    EventDef(
+        key="contributor_added",
+        label="Added as contributor",
+        label_ar="إضافة كمساهم",
+        description="Someone was given access to edit a course's content.",
+        variables=[*COMMON_VARIABLES, *STAFF_VARIABLES],
+        default_channels={"email": False, "sms": False},
+        builtin={
+            "en": _msg("You can now edit {{item_name}}", "You're a contributor", "You can now edit the content of <strong>{{item_name}}</strong>.", "Open course", "item_url", "{{org_name}}: you can now edit {{item_name}}. {{item_url}}"),
+            "ar": _msg("يمكنك الآن تعديل {{item_name}}", "أصبحت مساهمًا", "يمكنك الآن تعديل محتوى <strong>{{item_name}}</strong>.", "فتح الدورة", "item_url", "{{org_name}}: يمكنك الآن تعديل {{item_name}}. {{item_url}}"),
+        },
+    ),
+    EventDef(
+        key="application_accepted",
+        label="Admission: accepted",
+        label_ar="القبول: مقبول",
+        description="An applicant was accepted to a postgraduate program.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES],
+        builtin={
+            "en": _msg("You have been accepted to {{program_name}}", "Congratulations, {{user_first_name}}!", "Your application <strong>{{application_number}}</strong> to <strong>{{program_name}}</strong> has been accepted. The admissions team will complete your enrolment shortly.</p><p>{{decision_note}}", "View application", "application_url", "{{org_name}}: you have been accepted to {{program_name}} ({{application_number}}). {{application_url}}"),
+            "ar": _msg("تم قبولك في {{program_name}}", "تهانينا يا {{user_first_name}}!", "تم قبول طلبك <strong>{{application_number}}</strong> في <strong>{{program_name}}</strong>. سيستكمل فريق القبول تسجيلك قريبًا.</p><p>{{decision_note}}", "عرض الطلب", "application_url", "{{org_name}}: تم قبولك في {{program_name}} ({{application_number}}). {{application_url}}"),
+        },
+    ),
+    EventDef(
+        key="application_waitlisted",
+        label="Admission: waiting list",
+        label_ar="القبول: قائمة الانتظار",
+        description="An applicant was placed on a program's waiting list.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES],
+        builtin={
+            "en": _msg("Your application to {{program_name}} is on the waiting list", "You're on the waiting list", "Your application <strong>{{application_number}}</strong> to <strong>{{program_name}}</strong> is on the waiting list. We will let you know as soon as a place opens.</p><p>{{decision_note}}", "View application", "application_url", "{{org_name}}: your application to {{program_name}} ({{application_number}}) is on the waiting list. {{application_url}}"),
+            "ar": _msg("طلبك في {{program_name}} على قائمة الانتظار", "طلبك على قائمة الانتظار", "طلبك <strong>{{application_number}}</strong> في <strong>{{program_name}}</strong> على قائمة الانتظار. سنبلغك فور توفر مقعد.</p><p>{{decision_note}}", "عرض الطلب", "application_url", "{{org_name}}: طلبك في {{program_name}} ({{application_number}}) على قائمة الانتظار. {{application_url}}"),
+        },
+    ),
+    EventDef(
+        key="application_rejected",
+        label="Admission: not accepted",
+        label_ar="القبول: غير مقبول",
+        description="An application to a postgraduate program was not successful.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES],
+        builtin={
+            "en": _msg("Your application to {{program_name}}", "Application decision", "We are sorry, {{user_first_name}}. Your application <strong>{{application_number}}</strong> to <strong>{{program_name}}</strong> was not successful.</p><p>{{decision_note}}", "View application", "application_url", "{{org_name}}: your application to {{program_name}} ({{application_number}}) was not successful. {{application_url}}"),
+            "ar": _msg("طلبك في {{program_name}}", "قرار الطلب", "نأسف يا {{user_first_name}}، لم يتم قبول طلبك <strong>{{application_number}}</strong> في <strong>{{program_name}}</strong>.</p><p>{{decision_note}}", "عرض الطلب", "application_url", "{{org_name}}: لم يتم قبول طلبك في {{program_name}} ({{application_number}}). {{application_url}}"),
+        },
+    ),
+    EventDef(
+        key="application_enrolled",
+        label="Admission: enrolled as student",
+        label_ar="القبول: تسجيل كطالب",
+        description="An accepted applicant was enrolled and given a student number.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES, Variable("student_number", "Student number", "MSC-AI-2026-014"), Variable("academics_url", "Link to My academics", "https://academy.example.com/academics")],
+        builtin={
+            "en": _msg("Welcome to {{program_name}}", "You're now a student, {{user_first_name}}", "You are enrolled in <strong>{{program_name}}</strong>. Your student number is <strong>{{student_number}}</strong>.", "My academics", "academics_url", "{{org_name}}: you are enrolled in {{program_name}}. Student number: {{student_number}}"),
+            "ar": _msg("مرحبًا بك في {{program_name}}", "أصبحت طالبًا يا {{user_first_name}}", "تم تسجيلك في <strong>{{program_name}}</strong>. رقمك الجامعي هو <strong>{{student_number}}</strong>.", "شؤوني الأكاديمية", "academics_url", "{{org_name}}: تم تسجيلك في {{program_name}}. الرقم الجامعي: {{student_number}}"),
+        },
+    ),
+    EventDef(
+        key="application_document_rejected",
+        label="Admission: document rejected",
+        label_ar="القبول: رفض مستند",
+        description="A document an applicant uploaded was rejected and needs to be uploaded again.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES, Variable("document_name", "Document", "Transcript")],
+        builtin={
+            "en": _msg("Please upload a new {{document_name}} for {{program_name}}", "A document needs your attention", "The admissions team could not accept the <strong>{{document_name}}</strong> you uploaded for application <strong>{{application_number}}</strong> ({{program_name}}). Please upload a new copy.</p><p>{{decision_note}}", "Upload a new file", "application_url", "{{org_name}}: please upload a new {{document_name}} for your application {{application_number}}. {{application_url}}"),
+            "ar": _msg("يرجى رفع {{document_name}} جديد في {{program_name}}", "مستند يحتاج إلى انتباهك", "لم يتمكن فريق القبول من قبول <strong>{{document_name}}</strong> الذي رفعته في الطلب <strong>{{application_number}}</strong> ({{program_name}}). يرجى رفع نسخة جديدة.</p><p>{{decision_note}}", "رفع ملف جديد", "application_url", "{{org_name}}: يرجى رفع {{document_name}} جديد لطلبك {{application_number}}. {{application_url}}"),
+        },
+    ),
+    EventDef(
+        key="application_interview",
+        label="Admission: interview scheduled",
+        label_ar="القبول: موعد المقابلة",
+        description="An admission interview was scheduled or moved to a new time or place.",
+        variables=[*COMMON_VARIABLES, *ADMISSION_VARIABLES, Variable("interview_date", "Date", "2026-10-20"), Variable("interview_time", "Time", "10:00"), Variable("interview_location", "Place or meeting link", "Building B, room 204")],
+        builtin={
+            "en": _msg("Your interview for {{program_name}}: {{interview_date}} {{interview_time}}", "Your admission interview", "Your interview for <strong>{{program_name}}</strong> (application {{application_number}}) is on <strong>{{interview_date}}</strong> at <strong>{{interview_time}}</strong>.</p><p>{{interview_location}}", "View application", "application_url", "{{org_name}}: interview for {{program_name}} on {{interview_date}} {{interview_time}}, {{interview_location}}"),
+            "ar": _msg("مقابلتك في {{program_name}}: {{interview_date}} {{interview_time}}", "مقابلة القبول", "موعد مقابلتك في <strong>{{program_name}}</strong> (الطلب {{application_number}}) يوم <strong>{{interview_date}}</strong> الساعة <strong>{{interview_time}}</strong>.</p><p>{{interview_location}}", "عرض الطلب", "application_url", "{{org_name}}: مقابلة {{program_name}} يوم {{interview_date}} الساعة {{interview_time}}، {{interview_location}}"),
         },
     ),
 ]

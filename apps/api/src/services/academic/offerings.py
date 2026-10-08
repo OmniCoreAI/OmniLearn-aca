@@ -41,11 +41,8 @@ from src.db.usergroups import UserGroup
 from src.db.users import User, UserReadAuthor
 from src.security.auth import resolve_acting_user_id
 from src.security.rbac import AccessAction, check_resource_access
-from src.services.administration.facilities import (
-    check_session_booking,
-    facility_ref,
-    resolve_facility_id,
-)
+from src.services.administration.facilities import facility_ref, resolve_facility_id
+from src.services.administration.reservations import book_session, release_offering, release_session
 from src.services.academic.authors import (
     ensure_coordinator_authorship,
     get_user_author,
@@ -61,7 +58,8 @@ from src.services.academic.common import (
     require_academic_manager,
     require_academic_member,
 )
-from src.services.academic.validation import assert_status_transition, resolve_org_user
+from src.services.academic.validation import assert_status_transition, resolve_org_user, resolve_teaching_staff
+from src.services.notifications.assignments import slug, staff_assigned
 
 logger = logging.getLogger(__name__)
 
@@ -233,6 +231,7 @@ async def _cancel_offering(db_session: AsyncSession, offering: CourseOffering) -
     ).scalars().all()
     for enrollment in rows:
         await set_enrollment_status(db_session, offering, enrollment, EnrollmentStatus.WITHDRAWN)
+    await release_offering(db_session, offering.id)
     if not offering.content_course_id:
         return
     shared = (
@@ -338,6 +337,11 @@ async def to_read(db_session: AsyncSession, offering: CourseOffering) -> CourseO
         enrolled_count=await _enrolled_count(db_session, offering.id),  # type: ignore[arg-type]
         results_count=await _enrolled_count(db_session, offering.id, (EnrollmentStatus.COMPLETED, EnrollmentStatus.FAILED)),  # type: ignore[arg-type]
         facility=await facility_ref(db_session, offering.facility_id),
+        session_count=(
+            await db_session.execute(
+                select(func.count(OfferingSession.id)).where(OfferingSession.offering_id == offering.id)
+            )
+        ).scalar() or 0,
     )
 
 
@@ -570,8 +574,8 @@ async def create_offering(
 
     if data.capacity is not None and data.capacity < 0:
         raise bad_request("Capacity cannot be negative")
-    instructor_id = await resolve_org_user(db_session, org_id, data.instructor_uuid, label="Instructor")
-    ta_id = await resolve_org_user(db_session, org_id, data.teaching_assistant_uuid, label="Teaching assistant")
+    instructor_id = await resolve_teaching_staff(db_session, org_id, data.instructor_uuid, label="Instructor")
+    ta_id = await resolve_teaching_staff(db_session, org_id, data.teaching_assistant_uuid, label="Teaching assistant")
     content_course_id = await _resolve_content_course(db_session, org_id, data.content_course_uuid)
     facility_id = await resolve_facility_id(db_session, org_id, data.facility_uuid)
 
@@ -604,7 +608,30 @@ async def create_offering(
     )
     await db_session.commit()
     await db_session.refresh(offering)
+    await _notify_offering_staff(db_session, offering, current_user, previous=(None, None))
     return await to_read(db_session, offering)
+
+
+async def _notify_offering_staff(
+    db_session: AsyncSession, offering: CourseOffering, current_user: Principal, previous: tuple
+) -> None:
+    """Tell a newly assigned lecturer / teaching assistant (after commit)."""
+    new_staff = [
+        (offering.instructor_id, previous[0], "lecturer"),
+        (offering.teaching_assistant_id, previous[1], "assistant"),
+    ]
+    if not any(uid and uid != before for uid, before, _ in new_staff):
+        return
+    course = await db_session.get(AcademicCourse, offering.academic_course_id)
+    name = f"{course.code} · {course.name}" if course else offering.code
+    for uid, before, role in new_staff:
+        if uid and uid != before:
+            await staff_assigned(
+                db_session, offering.org_id, [uid], role, name,
+                f"/dash/postgraduate/teaching/offerings/{slug(offering.offering_uuid, 'offering_')}",
+                actor_id=resolve_acting_user_id(current_user), resource=("offering", offering.offering_uuid),
+            )
+    await db_session.refresh(offering)
 
 
 async def update_offering(
@@ -622,18 +649,20 @@ async def update_offering(
     previous_staff = [offering.instructor_id, offering.teaching_assistant_id]
     previous_content_id = offering.content_course_id
     if "instructor_uuid" in update:
-        offering.instructor_id = await resolve_org_user(
-            db_session, offering.org_id, update.pop("instructor_uuid"), label="Instructor"
+        offering.instructor_id = await resolve_teaching_staff(
+            db_session, offering.org_id, update.pop("instructor_uuid"), label="Instructor",
+            keep_id=offering.instructor_id,
         )
     if "teaching_assistant_uuid" in update:
-        offering.teaching_assistant_id = await resolve_org_user(
-            db_session, offering.org_id, update.pop("teaching_assistant_uuid"), label="Teaching assistant"
+        offering.teaching_assistant_id = await resolve_teaching_staff(
+            db_session, offering.org_id, update.pop("teaching_assistant_uuid"), label="Teaching assistant",
+            keep_id=offering.teaching_assistant_id,
         )
     allow_conflict = bool(update.pop("allow_conflict", False))
     if "facility_uuid" in update:
         facility_id = await resolve_facility_id(db_session, offering.org_id, update.pop("facility_uuid"))
-        if facility_id and not allow_conflict:
-            # Sessions without their own room move to the new default: check them.
+        if facility_id != offering.facility_id:
+            # Sessions without their own room move to the new default.
             inheriting = (
                 await db_session.execute(
                     select(OfferingSession).where(
@@ -643,9 +672,9 @@ async def update_offering(
                 )
             ).scalars().all()
             for session in inheriting:
-                await check_session_booking(
-                    db_session, facility_id, session.start_datetime, session.end_datetime,
-                    exclude=("offering_session", session.id),
+                await book_session(
+                    db_session, session, facility_id,
+                    allow_conflict=allow_conflict, active=offering.status != OfferingStatus.CANCELLED,
                 )
         offering.facility_id = facility_id
     content_changed = False
@@ -688,6 +717,7 @@ async def update_offering(
     await _sync_content_course(db_session, offering)
     await db_session.commit()
     await db_session.refresh(offering)
+    await _notify_offering_staff(db_session, offering, current_user, previous=tuple(previous_staff))
     return await to_read(db_session, offering)
 
 
@@ -747,19 +777,16 @@ async def create_session(
     await require_offering_staff(request, db_session, current_user, offering)
     _validate_session(data.model_dump())
     facility_id = await resolve_facility_id(db_session, offering.org_id, data.facility_uuid)
-    await check_session_booking(
-        db_session,
-        facility_id or offering.facility_id,
-        data.start_datetime,
-        data.end_datetime,
-        allow_conflict=data.allow_conflict,
-    )
     session = OfferingSession.model_validate(
         data.model_dump(exclude={"facility_uuid", "allow_conflict"}),
         update={"offering_id": offering.id, "org_id": offering.org_id, "facility_id": facility_id},
     )
     session.session_uuid = f"offeringsession_{uuid4()}"
     session.creation_date = session.update_date = now()
+    await book_session(
+        db_session, session, facility_id or offering.facility_id,
+        allow_conflict=data.allow_conflict, active=offering.status != OfferingStatus.CANCELLED,
+    )
     db_session.add(session)
     await db_session.commit()
     await db_session.refresh(session)
@@ -792,13 +819,9 @@ async def update_session(
     for key, value in update.items():
         setattr(session, key, value)
     if {"facility_id", "start_datetime", "end_datetime"} & set(update):
-        await check_session_booking(
-            db_session,
-            session.facility_id or offering.facility_id,
-            session.start_datetime,
-            session.end_datetime,
-            exclude=("offering_session", session.id),
-            allow_conflict=allow_conflict,
+        await book_session(
+            db_session, session, session.facility_id or offering.facility_id,
+            allow_conflict=allow_conflict, active=offering.status != OfferingStatus.CANCELLED,
         )
     session.update_date = now()
     db_session.add(session)
@@ -813,6 +836,7 @@ async def delete_session(
     offering = await get_offering_or_404(db_session, offering_uuid)
     await require_offering_staff(request, db_session, current_user, offering)
     session = await _get_session(db_session, offering, session_uuid)
+    await release_session(db_session, session)
     await db_session.delete(session)
     await db_session.commit()
     return "Session deleted"

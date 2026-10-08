@@ -70,18 +70,21 @@ export function InstructorSelect({
   onChange,
   className,
   current,
+  emptyLabel,
 }: {
   value: string
   onChange: (_userUuid: string) => void
   className?: string
   current?: { user_uuid: string; name: string } | null
+  /** Label of the empty choice (default "No instructor"). */
+  emptyLabel?: string
 }) {
   const { t } = useTranslation()
   const options = useInstructorOptions()
   const extra = current && current.user_uuid && !options.some((o) => o.user_uuid === current.user_uuid) ? [current] : []
   return (
     <select className={cn(className)} value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">{t('administration.pickers.no_instructor', 'No instructor')}</option>
+      <option value="">{emptyLabel ?? t('administration.pickers.no_instructor', 'No instructor')}</option>
       {extra.map((c) => (
         <option key={c.user_uuid} value={c.user_uuid}>
           {c.name}

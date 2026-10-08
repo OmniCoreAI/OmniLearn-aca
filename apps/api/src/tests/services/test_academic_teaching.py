@@ -10,6 +10,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
+from sqlmodel import select
 
 from src.db.academic.admissions import (
     ApplicantProfile,
@@ -36,6 +37,7 @@ from src.services.academic import catalog as catalog_svc
 from src.services.academic import cohorts as cohorts_svc
 from src.services.academic import offerings as offerings_svc
 from src.services.academic import programs as programs_svc
+from src.tests.conftest import register_instructor
 
 
 @pytest.fixture
@@ -78,6 +80,7 @@ class TestMyTeaching:
 
     @pytest.mark.asyncio
     async def test_my_offerings_lists_only_what_the_lecturer_teaches(self, db, org, admin_user, regular_user, mock_request):
+        await register_instructor(db, org.id, admin_user.id, regular_user.id)
         taught, _ = await _open_offerings(db, org, admin_user, mock_request, instructor_uuid=regular_user.user_uuid)
         mine = await offerings_svc.list_my_offerings(org.id, regular_user, db)
         assert [o.offering_uuid for o in mine] == [taught.offering_uuid]
@@ -87,17 +90,45 @@ class TestMyTeaching:
 
     @pytest.mark.asyncio
     async def test_teaching_assistant_sees_the_offering(self, db, org, admin_user, regular_user, mock_request):
+        await register_instructor(db, org.id, admin_user.id, regular_user.id)
         taught, _ = await _open_offerings(db, org, admin_user, mock_request, ta_uuid=regular_user.user_uuid)
         mine = await offerings_svc.list_my_offerings(org.id, regular_user, db)
         assert [o.offering_uuid for o in mine] == [taught.offering_uuid]
 
     @pytest.mark.asyncio
     async def test_viewer_permissions_on_an_offering(self, db, org, admin_user, regular_user, mock_request):
+        await register_instructor(db, org.id, admin_user.id, regular_user.id)
         taught, _ = await _open_offerings(db, org, admin_user, mock_request, instructor_uuid=regular_user.user_uuid)
         as_lecturer = await offerings_svc.get_offering(mock_request, taught.offering_uuid, regular_user, db)
         assert as_lecturer.viewer_teaches is True and as_lecturer.viewer_can_manage is False
         as_admin = await offerings_svc.get_offering(mock_request, taught.offering_uuid, admin_user, db)
         assert as_admin.viewer_teaches is False and as_admin.viewer_can_manage is True
+
+    @pytest.mark.asyncio
+    async def test_only_active_registry_instructors_can_teach(self, db, org, admin_user, regular_user, mock_request):
+        from src.db.academic.offerings import CourseOfferingUpdate
+
+        taught, _ = await _open_offerings(db, org, admin_user, mock_request)
+        assign = CourseOfferingUpdate(instructor_uuid=regular_user.user_uuid)
+        with pytest.raises(HTTPException) as exc:
+            await offerings_svc.update_offering(mock_request, taught.offering_uuid, assign, admin_user, db)
+        assert exc.value.status_code == 400 and "active instructor" in exc.value.detail
+
+        await register_instructor(db, org.id, regular_user.id)
+        await offerings_svc.update_offering(mock_request, taught.offering_uuid, assign, admin_user, db)
+        # Going inactive later doesn't block re-saving the unchanged assignment…
+        instructor = (await db.execute(select(Instructor).where(Instructor.user_id == regular_user.id))).scalars().one()
+        instructor.status = InstructorStatus.INACTIVE
+        db.add(instructor)
+        await db.commit()
+        await offerings_svc.update_offering(
+            mock_request, taught.offering_uuid, CourseOfferingUpdate(instructor_uuid=regular_user.user_uuid), admin_user, db
+        )
+        # …but they can't be given new teaching.
+        with pytest.raises(HTTPException):
+            await offerings_svc.update_offering(
+                mock_request, taught.offering_uuid, CourseOfferingUpdate(teaching_assistant_uuid=regular_user.user_uuid), admin_user, db
+            )
 
     @pytest.mark.asyncio
     async def test_lecturer_list_comes_from_the_active_registry(self, db, org, admin_user, regular_user):

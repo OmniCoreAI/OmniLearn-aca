@@ -16,6 +16,13 @@ function fetcher(url: string, token: string) {
 
 const STALE_TIME = 60_000
 
+/** Charts backed by the analytics service only load once it is configured
+ * (otherwise every widget would hit a 503). DB-backed queries don't need it. */
+function useAnalyticsConfigured(): boolean {
+  const { data } = useAnalyticsStatus()
+  return data?.configured === true
+}
+
 export function useAnalyticsPipe(
   pipeName: string,
   extraParams: Record<string, string> = {},
@@ -25,6 +32,7 @@ export function useAnalyticsPipe(
   const session = useLHSession() as any
   const token = session?.data?.tokens?.access_token
   const orgId = org?.id
+  const configured = useAnalyticsConfigured()
 
   const params = new URLSearchParams({ org_id: String(orgId ?? ''), ...extraParams })
   const paramsStr = params.toString()
@@ -33,7 +41,7 @@ export function useAnalyticsPipe(
     queryKey: queryKeys.analytics.pipe(orgId ?? 0, pipeName, paramsStr),
     queryFn: () =>
       fetcher(`${getAPIUrl()}analytics/dashboard/${pipeName}?${paramsStr}`, token),
-    enabled: !!(orgId && token),
+    enabled: !!(orgId && token) && configured,
     staleTime: STALE_TIME,
     refetchInterval: refreshInterval || false,
   })
@@ -48,6 +56,7 @@ export function useAnalyticsDetail(
   const session = useLHSession() as any
   const token = session?.data?.tokens?.access_token
   const orgId = org?.id
+  const configured = useAnalyticsConfigured()
 
   const params = new URLSearchParams({ org_id: String(orgId ?? ''), ...extraParams })
   const paramsStr = params.toString()
@@ -56,7 +65,7 @@ export function useAnalyticsDetail(
     queryKey: queryKeys.analytics.detail(orgId ?? 0, queryName, paramsStr),
     queryFn: () =>
       fetcher(`${getAPIUrl()}analytics/dashboard/detail/${queryName}?${paramsStr}`, token),
-    enabled: !!(orgId && token),
+    enabled: !!(orgId && token) && configured,
     staleTime: STALE_TIME,
     refetchInterval: refreshInterval || false,
   })
@@ -120,6 +129,7 @@ export function useCoursePipe(
   const session = useLHSession() as any
   const token = session?.data?.tokens?.access_token
   const orgId = org?.id
+  const configured = useAnalyticsConfigured()
 
   const params = new URLSearchParams({
     org_id: String(orgId ?? ''),
@@ -132,7 +142,7 @@ export function useCoursePipe(
     queryKey: queryKeys.analytics.coursePipe(orgId ?? 0, courseUuid, pipeName, paramsStr),
     queryFn: () =>
       fetcher(`${getAPIUrl()}analytics/dashboard/course/${pipeName}?${paramsStr}`, token),
-    enabled: !!(orgId && token && courseUuid),
+    enabled: !!(orgId && token && courseUuid) && configured,
     staleTime: STALE_TIME,
     refetchInterval: refreshInterval || false,
   })
@@ -148,6 +158,7 @@ export function useCourseAnalyticsDetail(
   const session = useLHSession() as any
   const token = session?.data?.tokens?.access_token
   const orgId = org?.id
+  const configured = useAnalyticsConfigured()
 
   const params = new URLSearchParams({
     org_id: String(orgId ?? ''),
@@ -160,7 +171,7 @@ export function useCourseAnalyticsDetail(
     queryKey: queryKeys.analytics.courseDetail(orgId ?? 0, courseUuid, queryName, paramsStr),
     queryFn: () =>
       fetcher(`${getAPIUrl()}analytics/dashboard/course/detail/${queryName}?${paramsStr}`, token),
-    enabled: !!(orgId && token && courseUuid),
+    enabled: !!(orgId && token && courseUuid) && configured,
     staleTime: STALE_TIME,
     refetchInterval: refreshInterval || false,
   })

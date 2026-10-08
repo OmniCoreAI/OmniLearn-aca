@@ -52,6 +52,8 @@ import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore }
 import { LayoutGroup, MotionConfig, motion } from 'motion/react'
 import UserAvatar from '../../Objects/UserAvatar'
 import AdminAuthorization from '@components/Security/AdminAuthorization'
+import useAdminStatus from '@components/Hooks/useAdminStatus'
+import NotificationBell from '@components/Objects/Notifications/NotificationBell'
 import usePortalNavVisibility from '@components/Hooks/usePortalNavVisibility'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
@@ -155,6 +157,9 @@ function DashLeftMenu() {
   const plan = usePlan()
   // Hooks must run on every render — keep this above the early return.
   const { isItemVisible } = usePortalNavVisibility()
+  // Only roles that may create courses get the "Create new course" shortcut.
+  const { rights } = useAdminStatus() as any
+  const canCreateCourses = rights?.courses?.action_create === true
   const postgrad = usePostgradSignals(org?.id, access_token, isItemVisible('postgraduate') && !isCollapsed)
   // Keep the current page in view inside the scrolling link list (e.g. a deep link into a long section).
   // Clicked links are already on screen, so this only moves the list on a fresh load.
@@ -447,7 +452,7 @@ function DashLeftMenu() {
     </HoverMenuContent>
   )
 
-  const settingsCount = 4
+  const settingsCount = 5
   const deskActive = isActivePath('/dash') || isActivePath('/dash/calendar') || isActivePath('/dash/my-entity')
   const academicActive = isActivePath('/dash/training-programs') || isActivePath('/dash/finance') || isActivePath('/dash/cms/news')
   const postgradActive = isActivePath(POSTGRAD_BASE) && !inMyTeaching
@@ -521,7 +526,7 @@ function DashLeftMenu() {
                     <NavItem
                       href="/dash/my-entity"
                       icon={icon(IdentificationCard, isActivePath('/dash/my-entity'))}
-                      label={t('entities.portal.nav', 'My organization')}
+                      label={t('entities.portal.nav', 'My entity')}
                       isCollapsed={isCollapsed}
                       active={isActivePath('/dash/my-entity')}
                       onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'my-entity' })}
@@ -736,9 +741,18 @@ function DashLeftMenu() {
               <div
                 className={cn(
                   'rounded-2xl bg-white p-1.5 shadow-[0_1px_3px_hsl(220_30%_20%/0.06)] ring-1 ring-[hsl(var(--dash-border))]/60',
-                  isCollapsed ? 'flex flex-col items-center gap-1' : 'grid grid-cols-4 gap-1'
+                  isCollapsed ? 'flex flex-col items-center gap-1' : 'grid grid-cols-5 gap-1'
                 )}
               >
+                <NotificationBell
+                  side="right"
+                  align="end"
+                  iconSize={18}
+                  triggerClassName={cn(
+                    'flex h-9 items-center justify-center rounded-xl text-[hsl(var(--dash-ink))]/60 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]',
+                    isCollapsed ? 'w-10' : 'w-full'
+                  )}
+                />
                 <HoverMenu align="end" content={languageMenu}>
                   <SettingsButton label={t('common.language')} isCollapsed={isCollapsed}>
                     <Globe size={18} weight="duotone" />
@@ -757,7 +771,7 @@ function DashLeftMenu() {
                 </SettingsButton>
               </div>
             </div>
-            <CreateCard plan={plan} orgSlug={org?.slug} isCollapsed={isCollapsed} />
+            {canCreateCourses && <CreateCard plan={plan} orgSlug={org?.slug} isCollapsed={isCollapsed} />}
 
             {/* Signed-in person */}
             <HoverMenu align="end" content={accountMenu}>

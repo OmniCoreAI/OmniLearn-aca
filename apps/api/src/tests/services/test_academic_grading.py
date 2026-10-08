@@ -9,6 +9,7 @@ from contextlib import ExitStack
 from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
+from sqlmodel import select
 
 from src.db.academic.calendar import AcademicTermCreate, AcademicYearCreate, TermType
 from src.db.academic.catalog import AcademicCourseCreate
@@ -29,6 +30,9 @@ from src.db.courses.assignments import (
     AssignmentUserSubmissionStatus,
     GradingTypeEnum,
 )
+from src.db.notification_inbox import Notification
+from src.db.user_organizations import UserOrganization
+from src.db.users import PublicUser, User
 from src.services.academic import calendar as calendar_svc
 from src.services.academic import catalog as catalog_svc
 from src.services.academic import cohorts as cohorts_svc
@@ -36,6 +40,7 @@ from src.services.academic import grading as grading_svc
 from src.services.academic import offerings as offerings_svc
 from src.services.academic import programs as programs_svc
 from src.services.academic import students as students_svc
+from src.tests.conftest import register_instructor
 
 
 @pytest.fixture
@@ -229,6 +234,7 @@ class TestGradebookWorkflow:
 
     @pytest.mark.asyncio
     async def test_instructor_cannot_approve_own_grades(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
+        await register_instructor(db, org.id, admin_user.id, regular_user.id)
         *_, offering, _, _ = await _setup(db, org, admin_user, regular_user, mock_request)
         await offerings_svc.update_offering(
             mock_request, offering.offering_uuid, CourseOfferingUpdate(instructor_uuid=admin_user.user_uuid), admin_user, db
@@ -239,6 +245,37 @@ class TestGradebookWorkflow:
         with pytest.raises(HTTPException) as exc:
             await grading_svc.approve_grades(mock_request, offering.offering_uuid, None, admin_user, db)
         assert exc.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_grade_workflow_notifies_each_side(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
+        teacher = User(
+            id=3, username="teacher", first_name="Tea", last_name="Cher", email="teacher@test.com", password="x",
+            user_uuid="user_teacher", creation_date="now", update_date="now",
+        )
+        db.add(teacher)
+        db.add(UserOrganization(user_id=3, org_id=org.id, role_id=2, creation_date="now", update_date="now"))
+        await db.commit()
+        teacher_user = PublicUser(id=3, username="teacher", first_name="Tea", last_name="Cher", email="teacher@test.com", user_uuid="user_teacher")
+        await register_instructor(db, org.id, admin_user.id, teacher.id)
+        *_, offering, _, _ = await _setup(db, org, admin_user, regular_user, mock_request)
+        await offerings_svc.update_offering(
+            mock_request, offering.offering_uuid, CourseOfferingUpdate(instructor_uuid=teacher_user.user_uuid), admin_user, db
+        )
+        components = await _scheme(mock_request, offering.offering_uuid, teacher_user, db)
+        await _grade(mock_request, offering.offering_uuid, components, [80, 75], teacher_user, db)
+
+        async def inbox_of(user_id):
+            rows = (await db.execute(select(Notification).where(Notification.user_id == user_id, Notification.type.in_(["grades_submitted", "grades_returned", "grades_approved", "result_published"])))).scalars().all()
+            return [(n.type, n.title) for n in rows]
+
+        await grading_svc.submit_grades(mock_request, offering.offering_uuid, None, teacher_user, db)
+        assert await inbox_of(admin_user.id) == [("grades_submitted", "Grades submitted for approval: AI-501 · Machine Learning")]
+        await grading_svc.return_grades(mock_request, offering.offering_uuid, "Check the final", admin_user, db)
+        await grading_svc.submit_grades(mock_request, offering.offering_uuid, None, teacher_user, db)
+        await grading_svc.approve_grades(mock_request, offering.offering_uuid, None, admin_user, db)
+        assert [t for t, _ in await inbox_of(teacher.id)] == ["grades_returned", "grades_approved"]
+        assert await inbox_of(regular_user.id) == [("result_published", "Your result for AI-501 · Machine Learning is published")]
+        assert len(await inbox_of(admin_user.id)) == 2  # never told about their own return / approval
 
     @pytest.mark.asyncio
     async def test_registration_closes_once_grades_are_submitted(

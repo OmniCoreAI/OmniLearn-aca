@@ -4,13 +4,15 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { CalendarClock, MapPin, Pencil, Users, Wrench } from 'lucide-react'
+import { CalendarClock, CalendarPlus, MapPin, Pencil, Users, Wrench } from 'lucide-react'
 import { Door } from '@phosphor-icons/react'
 import { getUriWithOrg } from '@services/config/config'
 import { AcademicPageShell, AcademicEmptyState } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { StatusPill } from '@components/Dashboard/Pages/Academic/AcademicUI'
 import DashDataTable, { RowActionsMenu, ToolbarSelect } from '@components/Dashboard/Shared/DataTable/DashDataTable'
-import { AdminBreadcrumbs, AdminCard, AdminDrawer, DetailItem, useAdminContext, useLookupLabel } from '@components/Dashboard/Pages/Administration/AdminUI'
+import { AdminBreadcrumbs, AdminCard, AdminDrawer, DetailItem, useAdminContext, useConfirm, useLookupLabel } from '@components/Dashboard/Pages/Administration/AdminUI'
+import { BookingForm } from '@components/Dashboard/Pages/Administration/HallBooking/BookingForm'
+import { toMinuteString } from '@components/Dashboard/Pages/Administration/HallBooking/hallTime'
 import { FACILITY_STATUSES, FacilityForm } from '@components/Dashboard/Pages/Administration/FacilityForm'
 import { getFacility, getFacilityBookings, updateFacility } from '@services/administration/administration'
 import { facilityImageUrl } from '../client'
@@ -23,6 +25,8 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
   const queryClient = useQueryClient()
   const label = useLookupLabel()
   const [editOpen, setEditOpen] = useState(false)
+  const [bookOpen, setBookOpen] = useState(false)
+  const { confirm, dialog } = useConfirm()
   const [range, setRange] = useState<'upcoming' | 'all'>('upcoming')
 
   const { data: facility } = useQuery({
@@ -30,7 +34,7 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
     queryFn: () => getFacility(facilityUuid, access_token),
     enabled: ready,
   })
-  const since = range === 'all' ? undefined : new Date().toISOString().slice(0, 16)
+  const since = range === 'all' ? undefined : toMinuteString(new Date())
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['administration', 'facility', facilityUuid, 'bookings', range],
     queryFn: () => getFacilityBookings(facilityUuid, access_token, since),
@@ -206,10 +210,10 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
         <div className="lg:col-span-2">
           <DashDataTable
             rows={bookings as any[]}
-            rowKey={(b: any) => b.session_uuid}
+            rowKey={(b: any) => b.booking_uuid}
             loading={bookingsLoading}
             pageSize={15}
-            itemLabel={(n) => t('administration.facilities.bookings_count', '{{count}} sessions', { count: n })}
+            itemLabel={(n) => t('administration.facilities.bookings_count', '{{count}} bookings', { count: n })}
             toolbar={
               <>
                 <span className="me-1 text-sm font-semibold text-[hsl(var(--dash-ink))]">{t('administration.facilities.bookings', 'Bookings')}</span>
@@ -224,12 +228,21 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
                 />
               </>
             }
+            toolbarEnd={
+              <button
+                type="button"
+                onClick={() => setBookOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-ink))] px-3.5 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+              >
+                <CalendarPlus className="h-3.5 w-3.5" /> {t('administration.halls.book_this_room', 'Book this room')}
+              </button>
+            }
             empty={
               <AcademicEmptyState
                 compact
                 icon={<CalendarClock className="h-6 w-6" />}
-                title={t('administration.facilities.no_bookings', 'No sessions booked')}
-                description={t('administration.facilities.bookings_desc', 'Sessions scheduled in this room, directly or through their course default.')}
+                title={t('administration.facilities.no_bookings', 'Nothing booked')}
+                description={t('administration.facilities.bookings_desc', 'Sessions scheduled in this room (directly or through their course default) and hall bookings such as events and exams.')}
               />
             }
             columns={[
@@ -245,7 +258,20 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
                   </div>
                 ),
               },
-              { key: 'session', header: t('administration.facilities.session', 'Session'), cell: (b: any) => <span className="line-clamp-1 text-[13px]">{b.title || '—'}</span> },
+              {
+                key: 'session',
+                header: t('administration.facilities.session', 'Session'),
+                cell: (b: any) => (
+                  <div className="min-w-0 leading-tight">
+                    <span className="line-clamp-1 text-[13px]">{b.title || '—'}</span>
+                    {b.double_booked ? (
+                      <span className="mt-0.5 inline-block rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
+                        {t('administration.facilities.double_booked', 'Double-booked')}
+                      </span>
+                    ) : null}
+                  </div>
+                ),
+              },
               {
                 key: 'parent',
                 header: t('administration.facilities.booked_by', 'Course / offering'),
@@ -262,6 +288,10 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
                         <Link className="line-clamp-1 text-[13px] font-medium hover:underline" href={getUriWithOrg(orgslug, href)} onClick={(e) => e.stopPropagation()}>
                           {b.parent_name}
                         </Link>
+                      ) : b.source === 'manual' ? (
+                        <span className="line-clamp-1 text-[13px]">
+                          {t('administration.facilities.hall_booking', 'Hall booking')} · {String(t(`administration.facilities.kind_${b.kind}`, b.kind))}
+                        </span>
                       ) : (
                         <span className="line-clamp-1 text-[13px]">{b.parent_name || '—'}</span>
                       )}
@@ -294,6 +324,32 @@ function FacilityDetail({ orgslug, facilityUuid }: { orgslug: string; facilityUu
           />
         ) : null}
       </AdminDrawer>
+      <AdminDrawer
+        icon={<Door size={20} weight="duotone" />}
+        open={bookOpen}
+        onOpenChange={setBookOpen}
+        width="sm:max-w-[640px]"
+        title={t('administration.halls.book_room_title', 'Book {{name}}', { name: facility.name })}
+        description={t('administration.halls.form_desc', 'The room is checked as you type; free rooms and times are suggested when it is taken.')}
+      >
+        {bookOpen ? (
+          <BookingForm
+            initial={{ facility_uuid: facilityUuid }}
+            confirmConflict={(message) =>
+              confirm({
+                title: t('administration.facilities.book_anyway', 'Book the room anyway?'),
+                message,
+                confirmText: t('academic.off.book_anyway', 'Book anyway'),
+              })
+            }
+            onDone={() => {
+              setBookOpen(false)
+              refresh()
+            }}
+          />
+        ) : null}
+      </AdminDrawer>
+      {dialog}
     </AcademicPageShell>
   )
 }

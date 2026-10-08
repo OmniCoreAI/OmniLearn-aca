@@ -9,6 +9,7 @@ from src.routers import plans
 from src.routers import usergroups
 from src.routers import dev, trail, users, auth, orgs, roles, search, portal_navigation
 from src.routers import calendar as calendar_router_module
+from src.routers import inbox as inbox_router_module
 from src.routers import monitoring
 from src.routers import stream
 from src.routers import api_tokens
@@ -313,6 +314,12 @@ v1_router.include_router(
     admin_audience_router_module.router,
     prefix="/audience",
     tags=["administration", "audience"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    inbox_router_module.router,
+    prefix="/inbox",
+    tags=["notifications"],
     dependencies=[Depends(require_authenticated_user)],
 )
 v1_router.include_router(

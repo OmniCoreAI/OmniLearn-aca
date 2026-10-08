@@ -9,11 +9,18 @@ course academic profiles, course offerings, training programs and the schedule
 sessions of both — a session without its own facility uses its parent's
 default facility. The legacy free-text ``classroom`` / ``location`` fields stay
 as a fallback.
+
+Every booked time range lives in **FacilityReservation**: one row per schedule
+session that occupies a room (kept in sync when the session is saved) plus
+hall bookings made directly (events, exams, meetings…). On PostgreSQL an
+exclusion constraint rejects two approved, non-overridden reservations of the
+same room that overlap, so concurrent saves cannot double-book.
 """
+from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
-from sqlalchemy import Column, ForeignKey, Integer, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -204,18 +211,128 @@ class FacilityOption(SQLModel):
     location_name: Optional[str] = None
 
 
-class FacilityBooking(SQLModel):
-    """A schedule session that occupies a facility."""
+# ---------------------------------------------------------------------------
+# Reservations (bookings)
+# ---------------------------------------------------------------------------
 
-    source: str  # course_session | offering_session
-    session_uuid: str
+
+class ReservationSource(str, Enum):
+    COURSE_SESSION = "course_session"
+    OFFERING_SESSION = "offering_session"
+    MANUAL = "manual"  # a hall booked directly (event, exam, meeting…)
+
+
+class ReservationStatus(str, Enum):
+    APPROVED = "approved"
+    CANCELLED = "cancelled"
+
+
+class ReservationKind(str, Enum):
+    SESSION = "session"
+    EVENT = "event"
+    EXAM = "exam"
+    MEETING = "meeting"
+    MAINTENANCE = "maintenance"
+    OTHER = "other"
+
+
+# Only approved rows that were not saved over a known conflict take part in the
+# PostgreSQL exclusion constraint (see services/administration/reservations.py).
+NO_OVERLAP_CONSTRAINT = "ex_facilityreservation_no_overlap"
+
+
+class FacilityReservation(SQLModel, table=True):
+    __table_args__ = (
+        Index("ix_facilityreservation_facility_time", "facility_id", "starts_at", "ends_at"),
+        {"extend_existing": True},
+    )
+    id: Optional[int] = Field(default=None, primary_key=True)
+    org_id: int = Field(
+        sa_column=Column(Integer, ForeignKey("organization.id", ondelete="CASCADE"), index=True)
+    )
+    facility_id: int = Field(
+        sa_column=Column(Integer, ForeignKey("facility.id", ondelete="CASCADE"), nullable=False)
+    )
+    source: str = Field(default=ReservationSource.MANUAL.value, sa_column=Column(String(32), nullable=False))
+    # The schedule session this row mirrors (at most one row per session).
+    course_session_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(
+            Integer, ForeignKey("courseschedulesession.id", ondelete="CASCADE"), nullable=True, unique=True
+        ),
+    )
+    offering_session_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(
+            Integer, ForeignKey("offeringsession.id", ondelete="CASCADE"), nullable=True, unique=True
+        ),
+    )
+    starts_at: datetime = Field(sa_column=Column(DateTime, nullable=False))
+    ends_at: datetime = Field(sa_column=Column(DateTime, nullable=False))
+    status: str = Field(default=ReservationStatus.APPROVED.value, sa_column=Column(String(16), nullable=False))
+    # Saved although it overlapped another booking (the user chose "book anyway").
+    conflict_override: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, default=False))
+    # Manual bookings only — session rows read their title from the session.
     title: Optional[str] = None
+    kind: str = Field(default=ReservationKind.SESSION.value, sa_column=Column(String(16), nullable=False))
+    attendees: Optional[int] = None
+    notes: Optional[str] = Field(default=None, sa_column=Column(Text))
+    created_by_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
+    reservation_uuid: str = Field(default="", index=True)
+    creation_date: str = ""
+    update_date: str = ""
+
+
+class FacilityReservationCreate(SQLModel):
+    title: str
+    kind: ReservationKind = ReservationKind.EVENT
+    start: str
+    end: str
+    attendees: Optional[int] = None
+    notes: Optional[str] = None
+    allow_conflict: bool = False
+
+
+class FacilityReservationUpdate(SQLModel):
+    # Move the booking to another room of the same organization.
+    facility_uuid: Optional[str] = None
+    title: Optional[str] = None
+    kind: Optional[ReservationKind] = None
     start: Optional[str] = None
     end: Optional[str] = None
+    attendees: Optional[int] = None
+    notes: Optional[str] = None
+    allow_conflict: bool = False
+
+
+class FacilityBooking(SQLModel):
+    """A reservation of a facility: a schedule session or a direct booking."""
+
+    booking_uuid: str = ""
+    source: str  # course_session | offering_session | manual
+    session_uuid: Optional[str] = None
+    facility_uuid: Optional[str] = None
+    facility_name: Optional[str] = None
+    title: Optional[str] = None
+    # As entered on the session (may be date-only); see starts_at / ends_at.
+    start: Optional[str] = None
+    end: Optional[str] = None
+    # The occupied range, always "YYYY-MM-DDTHH:MM" (end exclusive).
+    starts_at: Optional[str] = None
+    ends_at: Optional[str] = None
     parent_name: Optional[str] = None
     parent_uuid: Optional[str] = None
     # True when the room comes from the parent's default, not the session.
     inherited: bool = False
+    kind: str = ReservationKind.SESSION.value
+    status: str = ReservationStatus.APPROVED.value
+    attendees: Optional[int] = None
+    notes: Optional[str] = None
+    # Saved over a conflict with another booking of the same room.
+    double_booked: bool = False
 
 
 class FacilityRef(SQLModel):
@@ -225,3 +342,38 @@ class FacilityRef(SQLModel):
     name: str
     capacity: Optional[int] = None
     location_name: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Smart suggestions
+# ---------------------------------------------------------------------------
+
+
+class SuggestionReason(SQLModel):
+    """Why a room ranks where it does; ``code`` is translated by the client.
+
+    Codes: fits, roomy, seats, capacity_unknown, same_room, same_location,
+    nearby, equipment, quiet_day, busy_day.
+    """
+
+    code: str
+    params: dict = {}
+
+
+class RoomSuggestion(SQLModel):
+    """A room that is free for the requested time, ranked by fit (no costs)."""
+
+    facility_uuid: str
+    name: str
+    code: str = ""
+    capacity: Optional[int] = None
+    facility_type_name: Optional[str] = None
+    location_uuid: Optional[str] = None
+    location_name: Optional[str] = None
+    score: int = 0  # 0–100
+    reasons: List[SuggestionReason] = []
+
+
+class FreeSlot(SQLModel):
+    start: str
+    end: str

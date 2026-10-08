@@ -353,6 +353,16 @@ async def connect_to_db(app: FastAPI):
         # Create all tables
         if not is_testing:
             await conn.run_sync(SQLModel.metadata.create_all)
+    if not is_testing:
+        # Mirror existing sessions into facility reservations and add the
+        # no-double-booking constraint (both no-ops once done).
+        try:
+            from src.services.administration.reservations import install_reservations
+
+            async with engine.begin() as conn:
+                await conn.run_sync(install_reservations)
+        except Exception:
+            logging.warning("Facility reservations setup failed", exc_info=True)
     app.db_engine = engine  # type: ignore
     logging.info("OmniLearn database has been started.")
 

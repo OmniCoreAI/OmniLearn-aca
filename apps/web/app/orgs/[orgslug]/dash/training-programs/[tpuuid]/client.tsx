@@ -10,6 +10,7 @@ import AuthenticatedClientElement from '@components/Security/AuthenticatedClient
 import CourseThumbnail, { removeCoursePrefix } from '@components/Objects/Thumbnails/CourseThumbnail'
 import AttachCourseModal from '@components/Dashboard/Pages/Academic/AttachCourseModal'
 import { CourseProfilePanel } from '@components/Dashboard/Pages/Academic/CourseProfilePanel'
+import { TrainingProgramStaffPanel } from '@components/Dashboard/Pages/Academic/TrainingProgramStaffPanel'
 import { Section } from '@components/Dashboard/Pages/Academic/AcademicUI'
 import { AddOnAttachmentsPanel } from '@components/Dashboard/Pages/Administration/AddOnAttachmentsPanel'
 import { AudiencePanel } from '@components/Dashboard/Pages/Administration/AudiencePanel'
@@ -146,7 +147,20 @@ function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: s
         ))}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {program && orgId ? (
+        <div className="mt-8">
+          <TrainingProgramStaffPanel
+            orgslug={orgslug}
+            orgId={orgId}
+            access_token={access_token}
+            program={program}
+            courses={courses as any[]}
+            onScheduleCourse={setProfileCourse}
+          />
+        </div>
+      ) : null}
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Section
           title={t('administration.addons.program_addons', 'Program add-ons')}
           description={t('administration.addons.program_addons_desc', 'Meals, kits and services offered with this program.')}
@@ -200,7 +214,12 @@ function TrainingProgramDetail({ orgslug, tpuuid }: { orgslug: string; tpuuid: s
 
       <Modal
         isDialogOpen={!!profileCourse}
-        onOpenChange={(open: boolean) => !open && setProfileCourse(null)}
+        onOpenChange={(open: boolean) => {
+          if (!open) {
+            setProfileCourse(null)
+            refresh()
+          }
+        }}
         minWidth="md"
         dialogTitle={t('academic.academic_profile')}
         dialogDescription={profileCourse?.name}

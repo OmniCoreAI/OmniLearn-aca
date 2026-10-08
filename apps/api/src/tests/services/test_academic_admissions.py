@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException
 from sqlmodel import select
 
+from src.db.administration.notifications import NotificationLog
 from src.db.academic.admissions import (
     AdmissionRequirementCreate,
     ApplicantProfile,
@@ -32,11 +33,13 @@ from src.db.academic.admissions import (
 )
 from src.db.academic.cohorts import CohortCreate, CohortUpdate
 from src.db.academic.offerings import CohortMembership
-from src.db.academic.programs import ProgramCreate, ProgramLevel
+from src.db.academic.programs import Program, ProgramCreate, ProgramLevel
+from src.db.notification_inbox import Notification
 from src.services.academic import admissions as admissions_svc
 from src.services.academic import cohorts as cohorts_svc
 from src.services.academic import programs as programs_svc
 from src.services.academic import students as students_svc
+from src.services.notifications import dispatcher
 
 
 @pytest.fixture
@@ -225,6 +228,104 @@ class TestDecisions:
             CheckOverride(status=CheckStatus.MET, note="Interviewed at open day"), admin_user, db,
         )
         assert _check(app, "Interview").overridden is True
+
+    @pytest.mark.asyncio
+    async def test_each_side_is_notified(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):
+        program, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
+        row = (await db.execute(select(Program).where(Program.program_uuid == program.program_uuid))).scalars().one()
+        row.coordinator_id = admin_user.id
+        db.add(row)
+        await db.commit()
+
+        async def inbox_of(user_id):
+            rows = (await db.execute(select(Notification).where(Notification.user_id == user_id).order_by(Notification.id))).scalars().all()
+            return [(n.type, n.title, n.body) for n in rows]
+
+        app = await _apply(db, cohort, regular_user, mock_request)
+        assert [t for t, *_ in await inbox_of(admin_user.id)] == ["application_submitted"]
+        await admissions_svc.start_review(mock_request, app.application_uuid, admin_user, db)
+        await admissions_svc.decide(
+            mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.WAITLISTED, note="Capacity"), admin_user, db
+        )
+        await admissions_svc.decide(mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.ACCEPTED), admin_user, db)
+        enrolled = await admissions_svc.enroll_applicant(mock_request, app.application_uuid, admin_user, db)
+        assert await inbox_of(regular_user.id) == [
+            ("application_waitlisted", "You are on the waiting list for MSc AI", "Capacity"),
+            ("application_accepted", "You have been accepted to MSc AI", None),
+            ("application_enrolled", "You are now a student of MSc AI", f"Your student number is {enrolled.student_number}"),
+        ]
+        assert len(await inbox_of(admin_user.id)) == 1  # never told about their own decisions
+
+    @pytest.mark.asyncio
+    async def test_decisions_and_enrolment_are_emailed(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac, monkeypatch):
+        sent = []
+        monkeypatch.setattr(dispatcher, "email_transport", lambda to, subject, html, sender_name: sent.append((to, subject, html)) or {"id": "ok"})
+        _, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
+        app = await _apply(db, cohort, regular_user, mock_request)
+        await admissions_svc.start_review(mock_request, app.application_uuid, admin_user, db)
+        await admissions_svc.decide(
+            mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.WAITLISTED, note="<b>Capacity</b>"), admin_user, db
+        )
+        await admissions_svc.decide(mock_request, app.application_uuid, DecisionRequest(decision=ApplicationStatus.ACCEPTED), admin_user, db)
+        enrolled = await admissions_svc.enroll_applicant(mock_request, app.application_uuid, admin_user, db)
+
+        logs = (await db.execute(select(NotificationLog).order_by(NotificationLog.id))).scalars().all()
+        assert [(log.event_key, log.channel, log.status) for log in logs] == [
+            ("application_waitlisted", "email", "sent"),
+            ("application_accepted", "email", "sent"),
+            ("application_enrolled", "email", "sent"),
+        ]
+        assert {to for to, *_ in sent} == {"regular@test.com"}
+        assert [subject for _, subject, _ in sent] == [
+            "Your application to MSc AI is on the waiting list",
+            "You have been accepted to MSc AI",
+            "Welcome to MSc AI",
+        ]
+        assert "&lt;b&gt;Capacity&lt;/b&gt;" in sent[0][2]  # staff notes are escaped
+        assert enrolled.student_number in sent[2][2]
+
+    @pytest.mark.asyncio
+    async def test_rejected_documents_and_interviews_are_emailed(
+        self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac, monkeypatch
+    ):
+        sent = []
+        monkeypatch.setattr(dispatcher, "email_transport", lambda to, subject, html, sender_name: sent.append((subject, html)) or {"id": "ok"})
+        _, cohort, _ = await _program(db, org, admin_user, mock_request, requirements=False)
+        app = await _apply(db, cohort, regular_user, mock_request)
+        application = await admissions_svc._get(db, app.application_uuid)
+        db.add(ApplicationDocument(
+            application_id=application.id, org_id=org.id, document_type="transcript", original_name="t.pdf",
+            storage_key="orgs/x/admissions/y/t.pdf", document_uuid="admdoc_1", creation_date="",
+        ))
+        await db.commit()
+        await admissions_svc.review_document(
+            mock_request, app.application_uuid, "admdoc_1", DocumentReview(status=DocumentStatus.REJECTED, note="Page 2 is missing"),
+            admin_user, db,
+        )
+        # No date yet: in-app only, nothing to email.
+        app = await admissions_svc.schedule_interview(mock_request, app.application_uuid, InterviewCreate(location="Room 204"), admin_user, db)
+        interview = app.interviews[0].interview_uuid
+        await admissions_svc.update_interview(
+            mock_request, app.application_uuid, interview, InterviewUpdate(scheduled_at="2026-08-01T10:00"), admin_user, db
+        )
+        # Saving the same time again is not a move.
+        await admissions_svc.update_interview(
+            mock_request, app.application_uuid, interview, InterviewUpdate(scheduled_at="2026-08-01T10:00"), admin_user, db
+        )
+
+        assert [subject for subject, _ in sent] == [
+            "Please upload a new transcript for MSc AI",
+            "Your interview for MSc AI: 2026-08-01 10:00",
+        ]
+        assert "Page 2 is missing" in sent[0][1] and "Room 204" in sent[1][1]
+        titles = (await db.execute(
+            select(Notification.title).where(Notification.user_id == regular_user.id).order_by(Notification.id)
+        )).scalars().all()
+        assert titles == [
+            "Please upload a new transcript for MSc AI",
+            "Interview scheduled for MSc AI",
+            "Your interview for MSc AI was moved",
+        ]
 
     @pytest.mark.asyncio
     async def test_applicant_withdraws(self, db, org, admin_user, regular_user, mock_request, bypass_program_rbac):

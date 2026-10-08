@@ -1,5 +1,6 @@
 'use client'
 import { FacilitySelect, saveWithConflictCheck } from '@components/Dashboard/Pages/Administration/Pickers'
+import { RoomAssist } from '@components/Dashboard/Pages/Administration/HallBooking/RoomAssist'
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -522,6 +523,8 @@ function OfferingDetail({ orgslug, offeringuuid, workspace = 'office' }: { orgsl
             <SessionForm
               offeringUuid={offering_uuid}
               session={sessionDrawer.session}
+              defaultRoom={offering?.facility}
+              attendees={offering ? offering.enrolled_count || offering.capacity || null : null}
               confirmConflict={confirmConflict}
               onDone={() => {
                 setSessionDrawer(null)
@@ -685,7 +688,22 @@ function OfferingEditForm({ orgslug, offering, onDone, confirmConflict }: { orgs
 
 const toLocalInput = (v?: string | null) => (v ? v.slice(0, 16) : '')
 
-function SessionForm({ offeringUuid, session, onDone, confirmConflict }: { offeringUuid: string; session?: any; onDone: () => void; confirmConflict: (_m: string) => Promise<boolean> }) {
+function SessionForm({
+  offeringUuid,
+  session,
+  defaultRoom,
+  attendees,
+  onDone,
+  confirmConflict,
+}: {
+  offeringUuid: string
+  session?: any
+  /** The offering's room, used by sessions without their own. */
+  defaultRoom?: { facility_uuid: string; name: string } | null
+  attendees?: number | null
+  onDone: () => void
+  confirmConflict: (_m: string) => Promise<boolean>
+}) {
   const { t } = useTranslation()
   const { access_token } = useAcademicContext()
   const [title, setTitle] = useState(session?.title || '')
@@ -751,6 +769,20 @@ function SessionForm({ offeringUuid, session, onDone, confirmConflict }: { offer
         <Field label={t('administration.facilities.room', 'Room')}>
           <FacilitySelect className={inputCls} value={facility} onChange={setFacility} current={session?.facility} emptyLabel={t('administration.facilities.offering_room', 'Offering room (default)')} />
         </Field>
+        <RoomAssist
+          className="sm:col-span-2"
+          start={start}
+          end={end}
+          room={facility}
+          defaultRoom={defaultRoom}
+          attendees={attendees}
+          exclude={session?.session_uuid}
+          onPickRoom={setFacility}
+          onPickTime={(s, e) => {
+            setStart(s)
+            setEnd(e)
+          }}
+        />
         <Field label={t('academic.off.location_note', 'Location note or link')}>
           <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
         </Field>

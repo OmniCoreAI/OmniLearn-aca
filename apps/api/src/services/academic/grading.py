@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
 
 from fastapi import HTTPException, Request
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -52,8 +53,10 @@ from src.db.courses.assignments import (
     AssignmentUserSubmission,
     AssignmentUserSubmissionStatus,
 )
+from src.db.user_organizations import UserOrganization
 from src.db.users import User
 from src.security.auth import resolve_acting_user_id
+from src.security.rbac.constants import ADMIN_ROLE_ID
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic import offerings as offerings_svc
 from src.services.academic.common import (
@@ -65,6 +68,8 @@ from src.services.academic.common import (
     require_academic_manager,
     require_academic_member,
 )
+from src.services.notifications import inbox
+from src.services.notifications.assignments import slug
 
 # Default postgraduate 4.0 scale. C (60) is the minimum pass.
 DEFAULT_SCALE_NAME = "Standard 4.0"
@@ -471,16 +476,23 @@ def _log(score: ComponentScore, by: Optional[int], new: Optional[float], source:
 
 
 async def _score_row(db_session: AsyncSession, component: AssessmentComponent, enrollment: Enrollment) -> ComponentScore:
-    row = (
-        await db_session.execute(
-            select(ComponentScore).where(
-                ComponentScore.component_id == component.id, ComponentScore.enrollment_id == enrollment.id
-            )
+    def existing():
+        return select(ComponentScore).where(
+            ComponentScore.component_id == component.id, ComponentScore.enrollment_id == enrollment.id
         )
-    ).scalars().first()
+
+    row = (await db_session.execute(existing())).scalars().first()
     if row:
         return row
     row = ComponentScore(component_id=component.id, enrollment_id=enrollment.id, org_id=component.org_id, history=[])
+    try:
+        # Create it now, inside a savepoint: two saves of the same cell at once
+        # (double submit, retry) would otherwise both insert and one would 500.
+        async with db_session.begin_nested():
+            db_session.add(row)
+            await db_session.flush()
+    except IntegrityError:
+        row = (await db_session.execute(existing())).scalars().one()
     return row
 
 
@@ -668,6 +680,38 @@ async def get_gradebook(
 # Submission & approval workflow
 # ---------------------------------------------------------------------------
 
+async def _notify_grades(db_session: AsyncSession, offering: CourseOffering, stage: str, actor_id: Optional[int]) -> None:
+    """In-app notice for each step: approvers hear about submissions, teaching
+    staff about returns and approvals, students when results are official."""
+    course = await db_session.get(AcademicCourse, offering.academic_course_id)
+    label = f"{course.code} · {course.name}" if course else offering.code
+    key = slug(offering.offering_uuid, "offering_")
+    staff = [offering.instructor_id, offering.teaching_assistant_id]
+    teaching_path = f"/dash/postgraduate/teaching/offerings/{key}"
+    payload = {"offering_uuid": offering.offering_uuid, "name": label}
+    sends: List[Tuple[List[Optional[int]], str, str, str, Optional[str]]] = []
+    if stage == "submitted":
+        program = await offerings_svc._cohort_program(db_session, offering.cohort_id)
+        admins = (
+            await db_session.execute(
+                select(UserOrganization.user_id).where(
+                    UserOrganization.org_id == offering.org_id, UserOrganization.role_id == ADMIN_ROLE_ID
+                )
+            )
+        ).scalars().all()
+        approvers = [program.coordinator_id if program else None, *admins]
+        sends.append((approvers, "grades_submitted", f"Grades submitted for approval: {label}", f"/dash/postgraduate/offerings/{key}", offering.grade_note))
+    elif stage == "returned":
+        sends.append((staff, "grades_returned", f"Grades returned for changes: {label}", teaching_path, offering.grade_note))
+    elif stage == "approved":
+        sends.append((staff, "grades_approved", f"Grades approved: {label}", teaching_path, None))
+        students = [e.user_id for e in await _graded_enrollments(db_session, offering)]
+        sends.append((students, "result_published", f"Your result for {label} is published", "/academics", None))
+    for user_ids, type, title, link, body in sends:
+        recipients = [u for u in dict.fromkeys(user_ids) if u and u != actor_id]
+        if recipients:
+            await inbox.push(db_session, offering.org_id, recipients, type, title, body=body, link=link, payload=payload)
+
 async def submit_grades(
     request: Request, offering_uuid: str, note: Optional[str], current_user: Principal, db_session: AsyncSession
 ) -> GradebookRead:
@@ -690,6 +734,7 @@ async def submit_grades(
     offering.grades_submitted_by_id = resolve_acting_user_id(current_user) or None
     db_session.add(offering)
     await db_session.commit()
+    await _notify_grades(db_session, offering, "submitted", offering.grades_submitted_by_id)
     return await get_gradebook(request, offering_uuid, current_user, db_session)
 
 
@@ -706,6 +751,7 @@ async def return_grades(
     offering.grade_note = note
     db_session.add(offering)
     await db_session.commit()
+    await _notify_grades(db_session, offering, "returned", resolve_acting_user_id(current_user))
     return await get_gradebook(request, offering_uuid, current_user, db_session)
 
 
@@ -755,6 +801,7 @@ async def approve_grades(
     offering.grades_approved_by_id = resolve_acting_user_id(current_user) or None
     db_session.add(offering)
     await db_session.commit()
+    await _notify_grades(db_session, offering, "approved", offering.grades_approved_by_id)
     return await get_gradebook(request, offering_uuid, current_user, db_session)
 
 

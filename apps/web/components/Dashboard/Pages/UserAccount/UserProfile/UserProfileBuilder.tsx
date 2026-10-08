@@ -100,14 +100,6 @@ interface ProfileAffiliation {
   logoUrl: string;
 }
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  thumbnail?: string;
-  status: string;
-}
-
 interface BaseSection {
   id: string;
   type: keyof typeof SECTION_TYPES;
@@ -471,13 +463,12 @@ const UserProfileBuilder = () => {
                   }
                 }}
               >
-                <SelectTrigger className="w-full p-0 border-0 bg-black">
-                  <div className="w-full">
-                    <Button variant="default" className="w-full bg-black hover:bg-black/90 text-white">
-                      <Plus className="h-4 w-4 mr-2" />
-                      {t('user.settings.profile_builder.add_section')}
-                    </Button>
-                  </div>
+                {/* The trigger is already a <button>; a nested Button breaks hydration. */}
+                <SelectTrigger className="w-full justify-center rounded-md border-0 bg-black px-4 py-2 text-sm font-medium text-white hover:bg-black/90">
+                  <span className="inline-flex items-center">
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('user.settings.profile_builder.add_section')}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(SECTION_TYPES).map(([type, { icon: Icon, labelKey, descriptionKey }]) => (
@@ -520,7 +511,7 @@ const UserProfileBuilder = () => {
 
 interface SectionEditorProps {
   section: ProfileSection;
-  onChange: (section: ProfileSection) => void;
+  onChange: (_section: ProfileSection) => void;
 }
 
 const SectionEditor: React.FC<SectionEditorProps> = ({ section, onChange }) => {
@@ -549,7 +540,7 @@ const SectionEditor: React.FC<SectionEditorProps> = ({ section, onChange }) => {
 
 const ImageGalleryEditor: React.FC<{
   section: ImageGallerySection;
-  onChange: (section: ImageGallerySection) => void;
+  onChange: (_section: ImageGallerySection) => void;
 }> = ({ section, onChange }) => {
   const { t } = useTranslation()
   return (
@@ -652,7 +643,7 @@ const ImageGalleryEditor: React.FC<{
 
 const TextEditor: React.FC<{
   section: TextSection;
-  onChange: (section: TextSection) => void;
+  onChange: (_section: TextSection) => void;
 }> = ({ section, onChange }) => {
   const { t } = useTranslation()
   return (
@@ -692,7 +683,7 @@ const TextEditor: React.FC<{
 
 const LinksEditor: React.FC<{
   section: LinksSection;
-  onChange: (section: LinksSection) => void;
+  onChange: (_section: LinksSection) => void;
 }> = ({ section, onChange }) => {
   const { t } = useTranslation()
   return (
@@ -777,7 +768,7 @@ const LinksEditor: React.FC<{
 
 const SkillsEditor: React.FC<{
   section: SkillsSection;
-  onChange: (section: SkillsSection) => void;
+  onChange: (_section: SkillsSection) => void;
 }> = ({ section, onChange }) => {
   const { t } = useTranslation()
   return (
@@ -880,7 +871,7 @@ const SkillsEditor: React.FC<{
 
 const ExperienceEditor: React.FC<{
   section: ExperienceSection;
-  onChange: (section: ExperienceSection) => void;
+  onChange: (_section: ExperienceSection) => void;
 }> = ({ section, onChange }) => {
   const { t } = useTranslation()
   return (
@@ -1042,7 +1033,7 @@ const ExperienceEditor: React.FC<{
 
 const EducationEditor: React.FC<{
   section: EducationSection;
-  onChange: (section: EducationSection) => void;
+  onChange: (_section: EducationSection) => void;
 }> = ({ section, onChange }) => {
   const { t } = useTranslation()
   return (
@@ -1218,7 +1209,7 @@ const EducationEditor: React.FC<{
 
 const AffiliationEditor: React.FC<{
   section: AffiliationSection;
-  onChange: (section: AffiliationSection) => void;
+  onChange: (_section: AffiliationSection) => void;
 }> = ({ section, onChange }) => {
   const { t } = useTranslation()
   return (
@@ -1329,7 +1320,7 @@ const AffiliationEditor: React.FC<{
 
 const CoursesEditor: React.FC<{
   section: CoursesSection;
-  onChange: (section: CoursesSection) => void;
+  onChange: (_section: CoursesSection) => void;
 }> = ({ section, onChange }) => {
   const { t } = useTranslation()
   return (

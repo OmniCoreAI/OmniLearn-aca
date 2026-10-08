@@ -21,7 +21,7 @@ from src.db.courses.assignments import Assignment, AssignmentUserSubmission
 from src.db.courses.courses import Course
 from src.db.trail_runs import TrailRun
 from src.db.usergroup_user import UserGroupUser
-from src.services.administration.facilities import session_window
+from src.services.administration.reservations import session_window
 from src.services.notifications.dispatcher import notify
 from src.services.notifications.events import course_variables
 from src.services.notifications.settings import NotificationSettings, load_notification_settings

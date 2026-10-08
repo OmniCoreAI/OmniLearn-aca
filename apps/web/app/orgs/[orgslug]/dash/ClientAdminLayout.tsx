@@ -1,8 +1,6 @@
 'use client';
 import DashLeftMenu from '@components/Dashboard/Menus/DashLeftMenu';
 import DashMobileMenu from '@components/Dashboard/Menus/DashMobileMenu';
-import OnboardingBar from '@components/Dashboard/Onboarding/OnboardingBar';
-import WelcomeModal from '@components/Dashboard/Onboarding/WelcomeModal';
 import FreePlanUpgradeBanner from '@components/Dashboard/Shared/PlanRestricted/FreePlanUpgradeBanner';
 import AdminAuthorization from '@components/Security/AdminAuthorization'
 import { SessionGate } from '@components/Contexts/LHSessionContext'
@@ -13,7 +11,7 @@ import { useMediaQuery } from 'usehooks-ts';
 
 function ClientAdminLayout({
     children,
-    params,
+    params: _params,
 }: {
     children: React.ReactNode
     params: any
@@ -30,9 +28,7 @@ function ClientAdminLayout({
                         <div className="relative isolate flex min-w-0 w-full flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0">
                             <FreePlanUpgradeBanner />
                             {children}
-                            <OnboardingBar />
                         </div>
-                        <WelcomeModal />
                         <CommandPalette />
                     </div>
                 </CommandPaletteProvider>

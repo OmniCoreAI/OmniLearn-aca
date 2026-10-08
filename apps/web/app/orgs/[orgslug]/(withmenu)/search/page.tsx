@@ -14,7 +14,7 @@ import {
 import { Cube } from '@phosphor-icons/react'
 import { useTranslation } from 'react-i18next'
 
-import { searchOrgContent } from '@services/search/search'
+import { SEARCH_MIN_LENGTH, searchOrgContent } from '@services/search/search'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { useOrg } from '@components/Contexts/OrgContext'
 import {
@@ -586,7 +586,9 @@ function EmptyState({ query, t }: { query: string; t: (_k: string, _o?: any) => 
         {t('search.no_results_found')}
       </h3>
       <p className="text-sm text-black/50 max-w-md">
-        {t('search.no_results_description', { query })}
+        {query.trim().length < SEARCH_MIN_LENGTH
+          ? t('search.min_length', { count: SEARCH_MIN_LENGTH, defaultValue: 'Type at least {{count}} characters to search.' })
+          : t('search.no_results_description', { query })}
       </p>
     </div>
   )

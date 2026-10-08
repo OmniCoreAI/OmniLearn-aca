@@ -4,28 +4,27 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Check, Eye, Pencil, Upload } from 'lucide-react'
+import { Check, Pencil } from 'lucide-react'
 import GeneralWrapperStyled from '@components/Objects/StyledElements/Wrappers/GeneralWrapper'
 import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import { getUriWithOrg } from '@services/config/config'
 import {
   DataTable,
   GhostButton,
-  IconButton,
   Section,
   Stat,
   StatusPill,
   tdCls,
   useAcademicContext,
 } from '@components/Dashboard/Pages/Academic/AcademicUI'
-import { ProfileForm, UploadForm } from '@components/Dashboard/Pages/Academic/ApplicationForms'
+import { ProfileForm } from '@components/Dashboard/Pages/Academic/ApplicationForms'
+import { DocumentChecklist } from '@components/Pages/Academics/DocumentChecklist'
 import { PortalHeader, SignInPrompt } from '@components/Pages/Academics/PortalShared'
 import {
   applicationAction,
+  createApplication,
   getApplication,
-  openApplicationDocument,
   updateApplication,
-  uploadApplicationDocument,
 } from '@services/academic/core'
 
 const STEPS = ['draft', 'submitted', 'under_review', 'decision', 'enrolled']
@@ -77,7 +76,7 @@ function MyApplication({ orgslug, applicationuuid }: { orgslug: string; applicat
   const queryClient = useQueryClient()
   const uuid = `application_${applicationuuid}`
   const key = ['portal', 'application', uuid]
-  const [modal, setModal] = useState<null | 'profile' | 'upload'>(null)
+  const [modal, setModal] = useState<null | 'profile'>(null)
 
   const { data: app, error } = useQuery({
     queryKey: key,
@@ -127,6 +126,19 @@ function MyApplication({ orgslug, applicationuuid }: { orgslug: string; applicat
                 className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-[hsl(var(--dash-ink))]"
               >
                 {t('academic.submit_application_long', 'Submit application')}
+              </button>
+            )}
+            {app.status === 'withdrawn' && (
+              <button
+                onClick={() =>
+                  act(
+                    () => createApplication({ cohort_uuid: app.cohort_uuid }, access_token),
+                    t('academic.application_reopened', 'Application reopened — complete it and submit')
+                  )
+                }
+                className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-sm font-semibold text-[hsl(var(--dash-ink))]"
+              >
+                {t('academic.apply_again', 'Apply again')}
               </button>
             )}
             {canWithdraw && (
@@ -211,37 +223,18 @@ function MyApplication({ orgslug, applicationuuid }: { orgslug: string; applicat
         <Section
           title={t('academic.documents', 'Documents')}
           description={t('academic.documents_private_applicant', 'Only you and the admissions team can see these files.')}
-          action={
-            canUpload && (
-              <GhostButton onClick={() => setModal('upload')}>
-                <Upload className="h-3.5 w-3.5" /> {t('academic.upload_document', 'Upload')}
-              </GhostButton>
-            )
-          }
         >
-          <DataTable
-            headers={[t('academic.document_type', 'Type'), t('academic.file', 'File'), t('academic.status'), '']}
-            empty={t('academic.no_documents', 'No documents uploaded.')}
-          >
-            {app.documents.map((d: any) => (
-              <tr key={d.document_uuid}>
-                <td className={`${tdCls} text-xs`}>{String(t(`academic.doc_${d.document_type}`, d.document_type))}</td>
-                <td className={`${tdCls} text-xs`}>{d.original_name}</td>
-                <td className={tdCls}>
-                  <StatusPill status={d.status} label={String(t(`academic.docstatus_${d.status}`, d.status))} />
-                  {d.status === 'rejected' && d.review_note && <div className="mt-1 text-xs text-red-700">{d.review_note}</div>}
-                </td>
-                <td className={`${tdCls} text-right`}>
-                  <IconButton
-                    onClick={() => openApplicationDocument(uuid, d.document_uuid, access_token).catch((e) => toast.error(e.message))}
-                    aria-label={t('academic.open', 'Open')}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </IconButton>
-                </td>
-              </tr>
-            ))}
-          </DataTable>
+          <DocumentChecklist
+            applicationUuid={uuid}
+            accessToken={access_token}
+            documents={app.documents}
+            checks={app.checks}
+            canUpload={canUpload}
+            onChanged={(result) => {
+              if (result?.application_uuid) queryClient.setQueryData(key, result)
+              queryClient.invalidateQueries({ queryKey: ['portal'] })
+            }}
+          />
         </Section>
 
         {(app.test_attempts.length > 0 || app.interviews.length > 0) && (
@@ -290,15 +283,11 @@ function MyApplication({ orgslug, applicationuuid }: { orgslug: string; applicat
       <Modal
         isDialogOpen={!!modal}
         onOpenChange={(o: boolean) => !o && setModal(null)}
-        minWidth={modal === 'profile' ? 'md' : 'sm'}
-        dialogTitle={modal === 'profile' ? t('academic.academic_background', 'Academic background') : t('academic.upload_document', 'Upload')}
+        minWidth="md"
+        dialogTitle={t('academic.academic_background', 'Academic background')}
         dialogContent={
           modal === 'profile' ? (
             <ProfileForm profile={app.profile} onSubmit={(p) => act(() => updateApplication(uuid, p, access_token), t('academic.saved', 'Saved'))} />
-          ) : modal === 'upload' ? (
-            <UploadForm
-              onSubmit={(type, file) => act(() => uploadApplicationDocument(uuid, type, file, access_token), t('academic.uploaded', 'Uploaded'))}
-            />
           ) : null
         }
       />

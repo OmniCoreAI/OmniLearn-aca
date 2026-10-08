@@ -33,12 +33,11 @@ from src.db.academic.course_profiles import (
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import ensure_coordinator_authorship, get_user_author
 from src.services.administration.addons import course_addons_as_legacy, sync_legacy_course_addons
-from src.services.administration.facilities import (
-    check_session_booking,
-    facility_ref,
-    resolve_facility_id,
-)
-from src.services.academic.validation import resolve_org_user
+from src.services.administration.facilities import facility_ref, resolve_facility_id
+from src.services.administration.reservations import book_session, release_session
+from src.services.academic.validation import resolve_teaching_staff
+from src.services.notifications.assignments import slug, staff_assigned
+from src.security.auth import resolve_acting_user_id
 
 
 async def _get_course_or_404(db_session: AsyncSession, course_uuid: str) -> Course:
@@ -73,7 +72,9 @@ async def _sessions_read(
 
 async def _session_read(db_session: AsyncSession, session: CourseScheduleSession) -> CourseScheduleSessionRead:
     return CourseScheduleSessionRead(
-        **session.model_dump(), facility=await facility_ref(db_session, session.facility_id)
+        **session.model_dump(),
+        facility=await facility_ref(db_session, session.facility_id),
+        instructor=await get_user_author(db_session, session.instructor_id),
     )
 
 
@@ -168,9 +169,16 @@ async def upsert_course_academic_profile(
 
     instructor_changed = "instructor_uuid" in data
     instructor_id = None
+    previous_instructor_id = None
     if instructor_changed:
-        instructor_id = await resolve_org_user(
-            db_session, course.org_id, data.pop("instructor_uuid"), label="Instructor"
+        existing = await _get_profile(db_session, course.id)
+        previous_instructor_id = existing.instructor_id if existing else None
+        instructor_id = await resolve_teaching_staff(
+            db_session,
+            course.org_id,
+            data.pop("instructor_uuid"),
+            label="Instructor",
+            keep_id=existing.instructor_id if existing else None,
         )
 
     allow_conflict = bool(data.pop("allow_conflict", False))
@@ -202,8 +210,8 @@ async def upsert_course_academic_profile(
     if add_ons is not None:
         await sync_legacy_course_addons(db_session, course.org_id, course.course_uuid, add_ons)
     if facility_changed:
-        if facility_id and profile.id and not allow_conflict:
-            # Sessions without their own room move to the new default: check them.
+        if profile.id and facility_id != profile.facility_id:
+            # Sessions without their own room move to the new default.
             inheriting = (
                 await db_session.execute(
                     select(CourseScheduleSession).where(
@@ -213,10 +221,7 @@ async def upsert_course_academic_profile(
                 )
             ).scalars().all()
             for session in inheriting:
-                await check_session_booking(
-                    db_session, facility_id, session.start_date, session.end_date,
-                    exclude=("course_session", session.id),
-                )
+                await book_session(db_session, session, facility_id, allow_conflict=allow_conflict)
         profile.facility_id = facility_id
     profile.update_date = str(datetime.now())
 
@@ -226,6 +231,14 @@ async def upsert_course_academic_profile(
         await ensure_coordinator_authorship(db_session, course.course_uuid, instructor_id)
     await db_session.commit()
     await db_session.refresh(profile)
+
+    if instructor_changed and instructor_id and instructor_id != previous_instructor_id:
+        await staff_assigned(
+            db_session, course.org_id, [instructor_id], "course_instructor", course.name,
+            f"/dash/courses/course/{slug(course.course_uuid, 'course_')}/content",
+            actor_id=resolve_acting_user_id(current_user), resource=("course", course.course_uuid),
+        )
+        await db_session.refresh(profile)
 
     return await build_profile_read(db_session, course, profile)
 
@@ -283,27 +296,39 @@ async def create_session(
     )
     profile = await _ensure_profile(db_session, course)
     facility_id = await resolve_facility_id(db_session, course.org_id, payload.facility_uuid)
-    await check_session_booking(
-        db_session,
-        facility_id or profile.facility_id,
-        payload.start_date,
-        payload.end_date,
-        allow_conflict=payload.allow_conflict,
+    instructor_id = await resolve_teaching_staff(
+        db_session, course.org_id, payload.instructor_uuid, label="Session instructor"
     )
-
     session = CourseScheduleSession(
         profile_id=profile.id,
         org_id=course.org_id,
         facility_id=facility_id,
+        instructor_id=instructor_id,
         session_uuid=f"session_{uuid4()}",
         creation_date=str(datetime.now()),
         update_date=str(datetime.now()),
-        **payload.model_dump(exclude={"facility_uuid", "allow_conflict"}),
+        **payload.model_dump(exclude={"facility_uuid", "allow_conflict", "instructor_uuid"}),
+    )
+    await book_session(
+        db_session, session, facility_id or profile.facility_id, allow_conflict=payload.allow_conflict
     )
     db_session.add(session)
     await db_session.commit()
     await db_session.refresh(session)
+    await _notify_session_instructor(db_session, course, session, None, current_user)
     return await _session_read(db_session, session)
+
+
+async def _notify_session_instructor(
+    db_session: AsyncSession, course: Course, session: CourseScheduleSession, previous_id: Optional[int], current_user
+) -> None:
+    if session.instructor_id and session.instructor_id != previous_id:
+        await staff_assigned(
+            db_session, course.org_id, [session.instructor_id], "session_instructor",
+            f"{session.title} · {course.name}", "/dash/calendar",
+            actor_id=resolve_acting_user_id(current_user), resource=("course", course.course_uuid),
+        )
+        await db_session.refresh(session)
 
 
 async def _get_session_or_404(
@@ -344,22 +369,24 @@ async def update_session(
     if "facility_uuid" in data:
         session.facility_id = await resolve_facility_id(db_session, course.org_id, data.pop("facility_uuid"))
         data["facility_id"] = session.facility_id
+    previous_instructor_id = session.instructor_id
+    if "instructor_uuid" in data:
+        session.instructor_id = await resolve_teaching_staff(
+            db_session, course.org_id, data.pop("instructor_uuid"), label="Session instructor",
+            keep_id=session.instructor_id,
+        )
     for key, value in data.items():
         setattr(session, key, value)
     if {"facility_id", "start_date", "end_date"} & set(data):
-        await check_session_booking(
-            db_session,
-            session.facility_id or profile.facility_id,
-            session.start_date,
-            session.end_date,
-            exclude=("course_session", session.id),
-            allow_conflict=allow_conflict,
+        await book_session(
+            db_session, session, session.facility_id or profile.facility_id, allow_conflict=allow_conflict
         )
     session.update_date = str(datetime.now())
 
     db_session.add(session)
     await db_session.commit()
     await db_session.refresh(session)
+    await _notify_session_instructor(db_session, course, session, previous_instructor_id, current_user)
     return await _session_read(db_session, session)
 
 
@@ -379,6 +406,7 @@ async def delete_session(
         raise HTTPException(status_code=404, detail="Session not found")
 
     session = await _get_session_or_404(db_session, profile.id, session_uuid)
+    await release_session(db_session, session)
     await db_session.delete(session)
     await db_session.commit()
     return "Session deleted"

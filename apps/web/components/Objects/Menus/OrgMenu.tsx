@@ -8,6 +8,7 @@ import { getUriWithOrg } from '@services/config/config'
 import { fetchRAGChatSessions, RAGChatSession } from '@services/ai/ai'
 import { HeaderProfileBox } from '@components/Security/HeaderProfileBox'
 import MenuLinks from './OrgMenuLinks'
+import NotificationBell from '@components/Objects/Notifications/NotificationBell'
 import { getOrgLogoMediaDirectory } from '@services/media/media'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { useOrg } from '@components/Contexts/OrgContext'
@@ -23,7 +24,6 @@ import {
   ChatCircle,
   SquaresFour,
   ChalkboardSimple,
-  Signpost,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import {
@@ -180,7 +180,7 @@ export const OrgMenu = (props: any) => {
               </Link>
             </div>
             <div className="hidden md:flex">
-              <MenuLinks orgslug={orgslug} primaryColor={primaryColor} />
+              <MenuLinks orgslug={orgslug} primaryColor={primaryColor} inBar />
             </div>
           </div>
 
@@ -190,25 +190,10 @@ export const OrgMenu = (props: any) => {
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Progress / Trail */}
+            {/* Notifications */}
             <AuthenticatedClientElement checkMethod="authentication">
               <div className="hidden md:flex">
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link
-                        href={getUriWithOrg(orgslug, '/trail')}
-                        className={`p-2 rounded-lg transition-colors ${colors.iconBtn}`}
-                        aria-label={t('courses.progress')}
-                      >
-                        <Signpost size={20} weight="fill" />
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">
-                      {t('courses.progress')}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <NotificationBell triggerClassName={`p-2 rounded-lg transition-colors ${colors.iconBtn}`} />
               </div>
             </AuthenticatedClientElement>
             {/* Boards */}
