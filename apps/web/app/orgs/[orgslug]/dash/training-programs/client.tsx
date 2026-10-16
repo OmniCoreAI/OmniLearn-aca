@@ -1058,6 +1058,10 @@ function TrainingProgramForm({
       </FormSection>
 
       <FormSection title={t('training.section_schedule', 'Schedule and venue')}>
+        {/* Seats first: the room picker below only offers rooms that fit them. */}
+        <Field label={t('academic.capacity')} error={errors.capacity} hint={t('training.capacity_hint', 'Leave empty for open seats')} className="sm:col-span-2">
+          <input type="number" min={0} className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} aria-invalid={!!errors.capacity} />
+        </Field>
         <Field label={t('academic.start_date')}>
           <input type="date" className={inputCls} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </Field>
@@ -1073,9 +1077,6 @@ function TrainingProgramForm({
         </Field>
         <Field label={t('academic.location')} hint={t('training.location_hint', 'Used when no facility is picked, e.g. an external venue')}>
           <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
-        </Field>
-        <Field label={t('academic.capacity')} error={errors.capacity} hint={t('training.capacity_hint', 'Leave empty for open seats')}>
-          <input type="number" min={0} className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} aria-invalid={!!errors.capacity} />
         </Field>
       </FormSection>
 
