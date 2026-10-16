@@ -18,6 +18,7 @@ from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.users import PublicUser, AnonymousUser
+from src.db.courses.chapters import Chapter
 from src.db.courses.courses import Course
 from src.db.courses.certifications import Certifications
 from src.db.courses.assignments import Assignment
@@ -71,10 +72,14 @@ async def _sessions_read(
 
 
 async def _session_read(db_session: AsyncSession, session: CourseScheduleSession) -> CourseScheduleSessionRead:
+    chapter_count = (
+        await db_session.execute(select(func.count(Chapter.id)).where(Chapter.lecture_id == session.id))
+    ).scalar() or 0
     return CourseScheduleSessionRead(
         **session.model_dump(),
         facility=await facility_ref(db_session, session.facility_id),
         instructor=await get_user_author(db_session, session.instructor_id),
+        chapter_count=int(chapter_count),
     )
 
 

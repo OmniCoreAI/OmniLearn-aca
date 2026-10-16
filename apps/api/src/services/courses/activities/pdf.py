@@ -17,7 +17,8 @@ from src.services.courses.activities.uploads.pdfs import upload_pdf
 from fastapi import HTTPException, status, UploadFile, Request
 from uuid import uuid4
 from datetime import datetime
-from src.security.rbac import check_resource_access, AccessAction
+from src.security.rbac import AccessAction
+from src.services.courses.lecture_access import check_course_content_access
 
 
 async def create_documentpdf_activity(
@@ -59,8 +60,8 @@ async def create_documentpdf_activity(
         )
 
     # RBAC check
-    await check_resource_access(
-        request, db_session, current_user, course.course_uuid, AccessAction.CREATE
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.CREATE, chapter_id=chapter.id
     )
 
     # get org_id
@@ -170,8 +171,8 @@ async def update_documentpdf_activity(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    await check_resource_access(
-        request, db_session, current_user, course.course_uuid, AccessAction.UPDATE
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.UPDATE, activity_id=activity.id
     )
 
     if name:

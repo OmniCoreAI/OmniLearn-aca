@@ -25,6 +25,7 @@ from src.services.courses.locks import (
     is_locked_for_user,
     is_org_admin,
 )
+from src.services.courses.lecture_access import check_course_content_access
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,9 @@ async def create_activity(
             detail="Course not found",
         )
 
-    await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.CREATE)
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.CREATE, chapter_id=chapter.id
+    )
 
     # Create Activity
     activity = Activity(**activity_object.model_dump())
@@ -382,7 +385,9 @@ async def update_activity(
             detail="Course not found",
         )
 
-    await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.UPDATE, activity_id=activity.id
+    )
 
     # Update only the fields that were explicitly set (not default values)
     # Using model_dump(exclude_unset=True) to get only the fields that were passed in
@@ -471,7 +476,9 @@ async def delete_activity(
             detail="Course not found",
         )
 
-    await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.DELETE)
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.DELETE, activity_id=activity.id
+    )
 
     # Clean up content files from storage
     from src.db.organizations import Organization

@@ -439,6 +439,15 @@ async def link_course_to_training_program(
             update_date=str(datetime.now()),
         )
     )
+    # Training-program courses are organised by lectures, each with its own
+    # instructor (see services/courses/lecture_access.py).
+    from src.services.academic.course_profiles import _ensure_profile
+
+    profile = await _ensure_profile(db_session, course)
+    if not profile.organize_by_lectures:
+        profile.organize_by_lectures = True
+        profile.update_date = str(datetime.now())
+        db_session.add(profile)
     await db_session.commit()
     from src.services.administration.audience import sync_resource_audience
 

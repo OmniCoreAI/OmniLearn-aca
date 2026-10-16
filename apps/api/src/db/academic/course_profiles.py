@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import List, Optional
-from sqlalchemy import Column, Enum as SAEnum, ForeignKey, Integer
+from sqlalchemy import Boolean, Column, Enum as SAEnum, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -67,6 +67,12 @@ class CourseAcademicProfile(SQLModel, table=True):
         default=None,
         sa_column=Column(Integer, ForeignKey("facility.id", ondelete="SET NULL"), nullable=True, index=True),
     )
+    # The course is organised as lectures (each with its own instructor and
+    # chapters) instead of a flat list of chapters. On for courses linked to a
+    # training program; see services/courses/lecture_access.py.
+    organize_by_lectures: bool = Field(
+        default=False, sa_column=Column(Boolean, nullable=False, server_default="false")
+    )
     profile_uuid: str = Field(default="", index=True)
     creation_date: str = ""
     update_date: str = ""
@@ -74,7 +80,12 @@ class CourseAcademicProfile(SQLModel, table=True):
 
 
 class CourseScheduleSession(SQLModel, table=True):
-    """A scheduled session (class meeting) for a course offering."""
+    """A lecture of a course: a session (class meeting) that can also hold content.
+
+    The date/time and room are optional (self-paced lectures have none). When
+    the course is organised by lectures, chapters point at their lecture
+    (``Chapter.lecture_id``) and the lecture's instructor may edit them.
+    """
 
     id: Optional[int] = Field(default=None, primary_key=True)
     profile_id: int = Field(
@@ -88,6 +99,7 @@ class CourseScheduleSession(SQLModel, table=True):
         sa_column=Column(Integer, ForeignKey("organization.id", ondelete="CASCADE"))
     )
     title: str
+    description: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     location: Optional[str] = None
@@ -120,11 +132,13 @@ class CourseAcademicProfileUpsert(SQLModel):
     add_ons: Optional[List[CourseAddOn]] = None
     # Default facility (uuid; "" clears). Its sessions are checked for clashes.
     facility_uuid: Optional[str] = None
+    organize_by_lectures: Optional[bool] = None
     allow_conflict: bool = False
 
 
 class CourseScheduleSessionCreate(SQLModel):
     title: str
+    description: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     location: Optional[str] = None
@@ -138,6 +152,7 @@ class CourseScheduleSessionCreate(SQLModel):
 
 class CourseScheduleSessionUpdate(SQLModel):
     title: Optional[str] = None
+    description: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     location: Optional[str] = None
@@ -151,6 +166,7 @@ class CourseScheduleSessionRead(SQLModel):
     id: int
     session_uuid: str
     title: str
+    description: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     location: Optional[str] = None
@@ -158,6 +174,8 @@ class CourseScheduleSessionRead(SQLModel):
     # Set only when someone other than the course instructor teaches it.
     instructor: Optional[UserReadAuthor] = None
     order: int = 0
+    # Chapters in this lecture (courses organised by lectures).
+    chapter_count: int = 0
     creation_date: str = ""
     update_date: str = ""
 
@@ -178,6 +196,7 @@ class CourseAcademicProfileRead(SQLModel):
     usergroup_id: Optional[int] = None
     add_ons: Optional[List[CourseAddOn]] = None
     facility: Optional[FacilityRef] = None
+    organize_by_lectures: bool = False
     # Surfaced (not stored) from the existing Course subsystems:
     has_course_certification: bool = False
     assignment_count: int = 0
