@@ -1,6 +1,7 @@
 'use client'
 import React from 'react'
 import { iconFor, doorPlacement, nearestSide, type RenderStatus } from './geometry'
+import './floorplan.css'
 
 /* =====================================================================
    <FloorPlanSvg /> — pure SVG renderer for one floor (explicit geometry).
@@ -239,12 +240,15 @@ export default function FloorPlanSvg({
   floor, appearance, statusOf, selectedIds, dimmedIds, viewer = false,
   showGrid = false, grid = 20, handlers = {}, onBackgroundPointerDown, svgRef, children, className = '',
   statusLabel = (s: RenderStatus) => DEFAULT_LABELS[s] || s,
-  seatsLabel = (n: number | null | undefined) => `${n ?? '—'} seats`
+  seatsLabel = (n: number | null | undefined) => `${n ?? '—'} seats`,
+  roomsOnly = false
 }: {
   floor: any; appearance: any; statusOf?: (_room: any, _floor: any) => RenderStatus; selectedIds?: Set<string>; dimmedIds?: Set<string> | null;
   viewer?: boolean; showGrid?: boolean; grid?: number; handlers?: any; onBackgroundPointerDown?: (_e: React.PointerEvent<SVGSVGElement>) => void;
   svgRef?: React.Ref<SVGSVGElement>; children?: React.ReactNode; className?: string;
-  statusLabel?: (_s: RenderStatus) => string; seatsLabel?: (_n: number | null | undefined) => string
+  statusLabel?: (_s: RenderStatus) => string; seatsLabel?: (_n: number | null | undefined) => string;
+  /** Draw only the rooms, cropped to them and scaled to fill the box (pickers, previews). */
+  roomsOnly?: boolean
 }) {
   const { canvas } = floor;
   const ww = appearance.wallWidth;
@@ -252,9 +256,20 @@ export default function FloorPlanSvg({
   const sel = (id: string) => !!selectedIds && selectedIds.has(id);
   // Pattern ids are document-global; keep two plans on one page from sharing one.
   const gridId = `fp-grid-${floor.id}`;
+  let viewBox = `${-pad} ${-pad} ${canvas.w + pad * 2} ${canvas.h + pad * 2}`;
+  if (roomsOnly && floor.rooms.length) {
+    const xs = floor.rooms.flatMap((r: any) => [r.rect.x, r.rect.x + r.rect.w]);
+    const ys = floor.rooms.flatMap((r: any) => [r.rect.y, r.rect.y + r.rect.h]);
+    const m = 14;
+    const minX = Math.min(...xs) - m, minY = Math.min(...ys) - m;
+    const cw = Math.max(...xs) + m - minX, ch = Math.max(...ys) + m - minY;
+    // Never zoom in past roughly the editor's scale: one small room stays room-sized, centred.
+    const w = Math.max(cw, 560), h = Math.max(ch, 300);
+    viewBox = `${minX - (w - cw) / 2} ${minY - (h - ch) / 2} ${w} ${h}`;
+  }
   return (
-    <svg ref={svgRef} className={`fp-svg ${className}`} viewBox={`${-pad} ${-pad} ${canvas.w + pad * 2} ${canvas.h + pad * 2}`}
-      width="100%" preserveAspectRatio="xMidYMid meet" role="img" data-floor-id={floor.id}
+    <svg ref={svgRef} className={`fp-svg ${roomsOnly ? 'fp-rooms-only' : ''} ${className}`} viewBox={viewBox}
+      width="100%" height={roomsOnly ? '100%' : undefined} preserveAspectRatio="xMidYMid meet" role="img" data-floor-id={floor.id}
       onPointerDown={onBackgroundPointerDown}>
       <title>{floor.name}</title>
       <defs>
@@ -262,12 +277,12 @@ export default function FloorPlanSvg({
           <path d={`M ${grid} 0 L 0 0 0 ${grid}`} fill="none" className="fp-grid-line" />
         </pattern>
       </defs>
-      <rect className="fp-floor" x="0" y="0" width={canvas.w} height={canvas.h} rx="3" data-type="background" />
+      {!roomsOnly && <rect className="fp-floor" x="0" y="0" width={canvas.w} height={canvas.h} rx="3" data-type="background" />}
       {showGrid && <rect x="0" y="0" width={canvas.w} height={canvas.h} fill={`url(#${gridId})`} pointerEvents="none" />}
 
       {/* fixtures first (corridors sit under rooms) */}
       <g className="fp-fixtures">
-        {floor.fixtures.filter((f: any) => f.type !== 'entrance').map((fx: any) => (
+        {!roomsOnly && floor.fixtures.filter((f: any) => f.type !== 'entrance').map((fx: any) => (
           <Fixture key={fx.id} fx={fx} canvas={canvas} appearance={appearance} selected={sel(fx.id)} handlers={handlers} />
         ))}
       </g>
@@ -276,7 +291,7 @@ export default function FloorPlanSvg({
       <g className="fp-walls" style={{ strokeWidth: ww }}>
         {floor.rooms.map((r: any) => <rect key={r.id} className="fp-wall" x={r.rect.x} y={r.rect.y} width={r.rect.w} height={r.rect.h} rx="2" />)}
       </g>
-      <rect className="fp-wall fp-wall-outer" x="0" y="0" width={canvas.w} height={canvas.h} rx="3" style={{ strokeWidth: ww + 2 }} />
+      {!roomsOnly && <rect className="fp-wall fp-wall-outer" x="0" y="0" width={canvas.w} height={canvas.h} rx="3" style={{ strokeWidth: ww + 2 }} />}
 
       <g className="fp-rooms">
         {[...floor.rooms].sort((a: any, b: any) => (sel(a.id) ? 1 : 0) - (sel(b.id) ? 1 : 0)).map((r: any) => (
@@ -291,7 +306,7 @@ export default function FloorPlanSvg({
           const p = doorPlacement(r.rect, d);
           return <Door key={`${r.id}-${i}`} transform={p.transform} width={p.dw} wall={ww} />;
         }))}
-        {floor.fixtures.filter((f: any) => f.type === 'entrance').map((fx: any) => (
+        {!roomsOnly && floor.fixtures.filter((f: any) => f.type === 'entrance').map((fx: any) => (
           <Fixture key={fx.id} fx={fx} canvas={canvas} appearance={appearance} selected={sel(fx.id)} handlers={handlers} />
         ))}
       </g>

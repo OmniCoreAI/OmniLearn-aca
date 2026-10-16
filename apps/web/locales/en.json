@@ -7703,6 +7703,7 @@
       "hint_ok_sessions": "Free for all {{count}} sessions that use it",
       "hint_ok_sessions_one": "Free for the {{count}} session that uses it",
       "hint_ok_sessions_other": "Free for all {{count}} sessions that use it",
+      "legend": "Legend",
       "needs_seats": "{{count}} seats needed",
       "no_building": "No building",
       "no_dates": "No dates yet",

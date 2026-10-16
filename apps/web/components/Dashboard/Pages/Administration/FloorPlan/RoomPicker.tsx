@@ -2,15 +2,15 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, Building2, CalendarRange, Check, CheckCircle2, ChevronDown, Map as MapIcon, Sparkles, Users } from 'lucide-react'
+import { AlertCircle, Building2, CalendarRange, Check, CheckCircle2, ChevronDown, Layers, Map as MapIcon, Sparkles, Users } from 'lucide-react'
 import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import { AcademicPrimaryButton } from '@components/Dashboard/Pages/Academic/AcademicShared'
 import { GhostButton } from '@components/Dashboard/Pages/Academic/AcademicUI'
 import { useAdminContext } from '@components/Dashboard/Pages/Administration/AdminUI'
 import { getFloorPlan, getRoomAvailability, type RoomAvailability } from '@services/administration/administration'
 import { cn } from '@/lib/utils'
-import FloorPlanView from './FloorPlanView'
-import type { RenderStatus } from './geometry'
+import FloorPlanSvg from './FloorPlanSvg'
+import { normalizePlan, type RenderStatus } from './geometry'
 
 /* =====================================================================
    Visual room picker: the building's floor plan with every room coloured by
@@ -293,154 +293,220 @@ export function RoomPickerDialog({
     )
   }
 
+  const allFloors: any[] = useMemo(
+    () => (plan ? normalizePlan(plan).floors.filter((f: any) => f.rooms.some((r: any) => r.kind === 'room')) : []),
+    [plan]
+  )
+  const floor = allFloors.find((f) => f.id === floorId) || allFloors[0] || null
+  const selectableIds = useMemo(
+    () => new Set<string>((floor?.rooms || []).filter((r: any) => r.kind === 'room' && selectable(r)).map((r: any) => r.id)),
+    [floor, selectable]
+  )
+  const freeOn = (f: any) => f.rooms.filter((r: any) => r.kind === 'room' && selectable(r)).length
+  const planHandlers = useMemo(
+    () => ({
+      onClick: (_e: React.SyntheticEvent, room: any) => {
+        if (room.kind === 'room' && room.facility_uuid && selectable(room)) setPending(room.facility_uuid)
+      },
+    }),
+    [selectable]
+  )
+  const legend: [string, string][] = [
+    [STATUS_DOT.available, statusName('available')],
+    [STATUS_DOT.busy, statusName('busy')],
+    [STATUS_DOT.too_small, statusName('too_small')],
+    [STATUS_DOT.unavailable, statusName('unavailable')],
+  ]
+  const chip = 'inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-canvas))] px-3 py-1 text-[12px] font-medium'
+  const tab = (active: boolean) =>
+    cn(
+      'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors',
+      active ? 'border-[hsl(var(--dash-ink))] bg-[hsl(var(--dash-ink))] text-white' : 'border-[hsl(var(--dash-border))] bg-white hover:bg-[hsl(var(--dash-canvas))]'
+    )
+  const count = (active: boolean, n: number) => (
+    <span className={cn('rounded-full px-1.5 text-[10.5px] tabular-nums', active ? 'bg-white/15' : n ? 'bg-emerald-50 text-emerald-700' : 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]')}>{n}</span>
+  )
+
   const content = (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      {/* plan */}
-      <div className="min-w-0 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-canvas))] px-3 py-1 text-[12px] font-medium">
-            <CalendarRange className="h-3.5 w-3.5 text-[hsl(var(--dash-muted))]" /> {period_}
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--dash-canvas))] px-3 py-1 text-[12px] font-medium">
-            <Users className="h-3.5 w-3.5 text-[hsl(var(--dash-muted))]" />
-            {attendees ? tr('needs_seats', '{{count}} seats needed', { count: attendees }) : tr('no_seats', 'Any size')}
-          </span>
-          <span className="ms-auto text-[12px] text-[hsl(var(--dash-muted))]">
-            {tr('summary', '{{available}} free · {{busy}} booked · {{small}} too small', { available: counts.available, busy: counts.busy, small: counts.too_small })}
-          </span>
-        </div>
-        {!data?.checked_period && !isLoading ? (
-          <p className="rounded-xl bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
-            {parentMode
-              ? tr('no_sessions', 'No scheduled session uses this room yet, so only seats are checked. Each session is checked when you schedule it.')
-              : tr('set_dates', 'Set the start and end dates to rule out rooms that are already booked.')}
-          </p>
-        ) : null}
-
-        {buildings.length > 1 ? (
-          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={tr('buildings', 'Buildings')}>
-            {buildings.map((b) => {
-              const active = b.location_uuid === buildingUuid
-              const free = rooms.filter((r) => r.location_uuid === b.location_uuid && r.status === 'available').length
-              return (
-                <button
-                  key={b.location_uuid}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => {
-                    setBuildingUuid(b.location_uuid)
-                    setFloorId(undefined)
-                  }}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors',
-                    active ? 'border-[hsl(var(--dash-ink))] bg-[hsl(var(--dash-ink))] text-white' : 'border-[hsl(var(--dash-border))] bg-white hover:bg-[hsl(var(--dash-canvas))]'
-                  )}
-                >
-                  <Building2 className="h-3.5 w-3.5" />
-                  {b.parent_name ? <span className={active ? 'text-white/60' : 'text-[hsl(var(--dash-muted))]'}>{b.parent_name} ›</span> : null}
-                  {b.name}
-                  <span className={cn('rounded-full px-1.5 text-[10.5px]', active ? 'bg-white/15' : 'bg-emerald-50 text-emerald-700')}>{free}</span>
-                </button>
-              )
-            })}
-          </div>
-        ) : null}
-
-        <div className="rounded-[1.25rem] border border-[hsl(var(--dash-border))] p-3">
-          {!buildings.length && !isLoading ? (
-            <div className="px-4 py-16 text-center text-[13px] text-[hsl(var(--dash-muted))]">{tr('no_plans', 'No building has a floor plan yet — pick a room from the list.')}</div>
-          ) : !plan ? (
-            <div className={cn('h-[380px] rounded-xl', (loadingPlan || isLoading) && 'dash-shimmer')} />
-          ) : (
-            <FloorPlanView
-              key={buildingUuid || ''}
-              className="fp-picker"
-              plan={plan}
-              getStatus={statusOf}
-              statusLabel={renderLabel}
-              legend={['available', 'booked', 'inactive', 'maintenance']}
-              roomFilter={selectable}
-              showSearch={false}
-              floorId={floorId}
-              selectedRoomId={planRoomId}
-              onRoomSelect={(room) => room.facility_uuid && setPending(room.facility_uuid)}
-              onFloorChange={(floor) => setFloorId(floor?.id)}
-            />
-          )}
-        </div>
+    <div className="flex h-full min-h-0 flex-col">
+      {/* what is being checked */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[hsl(var(--dash-border))] px-5 py-2.5">
+        <span className={chip}>
+          <CalendarRange className="h-3.5 w-3.5 text-[hsl(var(--dash-muted))]" /> {period_}
+        </span>
+        <span className={chip}>
+          <Users className="h-3.5 w-3.5 text-[hsl(var(--dash-muted))]" />
+          {attendees ? tr('needs_seats', '{{count}} seats needed', { count: attendees }) : tr('no_seats', 'Any size')}
+        </span>
+        <span className="text-[12px] text-[hsl(var(--dash-muted))]">
+          {tr('summary', '{{available}} free · {{busy}} booked · {{small}} too small', { available: counts.available, busy: counts.busy, small: counts.too_small })}
+        </span>
+        <ul className="ms-auto flex flex-wrap items-center gap-3 text-[11.5px] text-[hsl(var(--dash-muted))]" aria-label={tr('legend', 'Legend')}>
+          {legend.map(([dot, label]) => (
+            <li key={label} className="inline-flex items-center gap-1.5">
+              <span className={cn('h-2 w-2 rounded-full', dot)} /> {label}
+            </li>
+          ))}
+        </ul>
       </div>
 
-      {/* list */}
-      <aside className="flex min-h-0 flex-col gap-3 lg:max-h-[68vh]">
-        <div className="min-h-0 flex-1 overflow-y-auto pe-1">
-          <h4 className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--dash-muted))]">
-            {tr('best_matches', 'Free rooms that fit')} · {available.length}
-          </h4>
-          {available.length ? (
-            <ul className="space-y-1">{available.map(roomRow)}</ul>
-          ) : (
-            <p className="rounded-xl bg-[hsl(var(--dash-canvas))] px-3 py-3 text-[12.5px] text-[hsl(var(--dash-muted))]">
-              {isLoading ? t('administration.common.loading', 'Loading…') : tr('none_free', 'No room is free and big enough for this period. Try other dates or fewer seats.')}
-            </p>
-          )}
-
-          {others.length ? (
-            <div className="mt-4">
-              <button
-                type="button"
-                onClick={() => setShowOthers((v) => !v)}
-                className="flex w-full items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--dash-muted))]"
-                aria-expanded={showOthers}
-              >
-                {tr('not_available', 'Not available')} · {others.length}
-                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showOthers && 'rotate-180')} />
-              </button>
-              {showOthers ? (
-                <ul className="mt-1.5 space-y-1">
-                  {others.map((r) => (
-                    <li key={r.facility_uuid} className="flex items-start gap-2.5 rounded-xl px-3 py-2 opacity-80">
-                      <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', STATUS_DOT[r.status])} />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-baseline justify-between gap-2">
-                          <span className="truncate text-[13px] font-medium">{r.name}</span>
-                          <span className="shrink-0 text-[11px] font-semibold text-[hsl(var(--dash-muted))]">{statusName(r.status)}</span>
-                        </span>
-                        <span className="block text-[11.5px] text-[hsl(var(--dash-muted))]">{why(r, attendees)}</span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(240px,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
+        {/* the plan: only the rooms, scaled to fit */}
+        <section className="flex min-h-0 flex-col gap-2.5 bg-[hsl(var(--dash-canvas))]/60 p-4">
+          {buildings.length > 1 || allFloors.length > 1 ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+              {buildings.length > 1
+                ? buildings.map((b) => {
+                    const active = b.location_uuid === buildingUuid
+                    const free = rooms.filter((r) => r.location_uuid === b.location_uuid && r.status === 'available').length
+                    return (
+                      <button
+                        key={b.location_uuid}
+                        type="button"
+                        onClick={() => {
+                          setBuildingUuid(b.location_uuid)
+                          setFloorId(undefined)
+                        }}
+                        className={tab(active)}
+                        aria-pressed={active}
+                      >
+                        <Building2 className="h-3.5 w-3.5" />
+                        {b.name}
+                        {count(active, free)}
+                      </button>
+                    )
+                  })
+                : null}
+              {buildings.length > 1 && allFloors.length > 1 ? <span className="mx-1 h-5 w-px bg-[hsl(var(--dash-border))]" aria-hidden="true" /> : null}
+              {allFloors.length > 1
+                ? allFloors.map((f) => {
+                    const active = f.id === floor?.id
+                    return (
+                      <button key={f.id} type="button" onClick={() => setFloorId(f.id)} className={tab(active)} aria-pressed={active}>
+                        <Layers className="h-3.5 w-3.5" />
+                        {f.name}
+                        {count(active, freeOn(f))}
+                      </button>
+                    )
+                  })
+                : null}
             </div>
           ) : null}
-        </div>
-
-        <div className="rounded-xl border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-canvas))] p-3">
-          {picked ? (
-            <>
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--dash-muted))]">{tr('selected', 'Selected')}</div>
-              <div className="mt-0.5 truncate text-[14px] font-semibold">{picked.name}</div>
-              <div className="text-[11.5px] text-[hsl(var(--dash-muted))]">
-                {fit(picked, attendees)}
-                {picked.status !== 'available' ? ` · ${statusName(picked.status)}` : ''}
+          <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-[hsl(var(--dash-border))] bg-white">
+            {!buildings.length && !isLoading ? (
+              <div className="flex h-full items-center justify-center px-6 text-center text-[13px] text-[hsl(var(--dash-muted))]">
+                {tr('no_plans', 'No building has a floor plan yet — pick a room from the list.')}
               </div>
-            </>
-          ) : (
-            <div className="text-[12.5px] text-[hsl(var(--dash-muted))]">{tr('pick_hint', 'Click a green room on the plan or in the list.')}</div>
-          )}
-          <div className="mt-3 flex items-center justify-end gap-2">
-            {value ? (
-              <GhostButton type="button" onClick={() => onSelect('')}>
-                {clearLabel || tr('clear', 'No room')}
-              </GhostButton>
-            ) : null}
-            <AcademicPrimaryButton type="button" disabled={!pending || pending === value} onClick={() => onSelect(pending)} className="disabled:opacity-50 disabled:shadow-none">
-              <Check className="h-4 w-4" /> {tr('use_room', 'Use this room')}
-            </AcademicPrimaryButton>
+            ) : !floor ? (
+              <div className={cn('h-full', (loadingPlan || isLoading) && 'dash-shimmer')} />
+            ) : (
+              <>
+                <div className="pointer-events-none absolute start-3 top-2.5 z-[1] rounded-full bg-white/90 px-2.5 py-0.5 text-[11.5px] font-semibold text-[hsl(var(--dash-muted))] shadow-sm">
+                  {[buildings.find((b) => b.location_uuid === buildingUuid)?.name, floor.name].filter(Boolean).join(' · ')}
+                </div>
+                <div className="fp fp-picker h-full w-full p-3" dir="ltr">
+                  <FloorPlanSvg
+                    floor={floor}
+                    appearance={normalizePlan(plan).appearance}
+                    statusOf={statusOf}
+                    statusLabel={renderLabel}
+                    seatsLabel={(n) => (n == null ? tr('seats_unknown', 'Seats unknown') : tr('seats', '{{count}} seats', { count: n }))}
+                    selectedIds={new Set(planRoomId ? [planRoomId] : [])}
+                    dimmedIds={selectableIds}
+                    viewer
+                    roomsOnly
+                    handlers={planHandlers}
+                  />
+                </div>
+              </>
+            )}
           </div>
-        </div>
-      </aside>
+        </section>
+
+        {/* the list and the choice */}
+        <aside className="flex min-h-0 flex-col border-t border-[hsl(var(--dash-border))] lg:border-s lg:border-t-0">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+            {!data?.checked_period && !isLoading ? (
+              <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+                {parentMode
+                  ? tr('no_sessions', 'No scheduled session uses this room yet, so only seats are checked. Each session is checked when you schedule it.')
+                  : tr('set_dates', 'Set the start and end dates to rule out rooms that are already booked.')}
+              </p>
+            ) : null}
+            <h4 className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--dash-muted))]">
+              {tr('best_matches', 'Free rooms that fit')} · {available.length}
+            </h4>
+            {available.length ? (
+              <ul className="space-y-1">{available.map(roomRow)}</ul>
+            ) : (
+              <p className="rounded-xl bg-[hsl(var(--dash-canvas))] px-3 py-3 text-[12.5px] text-[hsl(var(--dash-muted))]">
+                {isLoading ? t('administration.common.loading', 'Loading…') : tr('none_free', 'No room is free and big enough for this period. Try other dates or fewer seats.')}
+              </p>
+            )}
+            {others.length ? (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowOthers((v) => !v)}
+                  className="flex w-full items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--dash-muted))]"
+                  aria-expanded={showOthers}
+                >
+                  {tr('not_available', 'Not available')} · {others.length}
+                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showOthers && 'rotate-180')} />
+                </button>
+                {showOthers ? (
+                  <ul className="mt-1.5 space-y-1">
+                    {others.map((r) => (
+                      <li key={r.facility_uuid} className="flex items-start gap-2.5 rounded-xl px-3 py-2 opacity-80">
+                        <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', STATUS_DOT[r.status])} />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-baseline justify-between gap-2">
+                            <span className="truncate text-[13px] font-medium">{r.name}</span>
+                            <span className="shrink-0 text-[11px] font-semibold text-[hsl(var(--dash-muted))]">{statusName(r.status)}</span>
+                          </span>
+                          <span className="block text-[11.5px] text-[hsl(var(--dash-muted))]">{why(r, attendees)}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="shrink-0 border-t border-[hsl(var(--dash-border))] bg-white px-4 py-3">
+            {picked ? (
+              <div className="mb-2.5 flex items-center gap-2.5">
+                <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', STATUS_DOT[picked.status])} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[14px] font-semibold">{picked.name}</div>
+                  <div className="truncate text-[11.5px] text-[hsl(var(--dash-muted))]">
+                    {[fit(picked, attendees), picked.location_name, picked.floor].filter(Boolean).join(' · ')}
+                    {picked.status !== 'available' ? ` · ${statusName(picked.status)}` : ''}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="mb-2.5 text-[12.5px] text-[hsl(var(--dash-muted))]">{tr('pick_hint', 'Click a green room on the plan or in the list.')}</p>
+            )}
+            <div className="flex items-center justify-end gap-2">
+              {value ? (
+                <GhostButton type="button" onClick={() => onSelect('')}>
+                  {clearLabel || tr('clear', 'No room')}
+                </GhostButton>
+              ) : null}
+              <AcademicPrimaryButton
+                type="button"
+                disabled={!pending || pending === value || picked?.status !== 'available'}
+                onClick={() => onSelect(pending)}
+                className="disabled:opacity-50 disabled:shadow-none"
+              >
+                <Check className="h-4 w-4" /> {tr('use_room', 'Use this room')}
+              </AcademicPrimaryButton>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   )
 
@@ -448,7 +514,10 @@ export function RoomPickerDialog({
     <Modal
       isDialogOpen={open}
       onOpenChange={onOpenChange}
-      minWidth="xl"
+      minWidth="no-min"
+      customWidth="md:w-[min(1180px,94vw)] md:max-w-[94vw] lg:max-w-[94vw] xl:max-w-[94vw]"
+      customHeight="h-[88vh] max-h-[88vh]"
+      noPadding
       dialogTitle={tr('title', 'Choose a room')}
       dialogDescription={tr('description', 'Only rooms that are free for the whole period and seat everyone can be picked.')}
       dialogContent={content}
