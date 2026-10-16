@@ -7,18 +7,15 @@ import type { TFunction } from 'i18next'
 import {
   ArrowUpRight,
   CalendarBlank,
-  CaretLeft,
   CaretRight,
   CheckCircle,
-  Gear,
   PlusSquare,
   UserPlus,
   UserSwitch,
 } from '@phosphor-icons/react'
-import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { useOrg } from '@components/Contexts/OrgContext'
-import UserAvatar from '@components/Objects/UserAvatar'
 import { cn } from '@/lib/utils'
+import { GlassCalendar, type GlassCalendarRange } from '@/components/ui/glass-calendar'
 import { HOME_COLORS, HomeActivity, parseTimestamp, useHomeOverview, userDisplayName } from './homeData'
 import type { CalendarEvent } from '@services/calendar/calendar'
 import {
@@ -66,190 +63,99 @@ function SectionTitle({ children, action }: { children: React.ReactNode; action?
   )
 }
 
-/* ------------------------------------------------------------------ profile */
-
-function ProfileCard() {
-  const { t } = useTranslation()
-  const session = useLHSession() as any
-  const org = useOrg() as any
-  const user = session?.data?.user
-  const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || ''
-  const role = (session?.data?.roles ?? []).find((r: any) => r.org?.id === org?.id)?.role?.name
-
-  return (
-    <div className="relative shrink-0 overflow-hidden rounded-2xl bg-[linear-gradient(135deg,hsl(0_0%_12%),hsl(0_0%_5%))] p-3 text-white fit:p-2.5">
-      <span aria-hidden="true" className="absolute -end-8 -top-10 h-28 w-28 rounded-full bg-[hsl(var(--dash-accent))] opacity-30 blur-2xl" />
-      <div className="relative flex items-center gap-3">
-        <div className="rounded-xl ring-2 ring-[hsl(43_80%_60%)]/70">
-          <UserAvatar width={40} rounded="rounded-xl" shadow="shadow-none" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{name}</p>
-          <span className="mt-0.5 inline-flex max-w-full items-center truncate rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-[hsl(43_80%_70%)]">
-            {role || t('dashboard.home.rail.admin', 'Admin')}
-          </span>
-        </div>
-        <div className="flex gap-1.5">
-          <Link
-            href="/account/general"
-            aria-label={t('common.settings', 'Settings')}
-            title={t('common.settings', 'Settings')}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 transition-colors hover:bg-white/20"
-          >
-            <Gear size={16} />
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 /* ----------------------------------------------------------------- calendar */
 
-const GOLD_FILL = 'bg-[linear-gradient(145deg,hsl(43_85%_62%),hsl(38_78%_46%))]'
+/** Event dot colours, lifted where the light-theme colour vanishes on the dark glass. */
+const GLASS_DOT: Partial<Record<CalendarEvent['type'], string>> = { exam: 'hsl(0 0% 88%)', term: 'hsl(220 14% 72%)' }
 
-/** Month grid trimmed to the weeks that contain the month (4–6 rows, not always 6). */
-function monthWeeks(month: Date) {
-  const first = new Date(month.getFullYear(), month.getMonth(), 1)
-  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
-  return monthGrid(month).slice(0, Math.ceil((first.getDay() + daysInMonth) / 7) * 7)
-}
-
-function MonthCalendar({
-  month,
-  onMonth,
+function GlassMonthCalendar({
   selected,
   onSelect,
+  onRange,
+  range,
   byDay,
 }: {
-  month: Date
-  onMonth: (_month: Date) => void
   selected: Date
   onSelect: (_day: Date) => void
+  onRange: (_range: GlassCalendarRange) => void
+  range: GlassCalendarRange | null
   byDay: Map<string, CalendarEvent[]>
 }) {
   const { t, i18n } = useTranslation()
   const today = startOfDay(new Date())
-  const days = useMemo(() => monthWeeks(month), [month])
-  const weekdayNames = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 7 + i).toLocaleDateString(i18n.language, { weekday: 'short' })),
-    [i18n.language]
-  )
-  const monthEvents = useMemo(() => {
+  const rangeEvents = useMemo(() => {
+    if (!range) return 0
     const ids = new Set<string>()
-    for (const d of days) {
-      if (d.getMonth() !== month.getMonth()) continue
+    for (let d = range.start; d <= range.end; d = addDays(d, 1)) {
       for (const e of byDay.get(dayKey(d)) ?? []) ids.add(e.id)
     }
     return ids.size
-  }, [days, byDay, month])
-  const viewingThisMonth = month.getFullYear() === today.getFullYear() && month.getMonth() === today.getMonth()
-  const shift = (delta: number) => onMonth(new Date(month.getFullYear(), month.getMonth() + delta, 1))
+  }, [range, byDay])
+  const showingToday = sameDay(selected, today) && !!range && range.start <= today && today <= range.end
 
   return (
-    <div className="shrink-0">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-lg font-semibold leading-tight tracking-tight text-[hsl(var(--dash-ink))]">
-            {month.toLocaleDateString(i18n.language, { month: 'long' })}
-            <span className="ms-1.5 font-normal text-[hsl(var(--dash-muted))]">{month.getFullYear()}</span>
-          </p>
-          <p className="mt-0.5 text-[11px] text-[hsl(var(--dash-muted))]">
-            {t('dashboard.home.rail.month_events', '{{count}} events this month', { count: monthEvents })}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {!viewingThisMonth ? (
+    // The glass needs something to blur: a dark backdrop with the brand's gold,
+    // red and orange glowing in it, showing around and through a frosted panel.
+    <div className="relative isolate shrink-0 overflow-hidden rounded-[1.75rem] bg-[linear-gradient(150deg,hsl(0_0%_16%),hsl(0_0%_5%))] p-2">
+      <span aria-hidden="true" className="absolute -end-12 -top-14 -z-10 h-52 w-52 rounded-full bg-[hsl(43_90%_55%)] opacity-80 blur-2xl" />
+      <span aria-hidden="true" className="absolute -bottom-16 -start-12 -z-10 h-56 w-56 rounded-full bg-[hsl(351_85%_52%)] opacity-70 blur-2xl" />
+      <span aria-hidden="true" className="absolute start-[30%] top-[38%] -z-10 h-32 w-32 rounded-full bg-[hsl(24_90%_55%)] opacity-60 blur-2xl" />
+      <span aria-hidden="true" className="absolute end-[12%] bottom-[18%] -z-10 h-20 w-20 rounded-full bg-[hsl(330_80%_60%)] opacity-50 blur-xl" />
+      <GlassCalendar
+        expanded
+        defaultView="month"
+        className={cn(
+          'max-w-none rounded-[1.4rem] [--glass-pad:1.25rem] fit:[--glass-pad:1rem]',
+          // Frosted panel: light sheen, strong blur, bright edge.
+          'border-white/25 bg-transparent bg-[linear-gradient(155deg,rgba(255,255,255,0.22),rgba(255,255,255,0.07)_42%,rgba(255,255,255,0.03))] backdrop-blur-2xl backdrop-saturate-150',
+          'shadow-[inset_0_1px_0_0_rgba(255,255,255,0.35),inset_0_-1px_0_0_rgba(255,255,255,0.06),0_24px_48px_-24px_rgba(0,0,0,0.8)]'
+        )}
+        selectedDate={selected}
+        onDateSelect={onSelect}
+        onRangeChange={onRange}
+        locale={i18n.language}
+        labels={{
+          weekly: t('dashboard.home.rail.weekly', 'Weekly'),
+          monthly: t('dashboard.home.rail.monthly', 'Monthly'),
+          previousWeek: t('dashboard.home.rail.previous_week', 'Previous week'),
+          nextWeek: t('dashboard.home.rail.next_week', 'Next week'),
+          previousMonth: t('dashboard.home.rail.previous_month', 'Previous month'),
+          nextMonth: t('dashboard.home.rail.next_month', 'Next month'),
+        }}
+        dayMarkers={(day) =>
+          [...new Set((byDay.get(dayKey(day)) ?? []).map((e) => e.type))].map((type) => GLASS_DOT[type] ?? EVENT_STYLES[type].dot)
+        }
+        headerAction={
+          showingToday ? null : (
             <button
               type="button"
-              onClick={() => {
-                onMonth(new Date(today.getFullYear(), today.getMonth(), 1))
-                onSelect(today)
-              }}
-              className="rounded-full bg-[hsl(var(--dash-ink))] px-3 py-1 text-[11px] font-medium text-white transition-opacity hover:opacity-90"
+              onClick={() => onSelect(new Date(today))}
+              className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-white/25"
             >
               {t('dashboard.home.rail.today', 'Today')}
             </button>
-          ) : null}
-          <div className="inline-flex items-center rounded-full border border-[hsl(var(--dash-border))] bg-white p-0.5">
-            <button
-              type="button"
-              onClick={() => shift(-1)}
-              aria-label={t('dashboard.home.rail.previous_month', 'Previous month')}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[hsl(var(--dash-ink))] transition-colors hover:bg-[hsl(var(--dash-canvas))]"
-            >
-              <CaretLeft size={13} weight="bold" className="rtl:rotate-180" />
-            </button>
-            <span aria-hidden="true" className="h-4 w-px bg-[hsl(var(--dash-border))]" />
-            <button
-              type="button"
-              onClick={() => shift(1)}
-              aria-label={t('dashboard.home.rail.next_month', 'Next month')}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[hsl(var(--dash-ink))] transition-colors hover:bg-[hsl(var(--dash-canvas))]"
-            >
-              <CaretRight size={13} weight="bold" className="rtl:rotate-180" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-7 gap-1 text-center" role="grid">
-        {weekdayNames.map((n, i) => (
-          <span
-            key={`${n}-${i}`}
-            className="truncate pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[hsl(var(--dash-muted))]"
-          >
-            {n}
-          </span>
-        ))}
-        {days.map((day) => {
-          const inMonth = day.getMonth() === month.getMonth()
-          const isToday = sameDay(day, today)
-          const isSelected = sameDay(day, selected)
-          const types = [...new Set((byDay.get(dayKey(day)) ?? []).map((e) => e.type))].slice(0, 3)
-          return (
-            <button
-              key={day.toISOString()}
-              type="button"
-              role="gridcell"
-              aria-selected={isSelected}
-              aria-current={isToday ? 'date' : undefined}
-              aria-label={day.toLocaleDateString(i18n.language, { dateStyle: 'full' })}
-              onClick={() => onSelect(day)}
-              className={cn(
-                'flex h-10 flex-col items-center justify-center gap-[3px] rounded-xl text-[13px] tabular-nums outline-none transition-all focus-visible:ring-2 focus-visible:ring-[hsl(var(--dash-accent))]/60 fit:h-9',
-                inMonth ? 'text-[hsl(var(--dash-ink))]' : 'text-[hsl(var(--dash-muted))]/35',
-                !isToday && !isSelected && 'hover:bg-white hover:shadow-[0_6px_14px_-8px_rgba(0,0,0,0.25)]',
-                !isToday && !isSelected && inMonth && types.length > 0 && 'bg-white shadow-[0_1px_2px_hsl(220_30%_10%/0.06)]',
-                isToday &&
-                  cn(GOLD_FILL, 'font-semibold text-[hsl(var(--dash-ink))] shadow-[0_8px_18px_-8px_hsl(43_80%_40%/0.9)]'),
-                isSelected &&
-                  !isToday &&
-                  'bg-[hsl(var(--dash-ink))] font-semibold text-white shadow-[0_8px_18px_-10px_rgba(0,0,0,0.7)]'
-              )}
-            >
-              <span className="leading-none">{day.getDate()}</span>
-              <span className="flex h-1 items-center gap-[3px]">
-                {types.map((type) => (
-                  <span
-                    key={type}
-                    className="h-1 w-1 rounded-full"
-                    style={{
-                      background: isToday
-                        ? 'hsl(var(--dash-ink))'
-                        : isSelected
-                          ? 'hsl(43 85% 62%)'
-                          : inMonth
-                            ? EVENT_STYLES[type].dot
-                            : 'hsl(0 0% 80%)',
-                    }}
-                  />
-                ))}
-              </span>
-            </button>
           )
-        })}
-      </div>
+        }
+        footer={
+          <>
+            <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-white/70">
+              <CalendarBlank size={16} weight="duotone" className="shrink-0" />
+              <span className="truncate">
+                {range?.view === 'month'
+                  ? t('dashboard.home.rail.month_events', '{{count}} events this month', { count: rangeEvents })
+                  : t('dashboard.home.rail.week_events', '{{count}} events this week', { count: rangeEvents })}
+              </span>
+            </span>
+            <Link
+              href="/dash/calendar"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-black/20 px-3 py-2 text-xs font-medium text-white/80 transition-colors hover:bg-black/30 hover:text-white"
+            >
+              {t('dashboard.home.rail.open_calendar', 'Calendar')}
+              <ArrowUpRight size={13} className="rtl:-scale-x-100" />
+            </Link>
+          </>
+        }
+      />
     </div>
   )
 }
@@ -294,13 +200,6 @@ function DayAgenda({
             <span className="truncate text-[11px] text-[hsl(var(--dash-muted))]">{dateLabel}</span>
           ) : null}
         </p>
-        <Link
-          href="/dash/calendar"
-          className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-[hsl(var(--dash-muted))] transition-colors hover:bg-white hover:text-[hsl(var(--dash-ink))]"
-        >
-          {t('dashboard.home.rail.open_calendar', 'Calendar')}
-          <ArrowUpRight size={12} className="rtl:-scale-x-100" />
-        </Link>
       </div>
       {isLoading ? (
         <div className="space-y-2">
@@ -483,6 +382,7 @@ function RecentActivities() {
 export default function HomeRightRail({ showActivity = true }: { showActivity?: boolean }) {
   const today = useMemo(() => startOfDay(new Date()), [])
   const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
+  const [range, setRange] = useState<GlassCalendarRange | null>(null)
   const [selected, setSelected] = useState(today)
 
   // Load the visible 6-week grid plus two weeks so "Up next" can look ahead.
@@ -498,22 +398,27 @@ export default function HomeRightRail({ showActivity = true }: { showActivity?: 
 
   return (
     <div className="flex flex-col gap-5 fit:min-h-0 fit:flex-1 fit:gap-3">
-      <ProfileCard />
-      {/* One calendar card: month grid on top, the selected day's events below.
-          In fit mode it gives up height before Recent Activities does — the
-          agenda list scrolls instead. */}
-      <section className="grid gap-4 rounded-[1.25rem] bg-[hsl(var(--dash-canvas))]/70 p-3.5 md:max-xl:grid-cols-2 fit:flex fit:min-h-0 fit:flex-col fit:gap-3 fit:p-3">
-        <MonthCalendar
-          month={month}
-          onMonth={setMonth}
+      {/* The glass calendar spans the rail; the selected day's events sit below
+          it (beside it on tablet widths). In fit mode this wrapper dissolves
+          (`contents`) so the calendar and agenda are rail rows of their own: the
+          calendar keeps its height, the agenda gives up height before Recent
+          Activities does (its list scrolls). A wrapper that shrank instead let
+          the calendar spill over the rows below it. */}
+      <div className="grid gap-4 md:max-xl:grid-cols-2 fit:contents">
+        <GlassMonthCalendar
           selected={selected}
           onSelect={(d) => setSelected(startOfDay(d))}
+          onRange={(r) => {
+            setRange(r)
+            setMonth((m) => (m.getTime() === r.month.getTime() ? m : r.month))
+          }}
+          range={range}
           byDay={byDay}
         />
-        <div className="border-t border-[hsl(var(--dash-border))]/70 pt-3 md:max-xl:border-s md:max-xl:border-t-0 md:max-xl:ps-4 md:max-xl:pt-0 fit:flex fit:min-h-0 fit:flex-col fit:pt-2.5">
+        <section className="rounded-[1.25rem] bg-[hsl(var(--dash-canvas))]/70 p-3.5 fit:flex fit:min-h-[6.75rem] fit:shrink fit:flex-col fit:overflow-hidden fit:p-3">
           <DayAgenda selected={selected} byDay={byDay} upcoming={upcoming} isLoading={isLoading} />
-        </div>
-      </section>
+        </section>
+      </div>
       {showActivity ? <RecentActivities /> : null}
     </div>
   )

@@ -35,6 +35,15 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // The Zoom Meeting SDK host page may only be framed by the LMS itself.
+        source: '/zoom/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), display-capture=(self)' },
+        ],
+      },
+      {
         source: '/embed/:orgslug/course/:courseuuid/activity/:path*',
         headers: [
           {

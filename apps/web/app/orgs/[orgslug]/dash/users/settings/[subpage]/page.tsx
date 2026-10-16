@@ -107,7 +107,7 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
   }
 
   return (
-    <div className="grid h-screen w-full grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]">
+    <div className="grid h-[calc(100dvh-var(--dash-topbar-h,0px))] w-full grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]">
       <div className="relative z-10 flex-shrink-0 border-b border-[hsl(var(--dash-border))]/70 bg-[hsl(var(--dash-canvas))] px-4 tracking-tight sm:px-10">
         <div className="pb-4 pt-6">
           <Breadcrumbs items={[

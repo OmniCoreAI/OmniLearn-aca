@@ -580,7 +580,7 @@ export default function FinanceClient({ orgslug }: { orgslug: string }) {
     (summaryQuery.isLoading || entriesQuery.isLoading || coursesQuery.isLoading)
 
   return (
-    <div className="finance-shell flex h-screen w-full flex-col bg-[hsl(var(--dash-canvas))]">
+    <div className="finance-shell flex h-[calc(100dvh-var(--dash-topbar-h,0px))] w-full flex-col bg-[hsl(var(--dash-canvas))]">
       <div className="dash-card z-10 flex-shrink-0 px-4 tracking-tight sm:px-10">
         <div className="pb-4 pt-6">
           <Breadcrumbs

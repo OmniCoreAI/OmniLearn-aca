@@ -38,6 +38,7 @@ import {
 } from '@services/instructors/instructors'
 import { getOrgLmsCourses } from '@services/academic/core'
 import { cn } from '@/lib/utils'
+import { useModules } from '@/lib/modules'
 
 const nameOf = (i: any) => `${i?.user?.first_name || ''} ${i?.user?.last_name || ''}`.trim() || i?.user?.username || '—'
 const TABS = ['overview', 'courses', 'assignments', 'availability', 'activity'] as const
@@ -45,6 +46,7 @@ type Tab = (typeof TABS)[number]
 
 function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instructorUuid: string }) {
   const { t, i18n } = useTranslation()
+  const financeOn = useModules().isModuleEnabled('finance')
   const { org, orgId, access_token, ready } = useAdminContext()
   const queryClient = useQueryClient()
   const router = useRouter()
@@ -287,7 +289,7 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
                 </p>
               )}
             </AdminCard>
-            <AdminCard
+            {financeOn && <AdminCard
               title={t('instructors.finance', 'Finance')}
               action={
                 <Link className="text-xs font-semibold text-[hsl(var(--dash-accent))] hover:underline" href={getUriWithOrg(orgslug, '/dash/instructors/finance')}>
@@ -301,7 +303,7 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
                 </DetailItem>
                 <DetailItem label={t('instructors.total_cost', 'Total cost')}>{money(totalAmount, instructor.rate_currency)}</DetailItem>
               </dl>
-            </AdminCard>
+            </AdminCard>}
           </div>
         </div>
       ) : null}

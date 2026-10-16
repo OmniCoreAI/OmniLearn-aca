@@ -148,6 +148,87 @@ def load_sms_config() -> SMSConfig:
     )
 
 
+class ZoomConfig(BaseModel):
+    """Zoom online meetings (Integrations → Zoom).
+
+    One Zoom Marketplace *General app* (user-managed OAuth) with the Meeting SDK
+    "Embed" feature: its Client ID/Secret drive both the OAuth connection and the
+    Meeting SDK signatures. ``sdk_key``/``sdk_secret`` only need setting when the
+    SDK runs from a separate app. Configured only through ``OMNILEARN_ZOOM_*``.
+    """
+
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
+    # Must match the redirect URL registered on the Zoom app exactly.
+    redirect_uri: Optional[str] = None
+    # "Secret Token" from the app's Feature → Event subscriptions page.
+    webhook_secret_token: Optional[str] = None
+    sdk_key: Optional[str] = None
+    sdk_secret: Optional[str] = None
+    # Zoom's Meeting SDK Web version loaded from source.zoom.us.
+    sdk_version: str = "6.2.0"
+
+    @property
+    def oauth_configured(self) -> bool:
+        return bool(self.client_id and self.client_secret and self.redirect_uri)
+
+    @property
+    def sdk_configured(self) -> bool:
+        return bool(self.meeting_sdk_key and self.meeting_sdk_secret)
+
+    @property
+    def meeting_sdk_key(self) -> Optional[str]:
+        return self.sdk_key or self.client_id
+
+    @property
+    def meeting_sdk_secret(self) -> Optional[str]:
+        return self.sdk_secret or self.client_secret
+
+
+def load_zoom_config() -> ZoomConfig:
+    env = os.environ
+    return ZoomConfig(
+        client_id=env.get("OMNILEARN_ZOOM_CLIENT_ID") or None,
+        client_secret=env.get("OMNILEARN_ZOOM_CLIENT_SECRET") or None,
+        redirect_uri=env.get("OMNILEARN_ZOOM_REDIRECT_URI") or None,
+        webhook_secret_token=env.get("OMNILEARN_ZOOM_WEBHOOK_SECRET_TOKEN") or None,
+        sdk_key=env.get("OMNILEARN_ZOOM_SDK_KEY") or None,
+        sdk_secret=env.get("OMNILEARN_ZOOM_SDK_SECRET") or None,
+        sdk_version=env.get("OMNILEARN_ZOOM_SDK_VERSION") or ZoomConfig().sdk_version,
+    )
+
+
+class ModulesConfig(BaseModel):
+    """Platform sections that can be switched off for the whole instance.
+
+    Each one is read from ``OMNILEARN_FEATURE_<NAME>`` in the ``.env`` file
+    (``false`` / ``0`` / ``no`` / ``off`` turn it off; anything else, or unset,
+    leaves it on). A section that is off is hidden from every user, super
+    admins included, and its API answers 404. See ``src/security/modules.py``.
+    """
+
+    postgraduate: bool = True
+    training_programs: bool = True
+    finance: bool = True
+    analytics: bool = True
+    reports: bool = True
+    news: bool = True
+    online_classes: bool = True
+
+
+_FALSE_VALUES = ("0", "false", "no", "off", "disabled")
+
+
+def load_modules_config() -> ModulesConfig:
+    """Read the section switches from the environment (cheap: no file I/O)."""
+    values = {}
+    for name in ModulesConfig.model_fields:
+        raw = os.environ.get(f"OMNILEARN_FEATURE_{name.upper()}")
+        if raw is not None and raw.strip() != "":
+            values[name] = raw.strip().lower() not in _FALSE_VALUES
+    return ModulesConfig(**values)
+
+
 class DatabaseConfig(BaseModel):
     sql_connection_string: Optional[str]
 
@@ -180,6 +261,8 @@ class OmniLearnConfig(BaseModel):
     ai_config: AIConfig
     mailing_config: MailingConfig
     sms_config: SMSConfig = Field(default_factory=SMSConfig)
+    zoom_config: ZoomConfig = Field(default_factory=ZoomConfig)
+    modules_config: ModulesConfig = Field(default_factory=ModulesConfig)
     payments_config: InternalPaymentsConfig
     tinybird_config: TinybirdConfig | None
     judge0_config: Judge0Config | None
@@ -717,6 +800,8 @@ def get_omnilearn_config() -> OmniLearnConfig:
             smtp_use_tls=smtp_use_tls,
         ),
         sms_config=load_sms_config(),
+        zoom_config=load_zoom_config(),
+        modules_config=load_modules_config(),
         payments_config=InternalPaymentsConfig(
             stripe=InternalStripeConfig(
                 stripe_secret_key=stripe_secret_key,

@@ -55,12 +55,17 @@ test.describe('Entity coordinator', () => {
 })
 
 test.describe('Trainee', () => {
-  test('lands on the learner home with their learning links', async ({ page }) => {
+  test('lands on the student portal with only their own learning links', async ({ page }) => {
     await signIn(page, 'trainee')
     await expect(page).toHaveURL(/\/$/)
-    for (const link of ['My learning', 'My calendar']) {
-      await expect(page.getByRole('link', { name: link }).first()).toBeVisible()
+    const nav = page.getByRole('navigation', { name: 'Student navigation' })
+    for (const link of ['Home', 'My courses', 'Calendar', 'Assessments', 'Certificates']) {
+      await expect(nav.getByRole('link', { name: link, exact: true })).toBeVisible()
     }
+    // A student portal: no academy administration and no academy-wide figures.
+    await expect(nav.getByRole('link', { name: 'Staff dashboard' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: /^Welcome,/ })).toBeVisible()
+    await expect(page.getByText('Total students')).toHaveCount(0)
     await expect(page.getByRole('button', { name: /^Notifications/ })).toBeVisible()
 
     // No dashboard for learners: they're sent back to the learner home.

@@ -124,6 +124,36 @@ optional: the feature stays disabled or uses a runtime fallback when the variabl
 | `OMNILEARN_TWILIO_AUTH_TOKEN` | Twilio auth token. | secret string | unset | API |
 | `OMNILEARN_TWILIO_FROM` | Twilio sender number (falls back to `OMNILEARN_SMS_SENDER`). | phone | unset | API |
 
+## Zoom online meetings
+
+See [Online Meetings → Setup](/platform/online-meetings/setup). All are optional; Zoom features stay off until the first three are set.
+
+| Variable | Description | Type | Default / required | Used by |
+| --- | --- | --- | --- | --- |
+| `OMNILEARN_ZOOM_CLIENT_ID` | Client ID of the Zoom General app (OAuth and, by default, Meeting SDK). | string | unset | API |
+| `OMNILEARN_ZOOM_CLIENT_SECRET` | Client secret of that app. | secret string | unset | API |
+| `OMNILEARN_ZOOM_REDIRECT_URI` | OAuth redirect URL registered on the app: `https://<lms>/dash/administration/zoom/callback`. | URL | unset | API |
+| `OMNILEARN_ZOOM_WEBHOOK_SECRET_TOKEN` | Event subscription "Secret Token" used to verify webhooks. | secret string | unset; webhooks are rejected without it | API |
+| `OMNILEARN_ZOOM_SDK_KEY` | Meeting SDK client ID, only when the SDK runs from a different app. | string | the client ID | API |
+| `OMNILEARN_ZOOM_SDK_SECRET` | Meeting SDK client secret, only with `OMNILEARN_ZOOM_SDK_KEY`. | secret string | the client secret | API |
+| `OMNILEARN_ZOOM_SDK_VERSION` | Meeting SDK for Web version loaded from `source.zoom.us`. | semver | `6.2.0` | API |
+
+## Platform sections
+
+Each variable turns one section of the platform on or off for the whole instance. A section that is off is hidden from every user, super admins included: its sidebar entries, dashboard and learner pages, calendar events and home widgets disappear, and its API answers `404` with `module_disabled`. No data is deleted, and setting it back to `true` restores everything. Values `false`, `0`, `no` and `off` turn a section off; anything else, or leaving it unset, keeps it on. Restart the API after a change.
+
+When a section is on, the per-role sidebar toggles in the admin panel still decide who sees it. When it is off, those toggles show it as off and cannot override it.
+
+| Variable | Section | Default | Used by |
+| --- | --- | --- | --- |
+| `OMNILEARN_FEATURE_POSTGRADUATE` | Postgraduate Studies: programs, admissions, offerings, My Teaching, the admissions report and the learner's My academics. | `true` | API |
+| `OMNILEARN_FEATURE_TRAINING_PROGRAMS` | Training Programs, in the dashboard and the learner's Programs page. | `true` | API |
+| `OMNILEARN_FEATURE_FINANCE` | Finance ledger, instructor finance, the financial report and the home revenue chart. | `true` | API |
+| `OMNILEARN_FEATURE_ANALYTICS` | The Analytics dashboard. Learning-event tracking keeps running. | `true` | API |
+| `OMNILEARN_FEATURE_REPORTS` | The Reports section. | `true` | API |
+| `OMNILEARN_FEATURE_NEWS` | News (CMS), including the public news feed. | `true` | API |
+| `OMNILEARN_FEATURE_ONLINE_CLASSES` | Online classes (Zoom) on lectures, courses and the Online classes dashboard. | `true` | API |
+
 ## Content storage
 
 | Variable | Description | Type | Default / required | Used by |

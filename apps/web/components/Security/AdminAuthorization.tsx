@@ -9,6 +9,7 @@ import PageLoading from '@components/Objects/Loaders/PageLoading';
 import { getUriWithOrg } from '@services/config/config';
 import { useOrg } from '@components/Contexts/OrgContext';
 import { findNavItemForPath } from '@/lib/dash-nav-items';
+import { useModules } from '@/lib/modules';
 
 type AuthorizationProps = {
   children: React.ReactNode;
@@ -25,7 +26,8 @@ const AdminAuthorization: React.FC<AuthorizationProps> = ({ children, authorizat
   const pathname = usePathname();
   const router = useRouter();
   const { isAdmin, loading } = useAdminStatus() as any
-  const { visibleItemIds, isItemVisible, loading: navLoading } = usePortalNavVisibility()
+  const { isItemVisible, hasAnyPortalAccess, loading: navLoading } = usePortalNavVisibility()
+  const { isPathEnabled } = useModules()
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   const isUserAuthenticated = useMemo(() => session.status === 'authenticated', [session.status]);
@@ -34,22 +36,17 @@ const AdminAuthorization: React.FC<AuthorizationProps> = ({ children, authorizat
   // navigation visibility (falls back to the plain isAdmin boolean for
   // custom/unknown roles — see usePortalNavVisibility).
   const isPathAuthorized = useMemo(() => {
+    // Sections switched off in the .env file are closed to everyone, superadmins included.
+    if (!isPathEnabled(pathname || '')) return false;
     if (ALWAYS_ADMIN_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
       return isAdmin === true;
     }
     const item = findNavItemForPath(pathname || '');
     if (!item) return true; // uncovered route (e.g. account settings) — unchanged default-allow
     return isItemVisible(item.id);
-  }, [pathname, isAdmin, isItemVisible]);
+  }, [pathname, isAdmin, isItemVisible, isPathEnabled]);
 
-  // Whether the sidebar/dashboard shell should render at all: either the
-  // legacy admin flag, or the user has at least one visible portal item
-  // (e.g. an Instructor with a reduced but non-empty sidebar).
-  const hasAnyPortalAccess = useMemo(() => {
-    if (isAdmin) return true;
-    return (visibleItemIds?.size ?? 0) > 0;
-  }, [isAdmin, visibleItemIds]);
-
+  // Whether the sidebar/dashboard shell should render at all (see usePortalNavVisibility).
   const authorizeUser = useCallback(() => {
     if (loading || navLoading) {
       return; // Wait until admin status + portal visibility are determined

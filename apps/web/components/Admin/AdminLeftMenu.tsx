@@ -1,10 +1,13 @@
 'use client'
 import {
   Buildings,
+  CaretDown,
   ChartBar,
+  House,
   Key,
   Shield,
   SignOut,
+  SquaresFour,
   User,
   Users,
 } from '@phosphor-icons/react'
@@ -12,9 +15,17 @@ import { signOut } from '@components/Contexts/AuthContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUserAvatarMediaDirectory } from '@services/media/media'
 import Link from 'next/link'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@components/ui/dropdown-menu'
 import React from 'react'
 
-function AdminTopMenu() {
+/** `minimal`: logo + account menu only (for screens where the console itself is unavailable). */
+function AdminTopMenu({ minimal = false }: { minimal?: boolean }) {
   const session = useLHSession() as any
 
   async function logOutUI() {
@@ -49,7 +60,7 @@ function AdminTopMenu() {
         </Link>
 
         {/* Navigation */}
-        <nav className="flex items-center gap-1">
+        <nav className={minimal ? 'hidden' : 'flex items-center gap-1'}>
           <NavLink
             href="/admin/organizations"
             icon={<Buildings size={16} weight="fill" />}
@@ -80,33 +91,44 @@ function AdminTopMenu() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* User section */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="Avatar"
-                className="w-6 h-6 rounded-full object-cover bg-gray-700"
-              />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
-                <User size={14} weight="fill" className="text-white/50" />
-              </div>
-            )}
-            <span className="text-sm text-white/60 hidden sm:inline">
-              {user?.username}
-            </span>
-          </div>
-          <button
-            onClick={logOutUI}
-            className="flex items-center gap-1.5 rounded-lg text-red-500 hover:text-red-400 hover:bg-white/[0.08] transition-all px-2 py-1.5"
-            title="Sign Out"
-          >
-            <SignOut size={16} weight="fill" />
-            <span className="text-xs font-medium hidden sm:inline">Sign Out</span>
-          </button>
-        </div>
+        {/* Account */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Account menu"
+              className="group flex items-center gap-2 rounded-full py-1 pe-2.5 ps-1 text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 data-[state=open]:bg-white/[0.08] data-[state=open]:text-white"
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="h-7 w-7 rounded-full bg-gray-700 object-cover" />
+              ) : (
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10">
+                  <User size={14} weight="fill" className="text-white/50" />
+                </span>
+              )}
+              <span className="hidden text-sm sm:inline">{user?.username}</span>
+              <CaretDown size={12} weight="bold" className="transition-transform group-data-[state=open]:rotate-180" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={8} collisionPadding={12} className="w-56">
+            <div className="px-2.5 py-2">
+              <p className="truncate text-[13px] font-bold text-[hsl(var(--dash-ink))]">{user?.username}</p>
+              {user?.email ? <p className="truncate text-[11.5px] text-[hsl(var(--dash-muted))]">{user.email}</p> : null}
+              <span className="mt-1.5 inline-flex rounded bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-700">Superadmin</span>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild icon={SquaresFour}>
+              <Link href="/dash">Academy dashboard</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild icon={House}>
+              <Link href="/">Open the learning site</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem icon={SignOut} variant="destructive" onSelect={() => logOutUI()}>
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </>
   )

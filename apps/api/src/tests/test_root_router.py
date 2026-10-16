@@ -126,6 +126,12 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     sys.modules["src.routers.integrations"].zapier = sys.modules[
         "src.routers.integrations.zapier"
     ]
+    install_router_module(
+        "src.routers.integrations.zoom", "src.routers.integrations.zoom"
+    )
+    sys.modules["src.routers.integrations"].zoom = sys.modules[
+        "src.routers.integrations.zoom"
+    ]
 
     install_router_module("src.routers.ai.ai", "src.routers.ai.ai")
     install_router_module("src.routers.ai.magicblocks", "src.routers.ai.magicblocks")

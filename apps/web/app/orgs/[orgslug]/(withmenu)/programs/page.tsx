@@ -2,6 +2,7 @@ import React from 'react'
 import { Metadata } from 'next'
 import { getOrganizationContextInfo } from '@services/organizations/orgs'
 import MyPrograms from './client'
+import ModuleGate from '@components/Security/ModuleGate'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +14,11 @@ export async function generateMetadata(props: { params: Promise<{ orgslug: strin
 
 async function Page(props: { params: Promise<{ orgslug: string }> }) {
   const { orgslug } = await props.params
-  return <MyPrograms orgslug={orgslug} />
+  return (
+    <ModuleGate module="training_programs">
+      <MyPrograms orgslug={orgslug} />
+    </ModuleGate>
+  )
 }
 
 export default Page

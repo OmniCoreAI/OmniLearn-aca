@@ -53,6 +53,20 @@ async def _get_org_config_cached(org_id: int, db_session: AsyncSession) -> Optio
     return org_config
 
 
+def _with_live_modules(org_data: dict) -> dict:
+    """Refresh the .env section switches on a cached org read.
+
+    The switches are instance-wide and change only with an API restart, so a
+    cached copy must not keep serving the values it was stored with.
+    """
+    from src.security.modules import module_states
+
+    config = (org_data.get("config") or {}).get("config")
+    if isinstance(config, dict):
+        config["modules"] = module_states()
+    return org_data
+
+
 def _build_org_read_with_resolved(org, org_config) -> OrganizationRead:
     """Build OrganizationRead with resolved_features attached."""
     from src.security.features_utils.resolve import resolve_all_features
@@ -66,6 +80,10 @@ def _build_org_read_with_resolved(org, org_config) -> OrganizationRead:
         # Inject into the config dict so it's returned in the response
         config_dict = org_config.config.copy() if org_config.config else {}
         config_dict["resolved_features"] = resolved
+        # Platform sections switched on/off in the .env file (instance-wide).
+        from src.security.modules import module_states
+
+        config_dict["modules"] = module_states()
         org_read.config = OrganizationConfig(
             id=org_config.id,
             org_id=org_config.org_id,
@@ -116,7 +134,7 @@ async def get_organization_by_slug(
     # Check Redis cache first (org read is public, no RBAC needed)
     cached = get_cached_org_by_slug(org_slug)
     if cached is not None:
-        return OrganizationRead(**cached)
+        return OrganizationRead(**_with_live_modules(cached))
 
     statement = select(Organization).where(Organization.slug == org_slug).order_by(Organization.id)
     org = (await db_session.execute(statement)).scalars().first()

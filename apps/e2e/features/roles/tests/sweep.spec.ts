@@ -43,9 +43,11 @@ function adminPaths(x: Awaited<ReturnType<typeof ids>>): string[] {
   const paths = [
     '/dash', '/dash/calendar', '/dash/courses', '/dash/assignments', '/dash/library', '/dash/boards', '/dash/playgrounds',
     '/dash/analytics', '/dash/finance', '/dash/cms/news', '/dash/training-programs', '/dash/my-entity',
+    '/dash/reports', '/dash/reports/financial', '/dash/reports/financial?tab=revenue', '/dash/reports/financial?tab=instructors',
+    '/dash/reports/learning', '/dash/reports/admissions', '/dash/reports/people',
     '/dash/postgraduate', '/dash/postgraduate/overview', '/dash/postgraduate/courses', '/dash/postgraduate/offerings',
     '/dash/postgraduate/admissions', '/dash/postgraduate/students', '/dash/postgraduate/calendar', '/dash/postgraduate/settings',
-    '/dash/postgraduate/teaching',
+    '/dash/postgraduate/teaching', '/dash/online-classes',
     '/dash/administration', '/dash/administration/settings', '/dash/administration/settings/finance', '/dash/administration/roles',
     '/dash/administration/entities', '/dash/administration/entities/positions', '/dash/administration/entities/types',
     '/dash/administration/user-groups', '/dash/administration/facilities', '/dash/administration/facilities/locations',
@@ -73,7 +75,7 @@ function adminPaths(x: Awaited<ReturnType<typeof ids>>): string[] {
 }
 
 const LEARNER_PATHS = [
-  '/', '/courses', '/programs', '/trail', '/calendar', '/academics', '/admissions', '/library', '/search?q=a',
+  '/', '/courses', '/programs', '/trail', '/calendar', '/assessments', '/certificates', '/academics', '/admissions', '/library', '/search?q=a',
   '/account/general', '/account/profile', '/account/security', '/account/purchases', '/boards', '/playgrounds',
 ]
 
@@ -113,7 +115,7 @@ test('sweep every section as each role', async ({ browser }) => {
   const x = await ids()
   const plan: Record<Persona, string[]> = {
     admin: [...adminPaths(x), ...LEARNER_PATHS, x.course ? `/course/${strip(x.course.course_uuid, 'course')}` : '/', `/user/${x.username}`],
-    instructor: ['/dash', '/dash/calendar', '/dash/postgraduate/teaching', '/dash/training-programs', '/dash/assignments', '/dash/library', ...LEARNER_PATHS],
+    instructor: ['/dash', '/dash/calendar', '/dash/postgraduate/teaching', '/dash/online-classes', '/dash/training-programs', '/dash/assignments', '/dash/library', ...LEARNER_PATHS],
     coordinator: ['/dash', '/dash/my-entity', '/dash/my-entity?tab=members', '/dash/my-entity?tab=groups', '/dash/my-entity?tab=training',
       '/dash/my-entity?tab=progress', '/dash/my-entity?tab=import', ...LEARNER_PATHS],
     trainee: [...LEARNER_PATHS, x.course ? `/course/${strip(x.course.course_uuid, 'course')}` : '/'],

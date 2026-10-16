@@ -13,6 +13,7 @@ import {
   Package,
   SlidersHorizontal,
   UsersThree,
+  VideoCamera,
 } from '@phosphor-icons/react'
 import { getUriWithOrg } from '@services/config/config'
 import { AcademicPageShell, AcademicHeader } from '@components/Dashboard/Pages/Academic/AcademicShared'
@@ -20,6 +21,7 @@ import DashStatCards, { type DashStat } from '@components/Dashboard/Shared/DashS
 import { useAdminContext } from '@components/Dashboard/Pages/Administration/AdminUI'
 import { getAdminOverview } from '@services/administration/administration'
 import { cn } from '@/lib/utils'
+import { useModules } from '@/lib/modules'
 
 /**
  * The admin's "Create → Configure → Reuse → Assign" path. Each step is shown
@@ -49,6 +51,7 @@ const QUICK_CREATE: { href: string; labelKey: string; fallback: string; icon: Re
 
 function AdministrationOverview({ orgslug }: { orgslug: string }) {
   const { t } = useTranslation()
+  const { isPathEnabled } = useModules()
   const { orgId, access_token, ready } = useAdminContext()
   const { data: counts, isLoading } = useQuery({
     queryKey: ['administration', 'overview', orgId],
@@ -69,8 +72,9 @@ function AdministrationOverview({ orgslug }: { orgslug: string }) {
     { key: 'addons', label: t('administration.nav.addons', 'Add-ons'), value: count('addons'), icon: Package, tone: 'rose', href: '/dash/administration/add-ons' },
     { key: 'email_templates', label: t('administration.overview.email_templates', 'Email templates'), value: count('email_templates'), hint: t('administration.overview.custom_hint', 'Customized'), icon: EnvelopeSimple, tone: 'stone', href: '/dash/administration/communication' },
     { key: 'certificate_templates', label: t('administration.overview.certificate_templates', 'Certificate templates'), value: count('certificate_templates'), icon: Certificate, tone: 'gold', href: '/dash/administration/certificates' },
+    { key: 'zoom', label: t('online_meetings.admin.tile', 'Online meetings (Zoom)'), value: '—', hint: t('online_meetings.admin.tile_hint', 'Connect Zoom for online classes'), icon: VideoCamera, tone: 'stone', href: '/dash/administration/zoom' },
     { key: 'settings', label: t('administration.nav.settings', 'General Configuration'), value: '—', hint: t('administration.overview.settings_hint', 'Lists, currencies & taxes'), icon: SlidersHorizontal, tone: 'sand', href: '/dash/administration/settings' },
-  ]
+  ].filter((area) => !area.href || isPathEnabled(area.href))
 
   return (
     <AcademicPageShell>

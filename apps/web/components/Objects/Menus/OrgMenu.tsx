@@ -36,6 +36,7 @@ import {
 } from "@components/ui/dropdown-menu"
 import { FeedbackModal } from '@components/Objects/Modals/FeedbackModal'
 import { DASHBOARD_MENU_ITEMS, DashboardMenuItem } from '@/lib/dashboard-menu-items'
+import { readModules, modulesForPath } from '@/lib/modules'
 import { isFeatureAvailable } from '@services/plans/plans'
 import { getMenuColorClasses } from '@services/utils/ts/colorUtils'
 import AuthenticatedClientElement from '@components/Security/AuthenticatedClientElement'
@@ -90,7 +91,10 @@ export const OrgMenu = (props: any) => {
 
   // Filter dashboard menu items by resolved_features from API
   const rf = config?.resolved_features
+  const modules = readModules(org)
   const visibleDashboardItems = DASHBOARD_MENU_ITEMS.filter((item: DashboardMenuItem) => {
+    // Sections switched off in the .env file.
+    if (modulesForPath(item.href).some((m) => !modules[m])) return false
     if (!item.featureKey) return true
     if (rf?.[item.featureKey]) return rf[item.featureKey].enabled
     return isFeatureAvailable(item.featureKey)

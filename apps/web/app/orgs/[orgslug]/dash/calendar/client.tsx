@@ -9,7 +9,7 @@ const EventsCalendar = dynamic(() => import('@components/Calendar/EventsCalendar
 
 export default function DashCalendarClient({ orgslug }: { orgslug: string }) {
   return (
-    <div className="flex min-h-full w-full flex-col bg-[hsl(var(--dash-canvas))] px-4 py-6 sm:px-8 fit:h-dvh fit:min-h-0 fit:overflow-hidden fit:py-5">
+    <div className="flex min-h-full w-full flex-col bg-[hsl(var(--dash-canvas))] px-4 py-6 sm:px-8 fit:h-[calc(100dvh-var(--dash-topbar-h,0px))] fit:min-h-0 fit:overflow-hidden fit:py-5">
       <EventsCalendar context="dash" orgslug={orgslug} className="flex-1" />
     </div>
   )

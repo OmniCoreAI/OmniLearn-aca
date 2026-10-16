@@ -1,26 +1,20 @@
 'use client'
 import { useOrg } from '@components/Contexts/OrgContext'
-import { signOut } from '@components/Contexts/AuthContext'
 import {
   House,
   Chalkboard,
+  VideoCamera,
   Files,
   Users,
   UsersThree,
   CurrencyCircleDollar,
   Buildings,
-  Globe,
-  Question,
   Gear,
-  SignOut,
   CaretDown,
   CaretLeft,
   CaretRight,
-  Check,
   Plus,
   PencilSimple,
-  Book,
-  ChatCircleDots,
   ChartBar,
   DotsThree,
   Shield,
@@ -36,29 +30,28 @@ import {
   MagnifyingGlass,
   ChalkboardSimple,
   Cube,
-  ShoppingBag,
   FolderSimple,
   Certificate,
   Newspaper,
   CalendarBlank,
   CalendarDots,
   IdentificationCard,
+  PresentationChart,
+  Wallet,
+  GraduationCap,
+  UsersFour,
+  ChartLineUp,
 } from '@phosphor-icons/react'
-import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import CommandPaletteTrigger from '@components/Dashboard/CommandPalette/CommandPaletteTrigger'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { LayoutGroup, MotionConfig, motion } from 'motion/react'
-import UserAvatar from '../../Objects/UserAvatar'
 import AdminAuthorization from '@components/Security/AdminAuthorization'
 import useAdminStatus from '@components/Hooks/useAdminStatus'
-import NotificationBell from '@components/Objects/Notifications/NotificationBell'
 import usePortalNavVisibility from '@components/Hooks/usePortalNavVisibility'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
-import { getUriWithOrg } from '@services/config/config'
 import { useTranslation } from 'react-i18next'
-import { changeLanguage } from '@/lib/i18n'
 import {
   Tooltip,
   TooltipContent,
@@ -71,9 +64,8 @@ import {
   HoverMenuItem,
   HoverMenuLabel,
   HoverMenuSeparator,
+  hoverMenuItemClass,
 } from "@components/ui/hover-menu"
-import { FeedbackModal } from '@components/Objects/Modals/FeedbackModal'
-import { AVAILABLE_LANGUAGES } from '@/lib/languages'
 import { cn } from '@/lib/utils'
 import OrgLogo from '@components/Dashboard/Shared/OrgLogo'
 import { getAssignmentsFromACourse } from '@services/courses/assignments'
@@ -90,7 +82,7 @@ import { getApplications, getTerms } from '@services/academic/core'
 function DashLeftMenu() {
   const org = useOrg() as any
   const session = useLHSession() as any
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { track } = useOmniLearnAnalytics('dashboard')
   const pathname = usePathname() || ''
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -102,7 +94,6 @@ function DashLeftMenu() {
     return pathname === path || pathname.startsWith(path + '/')
   }
   const [recentAssignments, setRecentAssignments] = useState<any[]>([])
-  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const access_token = session?.data?.tokens?.access_token
 
   // Lazy-load courses + assignments only when the assignments hover menu is opened.
@@ -149,11 +140,6 @@ function DashLeftMenu() {
   }
 
 
-  async function logOutUI() {
-    await signOut({ redirect: true, callbackUrl: getUriWithOrg(org.slug, '/login') })
-  }
-
-
   const plan = usePlan()
   // Hooks must run on every render — keep this above the early return.
   const { isItemVisible } = usePortalNavVisibility()
@@ -192,6 +178,7 @@ function DashLeftMenu() {
   const showFinance = isItemVisible('finance')
   const showCmsNews = isItemVisible('cms-news')
   const showMyTeaching = isItemVisible('postgraduate-teaching')
+  const showOnlineClasses = isItemVisible('online-classes')
   const showAssignments = isItemVisible('assignments')
   const showLibrary = isEnabled('folders') && isItemVisible('library')
   const showBoards = isEnabled('boards') && isItemVisible('boards')
@@ -203,7 +190,7 @@ function DashLeftMenu() {
 
   const showAcademicSection = showTrainingPrograms || showFinance || showCmsNews
   const adminLinks = ADMIN_NAV_LINKS.filter((link) => isItemVisible(link.navId))
-  const showTeachingSection = showMyTeaching || showAssignments || showLibrary || showBoards || showPlaygrounds
+  const showTeachingSection = showMyTeaching || showOnlineClasses || showAssignments || showLibrary || showBoards || showPlaygrounds
   // "My Teaching" lives under /dash/postgraduate but is its own sidebar entry.
   const inMyTeaching = isActivePath('/dash/postgraduate/teaching')
   const showManageSection = showUsers || showPayments || showOrganization || showAnalytics
@@ -213,15 +200,6 @@ function DashLeftMenu() {
   const showOtherPlaygrounds = !isEnabled('playgrounds') && isItemVisible('playgrounds')
   const showOtherPayments = !isEnabled('payments') && isItemVisible('payments')
 
-  const user = session?.data?.user
-  const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || ''
-  const hour = new Date().getHours()
-  const greeting =
-    hour < 5 || hour >= 18
-      ? t('dashboard.sidebar.greeting_evening', 'Good evening')
-      : hour < 12
-        ? t('dashboard.sidebar.greeting_morning', 'Good morning')
-        : t('dashboard.sidebar.greeting_afternoon', 'Good afternoon')
   const count = (...flags: boolean[]) => flags.filter(Boolean).length
   const icon = (Icon: React.ElementType, active: boolean) => <Icon size={18} weight={active ? 'fill' : 'duotone'} />
 
@@ -369,95 +347,25 @@ function DashLeftMenu() {
     </HoverMenuContent>
   )
 
-  const accountMenu = (
-    <HoverMenuContent className="w-60">
-      <div className="px-3 py-2">
-        <p className="truncate text-sm font-semibold text-[hsl(var(--dash-ink))]">{displayName}</p>
-        <p className="truncate text-xs text-[hsl(var(--dash-muted))]">{user?.email}</p>
-      </div>
-      <HoverMenuSeparator />
-      <HoverMenuItem asChild>
-        <Link href="/account/general" className={menuLinkCls}>
-          <Gear size={16} weight="fill" />
-          <span>{t('common.settings')}</span>
-        </Link>
-      </HoverMenuItem>
-      <HoverMenuItem asChild>
-        <Link href={getUriWithOrg(org?.slug, '/account/purchases')} className={menuLinkCls}>
-          <ShoppingBag size={16} weight="fill" />
-          <span>{t('account.purchases')}</span>
-        </Link>
-      </HoverMenuItem>
-      <HoverMenuSeparator />
-      <HoverMenuItem onClick={() => logOutUI()} className={cn(menuLinkCls, 'text-red-600 hover:bg-red-50 hover:text-red-600')}>
-        <SignOut size={16} weight="fill" />
-        <span>{t('user.sign_out')}</span>
-      </HoverMenuItem>
-    </HoverMenuContent>
-  )
-
-  const languageMenu = (
-    <HoverMenuContent className="max-h-96 w-64 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <HoverMenuLabel className="flex items-center gap-2 font-medium text-[hsl(var(--dash-muted))]">
-        <Globe size={16} weight="fill" />
-        <span>{t('common.language')}</span>
-      </HoverMenuLabel>
-      <HoverMenuSeparator />
-      {AVAILABLE_LANGUAGES.map((language) => (
-        <HoverMenuItem
-          key={language.code}
-          onClick={() => changeLanguage(language.code)}
-          className="flex cursor-pointer items-center justify-between px-3 py-2.5 text-[hsl(var(--dash-ink))]/75 transition-colors hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))]"
-        >
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">{language.nativeName}</span>
-            <span className="text-xs text-[hsl(var(--dash-muted))]">{t(language.translationKey)}</span>
-          </div>
-          {i18n.language.split('-')[0] === language.code && <Check size={16} weight="bold" className="text-green-500" />}
-        </HoverMenuItem>
-      ))}
-    </HoverMenuContent>
-  )
-
-  const helpMenu = (
-    <HoverMenuContent className="w-56">
-      <HoverMenuLabel className="flex items-center gap-2 font-medium text-[hsl(var(--dash-muted))]">
-        <Question size={16} weight="fill" />
-        <span>{t('common.help')}</span>
-      </HoverMenuLabel>
-      <HoverMenuSeparator />
-      <HoverMenuItem asChild>
-        <a href="https://docs.omnilearn.app" target="_blank" rel="noopener noreferrer" className={menuLinkCls}>
-          <Book size={16} weight="fill" />
-          <span>{t('common.help_menu.documentation')}</span>
-        </a>
-      </HoverMenuItem>
-      <HoverMenuItem asChild>
-        <a href="https://omnilearn.app" target="_blank" rel="noopener noreferrer" className={menuLinkCls}>
-          <Globe size={16} weight="fill" />
-          <span>{t('common.help_menu.website')}</span>
-        </a>
-      </HoverMenuItem>
-      <HoverMenuItem asChild>
-        <a href="https://discord.gg/omnilearn" target="_blank" rel="noopener noreferrer" className={menuLinkCls}>
-          <DiscordIcon size={16} />
-          <span>{t('common.help_menu.discord')}</span>
-        </a>
-      </HoverMenuItem>
-      <HoverMenuSeparator />
-      <HoverMenuItem onClick={() => setFeedbackModalOpen(true)} className={menuLinkCls}>
-        <ChatCircleDots size={16} weight="fill" />
-        <span>{t('common.help_menu.report_feedback')}</span>
-      </HoverMenuItem>
-    </HoverMenuContent>
-  )
-
-  const settingsCount = 5
+  // Reports: an overview plus one page per report (Finance and Admissions follow their own sections).
+  const showReports = isItemVisible('reports')
+  const reportLinks = [
+    { key: 'overview', href: '/dash/reports', label: t('reports.nav.overview', 'All reports'), Icon: PresentationChart, active: pathname === '/dash/reports' || pathname === '/dash/reports/' },
+    ...(isItemVisible('finance')
+      ? [{ key: 'financial', href: '/dash/reports/financial', label: t('reports.nav.financial', 'Financial'), Icon: Wallet, active: isActivePath('/dash/reports/financial') }]
+      : []),
+    { key: 'learning', href: '/dash/reports/learning', label: t('reports.nav.learning', 'Learning & completion'), Icon: ChartLineUp, active: isActivePath('/dash/reports/learning') },
+    ...(isItemVisible('postgraduate')
+      ? [{ key: 'admissions', href: '/dash/reports/admissions', label: t('reports.nav.admissions', 'Admissions'), Icon: GraduationCap, active: isActivePath('/dash/reports/admissions') }]
+      : []),
+    { key: 'people', href: '/dash/reports/people', label: t('reports.nav.people', 'Users & entities'), Icon: UsersFour, active: isActivePath('/dash/reports/people') },
+  ]
+  const reportsActive = isActivePath('/dash/reports')
   const deskActive = isActivePath('/dash') || isActivePath('/dash/calendar') || isActivePath('/dash/my-entity')
   const academicActive = isActivePath('/dash/training-programs') || isActivePath('/dash/finance') || isActivePath('/dash/cms/news')
   const postgradActive = isActivePath(POSTGRAD_BASE) && !inMyTeaching
   const classroomActive =
-    inMyTeaching || isActivePath('/dash/assignments') || isActivePath('/dash/library') || isActivePath('/dash/boards') || isActivePath('/dash/playgrounds')
+    inMyTeaching || isActivePath('/dash/online-classes') || isActivePath('/dash/assignments') || isActivePath('/dash/library') || isActivePath('/dash/boards') || isActivePath('/dash/playgrounds')
   const manageActive = isActivePath('/dash/users') || isActivePath('/dash/payments') || isActivePath('/dash/org') || isActivePath('/dash/analytics')
   const adminActive = adminLinks.some((link) => isAdminLinkActive(link, pathname))
 
@@ -619,7 +527,7 @@ function DashLeftMenu() {
                   index={3}
                   hasActive={classroomActive}
                   label={t('dashboard.home.nav.teaching', 'Classroom')}
-                  count={count(showMyTeaching, showAssignments, showLibrary, showBoards, showPlaygrounds)}
+                  count={count(showMyTeaching, showOnlineClasses, showAssignments, showLibrary, showBoards, showPlaygrounds)}
                   isCollapsed={isCollapsed}
                 >
                   {showMyTeaching && (
@@ -630,6 +538,16 @@ function DashLeftMenu() {
                       isCollapsed={isCollapsed}
                       active={inMyTeaching}
                       onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'my_teaching' })}
+                    />
+                  )}
+                  {showOnlineClasses && (
+                    <NavItem
+                      href="/dash/online-classes"
+                      icon={icon(VideoCamera, isActivePath('/dash/online-classes'))}
+                      label={t('online_meetings.dashboard.title', 'Online classes')}
+                      isCollapsed={isCollapsed}
+                      active={isActivePath('/dash/online-classes')}
+                      onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: 'online_classes' })}
                     />
                   )}
                   {showAssignments && (
@@ -706,10 +624,33 @@ function DashLeftMenu() {
                 </NavGroup>
               )}
 
+              {showReports && (
+                <NavGroup
+                  id="reports"
+                  index={5}
+                  hasActive={reportsActive}
+                  label={t('reports.title', 'Reports')}
+                  count={reportLinks.length}
+                  isCollapsed={isCollapsed}
+                >
+                  {reportLinks.map((link) => (
+                    <NavItem
+                      key={link.href}
+                      href={link.href}
+                      icon={icon(link.Icon, link.active)}
+                      label={link.label}
+                      isCollapsed={isCollapsed}
+                      active={link.active}
+                      onClick={() => track(AnalyticsEvent.DashboardNavClicked, { section: `reports_${link.key}` })}
+                    />
+                  ))}
+                </NavGroup>
+              )}
+
               {adminLinks.length > 0 && (
                 <NavGroup
                   id="admin"
-                  index={5}
+                  index={6}
                   hasActive={adminActive}
                   label={t('dashboard.home.nav.administration', 'Administration & Configuration')}
                   count={adminLinks.length}
@@ -736,91 +677,21 @@ function DashLeftMenu() {
 
           {/* Settings row + create card */}
           <div className={cn('shrink-0 space-y-3 pb-3 pt-1', isCollapsed ? 'px-2' : 'px-3')}>
-            <div>
-              {!isCollapsed && <GroupLabel label={t('common.settings', 'Settings')} count={settingsCount} />}
-              <div
-                className={cn(
-                  'rounded-2xl bg-white p-1.5 shadow-[0_1px_3px_hsl(220_30%_20%/0.06)] ring-1 ring-[hsl(var(--dash-border))]/60',
-                  isCollapsed ? 'flex flex-col items-center gap-1' : 'grid grid-cols-5 gap-1'
-                )}
-              >
-                <NotificationBell
-                  side="right"
-                  align="end"
-                  iconSize={18}
-                  triggerClassName={cn(
-                    'flex h-9 items-center justify-center rounded-xl text-[hsl(var(--dash-ink))]/60 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]',
-                    isCollapsed ? 'w-10' : 'w-full'
-                  )}
-                />
-                <HoverMenu align="end" content={languageMenu}>
-                  <SettingsButton label={t('common.language')} isCollapsed={isCollapsed}>
-                    <Globe size={18} weight="duotone" />
-                  </SettingsButton>
-                </HoverMenu>
-                <HoverMenu align="end" content={helpMenu}>
-                  <SettingsButton label={t('common.help')} isCollapsed={isCollapsed}>
-                    <Question size={18} weight="duotone" />
-                  </SettingsButton>
-                </HoverMenu>
-                <SettingsButton label={t('user.user_settings', 'User settings')} href="/account/general" isCollapsed={isCollapsed}>
-                  <Gear size={18} weight="duotone" />
-                </SettingsButton>
-                <SettingsButton label={t('user.sign_out')} onClick={() => logOutUI()} isCollapsed={isCollapsed} danger>
-                  <SignOut size={18} weight="duotone" className="rtl:rotate-180" />
-                </SettingsButton>
-              </div>
-            </div>
+            {/* Language, help, settings and sign-out live in the top bar (control center + account menu). */}
             {canCreateCourses && <CreateCard plan={plan} orgSlug={org?.slug} isCollapsed={isCollapsed} />}
 
-            {/* Signed-in person */}
-            <HoverMenu align="end" content={accountMenu}>
-              <button
-                type="button"
-                aria-label={t('user.account_menu', 'Account menu')}
-                className={cn(
-                  'flex w-full items-center rounded-2xl text-start transition-colors',
-                  isCollapsed
-                    ? 'justify-center p-1 hover:bg-white/80'
-                    : 'gap-3 bg-white p-2 shadow-[0_1px_3px_hsl(220_30%_20%/0.06)] ring-1 ring-[hsl(var(--dash-border))]/60 hover:bg-[hsl(var(--dash-canvas))]'
-                )}
-              >
-                <span className="relative shrink-0 rounded-full ring-2 ring-white shadow-[0_4px_12px_-4px_hsl(220_30%_20%/0.35)]">
-                  <UserAvatar width={isCollapsed ? 40 : 36} rounded="rounded-full" shadow="shadow-none" />
-                  <span className="absolute -bottom-0.5 -end-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" aria-hidden="true" />
-                </span>
-                {!isCollapsed && (
-                  <>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] font-medium text-[hsl(var(--dash-muted))]" suppressHydrationWarning>
-                        {greeting} <span aria-hidden="true">👋</span>
-                      </span>
-                      <span className="block truncate text-sm font-bold capitalize leading-tight">{displayName}</span>
-                    </span>
-                    <DotsThree size={18} weight="bold" className="shrink-0 text-[hsl(var(--dash-muted))]" />
-                  </>
-                )}
-              </button>
-            </HoverMenu>
+            {/* Who's signed in lives in the top bar's account menu, not here too. */}
           </div>
         </div>
       </nav>
 
-      <FeedbackModal
-        open={feedbackModalOpen}
-        onOpenChange={setFeedbackModalOpen}
-        theme="light"
-        userName={session?.data?.user?.username}
-        userEmail={session?.data?.user?.email}
-      />
     </TooltipProvider>
     </LayoutGroup>
     </MotionConfig>
   )
 }
 
-const menuLinkCls =
-  'flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--dash-ink))]/75 transition-colors hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))]'
+const menuLinkCls = hoverMenuItemClass
 
 const tooltipCls = 'z-tooltip border-transparent bg-[hsl(var(--dash-ink))] px-2 py-1 text-xs text-white shadow-lg'
 
@@ -1006,14 +877,6 @@ function usePostgradSignals(orgId: number | undefined, token: string | undefined
     retry: false,
   })
   return { term: Array.isArray(terms) ? pickCurrentTerm(terms) : null, pendingApplications: pending ?? 0 }
-}
-
-function GroupLabel({ label, count }: { label: string; count: number }) {
-  return (
-    <p className="truncate px-3 pb-1.5 pt-3 text-[11px] font-medium text-[hsl(var(--dash-muted))]">
-      {label}: <span className="font-semibold text-[hsl(var(--dash-ink))]">{count}</span>
-    </p>
-  )
 }
 
 const GROUP_STATE_EVENT = 'dash-nav-groups-change'
@@ -1210,46 +1073,6 @@ function NavGroup({
   )
 }
 
-function SettingsButton({
-  label,
-  isCollapsed,
-  href,
-  onClick,
-  danger = false,
-  children,
-}: {
-  label: string
-  isCollapsed: boolean
-  href?: string
-  onClick?: () => void
-  danger?: boolean
-  children: React.ReactNode
-}) {
-  const className = cn(
-    'flex h-9 items-center justify-center rounded-xl text-[hsl(var(--dash-ink))]/60 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0',
-    isCollapsed ? 'w-10' : 'w-full',
-    danger ? 'hover:bg-[hsl(var(--dash-warn-soft))] hover:text-[hsl(var(--dash-warn))]' : 'hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]'
-  )
-  const element = href ? (
-    <Link href={href} aria-label={label} className={className}>
-      {children}
-    </Link>
-  ) : (
-    <button type="button" aria-label={label} onClick={onClick} className={className}>
-      {children}
-    </button>
-  )
-  // Hover menus (language, help) show their own panel; plain actions get a tooltip.
-  if (!href && !onClick) return element
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{element}</TooltipTrigger>
-      <TooltipContent side={isCollapsed ? 'right' : 'top'} className={tooltipCls}>
-        {label}
-      </TooltipContent>
-    </Tooltip>
-  )
-}
 
 /** The upgrade page opens in a new tab; "new course" stays in the app. */
 function CreateLink({ upgradeUrl, title, className, children }: { upgradeUrl: string | null; title: string; className: string; children: React.ReactNode }) {

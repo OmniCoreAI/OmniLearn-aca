@@ -221,8 +221,9 @@ export const config = {
      *    untouched; otherwise the middleware mis-routes it and ingestion 404s)
      * 9. /content/ (uploaded media proxied to the API by next.config — same
      *    reason: the tenant rewrite would turn it into a 404 page)
+     * 10. /zoom/ (static Zoom Meeting SDK host page in /public)
      */
-    '/((?!api|_next|fonts|umami|ingest|content/|examples|embed|monitoring|[\\w-]+\\.\\w+).*)',
+    '/((?!api|_next|fonts|umami|ingest|content/|zoom/|examples|embed|monitoring|[\\w-]+\\.\\w+).*)',
     '/sitemap.xml',
     '/robots.txt',
     '/payments/stripe/connect/oauth',

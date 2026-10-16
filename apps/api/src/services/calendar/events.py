@@ -515,5 +515,11 @@ async def get_calendar_events(
     if scope == "teaching" and not is_instructor_role and not teaches_anything:
         scope = "learning"
 
-    events = sorted(feed.events.values(), key=lambda e: (e["start"], e["title"]))
+    from src.security.modules import disabled_calendar_prefixes
+
+    hidden = disabled_calendar_prefixes()
+    events = sorted(
+        (e for event_id, e in feed.events.items() if not event_id.startswith(hidden)),
+        key=lambda e: (e["start"], e["title"]),
+    )
     return {"scope": scope, "start": start.isoformat(), "end": end.isoformat(), "events": events}

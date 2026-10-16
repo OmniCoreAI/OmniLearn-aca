@@ -113,6 +113,10 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
         if request.headers.get("stripe-signature"):
             return True
 
+        # Zoom webhooks are HMAC-signed (x-zm-signature), verified by the handler
+        if request.headers.get("x-zm-signature") and request.url.path.endswith("/integrations/zoom/webhook"):
+            return True
+
         # Internal service-to-service calls (collab server) use a shared key, not cookies
         if request.headers.get("x-internal-key"):
             return True

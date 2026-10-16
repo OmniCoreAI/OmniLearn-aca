@@ -1,6 +1,7 @@
 'use client';
 import DashLeftMenu from '@components/Dashboard/Menus/DashLeftMenu';
 import DashMobileMenu from '@components/Dashboard/Menus/DashMobileMenu';
+import DashTopBar, { DASH_TOPBAR_HEIGHT } from '@components/Dashboard/Menus/DashTopBar';
 import FreePlanUpgradeBanner from '@components/Dashboard/Shared/PlanRestricted/FreePlanUpgradeBanner';
 import AdminAuthorization from '@components/Security/AdminAuthorization'
 import { SessionGate } from '@components/Contexts/LHSessionContext'
@@ -23,9 +24,15 @@ function ClientAdminLayout({
             <AdminAuthorization authorizationMode="page">
                 <CommandPaletteProvider>
                     {isMobile && <DashMobileMenu />}
-                    <div className="dash-soft flex min-h-screen flex-col bg-[hsl(var(--dash-canvas))] lg:flex-row">
+                    <div
+                        className="dash-soft flex min-h-screen flex-col bg-[hsl(var(--dash-canvas))] lg:flex-row"
+                        // Screens that fill the viewport subtract the top bar's height.
+                        style={{ '--dash-topbar-h': isMobile ? '0px' : `${DASH_TOPBAR_HEIGHT}px` } as React.CSSProperties}
+                    >
                         {!isMobile && <DashLeftMenu />}
-                        <div className="relative isolate flex min-w-0 w-full flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0">
+                        {/* overflow-x-clip (not hidden) so the sticky top bar keeps sticking. */}
+                        <div className="relative isolate flex min-w-0 w-full flex-1 flex-col overflow-x-clip pb-24 lg:pb-0">
+                            {!isMobile && <DashTopBar />}
                             <FreePlanUpgradeBanner />
                             {children}
                         </div>

@@ -16,6 +16,7 @@ import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
 import { getMyInterviews, getMyOfferings, displayName } from '@services/academic/core'
+import { useModules } from '@/lib/modules'
 import { getMyAssignments } from '@services/instructors/instructors'
 import { getUriWithOrg } from '@services/config/config'
 import { HomeCard, EmptyState } from './HomeCard'
@@ -32,16 +33,19 @@ export default function InstructorHome() {
   const orgslug: string = org?.slug
   const token: string = session?.data?.tokens?.access_token
   const ready = !!orgId && !!token
+  const { isModuleEnabled } = useModules()
+  const postgradOn = isModuleEnabled('postgraduate')
+  const programsOn = isModuleEnabled('training_programs')
 
   const offeringsQ = useQuery({
     queryKey: ['academic', 'my-offerings', orgId],
     queryFn: () => getMyOfferings(orgId!, token),
-    enabled: ready,
+    enabled: ready && postgradOn,
   })
   const interviewsQ = useQuery({
     queryKey: ['academic', 'my-interviews', orgId],
     queryFn: () => getMyInterviews(orgId!, token),
-    enabled: ready,
+    enabled: ready && postgradOn,
   })
   const assignmentsQ = useQuery({
     queryKey: ['instructors', 'my-assignments', orgId],
@@ -59,7 +63,7 @@ export default function InstructorHome() {
   const toGrade = current.filter((o) => o.status === 'in_progress' && o.grade_status === 'open')
   const toEvaluate = interviews.filter((i) => i.can_evaluate && i.status === 'scheduled')
   const students = current.reduce((sum, o) => sum + (o.enrolled_count || 0), 0)
-  const loading = offeringsQ.isLoading || interviewsQ.isLoading || assignmentsQ.isLoading
+  const loading = (postgradOn && (offeringsQ.isLoading || interviewsQ.isLoading)) || assignmentsQ.isLoading
 
   const href = (path: string) => getUriWithOrg(orgslug, path)
   const offeringHref = (o: any) => href(`/dash/postgraduate/teaching/offerings/${o.offering_uuid.replace('offering_', '')}`)
@@ -72,7 +76,7 @@ export default function InstructorHome() {
 
   return (
     <div className="flex flex-col gap-5">
-      <DashStatCards
+      {postgradOn && <DashStatCards
         loading={loading}
         stats={[
           { key: 'teaching', label: t('academic.teaching_now', 'Teaching now'), value: current.length, icon: ChalkboardTeacher, tone: 'rose', href: href('/dash/postgraduate/teaching') },
@@ -80,10 +84,10 @@ export default function InstructorHome() {
           { key: 'grades', label: t('academic.grades_to_submit', 'Grades to submit'), value: toGrade.length + returned.length, icon: Exam, tone: 'gold' },
           { key: 'interviews', label: t('academic.interviews_to_evaluate', 'Interviews to evaluate'), value: toEvaluate.length, icon: VideoCamera, tone: 'sand' },
         ]}
-      />
+      />}
 
       <div className="grid grid-cols-12 gap-5">
-        <div className="col-span-12 @3xl:col-span-7">
+        {postgradOn && <div className="col-span-12 @3xl:col-span-7">
           <HomeCard
             title={t('academic.needs_attention', 'Needs your attention')}
             subtitle={attention ? t('workspace.items_waiting', '{{count}} waiting for you', { count: attention }) : undefined}
@@ -128,9 +132,9 @@ export default function InstructorHome() {
               </ul>
             )}
           </HomeCard>
-        </div>
+        </div>}
 
-        <div className="col-span-12 @3xl:col-span-5">
+        {postgradOn && <div className="col-span-12 @3xl:col-span-5">
           <HomeCard
             title={t('academic.teaching_now', 'Teaching now')}
             action={<ViewAllLink href={href('/dash/postgraduate/teaching')} label={t('academic.my_teaching', 'My Teaching')} />}
@@ -153,9 +157,9 @@ export default function InstructorHome() {
               </ul>
             )}
           </HomeCard>
-        </div>
+        </div>}
 
-        <div className="col-span-12 @2xl:col-span-6">
+        <div className={`col-span-12 ${programsOn ? '@2xl:col-span-6' : ''}`}>
           <HomeCard title={t('workspace.my_courses', 'My courses')} subtitle={t('workspace.my_courses_desc', 'Courses you teach or help write')}>
             {loading ? (
               <WorkListSkeleton />
@@ -178,7 +182,7 @@ export default function InstructorHome() {
           </HomeCard>
         </div>
 
-        <div className="col-span-12 @2xl:col-span-6">
+        {programsOn && <div className="col-span-12 @2xl:col-span-6">
           <HomeCard title={t('workspace.my_programs', 'My training programs')} subtitle={t('workspace.my_programs_desc', 'Programs you coordinate or deliver')}>
             {loading ? (
               <WorkListSkeleton />
@@ -210,7 +214,7 @@ export default function InstructorHome() {
               </ul>
             )}
           </HomeCard>
-        </div>
+        </div>}
       </div>
     </div>
   )

@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { cn } from "@/lib/utils"
+import { menuSurfaceClass } from "@/components/ui/dropdown-menu"
 import { CheckIcon, ChevronRightIcon } from "lucide-react"
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
@@ -42,6 +43,8 @@ function DropdownMenuContent({
           data-slot="dropdown-menu-content"
           className={cn(
             "cn-dropdown-menu-content cn-dropdown-menu-content-logical z-50 max-h-(--available-height) w-(--anchor-width) origin-(--transform-origin) overflow-x-hidden overflow-y-auto outline-none data-closed:overflow-hidden",
+            menuSurfaceClass,
+            "transition-[opacity,scale,translate] duration-200 ease-[cubic-bezier(0.22,1.4,0.36,1)] data-starting-style:-translate-y-1.5 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0",
             className
           )}
           {...props}
@@ -66,7 +69,7 @@ function DropdownMenuLabel({
     <MenuPrimitive.GroupLabel
       data-slot="dropdown-menu-label"
       data-inset={inset}
-      className={cn("cn-dropdown-menu-label", className)}
+      className={cn("cn-dropdown-menu-label px-2.5 py-1.5 text-[11.5px] font-semibold text-[hsl(var(--dash-muted))]", className)}
       {...props}
     />
   )
@@ -87,7 +90,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "cn-dropdown-menu-item group/dropdown-menu-item relative flex cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "cn-dropdown-menu-item group/dropdown-menu-item relative flex cursor-pointer items-center outline-hidden select-none rounded-lg px-2.5 py-2 text-[13px] gap-2 text-[hsl(var(--dash-ink))]/85 transition-[background-color,translate] duration-150 data-highlighted:bg-[hsl(var(--dash-canvas))] data-highlighted:text-[hsl(var(--dash-ink))] data-highlighted:translate-x-0.5 rtl:data-highlighted:-translate-x-0.5 [&_svg:not([class*='size-'])]:size-4 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className
       )}
       {...props}
@@ -163,7 +166,7 @@ function DropdownMenuCheckboxItem({
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
       className={cn(
-        "cn-dropdown-menu-checkbox-item relative flex cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "cn-dropdown-menu-checkbox-item relative flex cursor-pointer items-center outline-hidden select-none rounded-lg px-2.5 py-2 text-[13px] gap-2 text-[hsl(var(--dash-ink))]/85 transition-[background-color,translate] duration-150 data-highlighted:bg-[hsl(var(--dash-canvas))] data-highlighted:text-[hsl(var(--dash-ink))] data-highlighted:translate-x-0.5 rtl:data-highlighted:-translate-x-0.5 [&_svg:not([class*='size-'])]:size-4 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className
       )}
       checked={checked}
@@ -204,7 +207,7 @@ function DropdownMenuRadioItem({
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
       className={cn(
-        "cn-dropdown-menu-radio-item relative flex cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "cn-dropdown-menu-radio-item relative flex cursor-pointer items-center outline-hidden select-none rounded-lg px-2.5 py-2 text-[13px] gap-2 text-[hsl(var(--dash-ink))]/85 transition-[background-color,translate] duration-150 data-highlighted:bg-[hsl(var(--dash-canvas))] data-highlighted:text-[hsl(var(--dash-ink))] data-highlighted:translate-x-0.5 rtl:data-highlighted:-translate-x-0.5 [&_svg:not([class*='size-'])]:size-4 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className
       )}
       {...props}
@@ -229,7 +232,7 @@ function DropdownMenuSeparator({
   return (
     <MenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("cn-dropdown-menu-separator", className)}
+      className={cn("cn-dropdown-menu-separator -mx-1 my-1 h-px bg-[hsl(var(--dash-border))]/80", className)}
       {...props}
     />
   )

@@ -9,6 +9,7 @@ import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getMyAcademicRecord, getMyApplications, getOpenIntakes } from '@services/academic/core'
 import { getTrainingProgramCatalog } from '@services/academic/academic'
+import { useModules } from '@/lib/modules'
 import { useTranslation } from 'react-i18next'
 import { getMenuColorClasses } from '@services/utils/ts/colorUtils'
 
@@ -48,11 +49,15 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string; inBar?: bool
   const orgId: number | undefined = org?.id
   const token: string | undefined = session?.data?.tokens?.access_token
   const portalReady = signedIn && !!orgId && !!token
+  const { isModuleEnabled } = useModules()
+  const postgradOn = isModuleEnabled('postgraduate')
+  const programsOn = isModuleEnabled('training_programs')
   const portalQuery = { enabled: portalReady, staleTime: 5 * 60 * 1000, retry: false }
-  const { data: record } = useQuery({ queryKey: ['portal', 'record', orgId], queryFn: () => getMyAcademicRecord(orgId!, token!), ...portalQuery })
-  const { data: applications } = useQuery({ queryKey: ['portal', 'applications', orgId], queryFn: () => getMyApplications(orgId!, token!), ...portalQuery })
-  const { data: intakes } = useQuery({ queryKey: ['portal', 'intakes', orgId], queryFn: () => getOpenIntakes(orgId!, token!), ...portalQuery })
-  const { data: programs } = useQuery({ queryKey: ['portal', 'training-programs', orgId], queryFn: () => getTrainingProgramCatalog(orgId!, token!), ...portalQuery })
+  const academicQuery = { ...portalQuery, enabled: portalReady && postgradOn }
+  const { data: record } = useQuery({ queryKey: ['portal', 'record', orgId], queryFn: () => getMyAcademicRecord(orgId!, token!), ...academicQuery })
+  const { data: applications } = useQuery({ queryKey: ['portal', 'applications', orgId], queryFn: () => getMyApplications(orgId!, token!), ...academicQuery })
+  const { data: intakes } = useQuery({ queryKey: ['portal', 'intakes', orgId], queryFn: () => getOpenIntakes(orgId!, token!), ...academicQuery })
+  const { data: programs } = useQuery({ queryKey: ['portal', 'training-programs', orgId], queryFn: () => getTrainingProgramCatalog(orgId!, token!), ...portalQuery, enabled: portalReady && programsOn })
   const listed = (v: any) => (Array.isArray(v) ? v.length > 0 : false)
   const showAcademics = listed(record?.memberships) || listed(applications) || listed(intakes)
   const showPrograms = listed(programs)

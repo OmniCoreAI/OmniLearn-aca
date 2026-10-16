@@ -731,7 +731,7 @@ function BoardEditorInner({
     <BoardYjsProvider value={ydoc}>
     <BoardSelectionProvider editor={editor} selectedPositions={selectedPositions} setSelectedPositions={setSelectedPositions}>
     <div
-      className="relative h-screen w-full overflow-hidden board-effect-shake-target"
+      className="relative h-[calc(100dvh-var(--dash-topbar-h,0px))] w-full overflow-hidden board-effect-shake-target"
       style={{
         backgroundColor: '#f8f8f8',
         backgroundImage: 'radial-gradient(circle, #d1d1d1 1px, transparent 1px)',

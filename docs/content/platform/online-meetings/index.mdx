@@ -1,0 +1,53 @@
+import { Callout } from 'nextra/components'
+
+# Online Meetings (Zoom)
+
+Run live online classes from OmniLearn. An instructor turns any lecture into a Zoom meeting, starts it from the LMS, and enrolled students press **Join online class** on the course page. The meeting opens inside the LMS. Nobody copies links or searches for meeting IDs.
+
+## What it covers
+
+- **One Zoom connection per academy.** An administrator connects the academy's Zoom account once (OAuth). Tokens are stored encrypted and refreshed automatically.
+- **Meetings belong to lectures.** A meeting is attached to an existing lecture: a course's scheduled session or a postgraduate offering session. Its title, date and length default from the lecture. Nothing about the course, roster or instructor is copied.
+- **Embedded classes.** Students and instructors join through Zoom's official Meeting SDK for Web inside the LMS. *Open in Zoom app* is always available as a fallback.
+- **Live state from Zoom.** Webhooks keep each meeting's status (Upcoming, Live, Ended, Canceled) current, fill in attendance as people join and leave, and attach cloud recordings when Zoom finishes processing them.
+- **Attendance you can trust.** Participants are matched to students only by a key the LMS signs when it lets them join, or by their verified Zoom email. Display names are never used.
+
+## Who can do what
+
+| Action | Administrator | Instructor of the class | Enrolled student |
+| --- | --- | --- | --- |
+| Connect / disconnect Zoom | ✓ | | |
+| Create, edit, cancel a lecture's meeting | ✓ | ✓ | |
+| Start the meeting as host | ✓ | ✓ | |
+| See passcode, settings, attendance | ✓ | ✓ | |
+| Join the meeting | ✓ | ✓ | ✓ |
+| Watch recordings | ✓ | ✓ | ✓ once the instructor shares them |
+
+"Instructor of the class" follows the LMS's existing rules. For a course, that means anyone who can edit it (the course instructor and co-authors) plus a session's guest instructor. For an offering, it means its instructor or teaching assistant plus program managers. "Enrolled" means the student is registered in the course or the offering.
+
+<Callout type="info">
+API tokens can't host or join: Zoom host credentials and join signatures are only issued to a signed-in person.
+</Callout>
+
+## Architecture
+
+```
+Browser (LMS pages, /zoom/meeting.html)
+   ↓  LMS API only — no Zoom secrets or tokens in the browser
+LMS backend  /api/v1/integrations/zoom/*
+   ↓
+ZoomService  (src/services/integrations/zoom/)
+   ├── client.py      OAuth, encrypted tokens, refresh, REST calls, error mapping
+   ├── service.py     connect, create/update/cancel/get meeting, start, join token
+   ├── lectures.py    lecture lookup + host/join permissions (existing RBAC)
+   ├── signature.py   Meeting SDK JWT + signed participant key
+   ├── attendance.py  participant segments → LMS students
+   ├── recordings.py  cloud recording links
+   └── webhooks.py    signature check, URL validation, event handlers
+   ↓
+Zoom REST API · Zoom Meeting SDK (Web) · Zoom webhooks
+```
+
+Data lives in four tables: `zoomconnection`, `onlinemeeting`, `onlinemeetingattendance` and `onlinemeetingrecording` (migration `adc1d2e3f4a5`).
+
+Next: [Setup](/platform/online-meetings/setup).

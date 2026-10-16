@@ -74,6 +74,10 @@ interface SearchBarProps {
   isMobile?: boolean;
   showSearchSuggestions?: boolean;
   primaryColor?: string;
+  /** Overrides the default "Search…" placeholder. */
+  placeholder?: string;
+  /** Extra classes for the input (height, background…). */
+  inputClassName?: string;
 }
 
 const CourseResultsSkeleton = () => (
@@ -100,6 +104,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   isMobile = false,
   showSearchSuggestions = false,
   primaryColor = '',
+  placeholder,
+  inputClassName = '',
 }) => {
   const { t } = useTranslation();
   const org = useOrg() as any;
@@ -383,13 +389,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           value={searchQuery}
           onChange={handleSearchChange}
           onFocus={() => setShowResults(true)}
-          aria-label={t('search.search_placeholder')}
-          placeholder={t('search.search_placeholder')}
-          className={`w-full h-9 pl-11 pr-4 rounded-xl
+          aria-label={placeholder || t('search.search_placeholder')}
+          placeholder={placeholder || t('search.search_placeholder')}
+          className={`w-full h-9 ps-11 pe-4 rounded-xl
                      focus:outline-none focus:ring-1 transition-all text-sm
-                     ${colors.searchBg}`}
+                     ${colors.searchBg} ${inputClassName}`}
         />
-        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+        <div className="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none">
           <Search className={`${colors.searchIcon} transition-colors`} size={18} />
         </div>
       </div>

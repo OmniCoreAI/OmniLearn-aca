@@ -8,10 +8,11 @@ import { AdminBreadcrumbs, AdminCard } from '@components/Dashboard/Pages/Adminis
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { Switch } from '@components/ui/switch'
 import { getPortalNavigation, updatePortalNavigation } from '@services/portal-navigation/portal-navigation'
-import { DASH_NAV_ITEMS, SECTION_LABELS, DashNavSection } from '@/lib/dash-nav-items'
+import { DASH_NAV_ITEMS, SECTION_LABELS, DashNavSection, navItemModule } from '@/lib/dash-nav-items'
+import { useModules } from '@/lib/modules'
 import { cn } from '@/lib/utils'
 
-const SECTION_ORDER: DashNavSection[] = ['overview', 'academic', 'teaching', 'manage', 'administration']
+const SECTION_ORDER: DashNavSection[] = ['overview', 'academic', 'teaching', 'manage', 'reports', 'administration']
 
 type RoleInfo = {
   uuid: string
@@ -76,6 +77,12 @@ const ASSIGNMENT_ITEMS = [
  */
 function RolesAndPortals({ orgslug }: { orgslug: string }) {
   const { t } = useTranslation()
+  const { isModuleEnabled } = useModules()
+  // Sections switched off in the .env file are hidden for every role.
+  const isOff = (itemId: string) => {
+    const itemModule = navItemModule(itemId)
+    return !!itemModule && !isModuleEnabled(itemModule)
+  }
   const session = useLHSession() as any
   const access_token: string = session?.data?.tokens?.access_token
   const isSuperadmin = session?.data?.user?.is_superadmin === true
@@ -88,7 +95,7 @@ function RolesAndPortals({ orgslug }: { orgslug: string }) {
   const visibilityMap: Record<string, string[]> = (raw?.data ?? raw)?.visibility || {}
   const visible = new Set(visibilityMap[roleUuid] || [])
   const role = ROLES.find((r) => r.uuid === roleUuid)!
-  const viaAssignment = ASSIGNMENT_ITEMS.filter((a) => !visible.has(a.id))
+  const viaAssignment = ASSIGNMENT_ITEMS.filter((a) => !visible.has(a.id) && !isOff(a.id))
 
   const toggle = async (itemId: string, on: boolean) => {
     const next = new Set(visible)
@@ -163,10 +170,17 @@ function RolesAndPortals({ orgslug }: { orgslug: string }) {
                     <ul className="divide-y divide-[hsl(var(--dash-border))]">
                       {DASH_NAV_ITEMS.filter((i) => i.section === section).map((item) => (
                         <li key={item.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                          <span>{t(item.labelKey, item.fallbackLabel)}</span>
+                          <span className={isOff(item.id) ? 'text-[hsl(var(--dash-muted))]' : undefined}>
+                            {t(item.labelKey, item.fallbackLabel)}
+                            {isOff(item.id) && (
+                              <span className="ml-2 rounded-full bg-[hsl(var(--dash-border))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                                {t('modules.off_badge', 'Turned off')}
+                              </span>
+                            )}
+                          </span>
                           <Switch
                             checked={visible.has(item.id)}
-                            disabled={!isSuperadmin || saving}
+                            disabled={!isSuperadmin || saving || isOff(item.id)}
                             onCheckedChange={(on) => toggle(item.id, on)}
                             aria-label={t(item.labelKey, item.fallbackLabel)}
                           />
@@ -189,7 +203,7 @@ function RolesAndPortals({ orgslug }: { orgslug: string }) {
             ) : (
               <div className="space-y-3">
                 {SECTION_ORDER.map((section) => {
-                  const items = DASH_NAV_ITEMS.filter((i) => i.section === section && visible.has(i.id))
+                  const items = DASH_NAV_ITEMS.filter((i) => i.section === section && visible.has(i.id) && !isOff(i.id))
                   if (!items.length) return null
                   return (
                     <div key={section}>

@@ -3,6 +3,11 @@
 import * as React from "react"
 import * as Portal from "@radix-ui/react-portal"
 import { cn } from "@/lib/utils"
+import { menuSurfaceClass } from "@/components/ui/dropdown-menu"
+
+/** Compact menu row with a small nudge toward the reading end on hover. */
+export const hoverMenuItemClass =
+  "flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-[hsl(var(--dash-ink))]/85 transition-[background-color,color,translate] duration-150 hover:translate-x-0.5 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))] rtl:hover:-translate-x-0.5 [&>svg]:size-4 [&>svg]:shrink-0"
 
 interface HoverMenuProps {
   children: React.ReactNode
@@ -93,10 +98,14 @@ const HoverMenu = React.forwardRef<HTMLDivElement, HoverMenuProps>(
                 left: position.left,
                 right: position.right,
                 transform: align === "end" ? "translateY(-100%)" : align === "center" ? "translateY(-50%)" : undefined,
+                zIndex: "var(--z-modal-backdrop)",
               }}
               className={cn(
-                "z-modal-backdrop pointer-events-none transition-opacity duration-150",
-                isHovered ? "opacity-100 pointer-events-auto" : "opacity-0",
+                // Springs in from the trigger side, like the dropdown menus.
+                "pointer-events-none transition-[opacity,scale,translate] duration-200 ease-[cubic-bezier(0.22,1.4,0.36,1)]",
+                isHovered
+                  ? "pointer-events-auto translate-x-0 scale-100 opacity-100"
+                  : "-translate-x-1.5 scale-95 opacity-0 rtl:translate-x-1.5",
                 contentClassName
               )}
             >
@@ -123,7 +132,8 @@ const HoverMenuContent = React.forwardRef<HTMLDivElement, HoverMenuContentProps>
       <div
         ref={ref}
         className={cn(
-          "min-w-[200px] rounded-xl border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] py-1 shadow-lg shadow-[hsl(var(--dash-ink))/8%]",
+          menuSurfaceClass,
+          "min-w-[200px]",
           className
         )}
       >
@@ -156,7 +166,7 @@ const HoverMenuItem = React.forwardRef<HTMLDivElement, HoverMenuItemProps>(
         ref={ref}
         onClick={onClick}
         className={cn(
-          "cursor-pointer px-3 py-2 text-sm text-[hsl(var(--dash-ink))]/75 transition-colors hover:bg-[hsl(var(--dash-accent-soft))] hover:text-[hsl(var(--dash-accent))]",
+          hoverMenuItemClass,
           className
         )}
       >
@@ -178,7 +188,7 @@ const HoverMenuLabel = React.forwardRef<HTMLDivElement, HoverMenuLabelProps>(
       <div
         ref={ref}
         className={cn(
-          "px-3 py-2 text-xs font-medium text-[hsl(var(--dash-muted))]",
+          "px-2.5 py-1.5 text-[11.5px] font-semibold text-[hsl(var(--dash-muted))]",
           className
         )}
       >
@@ -194,7 +204,7 @@ const HoverMenuSeparator = React.forwardRef<HTMLDivElement, { className?: string
     return (
       <div
         ref={ref}
-        className={cn("my-1 h-px bg-[hsl(var(--dash-border))]", className)}
+        className={cn("-mx-1 my-1 h-px bg-[hsl(var(--dash-border))]/80", className)}
       />
     )
   }

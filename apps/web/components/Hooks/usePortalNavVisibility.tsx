@@ -6,7 +6,8 @@ import { useLHSession } from '@components/Contexts/LHSessionContext'
 import useAdminStatus from '@components/Hooks/useAdminStatus'
 import { getPortalNavigation, PortalNavigationResponse } from '@services/portal-navigation/portal-navigation'
 import { getMyAssignments } from '@services/instructors/instructors'
-import { DASH_NAV_ITEM_IDS } from '@/lib/dash-nav-items'
+import { DASH_NAV_ITEM_IDS, navItemModule } from '@/lib/dash-nav-items'
+import { useModules } from '@/lib/modules'
 
 const SYSTEM_ROLE_UUIDS = new Set([
   'role_global_admin',
@@ -20,6 +21,13 @@ interface UsePortalNavVisibilityReturn {
   /** null means "no restriction — fall back to isAdmin all-or-nothing" (custom/unknown role, or data not loaded yet). */
   visibleItemIds: Set<string> | null
   isItemVisible: (_itemId: string) => boolean
+  /**
+   * Whether the viewer has a staff dashboard at all: the legacy admin flag, or
+   * at least one visible sidebar item (e.g. an Instructor's reduced sidebar).
+   * The one rule for "staff vs learner" — the dashboard guard, the learner
+   * home's redirect and the portal's dashboard link all use it.
+   */
+  hasAnyPortalAccess: boolean
 }
 
 /**
@@ -34,6 +42,12 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
   const { isAdmin, userRoles, loading: adminStatusLoading } = useAdminStatus() as any
   const access_token = session?.data?.tokens?.access_token
   const isSuperadmin = session?.data?.user?.is_superadmin === true
+  const { modules } = useModules()
+  // Sections switched off in the .env file are gone for everyone, superadmins included.
+  const isModuleOn = (itemId: string) => {
+    const itemModule = navItemModule(itemId)
+    return !itemModule || modules[itemModule] !== false
+  }
 
   const { data: rawResponse, isLoading } = useSWR(
     access_token ? ['portal-navigation'] : null,
@@ -65,7 +79,7 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
   }, [assignments])
 
   const visibleItemIds = useMemo(() => {
-    if (isSuperadmin) return new Set(DASH_NAV_ITEM_IDS)
+    if (isSuperadmin) return new Set(DASH_NAV_ITEM_IDS.filter(isModuleOn))
     if (!data?.visibility || !org?.id) return null
 
     const roleUuidsHeld: string[] = (userRoles || [])
@@ -85,13 +99,17 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
       items.forEach((id: string) => union.add(id))
     })
     assignedItems.forEach((id) => union.add(id))
-    return union
-  }, [data, org?.id, userRoles, isSuperadmin, assignedItems])
+    return new Set(Array.from(union).filter(isModuleOn))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, org?.id, userRoles, isSuperadmin, assignedItems, modules])
 
   const isItemVisible = (itemId: string) => {
+    if (!isModuleOn(itemId)) return false
     if (visibleItemIds === null) return isAdmin === true
     return visibleItemIds.has(itemId)
   }
+
+  const hasAnyPortalAccess = isAdmin === true || (visibleItemIds?.size ?? 0) > 0
 
   return {
     // The route guard must wait for assignments too, or a deep link to an
@@ -99,6 +117,7 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
     loading: adminStatusLoading || isLoading || assignmentsLoading,
     visibleItemIds,
     isItemVisible,
+    hasAnyPortalAccess,
   }
 }
 

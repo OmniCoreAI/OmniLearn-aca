@@ -1,5 +1,6 @@
 'use client'
-import React from 'react'
+import React, { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useCourses } from '@/hooks/queries/useCourses'
 import LandingClassic from '@components/Landings/LandingClassic'
@@ -8,10 +9,23 @@ import { JsonLd } from '@components/SEO/JsonLd'
 import { getUriWithOrg } from '@services/config/config'
 import { getOrgLogoMediaDirectory } from '@services/media/media'
 import GeneralWrapperStyled from '@components/Objects/StyledElements/Wrappers/GeneralWrapper'
+import { useLHSession } from '@components/Contexts/LHSessionContext'
+import StudentDashboard from '@components/StudentPortal/Dashboard/StudentDashboard'
+import usePortalNavVisibility from '@components/Hooks/usePortalNavVisibility'
 
 export default function HomeClient({ orgslug }: { orgslug: string }) {
   const org = useOrg() as any
-  const { data: courses, isLoading: coursesLoading } = useCourses(orgslug)
+  const session = useLHSession() as any
+  const signedIn = session?.status === 'authenticated'
+  const router = useRouter()
+  const { hasAnyPortalAccess, loading: accessLoading } = usePortalNavVisibility()
+  // Staff (super admins, admins, instructors, coordinators) belong on their
+  // dashboard — the same rule the dashboard guard uses to send learners here.
+  const isStaff = signedIn && !accessLoading && hasAnyPortalAccess
+  useEffect(() => {
+    if (isStaff) router.replace('/dash')
+  }, [isStaff, router])
+  const { data: courses, isLoading: coursesLoading } = useCourses(signedIn ? '' : orgslug)
 
   const landingConfig = org?.config?.config?.customization?.landing || org?.config?.config?.landing
   const hasCustomLanding = landingConfig?.enabled
@@ -29,7 +43,13 @@ export default function HomeClient({ orgslug }: { orgslug: string }) {
       }
     : null
 
-  if (!org || (!hasCustomLanding && coursesLoading)) {
+  // Signed-in learners get their own learning home; the landing is for visitors.
+  if (signedIn && org && !accessLoading && !hasAnyPortalAccess) {
+    return <StudentDashboard orgslug={orgslug} />
+  }
+
+  // Still working out who this is, or on the way to the dashboard.
+  if (!org || signedIn || (!hasCustomLanding && coursesLoading)) {
     return (
       <GeneralWrapperStyled>
         <div className="animate-pulse space-y-6 pt-6">

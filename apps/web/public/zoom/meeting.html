@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Online class</title>
+  <!--
+    Hosts Zoom's official Meeting SDK for Web (Client View) inside the LMS.
+
+    The LMS app runs React 19, while the Meeting SDK supports React 18 only, so
+    the SDK lives in this same-origin page with Zoom's own React 18 build from
+    source.zoom.us. The LMS lecture page frames it and hands over the join data
+    (a short-lived signature made by the LMS backend) with postMessage. Nothing
+    secret is stored here, and messages from any other origin are ignored.
+
+    Messages in:  { type: 'zoom:join', payload: JoinToken, lang }
+    Messages out: zoom:ready | zoom:joining | zoom:joined | zoom:error | zoom:left
+  -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #1f1f1f; font-family: system-ui, sans-serif; }
+    #status { color: #d4d4d4; display: flex; align-items: center; justify-content: center; height: 100%; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="status">Loading…</div>
+  <script>
+    (function () {
+      var origin = window.location.origin
+      var params = new URLSearchParams(window.location.search)
+      var version = (params.get('v') || '6.2.0').replace(/[^0-9.]/g, '')
+      var parentWin = window.parent !== window ? window.parent : null
+
+      function send(type, extra) {
+        if (parentWin) parentWin.postMessage(Object.assign({ type: type }, extra || {}), origin)
+      }
+
+      // After leaving, Zoom navigates here with ?left=1.
+      if (params.get('left') === '1') {
+        document.getElementById('status').textContent = ''
+        send('zoom:left')
+        return
+      }
+
+      var SUPPORTED = ['en-US', 'de-DE', 'es-ES', 'fr-FR', 'jp-JP', 'pt-PT', 'ru-RU', 'zh-CN', 'zh-TW', 'ko-KO', 'it-IT', 'vi-VN', 'pl-PL', 'tr-TR', 'id-ID', 'nl-NL', 'sv-SE']
+      function lang(code) {
+        if (!code) return 'en-US'
+        var match = SUPPORTED.filter(function (l) { return l.toLowerCase().indexOf(String(code).toLowerCase().slice(0, 2)) === 0 })
+        return match[0] || 'en-US'
+      }
+
+      function load(src) {
+        return new Promise(function (resolve, reject) {
+          var s = document.createElement('script')
+          s.src = src
+          s.crossOrigin = 'anonymous'
+          s.onload = resolve
+          s.onerror = function () { reject(new Error('Could not load ' + src)) }
+          document.head.appendChild(s)
+        })
+      }
+
+      var cdn = 'https://source.zoom.us/'
+      var vendor = cdn + version + '/lib/vendor/'
+      var ready = ['react.min.js', 'react-dom.min.js', 'redux.min.js', 'redux-thunk.min.js', 'lodash.min.js']
+        .reduce(function (p, f) { return p.then(function () { return load(vendor + f) }) }, Promise.resolve())
+        .then(function () { return load(cdn + 'zoom-meeting-' + version + '.min.js') })
+        .then(function () {
+          var ZoomMtg = window.ZoomMtg
+          ZoomMtg.setZoomJSLib(cdn + version + '/lib', '/av')
+          ZoomMtg.preLoadWasm()
+          ZoomMtg.prepareWebSDK()
+          document.getElementById('status').textContent = ''
+          return ZoomMtg
+        })
+
+      ready.then(function () { send('zoom:ready') }, function (err) {
+        document.getElementById('status').textContent = 'The meeting could not be loaded.'
+        send('zoom:error', { code: 'sdk_load_failed', message: String(err && err.message || err) })
+      })
+
+      var started = false
+      window.addEventListener('message', function (event) {
+        if (event.origin !== origin || event.source !== parentWin) return
+        var data = event.data || {}
+        if (data.type !== 'zoom:join' || started) return
+        started = true
+        var t = data.payload || {}
+        ready.then(function (ZoomMtg) {
+          send('zoom:joining')
+          var language = lang(data.lang)
+          ZoomMtg.i18n.load(language)
+          ZoomMtg.i18n.onLoad(function () {
+            ZoomMtg.init({
+              leaveUrl: origin + '/zoom/meeting.html?left=1',
+              patchJsMedia: true,
+              leaveOnPageUnload: true,
+              disableCORP: !window.crossOriginIsolated,
+              disableInvite: true,
+              externalLinkPage: origin + '/zoom/meeting.html?left=1',
+              success: function () {
+                var opts = {
+                  signature: t.signature,
+                  meetingNumber: String(t.meeting_number),
+                  userName: t.user_name,
+                  passWord: t.password || '',
+                  customerKey: t.customer_key,
+                  success: function () { send('zoom:joined') },
+                  error: function (e) {
+                    started = false
+                    send('zoom:error', { code: String(e && (e.errorCode || e.method) || 'join_failed'), message: String(e && e.errorMessage || '') })
+                  }
+                }
+                if (t.user_email) opts.userEmail = t.user_email
+                if (t.zak) opts.zak = t.zak
+                ZoomMtg.join(opts)
+              },
+              error: function (e) {
+                started = false
+                send('zoom:error', { code: 'init_failed', message: String(e && e.errorMessage || '') })
+              }
+            })
+          })
+        })
+      })
+    })()
+  </script>
+</body>
+</html>
