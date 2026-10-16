@@ -29,6 +29,8 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
+import { KanbanBoard, type KanbanColumn, type KanbanTask } from '@/components/ui/kanban-board'
+import { useKanbanMessages } from '@components/Dashboard/Shared/useKanbanMessages'
 import AuthenticatedClientElement from '@components/Security/AuthenticatedClientElement'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
@@ -43,6 +45,7 @@ import { Switch } from '@components/ui/switch'
 import { getTrainingPrograms, createTrainingProgram, updateTrainingProgram, deleteTrainingProgram } from '@services/academic/academic'
 import { getTrainingProgramThumbnailMediaDirectory } from '@services/media/media'
 import { FacilitySelect } from '@components/Dashboard/Pages/Administration/Pickers'
+import { RoomFitHint, RoomPickerButton } from '@components/Dashboard/Pages/Administration/FloorPlan/RoomPicker'
 import { cn } from '@/lib/utils'
 
 const TYPES = ['training_course', 'workshop', 'event', 'bootcamp', 'conference', 'seminar', 'certification_program']
@@ -599,72 +602,102 @@ const COLUMNS: { key: Column; dot: string }[] = [
   { key: 'done', dot: 'bg-emerald-500' },
 ]
 
-/** Draft → Upcoming → Running → Done columns. */
-function BoardView({ programs, orgslug, actionsFor }: { programs: any[]; orgslug: string; actionsFor: (_p: any) => DashRowAction[] }) {
+/**
+ * Draft → Upcoming → Running → Done, as a drag-and-drop board.
+ * The dates decide Upcoming / Running / Done, so a drag only publishes or
+ * unpublishes: drop into Draft to take a program offline, or drag a draft out
+ * to the column its dates put it in to publish it.
+ */
+function BoardView({
+  programs,
+  orgslug,
+  actionsFor,
+  onSetPublished,
+}: {
+  programs: any[]
+  orgslug: string
+  actionsFor: (_p: any) => DashRowAction[]
+  onSetPublished: (_p: any, _published: boolean) => Promise<boolean>
+}) {
   const { today, dates, progress, seats, price, typeLabel, t } = useProgramText()
-  const labels: Record<Column, string> = {
-    draft: t('academic.draft', 'Draft'),
-    upcoming: t('training.phase_upcoming', 'Upcoming'),
-    running: t('training.phase_running', 'Running'),
-    done: t('training.phase_finished', 'Finished'),
-  }
-  return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {COLUMNS.map((col) => {
-        const items = programs.filter((p) => columnOf(p, today) === col.key)
-        return (
-          <div key={col.key} className="flex min-h-[200px] flex-col rounded-[1.25rem] bg-[hsl(var(--dash-ink))]/[0.03] p-2">
-            <div className="flex items-center gap-2 px-2 pb-2.5 pt-1.5">
-              <span className={cn('h-2 w-2 rounded-full', col.dot)} />
-              <span className="text-sm font-semibold text-[hsl(var(--dash-ink))]">{labels[col.key]}</span>
-              <span className="ms-auto rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[hsl(var(--dash-muted))] shadow-sm">{items.length}</span>
+  const messages = useKanbanMessages()
+  const dayKey = today.getTime()
+  const columns = useMemo<KanbanColumn[]>(() => {
+    const day = new Date(dayKey)
+    const labels: Record<Column, string> = {
+      draft: t('academic.draft', 'Draft'),
+      upcoming: t('training.phase_upcoming', 'Upcoming'),
+      running: t('training.phase_running', 'Running'),
+      done: t('training.phase_finished', 'Finished'),
+    }
+    return COLUMNS.map((col) => ({
+      id: col.key,
+      name: labels[col.key],
+      icon: <span className={cn('h-2 w-2 rounded-full', col.dot)} />,
+      tasks: programs.filter((p) => columnOf(p, day) === col.key).map((p) => ({ id: p.trainingprogram_uuid, title: p.name, data: p })),
+    }))
+  }, [programs, dayKey, t])
+
+  // Where a draft lands once published: the column its dates point to.
+  const publishedColumn = (p: any) => columnOf({ ...p, published: true }, today)
+
+  const renderCard = (task: KanbanTask) => {
+    const p = task.data
+    const col = columnOf(p, today)
+    const Icon = TYPE_ICONS[p.training_type] || Certificate
+    const prog = progress(p)
+    return (
+      <div
+        className={cn(
+          'relative rounded-2xl border bg-white p-3 shadow-[0_1px_2px_hsl(220_30%_20%/0.04)]',
+          col === 'running' ? 'border-[hsl(var(--dash-accent))]/40' : 'border-[hsl(var(--dash-border))]/70'
+        )}
+      >
+        <div className="absolute end-1.5 top-1.5">
+          <RowActionsMenu actions={actionsFor(p)} label={t('administration.table.actions', 'Actions')} />
+        </div>
+        <Link href={getUriWithOrg(orgslug, `/dash/training-programs/${idOf(p)}`)} draggable={false} className="block pe-8">
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[hsl(var(--dash-muted))]">
+            <Icon size={13} weight="duotone" /> {typeLabel(p)}
+          </span>
+          <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-[hsl(var(--dash-ink))]">{p.name}</p>
+          <p className="mt-1 text-[11px] text-[hsl(var(--dash-muted))]">{dates(p)}</p>
+          {col === 'running' && prog.pct != null ? (
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-[hsl(var(--dash-canvas))]">
+              <div className={cn('h-full rounded-full', GOLD)} style={{ width: `${prog.pct}%` }} />
             </div>
-            <div className="space-y-2">
-              {items.map((p) => {
-                const Icon = TYPE_ICONS[p.training_type] || Certificate
-                const prog = progress(p)
-                return (
-                  <div
-                    key={p.trainingprogram_uuid}
-                    className={cn(
-                      'group relative rounded-2xl border bg-white p-3 shadow-[0_1px_2px_hsl(220_30%_20%/0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-14px_hsl(220_30%_20%/0.35)]',
-                      col.key === 'running' ? 'border-[hsl(var(--dash-accent))]/40' : 'border-[hsl(var(--dash-border))]/70'
-                    )}
-                  >
-                    <div className="absolute end-1.5 top-1.5">
-                      <RowActionsMenu actions={actionsFor(p)} label={t('administration.table.actions', 'Actions')} />
-                    </div>
-                    <Link href={getUriWithOrg(orgslug, `/dash/training-programs/${idOf(p)}`)} className="block pe-8">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[hsl(var(--dash-muted))]">
-                        <Icon size={13} weight="duotone" /> {typeLabel(p)}
-                      </span>
-                      <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-[hsl(var(--dash-ink))]">{p.name}</p>
-                      <p className="mt-1 text-[11px] text-[hsl(var(--dash-muted))]">{dates(p)}</p>
-                      {col.key === 'running' && prog.pct != null ? (
-                        <div className="mt-2 h-1 overflow-hidden rounded-full bg-[hsl(var(--dash-canvas))]">
-                          <div className={cn('h-full rounded-full', GOLD)} style={{ width: `${prog.pct}%` }} />
-                        </div>
-                      ) : null}
-                      <div className="mt-2 flex items-center justify-between text-[11px] text-[hsl(var(--dash-muted))]">
-                        <span className="inline-flex items-center gap-1">
-                          <Users size={12} /> {seats(p)}
-                        </span>
-                        <span className="font-semibold text-[hsl(var(--dash-ink))]">{price(p)}</span>
-                      </div>
-                    </Link>
-                  </div>
-                )
-              })}
-              {items.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-[hsl(var(--dash-border))] px-3 py-6 text-center text-xs text-[hsl(var(--dash-muted))]">
-                  {t('training.column_empty', 'Nothing here')}
-                </p>
-              ) : null}
-            </div>
+          ) : null}
+          <div className="mt-2 flex items-center justify-between text-[11px] text-[hsl(var(--dash-muted))]">
+            <span className="inline-flex items-center gap-1">
+              <Users size={12} /> {seats(p)}
+            </span>
+            <span className="font-semibold text-[hsl(var(--dash-ink))]">{price(p)}</span>
           </div>
-        )
-      })}
-    </div>
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <KanbanBoard
+      columns={columns}
+      columnWidth="fill"
+      minColumnWidth={250}
+      reorderable={false}
+      label={t('training.view_board', 'Board')}
+      emptyLabel={t('training.column_empty', 'Nothing here')}
+      renderCard={renderCard}
+      canMove={(task, from, to) => (to === 'draft' ? true : from === 'draft' && to === publishedColumn(task.data))}
+      blockedHint={(task, from, to) =>
+        to === 'draft'
+          ? undefined
+          : from === 'draft'
+            ? t('training.board_dates_say', 'Its dates put it in {{column}}', { column: columns.find((c) => c.id === publishedColumn(task.data))?.name })
+            : t('training.board_set_by_dates', 'Set by the dates')
+      }
+      onMove={(task, _from, to) => onSetPublished(task.data, to !== 'draft')}
+      messages={messages}
+    />
   )
 }
 
@@ -720,6 +753,24 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
       refresh()
     } catch (err: any) {
       toast.error(err?.message || t('academic.update_failed'))
+    }
+  }
+  // Board drops: update the list at once so the card stays where it was dropped.
+  const programsKey = ['academic', 'training-programs', orgId]
+  const setPublishedFromBoard = async (p: any, published: boolean) => {
+    const before = queryClient.getQueryData(programsKey)
+    queryClient.setQueryData(programsKey, (list: any) =>
+      Array.isArray(list) ? list.map((x) => (x.trainingprogram_uuid === p.trainingprogram_uuid ? { ...x, published, public: published } : x)) : list
+    )
+    try {
+      await updateTrainingProgram(p.trainingprogram_uuid, { published, public: published }, access_token)
+      toast.success(published ? t('training.published_toast', 'Published') : t('training.unpublished', 'Moved to drafts'))
+      refresh()
+      return true
+    } catch (err: any) {
+      queryClient.setQueryData(programsKey, before)
+      toast.error(err?.message || t('academic.update_failed'))
+      return false
     }
   }
   const actionsFor = (p: any): DashRowAction[] => [
@@ -883,7 +934,7 @@ function TrainingProgramsHome({ orgslug }: { orgslug: string }) {
       ) : view === 'timeline' ? (
         <TimelineView programs={visible} orgslug={orgslug} />
       ) : view === 'board' ? (
-        <BoardView programs={visible} orgslug={orgslug} actionsFor={actionsFor} />
+        <BoardView programs={visible} orgslug={orgslug} actionsFor={actionsFor} onSetPublished={setPublishedFromBoard} />
       ) : status !== 'all' ? (
         grid(visible)
       ) : (
@@ -981,6 +1032,13 @@ function TrainingProgramForm({
   )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  // The room picker checks bookings over the program's dates and fits its seats.
+  const roomPeriod = {
+    start: startDate,
+    end: endDate || startDate,
+    attendees: capacity === '' ? null : Number(capacity),
+    excludeProgram: program?.trainingprogram_uuid,
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1050,6 +1108,10 @@ function TrainingProgramForm({
       </FormSection>
 
       <FormSection title={t('training.section_schedule', 'Schedule and venue')}>
+        {/* Seats first: the room picker below only offers rooms that fit them. */}
+        <Field label={t('academic.capacity')} error={errors.capacity} hint={t('training.capacity_hint', 'Leave empty for open seats')} className="sm:col-span-2">
+          <input type="number" min={0} className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} aria-invalid={!!errors.capacity} />
+        </Field>
         <Field label={t('academic.start_date')}>
           <input type="date" className={inputCls} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </Field>
@@ -1058,12 +1120,13 @@ function TrainingProgramForm({
         </Field>
         <Field label={t('administration.facilities.venue', 'Venue (facility)')}>
           <FacilitySelect className={inputCls} value={facility} onChange={setFacility} current={program?.facility} />
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+            <RoomFitHint value={facility} period={roomPeriod} />
+            <RoomPickerButton value={facility} onChange={setFacility} period={roomPeriod} className="ms-auto" />
+          </div>
         </Field>
         <Field label={t('academic.location')} hint={t('training.location_hint', 'Used when no facility is picked, e.g. an external venue')}>
           <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
-        </Field>
-        <Field label={t('academic.capacity')} error={errors.capacity} hint={t('training.capacity_hint', 'Leave empty for open seats')}>
-          <input type="number" min={0} className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} aria-invalid={!!errors.capacity} />
         </Field>
       </FormSection>
 

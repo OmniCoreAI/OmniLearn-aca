@@ -4,6 +4,7 @@ import logging
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from src.security.modules import require_module
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlmodel import select
@@ -386,6 +387,7 @@ async def ingest_frontend_event(
 # -------------------------------------------------------------------
 @router.get(
     "/dashboard/detail/{query_name}",
+    dependencies=[Depends(require_module("analytics"))],
     summary="Run a detail dashboard query",
     description="Executes a predefined analytics detail query against Tinybird and enriches the result rows with course, activity, and user metadata from PostgreSQL. Requires org admin privileges.",
     responses={
@@ -456,6 +458,7 @@ async def query_dashboard_detail(
 # -------------------------------------------------------------------
 @router.get(
     "/dashboard/home",
+    dependencies=[Depends(require_module("analytics"))],
     summary="Dashboard home overview",
     description="Totals, monthly enrollment trend, learning-activity heatmap, top and recent courses, and a recent-activity feed, computed from PostgreSQL. Works without the analytics backend. Requires org admin privileges.",
     responses={
@@ -484,6 +487,7 @@ async def query_dashboard_home(
 # -------------------------------------------------------------------
 @router.get(
     "/dashboard/{query_name}",
+    dependencies=[Depends(require_module("analytics"))],
     summary="Run a dashboard analytics query",
     description="Executes a predefined analytics query via Tinybird and returns the aggregated results. Advanced queries require an Enterprise plan. Requires org admin privileges.",
     responses={
@@ -541,6 +545,7 @@ async def query_dashboard(
 # -------------------------------------------------------------------
 @router.get(
     "/dashboard/db/{query_name}",
+    dependencies=[Depends(require_module("analytics"))],
     summary="Run a PostgreSQL-backed dashboard query",
     description="Executes a predefined PostgreSQL analytics query (e.g. grade distribution histogram). Requires org admin privileges and a Pro plan or higher.",
     responses={
@@ -655,6 +660,7 @@ def _build_sql(
 # -------------------------------------------------------------------
 @router.get(
     "/dashboard/course/detail/{query_name}",
+    dependencies=[Depends(require_module("analytics"))],
     summary="Run a course-level detail analytics query",
     description="Executes a predefined course-level detail query via Tinybird with fallback to PostgreSQL TrailRun data, and enriches results with course, activity, and user metadata. Requires org admin privileges and a Pro plan or higher.",
     responses={
@@ -759,6 +765,7 @@ async def query_course_dashboard_detail(
 # -------------------------------------------------------------------
 @router.get(
     "/dashboard/course/{query_name}",
+    dependencies=[Depends(require_module("analytics"))],
     summary="Run a course-level analytics query",
     description="Executes a predefined course-level analytics query via Tinybird and returns enriched aggregated results. Requires org admin privileges and a Pro plan or higher.",
     responses={
@@ -817,6 +824,7 @@ async def query_course_dashboard(
 # -------------------------------------------------------------------
 @router.get(
     "/export",
+    dependencies=[Depends(require_module("analytics"))],
     summary="Export analytics data",
     description="Exports results for a comma-separated list of analytics queries in either JSON or CSV format. Requires org admin privileges.",
     responses={

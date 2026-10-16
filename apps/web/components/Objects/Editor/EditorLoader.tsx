@@ -9,7 +9,6 @@ import EditorSkeleton from './EditorSkeleton'
 import EditorWrapper from './EditorWrapper'
 import MarkdownActivity from '@components/Objects/Activities/Markdown/MarkdownActivity'
 import EmbedActivity from '@components/Objects/Activities/Embed/EmbedActivity'
-import OnboardingBar from '@components/Dashboard/Onboarding/OnboardingBar'
 
 interface EditorLoaderProps {
   courseid: string
@@ -98,7 +97,6 @@ export default function EditorLoader({ courseid: _courseid, activityuuid }: Edit
           />
         </div>
       )}
-      <OnboardingBar />
     </div>
   )
 }

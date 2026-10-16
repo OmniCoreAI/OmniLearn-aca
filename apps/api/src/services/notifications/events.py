@@ -5,6 +5,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.courses.courses import Course
+from src.services.notifications import inbox
 from src.services.notifications.dispatcher import notify, org_variables
 
 
@@ -59,10 +60,9 @@ async def _on_audience_covered(
     if info is None:
         return
     base = (await org_variables(db_session, org_id)).get("platform_url", "")
-    if resource_type == "course":
-        url = f"{base}/course/{_slug(resource_uuid, 'course_')}"
-    else:
-        url = f"{base}/training-programs/{_slug(resource_uuid, 'trainingprogram_')}"
+    # Learner-site paths (the program page lists the learner's programs).
+    path = f"/course/{_slug(resource_uuid, 'course_')}" if resource_type == "course" else "/programs"
+    url = f"{base}{path}"
     due_dates = [
         d
         for d in (
@@ -76,9 +76,14 @@ async def _on_audience_covered(
         ).scalars().all()
         if d
     ]
+    due_date = min(due_dates) if due_dates else ""
+    await inbox.push(
+        db_session, org_id, user_ids, "course_assigned", f"New training assigned: {info.name}",
+        link=path, payload={"name": info.name, "kind": resource_type, "due_date": due_date},
+    )
     await notify(
         db_session, org_id, "course_assigned", user_ids,
-        {"course_name": info.name, "course_url": url if base else "", "due_date": min(due_dates) if due_dates else ""},
+        {"course_name": info.name, "course_url": url if base else "", "due_date": due_date},
         resource=(resource_type, resource_uuid), dedupe_prefix=f"course_assigned:{resource_type}:{resource_uuid}",
     )
 

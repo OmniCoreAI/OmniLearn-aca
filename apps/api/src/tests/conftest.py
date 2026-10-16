@@ -121,6 +121,19 @@ ADMIN_RIGHTS = Rights(
     playgrounds=_full_permission_with_own(),
 )
 
+async def register_instructor(db, org_id: int, *user_ids: int) -> None:
+    """Add active instructor-registry rows so these users may be assigned to teach."""
+    from src.db.instructors.instructors import Instructor, InstructorStatus
+
+    now = str(datetime.now())
+    for user_id in user_ids:
+        db.add(Instructor(
+            org_id=org_id, user_id=user_id, status=InstructorStatus.ACTIVE,
+            instructor_uuid=f"instructor_test_{org_id}_{user_id}", creation_date=now, update_date=now,
+        ))
+    await db.commit()
+
+
 USER_RIGHTS = Rights(
     courses=_readonly_permission_with_own(),
     users=_readonly_permission(),

@@ -448,7 +448,15 @@ async def api_get_course_meta(
             raise_on_deny=False,
         )
         if not decision.allowed:
-            with_unpublished_activities = False
+            # Lecture instructors (courses organised by lectures) see drafts too.
+            from src.db.courses.courses import Course
+            from src.services.courses.lecture_access import teaches_any_lecture
+
+            course = (
+                await db_session.execute(select(Course).where(Course.course_uuid == course_uuid))
+            ).scalars().first()
+            if course is None or not await teaches_any_lecture(db_session, current_user, course):
+                with_unpublished_activities = False
 
     return await get_course_meta(
         request, course_uuid, with_unpublished_activities, current_user=current_user, db_session=db_session, slim=slim

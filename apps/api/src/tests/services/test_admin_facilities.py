@@ -23,6 +23,7 @@ from src.services.academic import course_profiles as course_profiles_svc
 from src.services.academic import training_programs as tp_svc
 from src.services.administration import facilities as fac_svc
 from src.services.administration import lookups as lk_svc
+from src.services.administration import reservations as res_svc
 from src.services.administration.overview import get_overview
 
 
@@ -167,7 +168,7 @@ class TestAttachmentAndConflicts:
         )
         assert first.facility is None  # inherits the course default
 
-        bookings = await fac_svc.list_bookings(db, admin_user, room.facility_uuid)
+        bookings = await res_svc.list_bookings(db, admin_user, room.facility_uuid)
         assert [(b.title, b.inherited) for b in bookings] == [("Day 1", True)]
 
         # Overlapping session in the same (inherited) room is rejected…

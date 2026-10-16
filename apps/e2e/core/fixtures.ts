@@ -6,7 +6,8 @@
  * state via an init script that runs before any page script on every
  * navigation. Without this, the onboarding's full-screen overlay intercepts
  * pointer events and makes the dashboard untestable. The key + shape mirror
- * apps/web/components/Hooks/useOnboarding.ts (STORAGE_KEY = 'lh_onboarding').
+ * upstream's useOnboarding hook (STORAGE_KEY = 'lh_onboarding'); this fork no
+ * longer ships the onboarding, so here it is a harmless no-op.
  */
 import { test as base, expect } from '@playwright/test'
 

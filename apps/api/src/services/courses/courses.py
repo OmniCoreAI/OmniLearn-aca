@@ -232,12 +232,15 @@ async def get_course_meta(
         for resource_author, user in author_results
     ]
 
+    from src.services.courses.lecture_access import course_lecture_summaries
+
     # Create course read model with chapters and org_uuid
     course_read = FullCourseRead(
         **course.model_dump(),
         org_uuid=org.org_uuid,
         authors=authors,
-        chapters=chapters
+        chapters=chapters,
+        lectures=await course_lecture_summaries(db_session, course),
     )
 
     # Cache only the anonymous (public, uniformly-stripped) view. See the read
@@ -1656,5 +1659,14 @@ async def get_course_user_rights(
     # CERTIFICATION permissions
     if is_course_owner or is_admin or is_maintainer_role:
         rights["permissions"]["create_certifications"] = True
+
+    # LECTURES: courses organised by lectures let each lecture's instructor
+    # edit that lecture's content (see services/courses/lecture_access.py).
+    from src.services.courses.lecture_access import lecture_rights
+
+    rights["lectures"] = await lecture_rights(db_session, current_user, course)
+    rights["permissions"]["edit_lecture_content"] = bool(
+        rights["permissions"]["update_content"] or rights["lectures"]["taught"]
+    )
 
     return rights

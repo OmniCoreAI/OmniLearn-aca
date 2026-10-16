@@ -10,6 +10,7 @@ import { getFinanceSummary } from '@services/finance/ledger'
 import { cn } from '@/lib/utils'
 import { ChartTooltip, HomeCard, RangeSelect, Segmented } from './HomeCard'
 import { HOME_COLORS, monthLabel, useHomeOverview } from './homeData'
+import { useModules } from '@/lib/modules'
 
 type View = 'learning' | 'revenue'
 type Series = 'primary' | 'secondary'
@@ -84,6 +85,8 @@ export default function PerformanceChart() {
   const token = session?.data?.tokens?.access_token
   const { data: overview, isLoading: overviewLoading } = useHomeOverview()
   const [view, setView] = useState<View>('learning')
+  // No revenue view when Finance is switched off in the .env file.
+  const financeOn = useModules().isModuleEnabled('finance')
   const [months, setMonths] = useState(7)
   const [shown, setShown] = useState(ALL_ON)
   const [, startTransition] = useTransition()
@@ -92,7 +95,7 @@ export default function PerformanceChart() {
   const finance = useQuery({
     queryKey: ['dashboard-home', 'revenue', org?.id, keys12[0]],
     queryFn: () => getFinanceSummary(org.id, token, { date_from: `${keys12[0]}-01` }),
-    enabled: view === 'revenue' && !!token && !!org?.id,
+    enabled: financeOn && view === 'revenue' && !!token && !!org?.id,
     staleTime: 60_000,
     retry: false,
   })
@@ -162,7 +165,7 @@ export default function PerformanceChart() {
       subtitle={t('dashboard.home.last_n_months', 'Last {{count}} months', { count: months })}
       action={
         <div className="flex items-center gap-1.5">
-          <Segmented
+          {financeOn && <Segmented
             label={t('dashboard.home.performance.view', 'View')}
             value={view}
             onChange={(v) =>
@@ -175,7 +178,7 @@ export default function PerformanceChart() {
               { value: 'learning', label: t('dashboard.home.performance.learning', 'Learning') },
               { value: 'revenue', label: t('dashboard.home.revenue.title', 'Revenue') },
             ]}
-          />
+          />}
           <RangeSelect
             label={t('dashboard.home.range', 'Range')}
             value={months}

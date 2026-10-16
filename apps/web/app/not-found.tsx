@@ -1,42 +1,26 @@
-import { ArrowRight } from 'lucide-react'
-import Image from 'next/image'
+import { ArrowRight, Compass } from 'lucide-react'
 import Link from 'next/link'
-import omnilearnIcon from '@public/lrn-text.svg'
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center 
-   bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-200 to-slate-300">
-    <div className="nx-flex nx-items-center hover:nx-opacity-75 ltr:nx-mr-auto rtl:nx-ml-auto pb-20">
-        <Image
-          quality={100}
-          width={270}
-          height={100}
-          src={omnilearnIcon}
-          alt="logo"
-          priority
-          style={{ width: 'auto', height: 'auto' }}
-        />
+    <div className="flex min-h-screen w-full items-center justify-center bg-[hsl(var(--dash-canvas))] px-4">
+      <div className="w-full max-w-md rounded-[var(--dash-radius)] border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-accent))]">
+          <Compass size={28} />
         </div>
-      <div className="space-y-6 text-center">
-        <h1 className="text-8xl leading-7 font-bold text-black drop-shadow-md">
-          404!
-        </h1>
-        <p className='text-lg pt-8 text-black tracking-tight font-medium leading-normal'>
-          We are very sorry for the inconvenience. It looks like you're trying to
-          <span className="block">access a page that has been deleted or never existed before</span>
+        <p className="mt-6 text-sm font-semibold tracking-widest text-[hsl(var(--dash-accent))]">404</p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-[hsl(var(--dash-ink))]">Page not found</h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-[hsl(var(--dash-muted))]">
+          The page you&apos;re looking for doesn&apos;t exist or has moved.
         </p>
+        <Link
+          href="/"
+          className="mt-8 inline-flex h-11 items-center gap-2 rounded-full bg-[hsl(var(--dash-ink))] px-6 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          Go to the homepage
+          <ArrowRight size={16} />
+        </Link>
       </div>
-      <div className='pt-8 flex flex-col items-center'>
-      <Link
-        href="/"
-        className="flex w-fit h-[50px] text-xl space-x-2 bg-black px-6 py-2 text-md rounded-lg font-bold text-white items-center shadow-md gap-2"
-      >
-        Go back to homepage
-        <ArrowRight className="tracking-tight transition-transform duration-150 ease-in-out ml-1" />
-      </Link>
-    </div>
     </div>
   )
 }
-

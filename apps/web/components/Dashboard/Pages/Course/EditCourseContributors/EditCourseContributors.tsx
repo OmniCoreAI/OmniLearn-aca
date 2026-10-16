@@ -1,6 +1,8 @@
 import { useCourse, useCourseDispatch } from '@components/Contexts/CourseContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { useOrg } from '@components/Contexts/OrgContext'
+import Link from 'next/link'
+import { getUriWithOrg } from '@services/config/config'
 import ConfirmationModal from '@components/Objects/StyledElements/ConfirmationModal/ConfirmationModal'
 import { bulkAddContributors, bulkRemoveContributors, editContributor, getCourseContributors } from '@services/courses/courses'
 import { searchOrgContent } from '@services/search/search'
@@ -415,6 +417,16 @@ function EditCourseContributors(_props: EditCourseContributorsProps) {
                                 {t('dashboard.courses.contributors.subtitle')}
                             </h2>
                         </div>
+                        <p className="mb-3 rounded-md border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-accent-soft))]/50 px-3 py-2 text-xs text-gray-600">
+                            {t('dashboard.courses.contributors.teaching_note', 'Contributors can edit this course’s content. To choose who teaches it, use')}{' '}
+                            <Link
+                                href={getUriWithOrg(org?.slug, `/dash/courses/course/${String(courseStructure.course_uuid).replace('course_', '')}/delivery`)}
+                                className="font-semibold text-gray-800 underline"
+                            >
+                                {t('delivery.tab', 'Delivery & Resources')}
+                            </Link>
+                            .
+                        </p>
                         <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 mx-auto mb-3">
                             <ConfirmationModal
                                 confirmationButtonText={t('dashboard.courses.contributors.open_to_contributors.confirmation_button')}

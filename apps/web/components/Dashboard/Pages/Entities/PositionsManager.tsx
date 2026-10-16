@@ -69,9 +69,9 @@ function PositionForm({ position, entityUuid, onDone, onCancel }: { position: an
         </Field>
       </div>
       {!position && !entityUuid ? (
-        <Field label={t('entities.position_scope', 'Used by')} hint={t('entities.position_scope_hint', 'Shared positions are available in every organization.')}>
+        <Field label={t('entities.position_scope', 'Used by')} hint={t('entities.position_scope_hint', 'Shared positions are available in every entity.')}>
           <select className={inputCls} value={form.entity_uuid} onChange={(e) => setForm({ ...form, entity_uuid: e.target.value })}>
-            <option value="">{t('entities.all_entities', 'All organizations')}</option>
+            <option value="">{t('entities.all_entities', 'All entities')}</option>
             {(entities as any[]).map((o) => (
               <option key={o.entity_uuid} value={o.entity_uuid}>
                 {o.name}
@@ -248,7 +248,7 @@ export function PositionsManager({ entityUuid, canManage = true }: { entityUuid?
               p.entity_name ? (
                 <span className="text-[13px]">{p.entity_name}</span>
               ) : (
-                <span className="rounded-full bg-[hsl(var(--dash-canvas))] px-2 py-0.5 text-[11px] font-medium text-[hsl(var(--dash-muted))]">{t('entities.all_entities', 'All organizations')}</span>
+                <span className="rounded-full bg-[hsl(var(--dash-canvas))] px-2 py-0.5 text-[11px] font-medium text-[hsl(var(--dash-muted))]">{t('entities.all_entities', 'All entities')}</span>
               ),
           },
           { key: 'members', header: t('entities.members', 'Members'), align: 'end', sortValue: (p: any) => p.member_count, cell: (p: any) => <span className="tabular-nums">{p.member_count}</span> },

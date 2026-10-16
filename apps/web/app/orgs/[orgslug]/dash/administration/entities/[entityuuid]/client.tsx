@@ -50,7 +50,7 @@ function EntityInstructors({ orgslug, entityUuid }: { orgslug: string; entityUui
         <AcademicEmptyState
           compact
           title={t('entities.no_instructors', 'No instructors linked to this entity.')}
-          description={t('entities.no_instructors_hint', 'Instructors from this organization appear here once their profile is linked to it.')}
+          description={t('entities.no_instructors_hint', 'Instructors from this entity appear here once their profile is linked to it.')}
         />
       }
       columns={[
@@ -123,7 +123,7 @@ function EntityDetail({ orgslug, entityUuid }: { orgslug: string; entityUuid: st
     <AcademicPageShell>
       <AdminBreadcrumbs
         orgslug={orgslug}
-        items={[{ label: t('administration.nav.entities', 'Organizations'), href: '/dash/administration/entities' }, { label: name }]}
+        items={[{ label: t('administration.nav.entities', 'Entities'), href: '/dash/administration/entities' }, { label: name }]}
       />
 
       <section className="dash-card mb-5 flex flex-col gap-4 rounded-[1.25rem] p-5 lg:flex-row lg:items-center">

@@ -24,6 +24,8 @@ from src.db.academic.offerings import CohortMembership, CourseOffering, Membersh
 from src.db.courses.courses import Course
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import get_user_author
+from src.services.notifications.assignments import slug, staff_assigned
+from src.security.auth import resolve_acting_user_id
 from src.services.academic.validation import (
     assert_status_transition,
     resolve_coordinator,
@@ -208,7 +210,23 @@ async def create_cohort(
         await db_session.rollback()
         raise
 
+    await _notify_coordinator(db_session, cohort, None, current_user)
     return await _to_read(db_session, cohort)
+
+
+async def _notify_coordinator(db_session: AsyncSession, cohort: Cohort, previous_id: Optional[int], current_user) -> None:
+    if not cohort.coordinator_id or cohort.coordinator_id == previous_id:
+        return
+    program = await db_session.get(Program, cohort.program_id)
+    if program is None:
+        return
+    await staff_assigned(
+        db_session, cohort.org_id, [cohort.coordinator_id], "cohort_coordinator",
+        f"{program.name} · {cohort.name}",
+        f"/dash/postgraduate/{slug(program.program_uuid, 'program_')}/cohort/{slug(cohort.cohort_uuid, 'cohort_')}",
+        actor_id=resolve_acting_user_id(current_user), resource=("cohort", cohort.cohort_uuid),
+    )
+    await db_session.refresh(cohort)
 
 
 async def get_cohort(
@@ -275,6 +293,7 @@ async def update_cohort(
             cohort.status, update_data["status"], COHORT_STATUS_TRANSITIONS
         )
 
+    previous_coordinator_id = cohort.coordinator_id
     if "coordinator_uuid" in update_data:
         coordinator_uuid = update_data.pop("coordinator_uuid")
         cohort.coordinator_id = await resolve_coordinator(
@@ -307,6 +326,7 @@ async def update_cohort(
     db_session.add(cohort)
     await db_session.commit()
     await db_session.refresh(cohort)
+    await _notify_coordinator(db_session, cohort, previous_coordinator_id, current_user)
     return await _to_read(db_session, cohort)
 
 

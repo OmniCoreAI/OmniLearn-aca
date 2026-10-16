@@ -1,5 +1,7 @@
 'use client'
 import { FacilitySelect, saveWithConflictCheck } from '@components/Dashboard/Pages/Administration/Pickers'
+import { RoomFitHint, RoomPickerButton } from '@components/Dashboard/Pages/Administration/FloorPlan/RoomPicker'
+import { RoomAssist } from '@components/Dashboard/Pages/Administration/HallBooking/RoomAssist'
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -51,6 +53,7 @@ import {
   updateOfferingSession,
 } from '@services/academic/core'
 import { cn } from '@/lib/utils'
+import { LectureMeetingControls } from '@components/Objects/OnlineMeetings/LectureMeetingControls'
 
 const FLOW = ['planned', 'open', 'in_progress', 'completed'] as const
 // The forward step from each status, and the way back where one exists.
@@ -444,6 +447,12 @@ function OfferingDetail({ orgslug, offeringuuid, workspace = 'office' }: { orgsl
                           .filter(Boolean)
                           .join(' · ')}
                       </p>
+                      {isStaff ? (
+                        <LectureMeetingControls
+                          lecture={{ session_uuid: s.session_uuid, title: s.title, start: s.start_datetime, end: s.end_datetime }}
+                          access_token={access_token}
+                        />
+                      ) : null}
                     </div>
                     {isStaff ? (
                       <span className="flex shrink-0 opacity-60 transition-opacity group-hover:opacity-100">
@@ -522,6 +531,8 @@ function OfferingDetail({ orgslug, offeringuuid, workspace = 'office' }: { orgsl
             <SessionForm
               offeringUuid={offering_uuid}
               session={sessionDrawer.session}
+              defaultRoom={offering?.facility}
+              attendees={offering ? offering.enrolled_count || offering.capacity || null : null}
               confirmConflict={confirmConflict}
               onDone={() => {
                 setSessionDrawer(null)
@@ -582,6 +593,8 @@ function OfferingEditForm({ orgslug, offering, onDone, confirmConflict }: { orgs
   const [classroom, setClassroom] = useState(offering.classroom || '')
   const [facility, setFacility] = useState<string>(offering.facility?.facility_uuid || '')
   const [capacity, setCapacity] = useState(offering.capacity != null ? String(offering.capacity) : '')
+  // The default room is checked against every session that inherits it.
+  const roomPeriod = { forOffering: offering.offering_uuid, attendees: capacity === '' ? null : Number(capacity) }
   const [instructor, setInstructor] = useState<string | null>(offering.instructor?.user_uuid || null)
   const [instructorLabel, setInstructorLabel] = useState<string | undefined>(offering.instructor ? displayName(offering.instructor) : undefined)
   const [ta, setTa] = useState<string | null>(offering.teaching_assistant?.user_uuid || null)
@@ -655,6 +668,10 @@ function OfferingEditForm({ orgslug, offering, onDone, confirmConflict }: { orgs
       <FormSection title={t('academic.off.section_delivery', 'Lecturer and room')}>
         <Field label={t('administration.facilities.default_room', 'Room / facility')} className="sm:col-span-2">
           <FacilitySelect className={inputCls} value={facility} onChange={setFacility} current={offering.facility} />
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+            <RoomFitHint value={facility} period={roomPeriod} />
+            <RoomPickerButton value={facility} onChange={setFacility} period={roomPeriod} className="ms-auto" />
+          </div>
         </Field>
         <Field label={t('academic.classroom')}>
           <input className={inputCls} value={classroom} onChange={(e) => setClassroom(e.target.value)} />
@@ -685,7 +702,22 @@ function OfferingEditForm({ orgslug, offering, onDone, confirmConflict }: { orgs
 
 const toLocalInput = (v?: string | null) => (v ? v.slice(0, 16) : '')
 
-function SessionForm({ offeringUuid, session, onDone, confirmConflict }: { offeringUuid: string; session?: any; onDone: () => void; confirmConflict: (_m: string) => Promise<boolean> }) {
+function SessionForm({
+  offeringUuid,
+  session,
+  defaultRoom,
+  attendees,
+  onDone,
+  confirmConflict,
+}: {
+  offeringUuid: string
+  session?: any
+  /** The offering's room, used by sessions without their own. */
+  defaultRoom?: { facility_uuid: string; name: string } | null
+  attendees?: number | null
+  onDone: () => void
+  confirmConflict: (_m: string) => Promise<boolean>
+}) {
   const { t } = useTranslation()
   const { access_token } = useAcademicContext()
   const [title, setTitle] = useState(session?.title || '')
@@ -750,7 +782,29 @@ function SessionForm({ offeringUuid, session, onDone, confirmConflict }: { offer
       <FormSection title={t('academic.location', 'Location')}>
         <Field label={t('administration.facilities.room', 'Room')}>
           <FacilitySelect className={inputCls} value={facility} onChange={setFacility} current={session?.facility} emptyLabel={t('administration.facilities.offering_room', 'Offering room (default)')} />
+          <div className="mt-1.5 flex justify-end">
+            <RoomPickerButton
+              value={facility}
+              onChange={setFacility}
+              period={{ start, end, attendees, exclude: session?.session_uuid }}
+              clearLabel={t('administration.facilities.offering_room', 'Offering room (default)')}
+            />
+          </div>
         </Field>
+        <RoomAssist
+          className="sm:col-span-2"
+          start={start}
+          end={end}
+          room={facility}
+          defaultRoom={defaultRoom}
+          attendees={attendees}
+          exclude={session?.session_uuid}
+          onPickRoom={setFacility}
+          onPickTime={(s, e) => {
+            setStart(s)
+            setEnd(e)
+          }}
+        />
         <Field label={t('academic.off.location_note', 'Location note or link')}>
           <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
         </Field>

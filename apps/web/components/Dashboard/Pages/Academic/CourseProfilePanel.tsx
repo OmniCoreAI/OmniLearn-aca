@@ -18,6 +18,8 @@ import {
   createCourseSession,
   deleteCourseSession,
 } from '@services/academic/academic'
+import { RoomAssist } from '@components/Dashboard/Pages/Administration/HallBooking/RoomAssist'
+import { RoomFitHint, RoomPickerButton } from '@components/Dashboard/Pages/Administration/FloorPlan/RoomPicker'
 import {
   FacilitySelect,
   InstructorSelect,
@@ -25,6 +27,7 @@ import {
   useFacilityOptions,
 } from '@components/Dashboard/Pages/Administration/Pickers'
 import { AddOnAttachmentsPanel } from '@components/Dashboard/Pages/Administration/AddOnAttachmentsPanel'
+import { LectureMeetingControls } from '@components/Objects/OnlineMeetings/LectureMeetingControls'
 
 const inputCls =
   'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--dash-accent))]'
@@ -116,6 +119,8 @@ export function CourseProfilePanel({
   }
 
   const selectedFacility = facilityOptions.find((f) => f.facility_uuid === facilityUuid)
+  // The course room is checked against every session that inherits it.
+  const roomPeriod = { forCourse: courseUuid, attendees: capacity === '' ? null : Number(capacity) }
   const overCapacity =
     selectedFacility?.capacity != null && capacity !== '' && Number(capacity) > selectedFacility.capacity
 
@@ -183,6 +188,10 @@ export function CourseProfilePanel({
             onChange={setFacilityUuid}
             current={profile?.facility || null}
           />
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+            <RoomFitHint value={facilityUuid} period={roomPeriod} />
+            <RoomPickerButton value={facilityUuid} onChange={setFacilityUuid} period={roomPeriod} className="ms-auto" />
+          </div>
           {overCapacity && (
             <p className="mt-1 text-[11px] text-amber-700">
               {t('administration.facilities.over_capacity', 'Capacity is larger than the room ({{count}} seats).', { count: selectedFacility?.capacity })}
@@ -235,6 +244,8 @@ export function CourseProfilePanel({
         courseUuid={courseUuid}
         access_token={access_token}
         sessions={sessions as any[]}
+        defaultRoom={profile?.facility || null}
+        attendees={profile?.capacity ?? null}
       />
     </div>
   )
@@ -244,10 +255,15 @@ function SessionsEditor({
   courseUuid,
   access_token,
   sessions,
+  defaultRoom,
+  attendees,
 }: {
   courseUuid: string
   access_token: string
   sessions: any[]
+  /** The course room, used by sessions without their own. */
+  defaultRoom?: { facility_uuid: string; name: string } | null
+  attendees?: number | null
 }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -256,6 +272,7 @@ function SessionsEditor({
   const [end, setEnd] = useState('')
   const [location, setLocation] = useState('')
   const [facilityUuid, setFacilityUuid] = useState('')
+  const [instructorUuid, setInstructorUuid] = useState('')
   const [busy, setBusy] = useState(false)
 
   const refresh = () =>
@@ -275,6 +292,7 @@ function SessionsEditor({
               end_date: end || null,
               location: location || null,
               facility_uuid: facilityUuid || null,
+              instructor_uuid: instructorUuid || null,
               allow_conflict,
             },
             access_token
@@ -287,6 +305,7 @@ function SessionsEditor({
       setEnd('')
       setLocation('')
       setFacilityUuid('')
+      setInstructorUuid('')
       refresh()
     } catch (err: any) {
       toast.error(err?.message || t('academic.session_failed'))
@@ -316,17 +335,28 @@ function SessionsEditor({
         {sessions.map((s) => (
           <div
             key={s.session_uuid}
-            className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg"
+            className="flex items-start justify-between px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg"
           >
-            <span className="text-sm text-gray-800">
-              {s.title}
-              {(s.start_date || s.location || s.facility) && (
-                <span className="text-gray-400 text-xs">
-                  {' '}
-                  · {[s.start_date?.replace('T', ' '), s.facility?.name, s.location].filter(Boolean).join(' · ')}
-                </span>
-              )}
-            </span>
+            <div className="min-w-0">
+              <span className="text-sm text-gray-800">
+                {s.title}
+                {(s.start_date || s.location || s.facility) && (
+                  <span className="text-gray-400 text-xs">
+                    {' '}
+                    · {[s.start_date?.replace('T', ' '), s.facility?.name, s.location].filter(Boolean).join(' · ')}
+                  </span>
+                )}
+                {s.instructor && (
+                  <span className="ms-2 rounded-full bg-[hsl(var(--dash-accent-soft))] px-2 py-0.5 text-[11px] font-semibold text-[hsl(var(--dash-tile-mint-fg))]">
+                    {t('academic.taught_by', 'Taught by')} {instructorLabel(s.instructor)}
+                  </span>
+                )}
+              </span>
+              <LectureMeetingControls
+                lecture={{ session_uuid: s.session_uuid, title: s.title, start: s.start_date, end: s.end_date }}
+                access_token={access_token}
+              />
+            </div>
             <button
               onClick={() => remove(s.session_uuid)}
               disabled={busy}
@@ -368,7 +398,34 @@ function SessionsEditor({
           value={end}
           onChange={(e) => setEnd(e.target.value)}
         />
+        <InstructorSelect
+          className={inputCls}
+          value={instructorUuid}
+          onChange={setInstructorUuid}
+          emptyLabel={t('academic.session_course_instructor', 'Course instructor teaches it')}
+        />
       </div>
+      <div className="mt-2 flex justify-end">
+        <RoomPickerButton
+          value={facilityUuid}
+          onChange={setFacilityUuid}
+          period={{ start, end, attendees }}
+          clearLabel={t('administration.facilities.course_room', 'Course room (default)')}
+        />
+      </div>
+      <RoomAssist
+        className="mt-2.5"
+        start={start}
+        end={end}
+        room={facilityUuid}
+        defaultRoom={defaultRoom}
+        attendees={attendees}
+        onPickRoom={setFacilityUuid}
+        onPickTime={(s, e) => {
+          setStart(s)
+          setEnd(e)
+        }}
+      />
       <button
         onClick={add}
         disabled={busy || !title.trim()}

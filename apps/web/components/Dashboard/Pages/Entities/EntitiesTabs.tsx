@@ -12,9 +12,9 @@ export function EntitiesTabs({ orgslug }: { orgslug: string }) {
     <AdminTabs
       orgslug={orgslug}
       tabs={[
-        { href: base, label: t('administration.nav.entities', 'Organizations'), exact: true },
+        { href: base, label: t('administration.nav.entities', 'Entities'), exact: true },
         { href: `${base}/positions`, label: t('entities.positions', 'Positions') },
-        { href: `${base}/types`, label: t('administration.lookups.kind_entity_type', 'Organization types') },
+        { href: `${base}/types`, label: t('administration.lookups.kind_entity_type', 'Entity types') },
       ]}
     />
   )

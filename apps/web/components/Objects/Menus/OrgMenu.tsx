@@ -8,6 +8,7 @@ import { getUriWithOrg } from '@services/config/config'
 import { fetchRAGChatSessions, RAGChatSession } from '@services/ai/ai'
 import { HeaderProfileBox } from '@components/Security/HeaderProfileBox'
 import MenuLinks from './OrgMenuLinks'
+import NotificationBell from '@components/Objects/Notifications/NotificationBell'
 import { getOrgLogoMediaDirectory } from '@services/media/media'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { useOrg } from '@components/Contexts/OrgContext'
@@ -23,7 +24,6 @@ import {
   ChatCircle,
   SquaresFour,
   ChalkboardSimple,
-  Signpost,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import {
@@ -36,6 +36,7 @@ import {
 } from "@components/ui/dropdown-menu"
 import { FeedbackModal } from '@components/Objects/Modals/FeedbackModal'
 import { DASHBOARD_MENU_ITEMS, DashboardMenuItem } from '@/lib/dashboard-menu-items'
+import { readModules, modulesForPath } from '@/lib/modules'
 import { isFeatureAvailable } from '@services/plans/plans'
 import { getMenuColorClasses } from '@services/utils/ts/colorUtils'
 import AuthenticatedClientElement from '@components/Security/AuthenticatedClientElement'
@@ -90,7 +91,10 @@ export const OrgMenu = (props: any) => {
 
   // Filter dashboard menu items by resolved_features from API
   const rf = config?.resolved_features
+  const modules = readModules(org)
   const visibleDashboardItems = DASHBOARD_MENU_ITEMS.filter((item: DashboardMenuItem) => {
+    // Sections switched off in the .env file.
+    if (modulesForPath(item.href).some((m) => !modules[m])) return false
     if (!item.featureKey) return true
     if (rf?.[item.featureKey]) return rf[item.featureKey].enabled
     return isFeatureAvailable(item.featureKey)
@@ -180,7 +184,7 @@ export const OrgMenu = (props: any) => {
               </Link>
             </div>
             <div className="hidden md:flex">
-              <MenuLinks orgslug={orgslug} primaryColor={primaryColor} />
+              <MenuLinks orgslug={orgslug} primaryColor={primaryColor} inBar />
             </div>
           </div>
 
@@ -190,25 +194,10 @@ export const OrgMenu = (props: any) => {
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Progress / Trail */}
+            {/* Notifications */}
             <AuthenticatedClientElement checkMethod="authentication">
               <div className="hidden md:flex">
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link
-                        href={getUriWithOrg(orgslug, '/trail')}
-                        className={`p-2 rounded-lg transition-colors ${colors.iconBtn}`}
-                        aria-label={t('courses.progress')}
-                      >
-                        <Signpost size={20} weight="fill" />
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">
-                      {t('courses.progress')}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <NotificationBell triggerClassName={`p-2 rounded-lg transition-colors ${colors.iconBtn}`} />
               </div>
             </AuthenticatedClientElement>
             {/* Boards */}

@@ -1,0 +1,36 @@
+import { Callout } from 'nextra/components'
+
+# Attendance & Recordings
+
+## How attendance is collected
+
+```
+Zoom participant
+      ↓  joins from the LMS → customer_key signed by the LMS for (student, meeting)
+      ↓  or signs in to Zoom → Zoom-verified email
+LMS student (must be enrolled in the lecture, or one of its hosts)
+      ↓
+Attendance segments (join → leave), summed per student
+```
+
+1. **Live, through webhooks.** Zoom sends `meeting.participant_joined` and `meeting.participant_left`. Each join → leave span is stored as one segment, so a student who drops and rejoins has several. Duplicate deliveries land on the same row.
+2. **After class, through sync.** In **Attendance & recordings → Sync from Zoom**, the instructor pulls the meeting's past participants from Zoom. This fills any gaps, for example if webhooks weren't configured yet.
+
+A participant is linked to a student only when the LMS can prove who it is:
+
+- **Signed join key.** When a student joins from the LMS, the backend issues a `customer_key` (`u<user id>.<HMAC>`) that Zoom echoes back. Keys are signed per meeting, so a student can't claim someone else's attendance.
+- **Verified Zoom email.** If someone joined with the Zoom app while signed in, Zoom reports their account email. It counts only when it belongs to an enrolled student or a host.
+
+Everyone else appears as **Not identified** with their Zoom name and email. Names are never used for matching.
+
+<Callout type="info">
+The report shows each student's total time, how many times they joined, and *N of M enrolled students attended*. The data sits in `onlinemeetingattendance` with `user_id`, so it's ready to feed a future LMS attendance register.
+</Callout>
+
+## Recordings
+
+When the meeting records to the cloud, Zoom sends `recording.completed` after processing. OmniLearn stores Zoom's share link, its passcode (encrypted) and each file's player link. You can also run **Sync from Zoom** on the Recordings tab.
+
+- Students see recordings only after the instructor turns on **Share recordings with students** in **Edit**, and only while they're enrolled (registered or completed).
+- Videos play on Zoom's player, so Zoom's own sharing rules, passcode and retention still apply. Files aren't downloaded or re-hosted by the LMS.
+- Students don't see Zoom's raw extras (timeline, chat CSV, closed captions). Hosts see every file.

@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -110,7 +110,7 @@ export function GradebookPanel({ offering }: { offering: any }) {
   const approveGrades = async () => {
     const ok = await ask({
       title: t('academic.gb.approve_title', 'Approve these grades?'),
-      message: t('academic.confirm_approve', 'Approve these grades? Results become official and final.'),
+      message: t('academic.gb.approve_message', 'Results become official and final, and students are notified.'),
       confirmText: t('academic.approve_grades', 'Approve'),
       tone: 'success',
     })
@@ -374,15 +374,18 @@ function ScoreCell({
   // Re-mounted (via key) whenever the stored value changes, so the draft
   // always starts from the saved score.
   const [draft, setDraft] = useState<string>(value == null ? '' : String(value))
+  // The last value sent: a second blur before the save returns must not resend it.
+  const sent = useRef<number | null | undefined>(undefined)
 
   const commit = () => {
     const next = draft.trim() === '' ? null : Number(draft)
-    if (next === value || (next != null && Number.isNaN(next))) return
+    if (next === value || next === sent.current || (next != null && Number.isNaN(next))) return
     if (next != null && (next < 0 || next > max)) {
       toast.error(t('academic.score_range', { max, defaultValue: `Score must be between 0 and ${max}` }))
       setDraft(value == null ? '' : String(value))
       return
     }
+    sent.current = next
     onSave(next)
   }
 

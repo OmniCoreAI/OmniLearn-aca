@@ -7,13 +7,15 @@ from src.routers import health
 from src.routers import instance
 from src.routers import plans
 from src.routers import usergroups
-from src.routers import dev, trail, users, auth, orgs, roles, search, portal_navigation
+from src.routers import dev, trail, users, auth, orgs, roles, search, portal_navigation, reports
 from src.routers import calendar as calendar_router_module
+from src.routers import inbox as inbox_router_module
 from src.routers import monitoring
 from src.routers import stream
 from src.routers import api_tokens
 from src.routers import webhooks
 from src.routers.integrations import zapier as zapier_integration
+from src.routers.integrations import zoom as zoom_integration
 from src.routers.ai import ai, magicblocks, courseplanning, rag
 from src.routers.boards import boards_playground
 from src.routers.orgs import ai_credits
@@ -60,6 +62,7 @@ from src.core.ee_hooks import register_ee_routers
 from src.services.dev.dev import isDevModeEnabledOrRaise
 from src.routers.utils import router as utils_router
 from src.security.auth import get_current_user
+from src.security.modules import require_module
 from src.security.api_token_utils import (
     get_authenticated_non_api_token_user,
     require_authenticated_user_or_api_token,
@@ -142,6 +145,13 @@ v1_router.include_router(
     prefix="/integrations/zapier",
     tags=["integrations", "zapier"],
 )
+# Zoom: authenticated per route; /webhook is verified by Zoom's HMAC signature.
+v1_router.include_router(
+    zoom_integration.router,
+    prefix="/integrations/zoom",
+    tags=["integrations", "zoom"],
+    dependencies=[Depends(require_module("online_classes"))],
+)
 v1_router.include_router(
     custom_domains.router,
     prefix="/orgs",
@@ -200,25 +210,25 @@ v1_router.include_router(
     programs_router_module.router,
     prefix="/programs",
     tags=["academic", "programs"],
-    dependencies=[Depends(require_authenticated_user)],
+    dependencies=[Depends(require_module("postgraduate")), Depends(require_authenticated_user)],
 )
 v1_router.include_router(
     cohorts_router_module.router,
     prefix="/cohorts",
     tags=["academic", "cohorts"],
-    dependencies=[Depends(require_authenticated_user)],
+    dependencies=[Depends(require_module("postgraduate")), Depends(require_authenticated_user)],
 )
 v1_router.include_router(
     semesters_router_module.router,
     prefix="/semesters",
     tags=["academic", "semesters"],
-    dependencies=[Depends(require_authenticated_user)],
+    dependencies=[Depends(require_module("postgraduate")), Depends(require_authenticated_user)],
 )
 v1_router.include_router(
     training_programs_router_module.router,
     prefix="/training-programs",
     tags=["academic", "training-programs"],
-    dependencies=[Depends(require_authenticated_user)],
+    dependencies=[Depends(require_module("training_programs")), Depends(require_authenticated_user)],
 )
 # Academic core: calendar, course catalog, curricula, offerings, students.
 # Absolute paths (/academic-years, /terms, /academic-courses, /curricula,
@@ -226,7 +236,7 @@ v1_router.include_router(
 v1_router.include_router(
     academic_core_router_module.router,
     tags=["academic"],
-    dependencies=[Depends(require_authenticated_user)],
+    dependencies=[Depends(require_module("postgraduate")), Depends(require_authenticated_user)],
 )
 # Course academic profile (1:1 course extension) — reuses course RBAC.
 v1_router.include_router(
@@ -252,13 +262,13 @@ v1_router.include_router(
     instructor_finance_router_module.router,
     prefix="/instructor-finance",
     tags=["instructors", "finance"],
-    dependencies=[Depends(require_authenticated_user)],
+    dependencies=[Depends(require_module("finance")), Depends(require_authenticated_user)],
 )
 v1_router.include_router(
     finance_ledger_router_module.router,
     prefix="/finance",
     tags=["finance"],
-    dependencies=[Depends(require_authenticated_user)],
+    dependencies=[Depends(require_module("finance")), Depends(require_authenticated_user)],
 )
 # Administration & Configuration (reusable, org-level configuration data).
 v1_router.include_router(
@@ -313,6 +323,12 @@ v1_router.include_router(
     admin_audience_router_module.router,
     prefix="/audience",
     tags=["administration", "audience"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+v1_router.include_router(
+    inbox_router_module.router,
+    prefix="/inbox",
+    tags=["notifications"],
     dependencies=[Depends(require_authenticated_user)],
 )
 v1_router.include_router(
@@ -380,6 +396,12 @@ v1_router.include_router(
     prefix="/trail",
     tags=["trail"],
     dependencies=[Depends(require_authenticated_user)]
+)
+v1_router.include_router(
+    reports.router,
+    prefix="/reports",
+    tags=["reports"],
+    dependencies=[Depends(require_module("reports")), Depends(require_authenticated_user)]
 )
 v1_router.include_router(
     ai.router,
@@ -465,6 +487,7 @@ v1_router.include_router(
     cms_news_router.router,
     prefix="/cms",
     tags=["cms"],
+    dependencies=[Depends(require_module("news"))],
 )
 
 # Register EE Routers if available

@@ -2,7 +2,8 @@
 import { use, useEffect, type ReactNode } from "react";
 import '@styles/globals.css'
 import Watermark from '@components/Objects/Watermark'
-import { SessionGate } from '@components/Contexts/LHSessionContext'
+import { SessionGate, useLHSession } from '@components/Contexts/LHSessionContext'
+import StudentPortalShell from '@components/StudentPortal/StudentPortalShell'
 import { OrgMenu } from '@components/Objects/Menus/OrgMenu'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { OrgJoinBanner, OrgJoinBannerProvider } from '@components/Objects/Banners/OrgJoinBanner'
@@ -27,6 +28,7 @@ function OrgFooter() {
 
 function LayoutContent({ children, orgslug }: { children: ReactNode; orgslug: string }) {
   const org = useOrg() as any
+  const session = useLHSession() as any
   const customFont = org?.config?.config?.customization?.general?.font || org?.config?.config?.general?.font || ''
   const pathname = usePathname()
 
@@ -69,6 +71,23 @@ function LayoutContent({ children, orgslug }: { children: ReactNode; orgslug: st
   // Pages that use a full-bleed layout (no footer/watermark)
   const noFooterPaths = ['copilot']
   const isFullBleedPage = noFooterPaths.some((p) => pathParts.includes(p))
+  // Signed-in learners get the student portal (sidebar + compact header);
+  // lesson pages keep the focused full-width player and its own top bar.
+  const inPortal = session?.status === 'authenticated' && !isFullBleedPage && !pathParts.includes('activity')
+  const fontStyle = customFont ? { fontFamily: `'${customFont}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif` } : {}
+
+  if (inPortal) {
+    return (
+      <div style={fontStyle}>
+        <PageViewTracker />
+        <OrgJoinBanner />
+        <StudentPortalShell orgslug={orgslug}>
+          {children}
+          <OrgFooter />
+        </StudentPortalShell>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -76,7 +95,7 @@ function LayoutContent({ children, orgslug }: { children: ReactNode; orgslug: st
       style={{
         // Same neutral canvas as the dashboard on every page.
         backgroundColor: 'hsl(var(--dash-canvas))',
-        ...(customFont ? { fontFamily: `'${customFont}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif` } : {}),
+        ...fontStyle,
       }}
     >
       <PageViewTracker />

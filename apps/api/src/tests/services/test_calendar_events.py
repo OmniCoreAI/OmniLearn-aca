@@ -3,6 +3,7 @@
 from datetime import datetime
 
 import pytest
+from sqlmodel import select
 
 from src.db.academic.calendar import AcademicTerm, AcademicYear
 from src.db.academic.catalog import AcademicCourse
@@ -233,3 +234,26 @@ async def test_lms_enrollment_brings_course_sessions(db, org, course, world):
     # Enrolled in the LMS course only — its class session and published
     # deadline, but not the postgraduate offering's lectures or term dates.
     assert _ids(feed) == {"class:class_1", "deadline:assignment_published"}
+
+
+async def test_guest_instructor_sees_only_their_session(db, org, world):
+    guest = await _member(db, org, 12, "guest", 3)
+    profile_id = (await db.execute(select(CourseAcademicProfile.id))).scalars().first()
+    db.add(
+        CourseScheduleSession(
+            profile_id=profile_id,
+            org_id=org.id,
+            title="Guest lecture",
+            start_date="2026-10-09",
+            session_uuid="class_guest",
+            instructor_id=guest.id,
+        )
+    )
+    await db.commit()
+
+    feed = await get_calendar_events(org.id, guest.id, db, START, END)
+    assert _ids(feed) == {"class:class_guest"}
+    assert feed["events"][0]["instructor"] == "Guest Tester"
+    # The course instructor still sees it, labelled with the guest's name.
+    lecturer_feed = await get_calendar_events(org.id, world["instructor"].id, db, START, END)
+    assert "class:class_guest" in _ids(lecturer_feed)

@@ -24,12 +24,15 @@ from src.services.courses.activities.pdf import create_documentpdf_activity
 
 @pytest.fixture
 def bypass_activity_rbac():
-    """Patches check_resource_access where activity services import it."""
+    """Patches the access checks where activity services import them."""
     with patch(
         "src.services.courses.activities.activities.check_resource_access",
         new_callable=AsyncMock,
     ), patch(
-        "src.services.courses.activities.pdf.check_resource_access",
+        "src.services.courses.activities.activities.check_course_content_access",
+        new_callable=AsyncMock,
+    ), patch(
+        "src.services.courses.activities.pdf.check_course_content_access",
         new_callable=AsyncMock,
     ):
         yield

@@ -101,15 +101,15 @@ function EntitiesHome({ orgslug }: { orgslug: string }) {
 
   const createButton = (
     <AcademicPrimaryButton onClick={() => openForm(null)}>
-      <Plus className="h-4 w-4" /> {t('entities.new_entity', 'New organization')}
+      <Plus className="h-4 w-4" /> {t('entities.new_entity', 'New entity')}
     </AcademicPrimaryButton>
   )
 
   return (
     <AcademicPageShell>
-      <AdminBreadcrumbs orgslug={orgslug} items={[{ label: t('administration.nav.entities', 'Organizations') }]} />
+      <AdminBreadcrumbs orgslug={orgslug} items={[{ label: t('administration.nav.entities', 'Entities') }]} />
       <AcademicHeader
-        title={t('administration.nav.entities', 'Organizations')}
+        title={t('administration.nav.entities', 'Entities')}
         subtitle={t('entities.subtitle', 'Ministries, universities and companies the academy trains for — with their members, groups and coordinators.')}
         action={createButton}
       />
@@ -121,7 +121,7 @@ function EntitiesHome({ orgslug }: { orgslug: string }) {
         selectable
         rowHref={detailHref}
         initialSort={{ key: 'name', dir: 'asc' }}
-        itemLabel={(n) => t('entities.count', '{{count}} organizations', { count: n })}
+        itemLabel={(n) => t('entities.count', '{{count}} entities', { count: n })}
         toolbar={
           <>
             <ToolbarSearch value={query} onChange={setQuery} placeholder={t('entities.search', 'Search by name or code')} />
@@ -167,11 +167,11 @@ function EntitiesHome({ orgslug }: { orgslug: string }) {
           <AcademicEmptyState
             compact
             icon={<Buildings size={24} />}
-            title={filtering ? t('administration.common.no_matches', 'No matches') : t('entities.none', 'No organizations yet')}
+            title={filtering ? t('administration.common.no_matches', 'No matches') : t('entities.none', 'No entities yet')}
             description={
               filtering
                 ? t('administration.common.no_matches_hint', 'Try a different search or clear the filters.')
-                : t('entities.none_desc', 'Create an organization, give it a coordinator, then make training available to its people.')
+                : t('entities.none_desc', 'Create an entity, give it a coordinator, then make training available to its people.')
             }
             action={filtering ? undefined : createButton}
           />
@@ -179,7 +179,7 @@ function EntitiesHome({ orgslug }: { orgslug: string }) {
         columns={[
           {
             key: 'name',
-            header: t('entities.organization', 'Organization'),
+            header: t('entities.organization', 'Entity'),
             primary: true,
             sortValue: (e: any) => displayName(e),
             cell: (e: any) => {
@@ -270,7 +270,7 @@ function EntitiesHome({ orgslug }: { orgslug: string }) {
         open={open}
         onOpenChange={setOpen}
         width="sm:max-w-[640px]"
-        title={editing ? `${t('administration.common.edit', 'Edit')} ${displayName(editing)}` : t('entities.new_entity', 'New organization')}
+        title={editing ? `${t('administration.common.edit', 'Edit')} ${displayName(editing)}` : t('entities.new_entity', 'New entity')}
         description={t('entities.form_desc', 'Its people can then be grouped, assigned training and followed by a coordinator.')}
       >
         {open ? (

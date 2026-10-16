@@ -55,7 +55,7 @@ export default function ForcePasswordChangeGate() {
           id: toastId,
         })
         setTimeout(() => {
-          signOut({ redirect: true, callbackUrl: getUriWithoutOrg('/auth/login') })
+          signOut({ redirect: true, callbackUrl: getUriWithoutOrg('/login') })
         }, 1500)
       } else {
         const detail =

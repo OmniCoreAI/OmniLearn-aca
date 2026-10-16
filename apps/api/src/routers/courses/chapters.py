@@ -14,6 +14,7 @@ from src.services.courses.chapters import (
     get_chapter,
     get_course_chapters,
     reorder_chapters_and_activities,
+    reorder_lecture_content,
     update_chapter,
 )
 from src.services.courses.lock_usergroups import (
@@ -126,6 +127,31 @@ async def api_update_chapter_meta(
     return await reorder_chapters_and_activities(
         request, course_uuid, order, current_user, db_session
     )
+
+
+@router.put(
+    "/course/{course_uuid}/lectures/{lecture_uuid}/order",
+    summary="Reorder one lecture's chapters and activities",
+    description=(
+        "Reorder the chapters of a lecture and the activities inside them. Open to the lecture's "
+        "instructor as well as course editors; every chapter and activity of the lecture must be sent once."
+    ),
+    responses={
+        200: {"description": "Order updated successfully"},
+        400: {"description": "Not a lecture of this course, or the payload is incomplete"},
+        403: {"description": "User may not edit this lecture"},
+        404: {"description": "Course not found"},
+    },
+)
+async def api_reorder_lecture(
+    request: Request,
+    course_uuid: str,
+    lecture_uuid: str,
+    order: ChapterUpdateOrder,
+    current_user: PublicUser = Depends(get_current_user),
+    db_session=Depends(get_db_session),
+):
+    return await reorder_lecture_content(request, course_uuid, lecture_uuid, order, current_user, db_session)
 
 
 @router.get(

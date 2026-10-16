@@ -20,7 +20,8 @@ from src.services.courses.activities.uploads.videos import upload_video
 from fastapi import HTTPException, status, UploadFile, Request
 from uuid import uuid4
 from datetime import datetime
-from src.security.rbac import check_resource_access, AccessAction
+from src.security.rbac import AccessAction
+from src.services.courses.lecture_access import check_course_content_access
 
 
 async def create_video_activity(
@@ -66,8 +67,8 @@ async def create_video_activity(
         )
 
     # RBAC check
-    await check_resource_access(
-        request, db_session, current_user, course.course_uuid, AccessAction.CREATE
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.CREATE, chapter_id=chapter.id
     )
 
     # Get org_uuid
@@ -206,8 +207,8 @@ async def create_external_video_activity(
         )
 
     # RBAC check
-    await check_resource_access(
-        request, db_session, current_user, course.course_uuid, AccessAction.CREATE
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.CREATE, chapter_id=chapter.id
     )
 
     # generate activity_uuid
@@ -289,8 +290,8 @@ async def update_video_activity(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    await check_resource_access(
-        request, db_session, current_user, course.course_uuid, AccessAction.UPDATE
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.UPDATE, activity_id=activity.id
     )
 
     if name is not None:
@@ -352,8 +353,8 @@ async def update_external_video_activity(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    await check_resource_access(
-        request, db_session, current_user, course.course_uuid, AccessAction.UPDATE
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.UPDATE, activity_id=activity.id
     )
 
     if name is not None:

@@ -25,7 +25,7 @@ SYSTEM_ROLE_UUIDS = (
 
 class NavItem(NamedTuple):
     id: str
-    section: str  # overview | academic | teaching | manage | administration
+    section: str  # overview | academic | teaching | manage | administration | reports
 
 
 NAV_ITEMS: tuple[NavItem, ...] = (
@@ -39,6 +39,8 @@ NAV_ITEMS: tuple[NavItem, ...] = (
     NavItem("cms-news", "academic"),
     # Lecturer workspace: offerings they teach, gradebooks, interview panels.
     NavItem("postgraduate-teaching", "teaching"),
+    # Online classes (Zoom): the meetings a lecturer hosts, across their lectures.
+    NavItem("online-classes", "teaching"),
     NavItem("assignments", "teaching"),
     NavItem("library", "teaching"),
     NavItem("boards", "teaching"),
@@ -55,6 +57,8 @@ NAV_ITEMS: tuple[NavItem, ...] = (
     NavItem("entities", "administration"),
     NavItem("communication", "administration"),
     NavItem("certificate-templates", "administration"),
+    # Reports — read-only academy reports (financial, learning, admissions, people).
+    NavItem("reports", "reports"),
 )
 
 NAV_ITEM_IDS: frozenset[str] = frozenset(item.id for item in NAV_ITEMS)
@@ -62,12 +66,13 @@ NAV_ITEM_IDS: frozenset[str] = frozenset(item.id for item in NAV_ITEMS)
 _ALL_ITEM_IDS = tuple(item.id for item in NAV_ITEMS)
 
 # Teaching-oriented subset for the Instructor default — no finance, no
-# users/org-settings, no cross-org analytics.
+# users/org-settings, no cross-org analytics. Training Programs is added by
+# assignment (coordinator / trainer), see the web usePortalNavVisibility hook.
 _INSTRUCTOR_DEFAULT_ITEM_IDS = (
     "home",
     "calendar",
-    "training-programs",
     "postgraduate-teaching",
+    "online-classes",
     "assignments",
     "library",
     "boards",

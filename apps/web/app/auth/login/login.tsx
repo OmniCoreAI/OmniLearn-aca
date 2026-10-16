@@ -17,6 +17,7 @@ import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { useTranslation } from 'react-i18next'
 import { resendVerificationEmail } from '@services/auth/auth'
 import AuthLayout from '@components/Auth/AuthLayout'
+import { getLandingPath } from '@/lib/auth/landing'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
 
 interface LoginClientProps {
@@ -210,8 +211,10 @@ const LoginClient = (props: LoginClientProps) => {
         setIsSubmitting(false);
       } else {
         track(AnalyticsEvent.LoginSucceeded, { method: 'credentials' })
-        // First signIn already authenticated and set cookies — just redirect
-        window.location.href = callbackUrl;
+        // First signIn already authenticated and set cookies — send staff to
+        // their dashboard and learners to the learner home.
+        const landing = await getLandingPath(props.org?.id)
+        window.location.href = `${callbackUrl}?to=${encodeURIComponent(landing)}`;
       }
     },
   })
