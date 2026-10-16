@@ -72,16 +72,16 @@ export interface GlassCalendarRange {
 
 export interface GlassCalendarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   selectedDate?: Date
-  onDateSelect?: (date: Date) => void
+  onDateSelect?: (_date: Date) => void
   /** Called whenever the days in view change (and once on mount). */
-  onRangeChange?: (range: GlassCalendarRange) => void
+  onRangeChange?: (_range: GlassCalendarRange) => void
   defaultView?: GlassCalendarView
-  onViewChange?: (view: GlassCalendarView) => void
+  onViewChange?: (_view: GlassCalendarView) => void
   /** BCP 47 locale for month and weekday names; defaults to the browser's. */
   locale?: string
   labels?: GlassCalendarLabels
   /** Up to three CSS colours shown as dots under the day. */
-  dayMarkers?: (date: Date) => string[]
+  dayMarkers?: (_date: Date) => string[]
   /** Full month grid instead of the scrolling strip. */
   expanded?: boolean
   /** Rendered where the original had its settings button. */
@@ -145,6 +145,9 @@ export const GlassCalendar = React.forwardRef<HTMLDivElement, GlassCalendarProps
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view, rangeStartTime, visibleMonthTime])
 
+    // Plain values so the memo below re-runs on a new date, not a new Date object.
+    const weekStartTime = weekStart.getTime()
+    const selectedTime = selectedDate.getTime()
     const days = React.useMemo(() => {
       const list: Day[] = []
       if (view === 'week') {
@@ -168,7 +171,7 @@ export const GlassCalendar = React.forwardRef<HTMLDivElement, GlassCalendarProps
       }
       return list
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [view, expanded, weekStart.getTime(), visibleMonthTime, selectedDate.getTime()])
+    }, [view, expanded, weekStartTime, visibleMonthTime, selectedTime])
 
     // Month strip: scroll the selected day (or today) to the middle. Done by
     // delta so it works in RTL and never scrolls the page vertically.
