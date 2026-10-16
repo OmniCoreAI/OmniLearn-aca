@@ -13,12 +13,14 @@ from src.db.administration.facilities import (
     FacilityReservationUpdate,
     FacilityUpdate,
     FreeSlot,
+    RoomAvailabilityRead,
     RoomSuggestion,
 )
 from src.db.users import PublicUser
 from src.security.auth import get_current_user
 from src.services.administration import facilities as svc
 from src.services.administration import hall_suggestions as suggest_svc
+from src.services.administration import room_availability as availability_svc
 from src.services.administration import reservations as booking_svc
 
 router = APIRouter()
@@ -70,6 +72,28 @@ async def api_org_bookings(
     current_user: PublicUser = Depends(get_current_user),
 ) -> List[FacilityBooking]:
     return await booking_svc.list_org_bookings(db_session, current_user, org_id, since, until, include_cancelled)
+
+
+@router.get(
+    "/org/{org_id}/availability",
+    response_model=RoomAvailabilityRead,
+    summary="Every room's availability for a period (free / busy / too small / out of service) and the drawn buildings",
+)
+async def api_room_availability(
+    org_id: int,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    attendees: Optional[int] = None,
+    exclude_program: Optional[str] = None,
+    exclude: Optional[str] = None,
+    for_course: Optional[str] = None,
+    for_offering: Optional[str] = None,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> RoomAvailabilityRead:
+    return await availability_svc.room_availability(
+        db_session, current_user, org_id, start, end, attendees, exclude_program, exclude, for_course, for_offering
+    )
 
 
 @router.get(

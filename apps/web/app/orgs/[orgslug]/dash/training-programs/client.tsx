@@ -43,6 +43,7 @@ import { Switch } from '@components/ui/switch'
 import { getTrainingPrograms, createTrainingProgram, updateTrainingProgram, deleteTrainingProgram } from '@services/academic/academic'
 import { getTrainingProgramThumbnailMediaDirectory } from '@services/media/media'
 import { FacilitySelect } from '@components/Dashboard/Pages/Administration/Pickers'
+import { RoomFitHint, RoomPickerButton } from '@components/Dashboard/Pages/Administration/FloorPlan/RoomPicker'
 import { cn } from '@/lib/utils'
 
 const TYPES = ['training_course', 'workshop', 'event', 'bootcamp', 'conference', 'seminar', 'certification_program']
@@ -981,6 +982,13 @@ function TrainingProgramForm({
   )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  // The room picker checks bookings over the program's dates and fits its seats.
+  const roomPeriod = {
+    start: startDate,
+    end: endDate || startDate,
+    attendees: capacity === '' ? null : Number(capacity),
+    excludeProgram: program?.trainingprogram_uuid,
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1058,6 +1066,10 @@ function TrainingProgramForm({
         </Field>
         <Field label={t('administration.facilities.venue', 'Venue (facility)')}>
           <FacilitySelect className={inputCls} value={facility} onChange={setFacility} current={program?.facility} />
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+            <RoomFitHint value={facility} period={roomPeriod} />
+            <RoomPickerButton value={facility} onChange={setFacility} period={roomPeriod} className="ms-auto" />
+          </div>
         </Field>
         <Field label={t('academic.location')} hint={t('training.location_hint', 'Used when no facility is picked, e.g. an external venue')}>
           <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />

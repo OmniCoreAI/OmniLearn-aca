@@ -68,6 +68,11 @@ class Location(LocationBase, table=True):
         sa_column=Column(Integer, ForeignKey("location.id", ondelete="SET NULL"), nullable=True),
     )
     location_uuid: str = Field(default="", index=True)
+    # Drawn layout of the building: {"appearance", "floors": [{"id", "name", "canvas",
+    # "rooms": [{"id", "facility_uuid", "kind", "rect", "doors"}], "fixtures"}]}.
+    # Bookable rooms point at a Facility, which stays the source of truth for
+    # name, capacity, status and equipment (see services/administration/floor_plans.py).
+    floor_plan: Optional[dict] = Field(default=None, sa_column=Column(JSONB, nullable=True))
     creation_date: str = ""
     update_date: str = ""
 
@@ -101,8 +106,21 @@ class LocationRead(LocationBase):
     parent_uuid: Optional[str] = None
     parent_name: Optional[str] = None
     facility_count: int = 0
+    floor_count: int = 0
     creation_date: str
     update_date: str
+
+
+class FloorPlanSave(SQLModel):
+    plan: dict
+
+
+class FloorPlanRead(SQLModel):
+    location_uuid: str
+    # None until the building has been drawn.
+    plan: Optional[dict] = None
+    created: int = 0  # facilities created by this save
+    updated: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -377,3 +395,49 @@ class RoomSuggestion(SQLModel):
 class FreeSlot(SQLModel):
     start: str
     end: str
+
+
+# ---------------------------------------------------------------------------
+# Room availability for a period (visual room picker)
+# ---------------------------------------------------------------------------
+
+
+class RoomAvailabilityStatus(str, Enum):
+    AVAILABLE = "available"
+    BUSY = "busy"  # booked, or used by another program, during the period
+    TOO_SMALL = "too_small"
+    UNAVAILABLE = "unavailable"  # inactive, maintenance, not bookable or blacked out
+
+
+class RoomAvailability(SQLModel):
+    facility_uuid: str
+    name: str
+    code: str = ""
+    capacity: Optional[int] = None
+    facility_type_name: Optional[str] = None
+    location_uuid: Optional[str] = None
+    location_name: Optional[str] = None
+    floor: Optional[str] = None
+    room_number: Optional[str] = None
+    status: RoomAvailabilityStatus = RoomAvailabilityStatus.AVAILABLE
+    bookings: int = 0  # approved reservations overlapping the period
+    programs: List[str] = []  # other training programs holding the room then
+    blocked: List[str] = []  # out-of-service / blackout reasons
+    score: int = 0  # fit 0–100, only for available rooms
+    reasons: List[SuggestionReason] = []
+
+
+class PlanBuilding(SQLModel):
+    location_uuid: str
+    name: str
+    parent_uuid: Optional[str] = None
+    parent_name: Optional[str] = None
+    floor_count: int = 0
+
+
+class RoomAvailabilityRead(SQLModel):
+    # Whether a period was given; without one only seats and status are checked.
+    checked_period: bool = False
+    windows: int = 0  # time ranges checked (1 for a period, one per inheriting session)
+    rooms: List[RoomAvailability] = []
+    buildings: List[PlanBuilding] = []

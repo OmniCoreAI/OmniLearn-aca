@@ -18,6 +18,7 @@ import { pickCurrentTerm } from '@components/Dashboard/Menus/postgradNavItems'
 import { getPrograms, getProgramCohorts } from '@services/academic/academic'
 import { createOffering, displayName, getAcademicCourses, getOfferings, getTerms } from '@services/academic/core'
 import { FacilitySelect } from '@components/Dashboard/Pages/Administration/Pickers'
+import { RoomFitHint, RoomPickerButton } from '@components/Dashboard/Pages/Administration/FloorPlan/RoomPicker'
 import { cn } from '@/lib/utils'
 
 const LIVE = ['planned', 'open', 'in_progress']
@@ -317,6 +318,10 @@ function OfferingCreateForm({ terms, defaultTerm, onDone }: { terms: any[]; defa
         </Field>
         <Field label={t('administration.facilities.default_room', 'Room / facility')}>
           <FacilitySelect className={inputCls} value={facility} onChange={setFacility} />
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+            <RoomFitHint value={facility} period={{ attendees: capacity === '' ? null : Number(capacity) }} />
+            <RoomPickerButton value={facility} onChange={setFacility} period={{ attendees: capacity === '' ? null : Number(capacity) }} className="ms-auto" />
+          </div>
         </Field>
         <Field label={t('academic.classroom')}>
           <input className={inputCls} value={classroom} onChange={(e) => setClassroom(e.target.value)} placeholder={t('administration.facilities.free_text_hint', 'Optional free-text note')} />

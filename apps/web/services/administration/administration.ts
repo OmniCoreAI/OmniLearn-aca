@@ -76,6 +76,15 @@ export const createLocation = (org_id: number, data: any, token: string) =>
   call('POST', `locations/${qs({ org_id })}`, token, data)
 export const updateLocation = (uuid: string, data: any, token: string) => call('PUT', `locations/${uuid}`, token, data)
 export const deleteLocation = (uuid: string, token: string) => call('DELETE', `locations/${uuid}`, token)
+export const getFloorPlan = (location_uuid: string, token: string) =>
+  call('GET', `locations/${location_uuid}/floor-plan`, token) as Promise<{ location_uuid: string; plan: any | null }>
+export const saveFloorPlan = (location_uuid: string, plan: any, token: string) =>
+  call('PUT', `locations/${location_uuid}/floor-plan`, token, { plan }) as Promise<{
+    location_uuid: string
+    plan: any
+    created: number
+    updated: number
+  }>
 
 export const getFacilities = (org_id: number, token: string) => call('GET', `facilities/org/${org_id}`, token)
 export const getFacilityOptions = (org_id: number, token: string) =>
@@ -148,6 +157,52 @@ export const cancelFacilityBooking = (booking_uuid: string, token: string) =>
 /** Why start–end cannot use the room (empty when free). `exclude`: booking or session uuid being edited. */
 export const getFacilityConflicts = (facility_uuid: string, token: string, start: string, end?: string, exclude?: string) =>
   call('GET', `facilities/${facility_uuid}/conflicts${qs({ start, end, exclude })}`, token) as Promise<string[]>
+
+export type RoomAvailabilityStatus = 'available' | 'busy' | 'too_small' | 'unavailable'
+export interface RoomAvailability {
+  facility_uuid: string
+  name: string
+  code: string
+  capacity: number | null
+  facility_type_name: string | null
+  location_uuid: string | null
+  location_name: string | null
+  floor: string | null
+  room_number: string | null
+  status: RoomAvailabilityStatus
+  bookings: number
+  programs: string[]
+  blocked: string[]
+  score: number
+  reasons: SuggestionReason[]
+}
+export interface PlanBuilding {
+  location_uuid: string
+  name: string
+  parent_uuid: string | null
+  parent_name: string | null
+  floor_count: number
+}
+/** Every room's status for a period (dates or date-times) and the buildings that have a floor plan. */
+export const getRoomAvailability = (
+  org_id: number,
+  token: string,
+  params: {
+    start?: string
+    end?: string
+    attendees?: number | null
+    exclude_program?: string
+    exclude?: string
+    for_course?: string
+    for_offering?: string
+  }
+) =>
+  call('GET', `facilities/org/${org_id}/availability${qs(params)}`, token) as Promise<{
+    checked_period: boolean
+    windows: number
+    rooms: RoomAvailability[]
+    buildings: PlanBuilding[]
+  }>
 
 export function getRoomSuggestions(
   org_id: number,

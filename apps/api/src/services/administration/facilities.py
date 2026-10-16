@@ -93,11 +93,12 @@ async def _location_read(db_session: AsyncSession, location: Location) -> Locati
         await db_session.execute(select(func.count(Facility.id)).where(Facility.location_id == location.id))
     ).scalar() or 0
     return LocationRead(
-        **location.model_dump(),
+        **location.model_dump(exclude={"floor_plan"}),
         location_type=await _lookup_option(db_session, location.location_type_id),
         parent_uuid=parent.location_uuid if parent else None,
         parent_name=parent.name if parent else None,
         facility_count=int(facility_count),
+        floor_count=len((location.floor_plan or {}).get("floors") or []),
     )
 
 
