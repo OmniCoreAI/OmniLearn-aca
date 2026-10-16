@@ -54,7 +54,8 @@ function CourseOverviewPage(props: { params: Promise<CourseOverviewParams> }) {
       label: t('dashboard.courses.settings.tabs.content'),
       icon: GalleryVerticalEnd,
       href: `/dash/courses/course/${params.courseuuid}/content`,
-      requiredPermission: 'update_content' as const
+      // Lecture instructors edit their lectures' content without course-wide rights.
+      requiredPermission: 'edit_lecture_content' as const
     },
     {
       key: 'access',
@@ -177,7 +178,7 @@ function CourseOverviewPage(props: { params: Promise<CourseOverviewParams> }) {
                 <div className="h-32 bg-gray-200 rounded w-full max-w-2xl mt-6" />
               </div>
             ) : null}
-            {!rightsLoading && params.subpage == 'content' && hasPermission('update_content') ? (
+            {!rightsLoading && params.subpage == 'content' && hasPermission('edit_lecture_content') ? (
               <EditCourseStructure orgslug={params.orgslug} />
             ) : null}
             {!rightsLoading && params.subpage == 'general' && hasPermission('update') ? (

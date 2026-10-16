@@ -1657,4 +1657,13 @@ async def get_course_user_rights(
     if is_course_owner or is_admin or is_maintainer_role:
         rights["permissions"]["create_certifications"] = True
 
+    # LECTURES: courses organised by lectures let each lecture's instructor
+    # edit that lecture's content (see services/courses/lecture_access.py).
+    from src.services.courses.lecture_access import lecture_rights
+
+    rights["lectures"] = await lecture_rights(db_session, current_user, course)
+    rights["permissions"]["edit_lecture_content"] = bool(
+        rights["permissions"]["update_content"] or rights["lectures"]["taught"]
+    )
+
     return rights

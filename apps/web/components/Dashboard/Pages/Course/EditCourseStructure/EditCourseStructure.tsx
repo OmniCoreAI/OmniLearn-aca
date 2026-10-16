@@ -5,6 +5,8 @@ import { DragDropContext, Droppable } from '@hello-pangea/dnd'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@lib/query/keys'
 import ChapterElement from './DraggableElements/ChapterElement'
+import LecturesEditor from './LecturesEditor'
+import { useCourseRights } from '@components/Hooks/useCourseRights'
 import PageLoading from '@components/Objects/Loaders/PageLoading'
 import { createChapter } from '@services/courses/chapters'
 import { useRouter } from 'next/navigation'
@@ -57,6 +59,8 @@ const EditCourseStructure = (props: EditCourseStructureProps) => {
   const course_structure = course ? course.courseStructure : {}
   const course_uuid = course ? course.courseStructure.course_uuid : ''
   const _withUnpublishedActivities = course ? course.withUnpublishedActivities : false
+  const { rights } = useCourseRights(course_uuid)
+  const lecturesMode = !!rights?.lectures?.organized
   // New Chapter creation
   const [newChapterModal, setNewChapterModal] = useState(false)
 
@@ -122,6 +126,8 @@ const EditCourseStructure = (props: EditCourseStructureProps) => {
   }, [props.course_uuid, course_structure, course])
 
   if (!course) return <PageLoading></PageLoading>
+  // Training-program courses: chapters are grouped under lectures.
+  if (lecturesMode) return <LecturesEditor orgslug={props.orgslug} />
 
   return (
     <div className="flex flex-col">

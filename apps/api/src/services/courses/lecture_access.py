@@ -141,3 +141,23 @@ async def teaches_any_lecture(db_session: AsyncSession, current_user: AnyPrincip
         if (lecture.instructor_id or profile.instructor_id) == current_user.id:
             return await teaches_lecture(db_session, current_user, course, lecture)
     return False
+
+
+async def lecture_rights(db_session: AsyncSession, current_user: AnyPrincipal, course: Course) -> dict:
+    """For the course-rights endpoint: is the course organised by lectures, and
+    which lectures (session uuids) may this user edit on their own?"""
+    profile = (
+        await db_session.execute(select(CourseAcademicProfile).where(CourseAcademicProfile.course_id == course.id))
+    ).scalars().first()
+    organized = bool(profile and profile.organize_by_lectures)
+    taught: list[str] = []
+    if organized and isinstance(current_user, PublicUser) and getattr(current_user, "id", None):
+        lectures = (
+            await db_session.execute(
+                select(CourseScheduleSession).where(CourseScheduleSession.profile_id == profile.id)  # type: ignore[union-attr]
+            )
+        ).scalars().all()
+        mine = [lec for lec in lectures if (lec.instructor_id or profile.instructor_id) == current_user.id]  # type: ignore[union-attr]
+        if mine and await teaches_lecture(db_session, current_user, course, mine[0]):
+            taught = [lec.session_uuid for lec in mine]
+    return {"organized": organized, "taught": taught}
