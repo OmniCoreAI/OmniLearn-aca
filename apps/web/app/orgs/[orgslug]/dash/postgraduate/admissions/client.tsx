@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
   Archive,
@@ -29,9 +29,11 @@ import { PostgradDrawer } from '@components/Dashboard/Pages/Academic/AcademicDia
 import { PostgradTabs, StatusPill, useAcademicContext } from '@components/Dashboard/Pages/Academic/AcademicUI'
 import DashDataTable, { ToolbarSearch, ToolbarSelect } from '@components/Dashboard/Shared/DataTable/DashDataTable'
 import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
-import { PersonAvatar, useStoredView } from '@components/Dashboard/Pages/Administration/AdminUI'
+import { PersonAvatar, useConfirm, useStoredView } from '@components/Dashboard/Pages/Administration/AdminUI'
+import { KanbanBoard, type KanbanColumn, type KanbanTask } from '@/components/ui/kanban-board'
+import { useKanbanMessages } from '@components/Dashboard/Shared/useKanbanMessages'
 import { getPrograms, getProgramCohorts } from '@services/academic/academic'
-import { createApplication, displayName, getApplications, stripPrefix } from '@services/academic/core'
+import { applicationAction, createApplication, decideApplication, displayName, getApplications, stripPrefix } from '@services/academic/core'
 import { cn } from '@/lib/utils'
 
 const GOLD = 'bg-[linear-gradient(135deg,hsl(43_85%_60%),hsl(40_78%_49%))]'
@@ -150,64 +152,137 @@ function ApplicantCell({ a }: { a: any }) {
   )
 }
 
+/** Where an application may go next on the board. */
+const NEXT_STAGES: Partial<Record<StageKey, StageKey[]>> = {
+  new: ['review'],
+  review: ['waitlisted', 'accepted'],
+  waitlisted: ['accepted'],
+  accepted: ['enrolled'],
+}
+
+/**
+ * The admission funnel as a drag-and-drop board. Cards only move forward one
+ * real step (start review, waitlist, make an offer, enroll); each drop asks
+ * first because the applicant is emailed, and goes back if the server says no
+ * (e.g. requirements not met for an offer). Rejecting stays on the
+ * application page, where a reason is required.
+ */
 function PipelineBoard({ apps, orgslug }: { apps: any[]; orgslug: string }) {
   const { t } = useTranslation()
   const next = useNextStep()
   const relative = useRelative()
-  return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-5">
-      {BOARD.map((key) => {
+  const messages = useKanbanMessages()
+  const queryClient = useQueryClient()
+  const { orgId, access_token } = useAcademicContext()
+  const { confirm, dialog } = useConfirm()
+
+  const columns = useMemo<KanbanColumn[]>(
+    () =>
+      BOARD.map((key) => {
         const stage = STAGES.find((s) => s.key === key)!
-        const items = apps.filter((a) => stage.statuses!.includes(a.status))
-        return (
-          <div key={key} className="flex min-h-[220px] flex-col rounded-[1.25rem] bg-[hsl(var(--dash-ink))]/[0.03] p-2">
-            <div className="flex items-center gap-2 px-2 pb-2.5 pt-1.5">
-              <stage.Icon size={15} weight="duotone" className="text-[hsl(var(--dash-muted))]" />
-              <span className="text-sm font-semibold">{t(stage.labelKey, stage.label)}</span>
-              <span className="ms-auto rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[hsl(var(--dash-muted))] shadow-sm">{items.length}</span>
-            </div>
-            <div className="space-y-2">
-              {items.map((a) => {
-                const step = next(a)
-                return (
-                  <Link
-                    key={a.application_uuid}
-                    href={hrefOf(orgslug, a)}
-                    className="group block rounded-2xl border border-[hsl(var(--dash-border))]/70 bg-white p-3 shadow-[0_1px_2px_hsl(220_30%_20%/0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-14px_hsl(220_30%_20%/0.35)]"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <PersonAvatar name={displayName(a.applicant)} size={30} />
-                      <div className="min-w-0">
-                        <p className="truncate text-[13px] font-semibold">{displayName(a.applicant)}</p>
-                        <p className="truncate font-mono text-[10px] text-[hsl(var(--dash-muted))]">{a.application_number}</p>
-                      </div>
-                    </div>
-                    <p className="mt-2 truncate text-[11.5px] text-[hsl(var(--dash-ink))]/75">{a.program_name}</p>
-                    <p className="truncate text-[11px] text-[hsl(var(--dash-muted))]">
-                      {[a.cohort_code || a.cohort_name, relative(a.submitted_at)].filter(Boolean).join(' · ')}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      {['submitted', 'under_review', 'waitlisted'].includes(a.status) ? <EligibilityBadge eligible={a.eligible} pending={a.pending_checks} /> : <span />}
-                      {step?.urgent ? <span className={cn('h-2 w-2 shrink-0 rounded-full', GOLD)} title={step.label} /> : null}
-                    </div>
-                    {step ? (
-                      <p className={cn('mt-2 border-t border-[hsl(var(--dash-border))]/60 pt-2 text-[11px] font-semibold', step.urgent ? 'text-[hsl(var(--dash-accent))]' : 'text-[hsl(var(--dash-muted))]')}>
-                        {step.label} →
-                      </p>
-                    ) : null}
-                  </Link>
-                )
-              })}
-              {items.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-[hsl(var(--dash-border))] px-3 py-6 text-center text-xs text-[hsl(var(--dash-muted))]">
-                  {t('training.column_empty', 'Nothing here')}
-                </p>
-              ) : null}
-            </div>
+        return {
+          id: key,
+          name: t(stage.labelKey, stage.label),
+          icon: <stage.Icon size={15} weight="duotone" />,
+          tasks: apps.filter((a) => stage.statuses!.includes(a.status)).map((a) => ({ id: a.application_uuid, title: displayName(a.applicant), data: a })),
+        }
+      }),
+    [apps, t]
+  )
+  const stageName = (key: string) => columns.find((c) => c.id === key)?.name ?? key
+
+  const advance = async (a: any, to: StageKey) => {
+    const name = displayName(a.applicant)
+    const ask: Partial<Record<StageKey, { title: string; message: string; confirmText: string }>> = {
+      review: {
+        title: t('academic.adm.board_review_title', 'Start reviewing {{name}}?', { name }),
+        message: t('academic.adm.board_review_msg', 'The application moves to In review so checks, tests and interviews can start.'),
+        confirmText: t('academic.start_review', 'Start review'),
+      },
+      waitlisted: {
+        title: t('academic.adm.board_waitlist_title', 'Waitlist {{name}}?', { name }),
+        message: t('academic.adm.board_waitlist_msg', 'The applicant is told they are on the waitlist for this intake.'),
+        confirmText: t('academic.adm.waitlist', 'Waitlist'),
+      },
+      accepted: {
+        title: t('academic.adm.board_accept_title', 'Make {{name}} an offer?', { name }),
+        message: t('academic.adm.board_accept_msg', 'The applicant is emailed an offer. All mandatory requirements must be met.'),
+        confirmText: t('academic.adm.make_offer', 'Make offer'),
+      },
+      enrolled: {
+        title: t('academic.adm.board_enroll_title', 'Enroll {{name}}?', { name }),
+        message: t('academic.adm.board_enroll_msg', 'They become a student of the program and are added to the intake.'),
+        confirmText: t('academic.adm.enroll', 'Enroll'),
+      },
+    }
+    if (!(await confirm({ ...ask[to]!, tone: 'info' }))) return false
+
+    const status: Record<string, string> = { review: 'under_review', waitlisted: 'waitlisted', accepted: 'accepted', enrolled: 'enrolled' }
+    queryClient.setQueriesData({ queryKey: ['academic', 'applications', orgId] }, (list: any) =>
+      Array.isArray(list) ? list.map((x) => (x.application_uuid === a.application_uuid ? { ...x, status: status[to] } : x)) : list
+    )
+    try {
+      if (to === 'review') await applicationAction(a.application_uuid, 'review', access_token)
+      else if (to === 'enrolled') await applicationAction(a.application_uuid, 'enroll', access_token)
+      else await decideApplication(a.application_uuid, { decision: to }, access_token)
+      toast.success(t('academic.adm.board_moved', '{{name}} moved to {{stage}}', { name, stage: stageName(to) }))
+      return true
+    } catch (err: any) {
+      toast.error(err?.message || t('academic.update_failed'))
+      return false
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ['academic', 'applications'] })
+    }
+  }
+
+  const renderCard = (task: KanbanTask) => {
+    const a = task.data
+    const step = next(a)
+    return (
+      <Link
+        href={hrefOf(orgslug, a)}
+        draggable={false}
+        className="block rounded-2xl border border-[hsl(var(--dash-border))]/70 bg-white p-3 shadow-[0_1px_2px_hsl(220_30%_20%/0.04)]"
+      >
+        <div className="flex items-center gap-2.5">
+          <PersonAvatar name={displayName(a.applicant)} size={30} />
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-semibold">{displayName(a.applicant)}</p>
+            <p className="truncate font-mono text-[10px] text-[hsl(var(--dash-muted))]">{a.application_number}</p>
           </div>
-        )
-      })}
-    </div>
+        </div>
+        <p className="mt-2 truncate text-[11.5px] text-[hsl(var(--dash-ink))]/75">{a.program_name}</p>
+        <p className="truncate text-[11px] text-[hsl(var(--dash-muted))]">{[a.cohort_code || a.cohort_name, relative(a.submitted_at)].filter(Boolean).join(' · ')}</p>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          {['submitted', 'under_review', 'waitlisted'].includes(a.status) ? <EligibilityBadge eligible={a.eligible} pending={a.pending_checks} /> : <span />}
+          {step?.urgent ? <span className={cn('h-2 w-2 shrink-0 rounded-full', GOLD)} title={step.label} /> : null}
+        </div>
+        {step ? (
+          <p className={cn('mt-2 border-t border-[hsl(var(--dash-border))]/60 pt-2 text-[11px] font-semibold', step.urgent ? 'text-[hsl(var(--dash-accent))]' : 'text-[hsl(var(--dash-muted))]')}>
+            {step.label} →
+          </p>
+        ) : null}
+      </Link>
+    )
+  }
+
+  return (
+    <>
+      <KanbanBoard
+        columns={columns}
+        columnWidth="fill"
+        minColumnWidth={220}
+        reorderable={false}
+        label={t('academic.adm.view_pipeline', 'Pipeline')}
+        emptyLabel={t('training.column_empty', 'Nothing here')}
+        renderCard={renderCard}
+        canMove={(_task, from, to) => (NEXT_STAGES[from as StageKey] ?? []).includes(to as StageKey)}
+        blockedHint={() => t('academic.adm.board_not_next', 'Not a next step')}
+        onMove={(task, _from, to) => advance(task.data, to as StageKey)}
+        messages={messages}
+      />
+      {dialog}
+    </>
   )
 }
 

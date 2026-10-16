@@ -1133,7 +1133,20 @@
       "where": "Program and intake",
       "withdraw_message": "The application closes. It can be reopened later as a draft with the same number.",
       "withdraw_title": "Withdraw this application?",
-      "count_one": "{{count}} application"
+      "count_one": "{{count}} application",
+      "board_review_title": "Start reviewing {{name}}?",
+      "board_review_msg": "The application moves to In review so checks, tests and interviews can start.",
+      "board_waitlist_title": "Waitlist {{name}}?",
+      "board_waitlist_msg": "The applicant is told they are on the waitlist for this intake.",
+      "board_accept_title": "Make {{name}} an offer?",
+      "board_accept_msg": "The applicant is emailed an offer. All mandatory requirements must be met.",
+      "board_enroll_title": "Enroll {{name}}?",
+      "board_enroll_msg": "They become a student of the program and are added to the intake.",
+      "board_moved": "{{name}} moved to {{stage}}",
+      "board_not_next": "Not a next step",
+      "waitlist": "Waitlist",
+      "make_offer": "Make offer",
+      "enroll": "Enroll"
     },
     "prog": {
       "accepting": "Accepting applications",
@@ -8329,7 +8342,9 @@
     "next_session": "next {{when}}",
     "n_guest_sessions_one": "{{count}} with a guest trainer",
     "n_guest_sessions_other": "{{count}} with a guest trainer",
-    "no_trainer": "No trainer yet"
+    "no_trainer": "No trainer yet",
+    "board_dates_say": "Its dates put it in {{column}}",
+    "board_set_by_dates": "Set by the dates"
   },
   "postgrad": {
     "subtitle": "PhD, master’s and diploma programs — structure, intake, fees and coordination.",
@@ -9194,5 +9209,14 @@
     "disabled_body": "It is not available on this platform right now.",
     "back_home": "Back to home",
     "off_badge": "Turned off"
+  },
+  "board": {
+    "pick_up": "{{title}}. Press space to pick up.",
+    "picked_up": "Picked up {{title}}. Use the arrow keys to move it.",
+    "moved": "{{title}} moved to {{column}}, position {{position}}.",
+    "dropped": "Dropped {{title}} in {{column}}, position {{position}}.",
+    "cancelled": "Cancelled. {{title}} is back where it started.",
+    "not_allowed": "{{title}} cannot go to {{column}}.",
+    "draggable_card": "Draggable card"
   }
 }

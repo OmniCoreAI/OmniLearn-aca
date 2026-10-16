@@ -6542,7 +6542,20 @@
       "where": "البرنامج والدفعة",
       "withdraw_message": "يُغلق الطلب، ويمكن إعادة فتحه لاحقًا كمسودة بالرقم نفسه.",
       "withdraw_title": "سحب هذا الطلب؟",
-      "count_one": "طلب واحد"
+      "count_one": "طلب واحد",
+      "board_review_title": "بدء مراجعة طلب {{name}}؟",
+      "board_review_msg": "ينتقل الطلب إلى قيد المراجعة لتبدأ الفحوصات والاختبارات والمقابلات.",
+      "board_waitlist_title": "وضع {{name}} في قائمة الانتظار؟",
+      "board_waitlist_msg": "سيُبلَّغ المتقدم بأنه في قائمة الانتظار لهذه الدفعة.",
+      "board_accept_title": "تقديم عرض قبول إلى {{name}}؟",
+      "board_accept_msg": "سيُرسل عرض القبول إلى المتقدم بالبريد. يجب استيفاء جميع المتطلبات الإلزامية.",
+      "board_enroll_title": "تسجيل {{name}}؟",
+      "board_enroll_msg": "يصبح طالبًا في البرنامج ويُضاف إلى الدفعة.",
+      "board_moved": "نُقل {{name}} إلى {{stage}}",
+      "board_not_next": "ليست خطوة تالية",
+      "waitlist": "قائمة الانتظار",
+      "make_offer": "تقديم عرض",
+      "enroll": "تسجيل"
     },
     "prog": {
       "accepting": "يستقبل الطلبات",
@@ -8246,7 +8259,9 @@
     "n_sessions": "{{count}} جلسة",
     "next_session": "التالية {{when}}",
     "n_guest_sessions": "{{count}} بمدرب ضيف",
-    "no_trainer": "لا يوجد مدرب بعد"
+    "no_trainer": "لا يوجد مدرب بعد",
+    "board_dates_say": "تواريخه تضعه في {{column}}",
+    "board_set_by_dates": "تحدده التواريخ"
   },
   "postgrad": {
     "subtitle": "برامج الدكتوراه والماجستير والدبلوم — الهيكل والقبول والرسوم والتنسيق.",
@@ -9146,5 +9161,14 @@
     "disabled_body": "هذا القسم غير متاح على المنصة حاليًا.",
     "back_home": "العودة إلى الرئيسية",
     "off_badge": "متوقف"
+  },
+  "board": {
+    "pick_up": "{{title}}. اضغط مسافة لالتقاطها.",
+    "picked_up": "تم التقاط {{title}}. استخدم الأسهم لنقلها.",
+    "moved": "نُقلت {{title}} إلى {{column}}، الموضع {{position}}.",
+    "dropped": "وُضعت {{title}} في {{column}}، الموضع {{position}}.",
+    "cancelled": "أُلغي النقل. عادت {{title}} إلى مكانها.",
+    "not_allowed": "لا يمكن نقل {{title}} إلى {{column}}.",
+    "draggable_card": "بطاقة قابلة للسحب"
   }
 }
