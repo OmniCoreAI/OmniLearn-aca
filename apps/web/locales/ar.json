@@ -8335,7 +8335,15 @@
     "nothing_assigned_n": "{{count}} متدرب بلا تدريب مسند",
     "everyone_started": "بدأ كل من لديهم تدريب مسند.",
     "n_assigned": "{{count}} مسند",
-    "role_trainer": "مدرب"
+    "role_trainer": "مدرب",
+    "my_lectures": "محاضراتي",
+    "my_lectures_desc": "أضف فصول ومواد المحاضرات التي تدرّسها",
+    "self_paced": "ذاتية",
+    "lecture_no_content": "لا توجد مواد بعد",
+    "add_materials": "إضافة مواد",
+    "edit_lecture": "تعديل",
+    "n_chapters": "{{count}} فصول",
+    "n_activities": "{{count}} أنشطة"
   },
   "portal": {
     "programs": {
@@ -8932,7 +8940,14 @@
     "role_creator": "منشئ الدورة",
     "role_maintainer": "مشرف",
     "role_contributor": "مساهم",
-    "role_reporter": "مراجع"
+    "role_reporter": "مراجع",
+    "lecture_short": "م",
+    "lecture_n": "المحاضرة {{n}}",
+    "more_content": "المزيد",
+    "more_content_title": "فصول إضافية",
+    "lessons_done_of": "{{done}}/{{total}} دروس",
+    "lecture_empty": "ستظهر مواد هذه المحاضرة هنا.",
+    "lectures_count": "{{count}} محاضرات"
   },
   "online_meetings": {
     "status": {

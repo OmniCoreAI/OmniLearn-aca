@@ -161,3 +161,55 @@ async def lecture_rights(db_session: AsyncSession, current_user: AnyPrincipal, c
         if mine and await teaches_lecture(db_session, current_user, course, mine[0]):
             taught = [lec.session_uuid for lec in mine]
     return {"organized": organized, "taught": taught}
+
+
+async def course_lecture_summaries(db_session: AsyncSession, course: Course) -> list:
+    """The lectures of a course organised by lectures, for the learner course page."""
+    from src.db.administration.facilities import Facility
+    from src.db.courses.courses import CourseLectureSummary
+    from src.db.users import User
+
+    profile = (
+        await db_session.execute(select(CourseAcademicProfile).where(CourseAcademicProfile.course_id == course.id))
+    ).scalars().first()
+    if profile is None or not profile.organize_by_lectures:
+        return []
+    lectures = (
+        await db_session.execute(
+            select(CourseScheduleSession)
+            .where(CourseScheduleSession.profile_id == profile.id)
+            .order_by(CourseScheduleSession.order, CourseScheduleSession.id)  # type: ignore[arg-type]
+        )
+    ).scalars().all()
+    user_ids = {lec.instructor_id or profile.instructor_id for lec in lectures} - {None}
+    users = (
+        {u.id: u for u in (await db_session.execute(select(User).where(User.id.in_(user_ids)))).scalars().all()}  # type: ignore[union-attr]
+        if user_ids
+        else {}
+    )
+    room_ids = {lec.facility_id or profile.facility_id for lec in lectures} - {None}
+    rooms = (
+        dict((await db_session.execute(select(Facility.id, Facility.name).where(Facility.id.in_(room_ids)))).all())  # type: ignore[union-attr]
+        if room_ids
+        else {}
+    )
+    out = []
+    for lec in lectures:
+        teacher = users.get(lec.instructor_id or profile.instructor_id)
+        name = f"{teacher.first_name or ''} {teacher.last_name or ''}".strip() or teacher.username if teacher else None
+        out.append(
+            CourseLectureSummary(
+                lecture_uuid=lec.session_uuid,
+                title=lec.title,
+                description=lec.description,
+                order=lec.order or 0,
+                start_date=lec.start_date,
+                end_date=lec.end_date,
+                location=lec.location,
+                room=rooms.get(lec.facility_id or profile.facility_id),
+                instructor_uuid=teacher.user_uuid if teacher else None,
+                instructor_name=name,
+                instructor_avatar=teacher.avatar_image if teacher else None,
+            )
+        )
+    return out

@@ -398,3 +398,88 @@ class TestTrainingProgramLink:
             await tp_svc.link_course_to_training_program(_req(), "trainingprogram_x", course.course_uuid, admin_user, db)
         profile = (await db.execute(select(CourseAcademicProfile).where(CourseAcademicProfile.course_id == course.id))).scalars().first()
         assert profile is not None and profile.organize_by_lectures is True
+
+
+# ---------------------------------------------------------------------------
+# Learner course page and "My lectures"
+# ---------------------------------------------------------------------------
+
+
+class TestLectureSummaries:
+    @pytest.mark.asyncio
+    async def test_course_meta_lists_lectures_in_order(self, db, setup):
+        from src.services.courses.courses import get_course_meta
+
+        s = setup
+        s["l2"].order = 0
+        s["l1"].order = 5
+        s["l2"].instructor_id = None
+        s["profile"].instructor_id = s["outsider"].id
+        db.add_all([s["l1"], s["l2"], s["profile"]])
+        await db.commit()
+        meta = await get_course_meta(_req(), s["course"].course_uuid, False, s["admin"], db)
+        assert [lec.lecture_uuid for lec in meta.lectures] == ["session_l2", "session_l1"]
+        by_uuid = {lec.lecture_uuid: lec for lec in meta.lectures}
+        # A lecture without its own instructor shows the course instructor.
+        assert by_uuid["session_l2"].instructor_name.startswith("outsider")
+        assert by_uuid["session_l1"].instructor_uuid == "user_regular"
+        assert {c.id: c.lecture_uuid for c in meta.chapters}[21] == "session_l2"
+
+    @pytest.mark.asyncio
+    async def test_flat_courses_have_no_lectures(self, db, setup):
+        from src.services.courses.lecture_access import course_lecture_summaries
+
+        s = setup
+        s["profile"].organize_by_lectures = False
+        db.add(s["profile"])
+        await db.commit()
+        assert await course_lecture_summaries(db, s["course"]) == []
+
+
+class TestMyLectures:
+    @pytest.mark.asyncio
+    async def test_each_instructor_sees_their_own(self, db, setup, org):
+        from src.services.academic.course_profiles import list_my_lectures
+
+        s = setup
+        mine = await list_my_lectures(db, s["teacher"], org.id)
+        assert [lec.lecture_uuid for lec in mine] == ["session_l1"]
+        assert mine[0].chapter_count == 2 and mine[0].activity_count == 2
+        assert mine[0].course_uuid == s["course"].course_uuid and not mine[0].as_course_instructor
+        assert [lec.lecture_uuid for lec in await list_my_lectures(db, s["other"], org.id)] == ["session_l2"]
+        assert await list_my_lectures(db, s["outsider"], org.id) == []
+
+    @pytest.mark.asyncio
+    async def test_course_instructor_gets_lectures_without_an_instructor(self, db, setup, org):
+        from src.services.academic.course_profiles import list_my_lectures
+
+        s = setup
+        s["l2"].instructor_id = None
+        s["profile"].instructor_id = s["outsider"].id
+        db.add_all([s["l2"], s["profile"]])
+        await db.commit()
+        lectures = await list_my_lectures(db, s["outsider"], org.id)
+        assert [lec.lecture_uuid for lec in lectures] == ["session_l2"] and lectures[0].as_course_instructor
+
+    @pytest.mark.asyncio
+    async def test_other_organisation_is_refused(self, db, setup, other_org):
+        from src.services.academic.course_profiles import list_my_lectures
+
+        with pytest.raises(HTTPException) as exc:
+            await list_my_lectures(db, setup["teacher"], other_org.id)
+        assert exc.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_assignment_notice_links_to_the_content(self, db, setup):
+        from src.services.academic import course_profiles as cp
+
+        s = setup
+        with patch.object(cp, "staff_assigned", new=AsyncMock()) as notify:
+            await cp._notify_session_instructor(db, s["course"], s["l1"], None, s["admin"])
+        assert notify.await_args.args[5].endswith("/content")
+        s["profile"].organize_by_lectures = False
+        db.add(s["profile"])
+        await db.commit()
+        with patch.object(cp, "staff_assigned", new=AsyncMock()) as notify:
+            await cp._notify_session_instructor(db, s["course"], s["l1"], None, s["admin"])
+        assert notify.await_args.args[5] == "/dash/calendar"

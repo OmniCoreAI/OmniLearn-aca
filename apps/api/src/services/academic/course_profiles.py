@@ -23,6 +23,7 @@ from src.db.courses.courses import Course
 from src.db.courses.certifications import Certifications
 from src.db.courses.assignments import Assignment
 from src.db.academic.course_profiles import (
+    MyLectureRead,
     CourseAcademicProfile,
     CourseAcademicProfileRead,
     CourseAcademicProfileUpsert,
@@ -328,9 +329,16 @@ async def _notify_session_instructor(
     db_session: AsyncSession, course: Course, session: CourseScheduleSession, previous_id: Optional[int], current_user
 ) -> None:
     if session.instructor_id and session.instructor_id != previous_id:
+        # Lecture instructors land on the course content, where they add the lecture's material.
+        profile = await _get_profile(db_session, course.id)
+        link = (
+            f"/dash/courses/course/{slug(course.course_uuid, 'course_')}/content"
+            if profile and profile.organize_by_lectures
+            else "/dash/calendar"
+        )
         await staff_assigned(
             db_session, course.org_id, [session.instructor_id], "session_instructor",
-            f"{session.title} · {course.name}", "/dash/calendar",
+            f"{session.title} · {course.name}", link,
             actor_id=resolve_acting_user_id(current_user), resource=("course", course.course_uuid),
         )
         await db_session.refresh(session)
@@ -415,3 +423,89 @@ async def delete_session(
     await db_session.delete(session)
     await db_session.commit()
     return "Session deleted"
+
+
+async def list_my_lectures(
+    db_session: AsyncSession, current_user: PublicUser, org_id: int
+) -> List[MyLectureRead]:
+    """Lectures the user teaches in courses organised by lectures (dated ones first)."""
+    from src.db.academic.links import TrainingProgramCourse
+    from src.db.academic.training_programs import TrainingProgram
+    from src.db.administration.facilities import Facility
+    from src.db.courses.chapter_activities import ChapterActivity
+    from src.services.administration.authz import require_org_member
+
+    await require_org_member(db_session, current_user, org_id)
+    me = current_user.id
+    rows = (
+        await db_session.execute(
+            select(CourseScheduleSession, CourseAcademicProfile, Course)
+            .join(CourseAcademicProfile, CourseAcademicProfile.id == CourseScheduleSession.profile_id)  # type: ignore[arg-type]
+            .join(Course, Course.id == CourseAcademicProfile.course_id)  # type: ignore[arg-type]
+            .where(
+                Course.org_id == org_id,
+                CourseAcademicProfile.organize_by_lectures == True,  # noqa: E712
+                (CourseScheduleSession.instructor_id == me)
+                | (CourseScheduleSession.instructor_id.is_(None) & (CourseAcademicProfile.instructor_id == me)),  # type: ignore[union-attr]
+            )
+        )
+    ).all()
+    if not rows:
+        return []
+    lecture_ids = [s.id for s, _, _ in rows]
+    course_ids = {c.id for _, _, c in rows}
+    chapter_counts = dict(
+        (
+            await db_session.execute(
+                select(Chapter.lecture_id, func.count(Chapter.id))
+                .where(Chapter.lecture_id.in_(lecture_ids))  # type: ignore[union-attr]
+                .group_by(Chapter.lecture_id)
+            )
+        ).all()
+    )
+    activity_counts = dict(
+        (
+            await db_session.execute(
+                select(Chapter.lecture_id, func.count(ChapterActivity.id))
+                .join(ChapterActivity, ChapterActivity.chapter_id == Chapter.id)  # type: ignore[arg-type]
+                .where(Chapter.lecture_id.in_(lecture_ids))  # type: ignore[union-attr]
+                .group_by(Chapter.lecture_id)
+            )
+        ).all()
+    )
+    programs = {
+        course_id: tp
+        for course_id, tp in (
+            await db_session.execute(
+                select(TrainingProgramCourse.course_id, TrainingProgram)
+                .join(TrainingProgram, TrainingProgram.id == TrainingProgramCourse.training_program_id)  # type: ignore[arg-type]
+                .where(TrainingProgramCourse.course_id.in_(course_ids))  # type: ignore[attr-defined]
+            )
+        ).all()
+    }
+    room_ids = {s.facility_id or p.facility_id for s, p, _ in rows} - {None}
+    rooms = (
+        dict((await db_session.execute(select(Facility.id, Facility.name).where(Facility.id.in_(room_ids)))).all())  # type: ignore[union-attr]
+        if room_ids
+        else {}
+    )
+    out = [
+        MyLectureRead(
+            lecture_uuid=s.session_uuid,
+            title=s.title,
+            start_date=s.start_date,
+            end_date=s.end_date,
+            location=s.location,
+            room=rooms.get(s.facility_id or p.facility_id),
+            course_uuid=c.course_uuid,
+            course_name=c.name,
+            training_program_uuid=programs[c.id].trainingprogram_uuid if c.id in programs else None,
+            training_program_name=programs[c.id].name if c.id in programs else None,
+            chapter_count=int(chapter_counts.get(s.id, 0)),
+            activity_count=int(activity_counts.get(s.id, 0)),
+            as_course_instructor=s.instructor_id is None,
+        )
+        for s, p, c in rows
+    ]
+    out.sort(key=lambda lec: (lec.start_date is None, lec.start_date or "", lec.course_name, lec.title))
+    return out

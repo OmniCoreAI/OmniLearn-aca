@@ -3,10 +3,11 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, CaretDown, Check, ListBullets, LockSimple, Play } from '@phosphor-icons/react'
+import { ArrowRight, CalendarBlank, CaretDown, Check, ChalkboardTeacher, ListBullets, LockSimple, MapPin, Play } from '@phosphor-icons/react'
 import { EmptyState, Panel, PanelHeader, Pill, ProgressBar, useFormats } from '@components/StudentPortal/Dashboard/ui'
 import { cn } from '@/lib/utils'
-import { activityType, type CourseOutline, type OutlineChapter, type OutlineLesson } from './useCourseOutline'
+import { formatSlot } from '@components/Dashboard/Pages/Administration/HallBooking/hallTime'
+import { activityType, type CourseOutline, type OutlineChapter, type OutlineLecture, type OutlineLesson } from './useCourseOutline'
 
 function LessonStatus({ state, number }: { state: OutlineLesson['state']; number: string }) {
   if (state === 'done') {
@@ -198,6 +199,90 @@ function ChapterBlock({
   )
 }
 
+/** A lecture: who teaches it, when and where, its progress, then its chapters. */
+function LectureSection({ group, signedIn, children }: { group: OutlineLecture; signedIn: boolean; children: React.ReactNode }) {
+  const { t, i18n } = useTranslation()
+  const fmt = useFormats()
+  const lecture = group.lecture
+  const complete = group.total > 0 && group.done >= group.total
+  const pct = group.total ? Math.round((group.done / group.total) * 100) : 0
+  const place = lecture?.room || lecture?.location
+  return (
+    <li className="space-y-2.5">
+      <div className="flex flex-wrap items-start gap-3 px-1">
+        <span
+          className={cn(
+            'inline-flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-2xl leading-none',
+            complete && signedIn
+              ? 'bg-[hsl(152_45%_92%)] text-[hsl(152_60%_28%)]'
+              : group.containsNext && signedIn
+                ? 'bg-[linear-gradient(135deg,hsl(43_90%_62%),hsl(39_82%_47%))] text-[hsl(220_10%_8%)]'
+                : 'bg-[hsl(var(--dash-ink))] text-white'
+          )}
+        >
+          {lecture ? (
+            <>
+              <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">{t('course_page.lecture_short', 'Lec')}</span>
+              <span className="text-[16px] font-extrabold tabular-nums">{fmt.number(group.number)}</span>
+            </>
+          ) : (
+            <ListBullets size={18} weight="bold" />
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11.5px] font-semibold uppercase tracking-wide text-[hsl(var(--dash-muted))]">
+            {lecture ? t('course_page.lecture_n', 'Lecture {{n}}', { n: fmt.number(group.number) }) : t('course_page.more_content', 'More content')}
+          </p>
+          <h3 className="text-[16px] font-bold leading-snug text-[hsl(var(--dash-ink))]" dir="auto">
+            {lecture ? lecture.title : t('course_page.more_content_title', 'Extra chapters')}
+          </h3>
+          {lecture ? (
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-[hsl(var(--dash-muted))]">
+              {lecture.instructor_name ? (
+                <span className="inline-flex items-center gap-1">
+                  <ChalkboardTeacher size={14} /> {lecture.instructor_name}
+                </span>
+              ) : null}
+              {lecture.start_date ? (
+                <span className="inline-flex items-center gap-1">
+                  <CalendarBlank size={14} /> {formatSlot(lecture.start_date, lecture.end_date, i18n.language)}
+                </span>
+              ) : null}
+              {place ? (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin size={14} /> {place}
+                </span>
+              ) : null}
+            </p>
+          ) : null}
+          {lecture?.description ? (
+            <p className="mt-1 text-[13px] leading-relaxed text-[hsl(var(--dash-ink))]/75" dir="auto">
+              {lecture.description}
+            </p>
+          ) : null}
+        </div>
+        {group.total ? (
+          <div className="flex shrink-0 flex-col items-end gap-1 pt-1">
+            <span className="text-[12px] font-semibold tabular-nums text-[hsl(var(--dash-muted))]">
+              {signedIn
+                ? t('course_page.lessons_done_of', '{{done}}/{{total}} lessons', { done: group.done, total: group.total })
+                : t('course_page.lessons_count', '{{count}} lessons', { count: group.total })}
+            </span>
+            {signedIn ? <ProgressBar value={pct} tone={complete ? 'green' : 'gold'} className="h-1.5 w-24" /> : null}
+          </div>
+        ) : null}
+      </div>
+      {group.chapters.length ? (
+        <ol className="space-y-2.5 border-s-2 border-[hsl(var(--dash-border))]/70 ps-3 sm:ms-[1.3rem] sm:ps-5">{children}</ol>
+      ) : (
+        <p className="rounded-xl bg-[hsl(var(--dash-canvas))] px-4 py-3 text-[13px] text-[hsl(var(--dash-muted))] sm:ms-[1.3rem]">
+          {t('course_page.lecture_empty', 'The materials for this lecture will appear here.')}
+        </p>
+      )}
+    </li>
+  )
+}
+
 /** Chapters and lessons, with the learner's progress through each. */
 export default function CourseCurriculum({
   outline,
@@ -224,7 +309,11 @@ export default function CourseCurriculum({
         id="course-content-title"
         icon={<ListBullets size={18} weight="bold" />}
         title={t('course_page.content_title', 'Course content')}
-        subtitle={`${t('course_page.chapters_count', '{{count}} chapters', { count: outline.chapters.length })} · ${t('course_page.lessons_count', '{{count}} lessons', { count: outline.total })}`}
+        subtitle={`${
+          outline.lectureGroups.some((g) => g.lecture)
+            ? t('course_page.lectures_count', '{{count}} lectures', { count: outline.lectureGroups.filter((g) => g.lecture).length })
+            : t('course_page.chapters_count', '{{count}} chapters', { count: outline.chapters.length })
+        } · ${t('course_page.lessons_count', '{{count}} lessons', { count: outline.total })}`}
         action={
           outline.chapters.length > 1 ? (
             <button
@@ -237,7 +326,24 @@ export default function CourseCurriculum({
           ) : null
         }
       />
-      {outline.chapters.length ? (
+      {outline.lectureGroups.length ? (
+        <ol className="mt-5 space-y-7">
+          {outline.lectureGroups.map((group) => (
+            <LectureSection key={group.key} group={group} signedIn={signedIn}>
+              {group.chapters.map((chapter) => (
+                <ChapterBlock
+                  key={chapter.key}
+                  chapter={chapter}
+                  open={isOpen(chapter.key)}
+                  onToggle={() => setOverrides((prev) => ({ ...prev, [chapter.key]: !isOpen(chapter.key) }))}
+                  signedIn={signedIn}
+                  onPrefetch={onPrefetch}
+                />
+              ))}
+            </LectureSection>
+          ))}
+        </ol>
+      ) : outline.chapters.length ? (
         <ol className="mt-4 space-y-2.5">
           {outline.chapters.map((chapter) => (
             <ChapterBlock

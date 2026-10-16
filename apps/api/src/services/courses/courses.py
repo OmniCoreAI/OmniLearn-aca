@@ -232,12 +232,15 @@ async def get_course_meta(
         for resource_author, user in author_results
     ]
 
+    from src.services.courses.lecture_access import course_lecture_summaries
+
     # Create course read model with chapters and org_uuid
     course_read = FullCourseRead(
         **course.model_dump(),
         org_uuid=org.org_uuid,
         authors=authors,
-        chapters=chapters
+        chapters=chapters,
+        lectures=await course_lecture_summaries(db_session, course),
     )
 
     # Cache only the anonymous (public, uniformly-stripped) view. See the read

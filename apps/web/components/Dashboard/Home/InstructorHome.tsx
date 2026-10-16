@@ -9,6 +9,7 @@ import {
   Certificate,
   ChalkboardTeacher,
   Exam,
+  Presentation,
   Student,
   VideoCamera,
 } from '@phosphor-icons/react'
@@ -18,6 +19,8 @@ import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
 import { getMyInterviews, getMyOfferings, displayName } from '@services/academic/core'
 import { useModules } from '@/lib/modules'
 import { getMyAssignments } from '@services/instructors/instructors'
+import { getMyLectures } from '@services/academic/academic'
+import { formatSlot } from '@components/Dashboard/Pages/Administration/HallBooking/hallTime'
 import { getUriWithOrg } from '@services/config/config'
 import { HomeCard, EmptyState } from './HomeCard'
 import { ViewAllLink, WorkBadge, WorkListSkeleton, WorkRow, shortDate } from './WorkspaceUI'
@@ -53,6 +56,13 @@ export default function InstructorHome() {
     enabled: ready,
   })
 
+  const lecturesQ = useQuery({
+    queryKey: ['academic', 'my-lectures', orgId],
+    queryFn: () => getMyLectures(orgId!, token),
+    enabled: ready,
+  })
+  const lectures = (Array.isArray(lecturesQ.data) ? lecturesQ.data : []) as any[]
+
   const offerings = (Array.isArray(offeringsQ.data) ? offeringsQ.data : []) as any[]
   const interviews = (Array.isArray(interviewsQ.data) ? interviewsQ.data : []) as any[]
   const courses = (assignmentsQ.data?.courses ?? []) as any[]
@@ -87,6 +97,40 @@ export default function InstructorHome() {
       />}
 
       <div className="grid grid-cols-12 gap-5">
+        {lecturesQ.isLoading || lectures.length ? (
+          <div className="col-span-12">
+            <HomeCard
+              title={t('workspace.my_lectures', 'My lectures')}
+              subtitle={t('workspace.my_lectures_desc', 'Add the chapters and materials for the lectures you teach')}
+            >
+              {lecturesQ.isLoading ? (
+                <WorkListSkeleton />
+              ) : (
+                <ul className="space-y-1.5">
+                  {lectures.map((l) => {
+                    const when = l.start_date ? formatSlot(l.start_date, l.end_date, i18n.language) : t('workspace.self_paced', 'Self-paced')
+                    const content =
+                      l.chapter_count === 0
+                        ? t('workspace.lecture_no_content', 'No materials yet')
+                        : `${t('workspace.n_chapters', '{{count}} chapters', { count: l.chapter_count })} · ${t('workspace.n_activities', '{{count}} activities', { count: l.activity_count })}`
+                    return (
+                      <WorkRow
+                        key={l.lecture_uuid}
+                        href={href(`/dash/courses/course/${l.course_uuid.replace('course_', '')}/content`)}
+                        icon={Presentation}
+                        tone={l.chapter_count === 0 ? 'urgent' : 'plain'}
+                        title={`${l.title} · ${l.course_name}`}
+                        meta={[when, l.room || l.location, content].filter(Boolean).join(' · ')}
+                        badge={l.training_program_name ? <WorkBadge tone="muted">{l.training_program_name}</WorkBadge> : undefined}
+                        action={l.chapter_count === 0 ? t('workspace.add_materials', 'Add materials') : t('workspace.edit_lecture', 'Edit')}
+                      />
+                    )
+                  })}
+                </ul>
+              )}
+            </HomeCard>
+          </div>
+        ) : null}
         {postgradOn && <div className="col-span-12 @3xl:col-span-7">
           <HomeCard
             title={t('academic.needs_attention', 'Needs your attention')}

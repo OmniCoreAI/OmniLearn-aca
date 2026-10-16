@@ -118,6 +118,23 @@ class CourseRead(CourseBase):
     extra_metadata: Optional[dict] = None
 
 
+class CourseLectureSummary(SQLModel):
+    """A lecture as learners see it (courses organised by lectures)."""
+
+    lecture_uuid: str
+    title: str
+    description: Optional[str] = None
+    order: int = 0
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    location: Optional[str] = None
+    room: Optional[str] = None
+    # The lecture's own instructor, or the course instructor when it has none.
+    instructor_uuid: Optional[str] = None
+    instructor_name: Optional[str] = None
+    instructor_avatar: Optional[str] = None
+
+
 class FullCourseRead(CourseBase):
     id: int
     org_id: int
@@ -133,6 +150,8 @@ class FullCourseRead(CourseBase):
     # Chapters, Activities
     chapters: List[ChapterRead]
     authors: List[AuthorWithRole]
+    # Courses organised by lectures: the lectures, in order (chapters carry lecture_uuid).
+    lectures: List[CourseLectureSummary] = []
     pass
 
 

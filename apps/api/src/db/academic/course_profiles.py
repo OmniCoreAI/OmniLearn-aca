@@ -203,3 +203,22 @@ class CourseAcademicProfileRead(SQLModel):
     sessions: List[CourseScheduleSessionRead] = []
     creation_date: str = ""
     update_date: str = ""
+
+
+class MyLectureRead(SQLModel):
+    """A lecture the signed-in user teaches (their own, or as course instructor)."""
+
+    lecture_uuid: str
+    title: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    location: Optional[str] = None
+    room: Optional[str] = None
+    course_uuid: str
+    course_name: str
+    training_program_uuid: Optional[str] = None
+    training_program_name: Optional[str] = None
+    chapter_count: int = 0
+    activity_count: int = 0
+    # True when the lecture has no instructor of its own and the user teaches the course.
+    as_course_instructor: bool = False
