@@ -26,6 +26,9 @@ class UserCreate(UserBase):
     first_name: str = ""
     last_name: str = ""
     password: str
+    # From /auth/otp/verify-phone: the account gets that number, verified.
+    # Never stored itself.
+    phone_token: Optional[str] = None
 
 
 class UserUpdate(UserBase):

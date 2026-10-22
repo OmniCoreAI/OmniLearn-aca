@@ -9,10 +9,8 @@ reset only match phones that were verified.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
-import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy import func
@@ -24,9 +22,9 @@ from src.core.events.database import get_db_session
 from src.db.users import User, UserRead
 from src.routers.auth import get_token_expiry_ms, set_auth_cookies
 from src.security.auth import create_access_token, create_refresh_token
-from src.security.security import ALGORITHM, SECRET_KEY
 from src.services.email.utils import send_email
 from src.services.otp.messages import Language, otp_email, otp_sms
+from src.services.otp.phone_token import decode_phone_token, issue_phone_token  # noqa: F401
 from src.services.otp.store import Channel, allow_ip, issue_code, verify_code
 from src.services.phone import normalize_phone
 from src.services.security.account_lockout import (
@@ -43,8 +41,6 @@ from src.services.users.password_reset import set_user_password
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-PHONE_TOKEN_AUDIENCE = "phone-verification"
-PHONE_TOKEN_TTL = timedelta(minutes=30)
 _OK = {"ok": True}
 
 
@@ -220,24 +216,4 @@ async def api_verify_phone(body: PhoneVerify):
         raise _error(400, "INVALID_PHONE", "Enter a valid mobile number")
     if not verify_code("verify_phone", "sms", phone, body.code):
         raise _error(400, "INVALID_CODE", "The code is wrong or has expired")
-    now = datetime.now(timezone.utc)
-    token = jwt.encode(
-        {"sub": phone, "aud": PHONE_TOKEN_AUDIENCE, "iat": now, "exp": now + PHONE_TOKEN_TTL},
-        SECRET_KEY,
-        algorithm=ALGORITHM,
-    )
-    return {"phone": phone, "phone_token": token}
-
-
-def decode_phone_token(token: str) -> Optional[str]:
-    """
-    The E.164 number a phone token (from /verify-phone) vouches for, or None
-    when it's invalid or expired. The audience claim keeps these tokens from
-    passing as sign-in tokens, and sign-in tokens from passing as these.
-    """
-    try:
-        claims = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], audience=PHONE_TOKEN_AUDIENCE)
-    except jwt.PyJWTError:
-        return None
-    phone = claims.get("sub")
-    return phone if isinstance(phone, str) and phone.startswith("+") else None
+    return {"phone": phone, "phone_token": issue_phone_token(phone)}
