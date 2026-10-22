@@ -63,6 +63,7 @@ async def get_instance_info(db_session: AsyncSession = Depends(get_db_session)):
         "cookie_domain": get_shared_cookie_domain(config),
         "login_url": config.hosting_config.login_url,
         "signup_url": config.hosting_config.signup_url,
+        "password_reset_url": config.hosting_config.password_reset_url,
     }
 
     set_cached_instance_info(result)

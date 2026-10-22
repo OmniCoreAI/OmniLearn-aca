@@ -47,6 +47,7 @@ class TestInstanceRouter:
                 cookie_config=SimpleNamespace(domain=".localhost"),
                 login_url=None,
                 signup_url=None,
+                password_reset_url=None,
             )
         )
         with patch(
@@ -85,6 +86,7 @@ class TestInstanceRouter:
                 cookie_config=SimpleNamespace(domain=".example.org"),
                 login_url="https://www.example.org/login",
                 signup_url="https://www.example.org/register",
+                password_reset_url="https://www.example.org/forgot-password",
             )
         )
         with patch(
@@ -111,6 +113,7 @@ class TestInstanceRouter:
         assert body["cookie_domain"] == ".example.org"
         assert body["login_url"] == "https://www.example.org/login"
         assert body["signup_url"] == "https://www.example.org/register"
+        assert body["password_reset_url"] == "https://www.example.org/forgot-password"
 
     async def test_get_instance_info_falls_back_when_db_lookup_fails(self, client):
         config = SimpleNamespace(
@@ -120,6 +123,7 @@ class TestInstanceRouter:
                 cookie_config=SimpleNamespace(domain=".localhost"),
                 login_url=None,
                 signup_url=None,
+                password_reset_url=None,
             )
         )
         bad_session = Mock()

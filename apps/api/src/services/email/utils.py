@@ -3,6 +3,7 @@ import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -223,7 +224,7 @@ def send_email(to: EmailStr, subject: str, body: str):
 
     lh_config = get_omnilearn_config()
     mailing = lh_config.mailing_config
-    sender = f"OmniLearn <{mailing.system_email_address}>"
+    sender_name = getattr(mailing, "system_email_name", None) or "OmniLearn"
 
     # Resend (and most providers) require a plain `email@example.com` string.
     # Pydantic's EmailStr is a str subclass, but third-party JSON serializers
@@ -236,8 +237,12 @@ def send_email(to: EmailStr, subject: str, body: str):
         raise HTTPException(status_code=400, detail="Invalid recipient email address")
 
     if mailing.email_provider == "smtp":
+        # formataddr RFC 2047-encodes a non-ASCII name (e.g. an Arabic one),
+        # as raw SMTP headers must be ASCII.
+        sender = formataddr((sender_name, mailing.system_email_address))
         return _send_email_smtp(sender, to_addr, subject, body, mailing)
     else:
+        sender = f"{sender_name} <{mailing.system_email_address}>"
         return _send_email_resend(sender, to_addr, subject, body, mailing)
 
 

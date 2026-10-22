@@ -110,12 +110,18 @@ def send_password_reset_email(
     email: EmailStr,
     base_url: str,
     lang: str = "en",
+    reset_page_url: Optional[str] = None,
 ):
+    """
+    `reset_page_url` (OMNILEARN_PASSWORD_RESET_URL) is a reset page hosted
+    elsewhere, e.g. on the main website; otherwise the LMS's own /reset.
+    """
     safe_username = html.escape(user.username)
     safe_code = html.escape(generated_reset_code)
     safe_email = quote(str(email), safe='')
     safe_code_param = quote(generated_reset_code, safe='')
-    reset_url = f"{base_url}/reset?email={safe_email}&amp;resetCode={safe_code_param}"
+    reset_page = html.escape(reset_page_url) if reset_page_url else f"{base_url}/reset"
+    reset_url = f"{reset_page}?email={safe_email}&amp;resetCode={safe_code_param}"
 
     heading = t(lang, "password_reset.heading")
     body_text = t(lang, "password_reset.body", username=safe_username)
