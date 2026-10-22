@@ -131,6 +131,10 @@ class SmsConfig(BaseModel):
     brevo_api_key: Optional[str] = None
     # The "From" shown on the phone: up to 11 letters/digits, approved in Brevo.
     sms_sender: Optional[str] = None
+    # Most code SMS the whole site sends in an hour: caps what abuse can cost.
+    sms_hourly_budget: int = 100
+    # Countries (ISO alpha-2) codes may be texted to; empty = any.
+    sms_allowed_countries: list[str] = []
 
 
 class OmniLearnConfig(BaseModel):
@@ -706,6 +710,20 @@ def get_omnilearn_config() -> OmniLearnConfig:
             sms_sender=os.environ.get("OMNILEARN_SMS_SENDER")
             or yaml_config.get("sms_config", {}).get("sms_sender")
             or None,
+            sms_hourly_budget=int(
+                os.environ.get("OMNILEARN_SMS_HOURLY_BUDGET")
+                or yaml_config.get("sms_config", {}).get("sms_hourly_budget")
+                or 100
+            ),
+            sms_allowed_countries=[
+                c.strip().upper()
+                for c in (
+                    os.environ.get("OMNILEARN_SMS_ALLOWED_COUNTRIES")
+                    or yaml_config.get("sms_config", {}).get("sms_allowed_countries")
+                    or ""
+                ).split(",")
+                if c.strip()
+            ],
         ),
         mailing_config=MailingConfig(
             email_provider=email_provider,

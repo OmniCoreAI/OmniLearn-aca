@@ -11,12 +11,15 @@ reset only match phones that were verified.
 import logging
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+import phonenumbers
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from config.config import get_omnilearn_config
 from src.core.deployment_mode import get_deployment_mode
 from src.core.events.database import get_db_session
 from src.db.users import User, UserRead
@@ -25,7 +28,7 @@ from src.security.auth import create_access_token, create_refresh_token
 from src.services.email.utils import send_email
 from src.services.otp.messages import Language, otp_email, otp_sms
 from src.services.otp.phone_token import decode_phone_token, issue_phone_token  # noqa: F401
-from src.services.otp.store import Channel, allow_ip, issue_code, verify_code
+from src.services.otp.store import Channel, allow_ip, allow_sms, discard, issue_code, verify_code
 from src.services.phone import normalize_phone
 from src.services.security.account_lockout import (
     check_account_locked,
@@ -100,22 +103,48 @@ async def _find_user(db_session: AsyncSession, channel: Channel, identifier: str
     return (await db_session.execute(statement)).scalars().first()
 
 
-async def _deliver(channel: Channel, user: User, purpose: str, language: str, code: str) -> None:
-    """Sends the code; failures are only logged so the answer stays neutral."""
+def _sms_country_allowed(phone: str) -> bool:
+    allowed = get_omnilearn_config().sms_config.sms_allowed_countries
+    if not allowed:
+        return True
+    return phonenumbers.region_code_for_number(phonenumbers.parse(phone)) in allowed
+
+
+def _sms_budget_left() -> bool:
+    return allow_sms(get_omnilearn_config().sms_config.sms_hourly_budget)
+
+
+async def _deliver(
+    channel: Channel, identifier: str, user: User, purpose: str, language: str, code: str
+) -> None:
+    """
+    Sends the code. Runs after the response (BackgroundTasks), so known and
+    unknown accounts answer alike. A code that can't go out is discarded,
+    giving back the cooldown and hourly quota; failures are only logged.
+    """
     if channel == "sms":
-        if not await send_sms(user.phone, otp_sms(purpose, language, code)):
+        if not _sms_country_allowed(user.phone) or not _sms_budget_left():
+            logger.warning("OTP SMS withheld (country not allowed or hourly budget used up)")
+            discard(purpose, channel, identifier)
+        elif not await send_sms(user.phone, otp_sms(purpose, language, code)):
             logger.error("OTP SMS not delivered to user %s", user.user_uuid)
+            discard(purpose, channel, identifier)
         return
     subject, body = otp_email(purpose, language, code)
     try:
-        send_email(to=user.email, subject=subject, body=body)
+        # send_email is blocking (SMTP); keep it off the event loop.
+        await run_in_threadpool(send_email, to=user.email, subject=subject, body=body)
     except HTTPException:
         logger.error("OTP email not delivered to user %s", user.user_uuid)
+        discard(purpose, channel, identifier)
 
 
 @router.post("/request", summary="Send a one-time sign-in or reset code")
 async def api_request_code(
-    request: Request, body: OtpRequest, db_session: AsyncSession = Depends(get_db_session)
+    request: Request,
+    body: OtpRequest,
+    background: BackgroundTasks,
+    db_session: AsyncSession = Depends(get_db_session),
 ):
     _guard_ip(request)
     identifier = _identifier(body.channel, body.identifier, body.region)
@@ -124,7 +153,9 @@ async def api_request_code(
         if user:
             code = issue_code(body.purpose, body.channel, identifier)
             if code:
-                await _deliver(body.channel, user, body.purpose, body.language, code)
+                background.add_task(
+                    _deliver, body.channel, identifier, user, body.purpose, body.language, code
+                )
     return _OK
 
 
@@ -203,9 +234,16 @@ async def api_request_phone_code(request: Request, body: PhoneCodeRequest):
     phone = normalize_phone(body.phone, body.region)
     if not phone:
         raise _error(400, "INVALID_PHONE", "Enter a valid mobile number")
+    if not _sms_country_allowed(phone):
+        raise _error(400, "COUNTRY_NOT_SUPPORTED", "We can't send codes to this country yet")
     code = issue_code("verify_phone", "sms", phone)
-    if code and not await send_sms(phone, otp_sms("verify_phone", body.language, code)):
-        logger.error("Phone verification SMS not delivered")
+    if code:
+        if not _sms_budget_left():
+            discard("verify_phone", "sms", phone)
+            raise _error(429, "SMS_LIMIT", "Text messages are busy right now. Please try again later.")
+        if not await send_sms(phone, otp_sms("verify_phone", body.language, code)):
+            logger.error("Phone verification SMS not delivered")
+            discard("verify_phone", "sms", phone)
     return _OK
 
 

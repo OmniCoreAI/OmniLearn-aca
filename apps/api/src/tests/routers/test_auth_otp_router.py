@@ -204,3 +204,59 @@ async def test_sms_message_is_in_the_requested_language(client, outbox, db):
     assert text.startswith("رمز التحقق") and len(text) <= 70
     users = (await db.execute(select(User))).scalars().all()
     assert len(users) == 1
+
+
+async def test_delivery_runs_after_the_response(client, outbox, db):
+    # Sending inline would make known accounts answer measurably slower than
+    # unknown ones (enumeration by timing), and block the event loop on SMTP.
+    from fastapi import BackgroundTasks
+
+    await _user(db)
+    scheduled = []
+    real_add = BackgroundTasks.add_task
+
+    def spy(self, func, *args, **kwargs):
+        scheduled.append(func.__name__)
+        return real_add(self, func, *args, **kwargs)
+
+    with patch.object(BackgroundTasks, "add_task", spy):
+        await client.post("/api/v1/auth/otp/request", json={
+            "channel": "email", "identifier": "otp@test.com", "purpose": "login",
+        })
+    assert scheduled == ["_deliver"]
+    outbox["email"].assert_called_once()
+
+
+async def test_failed_sms_can_be_requested_again_at_once(client, outbox, db):
+    await _user(db, phone=PHONE, phone_verified=True)
+    req = {"channel": "sms", "identifier": PHONE, "purpose": "login"}
+    outbox["sms"].return_value = False
+    await client.post("/api/v1/auth/otp/request", json=req)
+    outbox["sms"].return_value = True
+    await client.post("/api/v1/auth/otp/request", json=req)
+    assert outbox["sms"].call_count == 2
+
+
+def _sms_config(budget=100, countries=None):
+    from types import SimpleNamespace
+    return SimpleNamespace(sms_config=SimpleNamespace(
+        brevo_api_key="k", sms_sender="ACA",
+        sms_hourly_budget=budget, sms_allowed_countries=countries or [],
+    ))
+
+
+async def test_verify_phone_respects_country_allowlist(client, outbox):
+    with patch("src.routers.auth_otp.get_omnilearn_config", return_value=_sms_config(countries=["EG"])):
+        r = await client.post("/api/v1/auth/otp/verify-phone/request", json={"phone": "+33612345678"})
+        assert r.status_code == 400 and r.json()["detail"]["code"] == "COUNTRY_NOT_SUPPORTED"
+        r = await client.post("/api/v1/auth/otp/verify-phone/request", json={"phone": PHONE})
+        assert r.status_code == 200
+    outbox["sms"].assert_called_once()
+
+
+async def test_global_sms_budget_stops_sending(client, outbox, db):
+    with patch("src.routers.auth_otp.get_omnilearn_config", return_value=_sms_config(budget=1)):
+        await client.post("/api/v1/auth/otp/verify-phone/request", json={"phone": PHONE})
+        r = await client.post("/api/v1/auth/otp/verify-phone/request", json={"phone": "+201001234568"})
+    assert r.status_code == 429 and r.json()["detail"]["code"] == "SMS_LIMIT"
+    assert outbox["sms"].call_count == 1

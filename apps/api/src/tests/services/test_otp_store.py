@@ -85,3 +85,35 @@ def test_redis_down_raises_503():
         with pytest.raises(HTTPException) as exc:
             issue_code("login", "email", ID)
     assert exc.value.status_code == 503
+
+
+def test_redis_connection_error_raises_503():
+    import redis as redis_lib
+
+    broken = fakeredis.FakeRedis()
+    broken.set = lambda *a, **k: (_ for _ in ()).throw(redis_lib.exceptions.ConnectionError("down"))
+    with patch("src.services.otp.store.get_redis_client", return_value=broken):
+        with pytest.raises(HTTPException) as exc:
+            issue_code("login", "email", ID)
+    assert exc.value.status_code == 503
+
+
+def test_discard_lets_the_user_request_again_at_once(fake):
+    assert issue_code("login", "sms", "+201001234567") is not None
+    store.discard("login", "sms", "+201001234567")
+    for _ in range(5):  # undelivered codes don't use up the hourly quota
+        code = issue_code("login", "sms", "+201001234567")
+        assert code is not None
+        store.discard("login", "sms", "+201001234567")
+    assert verify_code("login", "sms", "+201001234567", code) is False
+
+
+def test_arabic_indic_digits_verify(fake):
+    code = issue_code("login", "email", ID)
+    arabic = code.translate(str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩"))
+    assert verify_code("login", "email", ID, arabic) is True
+
+
+def test_global_sms_budget(fake):
+    assert all(store.allow_sms(3) for _ in range(3))
+    assert store.allow_sms(3) is False

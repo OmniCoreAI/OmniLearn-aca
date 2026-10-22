@@ -10,6 +10,9 @@ E.164 form where valid (src/services/phone.py, Egypt assumed for numbers
 without a country code); invalid ones are skipped, and when two accounts
 typed the same number the older account (lowest id) keeps it. None count as
 verified: ``phone_verified`` starts false for everyone.
+
+Idempotent (src/db/schema_patches.py): deployments built by create_all may be
+stamped past this revision, so the app also runs the same DDL at startup.
 """
 from typing import Sequence, Union
 
@@ -17,6 +20,7 @@ from alembic import op
 import sqlalchemy as sa
 import sqlmodel  # noqa: F401
 
+from src.db.schema_patches import USER_PHONE_DDL
 from src.services.phone import normalize_phone
 
 revision: str = "h1a2b3c4d5e6"
@@ -26,21 +30,20 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column("user", sa.Column("phone", sqlmodel.sql.sqltypes.AutoString(), nullable=True))
-    op.add_column(
-        "user",
-        sa.Column("phone_verified", sa.Boolean(), server_default=sa.false(), nullable=False),
-    )
-    op.create_index("ix_user_phone", "user", ["phone"], unique=True)
+    for statement in USER_PHONE_DDL:
+        op.execute(statement)
 
     conn = op.get_bind()
+    # Only accounts without a phone yet, so running this again changes nothing.
     rows = conn.execute(
         sa.text(
             "SELECT id, extra_metadata->>'phone' FROM \"user\" "
-            "WHERE extra_metadata->>'phone' IS NOT NULL ORDER BY id"
+            "WHERE phone IS NULL AND extra_metadata->>'phone' IS NOT NULL ORDER BY id"
         )
     ).fetchall()
-    taken: set[str] = set()
+    taken: set[str] = {
+        phone for (phone,) in conn.execute(sa.text('SELECT phone FROM "user" WHERE phone IS NOT NULL'))
+    }
     for user_id, raw in rows:
         phone = normalize_phone(raw, "EG")
         if phone is None or phone in taken:

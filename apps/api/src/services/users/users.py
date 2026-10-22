@@ -105,12 +105,19 @@ async def create_user(
                 status_code=400,
                 detail={"code": "INVALID_PHONE_TOKEN", "message": "Verify your phone number again"},
             )
-        taken = (await db_session.execute(select(User).where(User.phone == phone))).scalars().first()
-        if taken:
+        holder = (await db_session.execute(select(User).where(User.phone == phone))).scalars().first()
+        if holder and holder.phone_verified:
             raise HTTPException(
                 status_code=409,
                 detail={"code": "PHONE_IN_USE", "message": "This phone number is already used by another account"},
             )
+        if holder:
+            # Unverified (copied from old free-text data): whoever proves the
+            # number by SMS gets it. Flushed now so the unique index never
+            # sees both accounts holding it.
+            holder.phone = None
+            db_session.add(holder)
+            await db_session.flush()
         user.phone = phone
         user.phone_verified = True
 

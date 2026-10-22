@@ -77,3 +77,23 @@ async def test_signup_without_phone_token_is_unchanged(quiet_signup, mock_reques
     created = await create_user(mock_request, db, admin_user, _signup("p4"), org.id)
     assert created.phone is None
     assert created.phone_verified is False
+
+
+async def test_verified_signup_takes_the_number_from_an_unverified_holder(
+    quiet_signup, mock_request, db, admin_user, org
+):
+    # Phones copied from old free-text data are unverified; whoever proves
+    # the number by SMS gets it, instead of a 409 they can't get past.
+    from sqlmodel import select
+    from src.db.users import User
+
+    holder = await create_user(mock_request, db, admin_user, _signup("old1"), org.id)
+    row = (await db.execute(select(User).where(User.id == holder.id))).scalars().one()
+    row.phone, row.phone_verified = PHONE, False
+    db.add(row)
+    await db.commit()
+
+    created = await create_user(mock_request, db, admin_user, _signup("new1", issue_phone_token(PHONE)), org.id)
+    assert created.phone == PHONE and created.phone_verified is True
+    await db.refresh(row)
+    assert row.phone is None
