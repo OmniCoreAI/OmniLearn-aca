@@ -126,6 +126,13 @@ class InternalPaymentsConfig(BaseModel):
     stripe: InternalStripeConfig
 
 
+class SmsConfig(BaseModel):
+    # Brevo API key (Brevo → SMTP & API → API keys); SMS is off without it.
+    brevo_api_key: Optional[str] = None
+    # The "From" shown on the phone: up to 11 letters/digits, approved in Brevo.
+    sms_sender: Optional[str] = None
+
+
 class OmniLearnConfig(BaseModel):
     site_name: str
     site_description: str
@@ -137,6 +144,7 @@ class OmniLearnConfig(BaseModel):
     security_config: SecurityConfig
     ai_config: AIConfig
     mailing_config: MailingConfig
+    sms_config: SmsConfig = SmsConfig()
     payments_config: InternalPaymentsConfig
     tinybird_config: TinybirdConfig | None
     judge0_config: Judge0Config | None
@@ -691,6 +699,14 @@ def get_omnilearn_config() -> OmniLearnConfig:
         security_config=SecurityConfig(auth_jwt_secret_key=auth_jwt_secret_key),
         ai_config=ai_config,
         redis_config=RedisConfig(redis_connection_string=redis_connection_string),
+        sms_config=SmsConfig(
+            brevo_api_key=os.environ.get("OMNILEARN_BREVO_API_KEY")
+            or yaml_config.get("sms_config", {}).get("brevo_api_key")
+            or None,
+            sms_sender=os.environ.get("OMNILEARN_SMS_SENDER")
+            or yaml_config.get("sms_config", {}).get("sms_sender")
+            or None,
+        ),
         mailing_config=MailingConfig(
             email_provider=email_provider,
             system_email_address=system_email_address,
