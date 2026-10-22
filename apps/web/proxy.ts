@@ -33,6 +33,7 @@ interface InstanceInfo {
   cookie_domain?: string | null
   login_url?: string | null
   signup_url?: string | null
+  password_reset_url?: string | null
 }
 
 // Cached instance info from backend (30-second TTL)
@@ -196,6 +197,12 @@ function externalAuthUrlFor(pathname: string, instance: InstanceInfo): string | 
   return null
 }
 
+/** The main-website password reset page for /forgot and /reset, or null. */
+function externalResetUrlFor(pathname: string, instance: InstanceInfo): string | null {
+  const resetPaths = ['/forgot', '/reset', '/auth/forgot', '/auth/reset']
+  return resetPaths.includes(pathname) ? instance.password_reset_url || null : null
+}
+
 /**
  * Build a request-header bag that propagates tenancy context to downstream
  * Server Components on THIS request. Cookies set in the response only become
@@ -296,9 +303,20 @@ export default async function proxy(req: NextRequest) {
   }
 
   // -------------------------------------------------------------------------
-  // 3a. Login/sign-up hosted on the main website (OMNILEARN_LOGIN_URL /
-  //     OMNILEARN_SIGNUP_URL) — send the user there, with where to come back.
+  // 3a. Login/sign-up/password reset hosted on the main website
+  //     (OMNILEARN_LOGIN_URL / _SIGNUP_URL / _PASSWORD_RESET_URL) — send the
+  //     user there: a reset link keeps its email and code, login/sign-up get
+  //     where to come back.
   // -------------------------------------------------------------------------
+  const resetPage = externalResetUrlFor(pathname, instance)
+  if (resetPage) {
+    const target = new URL(resetPage)
+    for (const key of ['email', 'resetCode']) {
+      const value = req.nextUrl.searchParams.get(key)
+      if (value) target.searchParams.set(key, value)
+    }
+    return NextResponse.redirect(target)
+  }
   const externalAuthUrl = externalAuthUrlFor(pathname, instance)
   if (externalAuthUrl) {
     const target = new URL(externalAuthUrl)

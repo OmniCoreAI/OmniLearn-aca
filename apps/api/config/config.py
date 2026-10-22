@@ -88,11 +88,16 @@ class HostingConfig(BaseModel):
     # When set, the LMS's own /login and /signup redirect there.
     login_url: Optional[str] = None
     signup_url: Optional[str] = None
+    # Page on the main website where users reset their password. When set,
+    # reset emails link there and the LMS's /forgot and /reset redirect to it.
+    password_reset_url: Optional[str] = None
 
 
 class MailingConfig(BaseModel):
     email_provider: Literal["resend", "smtp"]
     system_email_address: str
+    # Display name on outgoing email ("<name> <address>").
+    system_email_name: str = "OmniLearn"
     resend_api_key: Optional[str] = None
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = 587
@@ -263,6 +268,7 @@ def get_omnilearn_config() -> OmniLearnConfig:
     env_tenancy = os.environ.get("OMNILEARN_TENANCY")
     env_login_url = os.environ.get("OMNILEARN_LOGIN_URL")
     env_signup_url = os.environ.get("OMNILEARN_SIGNUP_URL")
+    env_password_reset_url = os.environ.get("OMNILEARN_PASSWORD_RESET_URL")
 
     # Allowed origins should be a comma separated string
     if env_allowed_origins:
@@ -466,6 +472,7 @@ def get_omnilearn_config() -> OmniLearnConfig:
     env_email_provider = os.environ.get("OMNILEARN_EMAIL_PROVIDER")
     env_resend_api_key = os.environ.get("OMNILEARN_RESEND_API_KEY")
     env_system_email_address = os.environ.get("OMNILEARN_SYSTEM_EMAIL_ADDRESS")
+    env_system_email_name = os.environ.get("OMNILEARN_SYSTEM_EMAIL_NAME")
     env_smtp_host = os.environ.get("OMNILEARN_SMTP_HOST")
     env_smtp_port = os.environ.get("OMNILEARN_SMTP_PORT")
     env_smtp_username = os.environ.get("OMNILEARN_SMTP_USERNAME")
@@ -566,6 +573,11 @@ def get_omnilearn_config() -> OmniLearnConfig:
         content_delivery=content_delivery,
         login_url=env_login_url or yaml_config.get("hosting_config", {}).get("login_url") or None,
         signup_url=env_signup_url or yaml_config.get("hosting_config", {}).get("signup_url") or None,
+        password_reset_url=(
+            env_password_reset_url
+            or yaml_config.get("hosting_config", {}).get("password_reset_url")
+            or None
+        ),
     )
 
     # Tenancy validation and deprecation warnings — only enforce in non-test
@@ -682,6 +694,11 @@ def get_omnilearn_config() -> OmniLearnConfig:
         mailing_config=MailingConfig(
             email_provider=email_provider,
             system_email_address=system_email_address,
+            system_email_name=(
+                env_system_email_name
+                or yaml_config.get("mailing_config", {}).get("system_email_name")
+                or "OmniLearn"
+            ),
             resend_api_key=resend_api_key,
             smtp_host=smtp_host,
             smtp_port=smtp_port,

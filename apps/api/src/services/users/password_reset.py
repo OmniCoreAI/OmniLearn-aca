@@ -18,6 +18,7 @@ from src.services.users.emails import (
     send_password_reset_email_platform,
 )
 from src.services.email.utils import get_base_url_from_request
+from src.services.security.rate_limiting import get_client_ip
 from src.db.users import (
     AnonymousUser,
     PublicUser,
@@ -80,7 +81,9 @@ async def send_reset_password_code(
     - Logs attempts for security audit
     """
     # Rate limit by IP before any email lookup (prevents enumeration timing attacks)
-    _ip = request.client.host if request.client else "unknown"
+    # The visitor's IP, also when the request comes through a trusted proxy
+    # such as the main website's server (which forwards it).
+    _ip = get_client_ip(request)
     ip_rate_key = f"pwd_reset_ip:{_ip}"
     try:
         _r_ip = _get_redis_connection()
@@ -171,6 +174,7 @@ async def send_reset_password_code(
         email=user_read.email,
         base_url=base_url,
         lang=get_org_default_language(org_config),
+        reset_page_url=OL_CONFIG.hosting_config.password_reset_url,
     )
 
     if not isEmailSent:

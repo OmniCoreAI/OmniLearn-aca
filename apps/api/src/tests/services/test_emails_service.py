@@ -75,6 +75,23 @@ class TestEmailsService:
         assert "reset?email=user%2Btag%40test.com&amp;resetCode=code%20123" in first_body
         assert "reset-password?email=user%2Btag%40test.com&amp;resetCode=code%20123" in second_body
 
+    def test_send_password_reset_email_links_to_external_reset_page(self):
+        with patch("src.services.users.emails.send_email", return_value=True) as send_email:
+            send_password_reset_email(
+                "code 123",
+                _user(),
+                _org(),
+                "user+tag@test.com",
+                "https://app.test",
+                reset_page_url="https://www.example.org/forgot-password",
+            )
+        body = send_email.call_args.kwargs["body"]
+        assert (
+            'href="https://www.example.org/forgot-password?email=user%2Btag%40test.com&amp;resetCode=code%20123"'
+            in body
+        )
+        assert "https://app.test/reset" not in body
+
     def test_send_invitation_role_change_and_verification_email(self):
         with patch("src.services.users.emails.send_email", return_value=True) as send_email:
             send_invitation_email(

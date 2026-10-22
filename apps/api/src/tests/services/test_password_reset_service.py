@@ -73,7 +73,8 @@ class TestPasswordResetService:
             return_value=SimpleNamespace(
                 redis_config=SimpleNamespace(
                     redis_connection_string="redis://test"
-                )
+                ),
+                hosting_config=SimpleNamespace(password_reset_url=None),
             ),
         ), patch(
             "src.services.users.password_reset.redis.Redis.from_url",
@@ -102,7 +103,8 @@ class TestPasswordResetService:
             return_value=SimpleNamespace(
                 redis_config=SimpleNamespace(
                     redis_connection_string="redis://test"
-                )
+                ),
+                hosting_config=SimpleNamespace(password_reset_url=None),
             ),
         ), patch(
             "src.services.users.password_reset.redis.Redis.from_url",
@@ -228,7 +230,8 @@ class TestPasswordResetService:
             return_value=SimpleNamespace(
                 redis_config=SimpleNamespace(
                     redis_connection_string="redis://test"
-                )
+                ),
+                hosting_config=SimpleNamespace(password_reset_url=None),
             ),
         ), patch(
             "src.services.users.password_reset.redis.Redis.from_url",
@@ -252,7 +255,8 @@ class TestPasswordResetService:
             return_value=SimpleNamespace(
                 redis_config=SimpleNamespace(
                     redis_connection_string="redis://test"
-                )
+                ),
+                hosting_config=SimpleNamespace(password_reset_url=None),
             ),
         ), patch(
             "src.services.users.password_reset.redis.Redis.from_url",
@@ -305,7 +309,8 @@ class TestPasswordResetService:
             return_value=SimpleNamespace(
                 redis_config=SimpleNamespace(
                     redis_connection_string="redis://test"
-                )
+                ),
+                hosting_config=SimpleNamespace(password_reset_url=None),
             ),
         ), patch(
             "src.services.users.password_reset.redis.Redis.from_url",
@@ -377,7 +382,8 @@ class TestPasswordResetService:
             return_value=SimpleNamespace(
                 redis_config=SimpleNamespace(
                     redis_connection_string="redis://test"
-                )
+                ),
+                hosting_config=SimpleNamespace(password_reset_url=None),
             ),
         ), patch(
             "src.services.users.password_reset.redis.Redis.from_url",
@@ -415,7 +421,8 @@ class TestPasswordResetService:
             return_value=SimpleNamespace(
                 redis_config=SimpleNamespace(
                     redis_connection_string="redis://test"
-                )
+                ),
+                hosting_config=SimpleNamespace(password_reset_url=None),
             ),
         ), patch(
             "src.services.users.password_reset.redis.Redis.from_url",
@@ -443,7 +450,8 @@ class TestPasswordResetService:
             return_value=SimpleNamespace(
                 redis_config=SimpleNamespace(
                     redis_connection_string="redis://test"
-                )
+                ),
+                hosting_config=SimpleNamespace(password_reset_url=None),
             ),
         ), patch(
             "src.services.users.password_reset.redis.Redis.from_url",
@@ -478,7 +486,8 @@ class TestPasswordResetService:
             return_value=SimpleNamespace(
                 redis_config=SimpleNamespace(
                     redis_connection_string="redis://test"
-                )
+                ),
+                hosting_config=SimpleNamespace(password_reset_url=None),
             ),
         ), patch(
             "src.services.users.password_reset.redis.Redis.from_url",
