@@ -7,7 +7,7 @@ from src.routers import health
 from src.routers import instance
 from src.routers import plans
 from src.routers import usergroups
-from src.routers import dev, trail, users, auth, orgs, roles, search
+from src.routers import dev, trail, users, auth, auth_otp, orgs, roles, search
 from src.routers import monitoring
 from src.routers import stream
 from src.routers import api_tokens
@@ -85,6 +85,7 @@ v1_router.include_router(
     ],
 )
 v1_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+v1_router.include_router(auth_otp.router, prefix="/auth/otp", tags=["auth"])
 v1_router.include_router(
     orgs.router,
     prefix="/orgs",

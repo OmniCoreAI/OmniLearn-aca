@@ -65,6 +65,19 @@ def generate_secure_reset_code(length: int = 8) -> str:
     return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
+async def set_user_password(db_session: AsyncSession, user: User, new_password: str) -> None:
+    """
+    Stores a new (already validated) password. ``password_changed_at`` makes
+    get_current_user reject every token issued before now, so other sessions
+    end with the old password.
+    """
+    user.password = security_hash_password(new_password)
+    user.password_changed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+
 async def send_reset_password_code(
     request: Request,
     db_session: AsyncSession,
@@ -291,13 +304,7 @@ async def change_password_with_reset_code(
             detail="Invalid or expired reset code",
         )
 
-    # Change password
-    user.password = security_hash_password(new_password)
-    user.password_changed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    db_session.add(user)
-
-    await db_session.commit()
-    await db_session.refresh(user)
+    await set_user_password(db_session, user, new_password)
 
     # Delete reset code (one-time use)
     r.delete(reset_key)
@@ -437,12 +444,7 @@ async def change_password_with_reset_code_platform(
             detail="Invalid or expired reset code",
         )
 
-    user.password = security_hash_password(new_password)
-    user.password_changed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    db_session.add(user)
-
-    await db_session.commit()
-    await db_session.refresh(user)
+    await set_user_password(db_session, user, new_password)
 
     r.delete(reset_key)
 
