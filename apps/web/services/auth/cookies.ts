@@ -32,12 +32,19 @@ export function getDomainFromRequest(request: NextRequest): { domain: string; to
 export function getCookieDomain(request: NextRequest): string | undefined {
   // Tenancy is the source of truth: in single mode cookies are always
   // host-only on whatever Host the request arrived with, regardless of
-  // whether that's localhost or a self-hosted VPS hostname. In multi mode
-  // we use the configured top domain so subdomains share the session.
+  // whether that's localhost or a self-hosted VPS hostname — unless the API
+  // configured a shared parent domain (OMNILEARN_COOKIE_DOMAIN, passed on by
+  // proxy.ts as OL_cookie_domain) so the main website's login reaches us.
+  // In multi mode we use the configured top domain so subdomains share the
+  // session.
   const tenancy = request.cookies.get('OL_tenancy')?.value || 'single'
-  if (tenancy === 'single') return undefined
-
   const host = request.headers.get('host')
+  if (tenancy === 'single') {
+    const shared = request.cookies.get('OL_cookie_domain')?.value
+    if (shared && isSubdomainOf(host, shared.replace(/^\./, ''))) return shared
+    return undefined
+  }
+
   const { domain, topDomain } = getDomainFromRequest(request)
 
   if (isLocalhost(host)) return undefined

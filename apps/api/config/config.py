@@ -84,6 +84,10 @@ class HostingConfig(BaseModel):
     self_hosted: bool
     cookie_config: CookieConfig
     content_delivery: ContentDeliveryConfig
+    # Login and sign-up pages hosted outside the LMS (e.g. the main website).
+    # When set, the LMS's own /login and /signup redirect there.
+    login_url: Optional[str] = None
+    signup_url: Optional[str] = None
 
 
 class MailingConfig(BaseModel):
@@ -164,6 +168,23 @@ def _normalize_sql_url_for_runtime(url: str | None) -> str | None:
     return url
 
 
+def get_shared_cookie_domain(config: OmniLearnConfig) -> Optional[str]:
+    """
+    The parent domain a single-tenant LMS shares its session cookies with
+    (e.g. ".example.com", so www.example.com can log users in for
+    lms.example.com), or None when cookies stay host-only. Only a dotted,
+    non-localhost OMNILEARN_COOKIE_DOMAIN opts in; multi tenancy has its own
+    rules (routers/auth.py).
+    """
+    hosting = config.hosting_config
+    domain = (hosting.cookie_config.domain or "").strip().lower()
+    if hosting.tenancy != "single":
+        return None
+    if not domain.startswith(".") or domain == ".localhost":
+        return None
+    return domain
+
+
 def get_omnilearn_config() -> OmniLearnConfig:
 
     _load_unified_env()
@@ -240,6 +261,8 @@ def get_omnilearn_config() -> OmniLearnConfig:
     env_cookie_domain = os.environ.get("OMNILEARN_COOKIE_DOMAIN")
     env_frontend_domain = os.environ.get("OMNILEARN_FRONTEND_DOMAIN")
     env_tenancy = os.environ.get("OMNILEARN_TENANCY")
+    env_login_url = os.environ.get("OMNILEARN_LOGIN_URL")
+    env_signup_url = os.environ.get("OMNILEARN_SIGNUP_URL")
 
     # Allowed origins should be a comma separated string
     if env_allowed_origins:
@@ -541,6 +564,8 @@ def get_omnilearn_config() -> OmniLearnConfig:
         self_hosted=bool(self_hosted),
         cookie_config=cookie_config,
         content_delivery=content_delivery,
+        login_url=env_login_url or yaml_config.get("hosting_config", {}).get("login_url") or None,
+        signup_url=env_signup_url or yaml_config.get("hosting_config", {}).get("signup_url") or None,
     )
 
     # Tenancy validation and deprecation warnings — only enforce in non-test

@@ -44,6 +44,9 @@ class TestInstanceRouter:
             hosting_config=SimpleNamespace(
                 frontend_domain="localhost:3000",
                 tenancy="multi",
+                cookie_config=SimpleNamespace(domain=".localhost"),
+                login_url=None,
+                signup_url=None,
             )
         )
         with patch(
@@ -79,6 +82,9 @@ class TestInstanceRouter:
             hosting_config=SimpleNamespace(
                 frontend_domain="learn.example.org",
                 tenancy="single",
+                cookie_config=SimpleNamespace(domain=".example.org"),
+                login_url="https://www.example.org/login",
+                signup_url="https://www.example.org/register",
             )
         )
         with patch(
@@ -102,12 +108,18 @@ class TestInstanceRouter:
         body = response.json()
         assert body["tenancy"] == "single"
         assert body["multi_org_enabled"] is False
+        assert body["cookie_domain"] == ".example.org"
+        assert body["login_url"] == "https://www.example.org/login"
+        assert body["signup_url"] == "https://www.example.org/register"
 
     async def test_get_instance_info_falls_back_when_db_lookup_fails(self, client):
         config = SimpleNamespace(
             hosting_config=SimpleNamespace(
                 frontend_domain="omnilearn.ai",
                 tenancy="single",
+                cookie_config=SimpleNamespace(domain=".localhost"),
+                login_url=None,
+                signup_url=None,
             )
         )
         bad_session = Mock()

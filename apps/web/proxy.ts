@@ -28,6 +28,11 @@ interface InstanceInfo {
   tenancy: 'multi' | 'single'
   frontend_domain: string
   top_domain: string
+  // Single tenancy: parent domain the session cookies are shared on, and the
+  // login/sign-up pages on the main website (null when the LMS hosts them).
+  cookie_domain?: string | null
+  login_url?: string | null
+  signup_url?: string | null
 }
 
 // Cached instance info from backend (30-second TTL)
@@ -139,7 +144,7 @@ async function isAdminSubdomain(host: string | null, instance: InstanceInfo): Pr
  * - localhost in either mode → '' (browsers refuse `Domain=.localhost`)
  */
 function cookieDomainFor(instance: InstanceInfo, customDomain?: string): string {
-  if (instance.tenancy === 'single') return ''
+  if (instance.tenancy === 'single') return instance.cookie_domain || ''
   if (customDomain) return ''
   if (instance.top_domain === 'localhost') return ''
   return `.${instance.top_domain}`
@@ -173,7 +178,22 @@ function setInstanceCookies(response: NextResponse, info: InstanceInfo) {
   response.cookies.set({ name: 'OL_frontend_domain', value: info.frontend_domain, path: '/' })
   response.cookies.set({ name: 'OL_top_domain', value: info.top_domain, path: '/' })
   response.cookies.set({ name: 'OL_mode', value: info.mode, path: '/' })
+  if (info.cookie_domain) {
+    response.cookies.set({ name: 'OL_cookie_domain', value: info.cookie_domain, path: '/' })
+  } else {
+    response.cookies.delete('OL_cookie_domain')
+  }
   return response
+}
+
+/**
+ * The main-website page to send /login or /signup to, or null when the LMS
+ * shows its own. The platform-admin login (/admin/login) always stays here.
+ */
+function externalAuthUrlFor(pathname: string, instance: InstanceInfo): string | null {
+  if (pathname === '/login' || pathname === '/auth/login') return instance.login_url || null
+  if (pathname === '/signup' || pathname === '/auth/signup') return instance.signup_url || null
+  return null
 }
 
 /**
@@ -273,6 +293,21 @@ export default async function proxy(req: NextRequest) {
   // -------------------------------------------------------------------------
   if (pathname === '/home') {
     return NextResponse.rewrite(new URL(`${pathname}${search}`, req.url))
+  }
+
+  // -------------------------------------------------------------------------
+  // 3a. Login/sign-up hosted on the main website (OMNILEARN_LOGIN_URL /
+  //     OMNILEARN_SIGNUP_URL) — send the user there, with where to come back.
+  // -------------------------------------------------------------------------
+  const externalAuthUrl = externalAuthUrlFor(pathname, instance)
+  if (externalAuthUrl) {
+    const target = new URL(externalAuthUrl)
+    const back = req.nextUrl.searchParams.get('redirect')
+    target.searchParams.set(
+      'next',
+      new URL(back && back.startsWith('/') && !back.startsWith('//') ? back : '/', req.url).toString(),
+    )
+    return NextResponse.redirect(target)
   }
 
   // -------------------------------------------------------------------------

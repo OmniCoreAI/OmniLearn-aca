@@ -23,12 +23,12 @@ from src.routers.auth import (
 from src.security.auth import get_current_user
 
 
-def _mock_config(tenancy: str = "multi"):
+def _mock_config(tenancy: str = "multi", cookie_domain: str = ".omnilearn.test"):
     return SimpleNamespace(
         hosting_config=SimpleNamespace(
             tenancy=tenancy,
             domain="omnilearn.test",
-            cookie_config=SimpleNamespace(domain=".omnilearn.test"),
+            cookie_config=SimpleNamespace(domain=cookie_domain),
         )
     )
 
@@ -99,24 +99,46 @@ class TestAuthHelpers:
             assert get_cookie_domain_for_request(custom_request) is None
             assert get_cookie_domain_for_request(localhost_request) is None
 
-    def test_get_cookie_domain_single_tenancy_is_always_host_only(self):
+    def test_get_cookie_domain_single_tenancy_is_host_only_without_shared_domain(self):
         # In single tenancy the same code path serves localhost dev and any
-        # self-hosted VPS hostname — cookies are always host-only.
-        for origin in (
-            "https://app.omnilearn.test",  # would be subdomain match in multi
-            "https://learn.someschool.edu",  # arbitrary VPS host
-            "http://localhost:3000",
-            "",
-        ):
+        # self-hosted VPS hostname — cookies are host-only unless a dotted
+        # parent cookie domain is configured.
+        for cookie_domain in (".localhost", "omnilearn.test", ""):
+            for origin in (
+                "https://app.omnilearn.test",  # would be subdomain match in multi
+                "https://learn.someschool.edu",  # arbitrary VPS host
+                "http://localhost:3000",
+                "",
+            ):
+                request = Mock()
+                request.headers = {"origin": origin, "referer": "", "host": ""}
+                with patch(
+                    "src.routers.auth.get_omnilearn_config",
+                    return_value=_mock_config(tenancy="single", cookie_domain=cookie_domain),
+                ):
+                    assert get_cookie_domain_for_request(request) is None, (
+                        f"single tenancy must return None for origin {origin!r} "
+                        f"with cookie domain {cookie_domain!r}"
+                    )
+
+    def test_get_cookie_domain_single_tenancy_shares_dotted_parent(self):
+        # A dotted parent lets sibling sites (the main website's login) share
+        # the session — only for hosts under that parent.
+        cases = {
+            "https://lms.omnilearn.test": ".omnilearn.test",
+            "https://omnilearn.test": ".omnilearn.test",
+            "https://learn.someschool.edu": None,
+            "https://evilomnilearn.test": None,
+            "http://localhost:3000": None,
+        }
+        for origin, expected in cases.items():
             request = Mock()
             request.headers = {"origin": origin, "referer": "", "host": ""}
             with patch(
                 "src.routers.auth.get_omnilearn_config",
                 return_value=_mock_config(tenancy="single"),
             ):
-                assert get_cookie_domain_for_request(request) is None, (
-                    f"single tenancy must return None for origin {origin!r}"
-                )
+                assert get_cookie_domain_for_request(request) == expected, origin
 
     def test_is_request_secure_prefers_proxy_headers_for_local_proxy(self):
         request = Mock()
