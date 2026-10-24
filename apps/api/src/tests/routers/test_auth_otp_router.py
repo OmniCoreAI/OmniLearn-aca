@@ -11,10 +11,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
 
 from src.core.events.database import get_db_session
-from src.db.users import User
+from src.db.users import AnonymousUser, User
 from src.routers import auth_otp
-from src.routers.auth_otp import decode_phone_token
-from src.security.auth import authenticate_user
+from src.routers.auth_otp import decode_phone_token, issue_phone_token
+from src.security.auth import authenticate_user, get_current_user
 from src.security.security import security_hash_password
 
 PHONE = "+201001234567"
@@ -260,3 +260,81 @@ async def test_global_sms_budget_stops_sending(client, outbox, db):
         r = await client.post("/api/v1/auth/otp/verify-phone/request", json={"phone": "+201001234568"})
     assert r.status_code == 429 and r.json()["detail"]["code"] == "SMS_LIMIT"
     assert outbox["sms"].call_count == 1
+
+
+# --- Adding a verified phone to the signed-in account ---------------------------
+
+
+@pytest.fixture
+async def client_as(app):
+    """client_as(user) -> a client whose requests are made as `user`."""
+    clients = []
+
+    def make(user):
+        app.dependency_overrides[get_current_user] = lambda: user
+        c = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+        clients.append(c)
+        return c
+
+    yield make
+    for c in clients:
+        await c.aclose()
+
+
+async def test_attach_phone_sets_verified_phone(client_as, db):
+    user = await _user(db)
+    r = await client_as(user).post("/api/v1/auth/otp/phone", json={"phone_token": issue_phone_token(PHONE)})
+    assert r.status_code == 200
+    assert r.json()["phone"] == PHONE and r.json()["phone_verified"] is True
+
+
+async def test_attach_phone_replaces_unverified_phone_on_file(client_as, db):
+    user = await _user(db, phone="+201000000000", phone_verified=False)
+    r = await client_as(user).post("/api/v1/auth/otp/phone", json={"phone_token": issue_phone_token(PHONE)})
+    assert r.status_code == 200 and r.json()["phone"] == PHONE
+
+
+async def test_attach_phone_when_already_verified_is_409(client_as, db):
+    user = await _user(db, phone="+201000000000", phone_verified=True)
+    r = await client_as(user).post("/api/v1/auth/otp/phone", json={"phone_token": issue_phone_token(PHONE)})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "PHONE_ALREADY_VERIFIED"
+
+
+async def test_attach_phone_verified_elsewhere_is_409(client_as, db):
+    await _user(db, username="other", email="o@test.com", user_uuid="user_o", phone=PHONE, phone_verified=True)
+    user = await _user(db)
+    r = await client_as(user).post("/api/v1/auth/otp/phone", json={"phone_token": issue_phone_token(PHONE)})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "PHONE_IN_USE"
+
+
+async def test_attach_phone_takes_number_from_unverified_holder(client_as, db):
+    holder = await _user(db, username="other", email="o@test.com", user_uuid="user_o", phone=PHONE, phone_verified=False)
+    user = await _user(db)
+    r = await client_as(user).post("/api/v1/auth/otp/phone", json={"phone_token": issue_phone_token(PHONE)})
+    assert r.status_code == 200
+    await db.refresh(holder)
+    assert holder.phone is None
+
+
+async def test_attach_phone_invalid_or_expired_token_is_400(client_as, db):
+    user = await _user(db)
+    r = await client_as(user).post("/api/v1/auth/otp/phone", json={"phone_token": "not-a-token"})
+    assert r.status_code == 400 and r.json()["detail"]["code"] == "INVALID_PHONE_TOKEN"
+
+
+async def test_attach_phone_anonymous_is_401(client_as):
+    r = await client_as(AnonymousUser()).post("/api/v1/auth/otp/phone", json={"phone_token": issue_phone_token(PHONE)})
+    assert r.status_code == 401
+
+
+async def test_attach_phone_api_token_is_401(client_as, db):
+    # An API token's id is the token's: it must never pick a user by that id.
+    from src.db.users import APITokenUser
+
+    user = await _user(db)
+    r = await client_as(APITokenUser(id=user.id, org_id=1)).post(
+        "/api/v1/auth/otp/phone", json={"phone_token": issue_phone_token(PHONE)}
+    )
+    assert r.status_code == 401
+    await db.refresh(user)
+    assert user.phone is None
