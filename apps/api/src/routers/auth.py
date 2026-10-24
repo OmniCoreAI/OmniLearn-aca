@@ -3,7 +3,7 @@ from typing import Literal, Optional
 from fastapi import Depends, APIRouter, HTTPException, Response, status, Request, Form
 from pydantic import BaseModel, EmailStr
 from sqlmodel import select
-from src.db.users import AnonymousUser, User, UserRead
+from src.db.users import AnonymousUser, UserRead
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.events.database import get_db_session
 from config.config import get_omnilearn_config, get_shared_cookie_domain
@@ -24,6 +24,7 @@ from src.security.auth import (
     JWT_REFRESH_COOKIE_NAME,
     JWT_COOKIE_NAME,
 )
+from src.services.users.login_identifier import resolve_login_user
 from src.services.users.users import security_get_user
 from src.services.auth.utils import signWithGoogle, get_google_user_info
 from src.services.dev.dev import isDevModeEnabled
@@ -367,9 +368,8 @@ async def login(
     if not user:
         # Unknown user OR wrong password — responses are indistinguishable.
         # The row lookup below runs behind that wall for lockout bookkeeping.
-        user_record = (await db_session.execute(
-            select(User).where(User.email == username)
-        )).scalars().first()
+        # The same lookup as sign-in, so a phone number counts toward lockout too.
+        user_record = await resolve_login_user(db_session, username)
         if user_record:
             await record_failed_login(
                 user_record,
@@ -420,10 +420,10 @@ async def login(
 
     # Step 6: Issue tokens
     access_token = create_access_token(
-        data={"sub": username},
+        data={"sub": user.email},
         expires_delta=JWT_ACCESS_TOKEN_EXPIRES
     )
-    refresh_token = create_refresh_token(data={"sub": username})
+    refresh_token = create_refresh_token(data={"sub": user.email})
 
     set_auth_cookies(response, access_token, refresh_token, request)
 

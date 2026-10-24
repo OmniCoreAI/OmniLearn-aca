@@ -707,3 +707,78 @@ class TestAuthRouter:
         ):
             response = await client.delete("/api/v1/auth/logout")
         assert response.status_code == 401
+
+
+# --- Password sign-in with a confirmed phone number --------------------------
+
+
+@pytest.fixture
+async def phone_user(db):
+    from src.security.security import security_hash_password
+
+    user = User(
+        username="phoneuser",
+        first_name="Phone",
+        last_name="User",
+        email="phone@test.com",
+        password=security_hash_password("Secret!123"),
+        user_uuid="user_phone",
+        email_verified=True,
+        phone="+201001234567",
+        phone_verified=True,
+        creation_date=str(datetime.now()),
+        update_date=str(datetime.now()),
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+def _login_patches(**extra):
+    patches = [
+        patch("src.routers.auth.check_login_rate_limit", return_value=(True, None)),
+        patch("src.routers.auth.set_auth_cookies"),
+        patch("src.routers.auth.get_deployment_mode", return_value="oss"),
+        patch("src.routers.auth.get_token_expiry_ms", return_value=12345),
+    ]
+    patches += [patch(f"src.routers.auth.{name}", value) for name, value in extra.items()]
+    return patches
+
+
+async def test_login_with_phone_issues_tokens_for_the_email(client, phone_user):
+    access, refresh = Mock(return_value="a"), Mock(return_value="r")
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        for p in _login_patches(create_access_token=access, create_refresh_token=refresh):
+            stack.enter_context(p)
+        r = await client.post("/api/v1/auth/login", data={"username": "01001234567", "password": "Secret!123"})
+    assert r.status_code == 200
+    assert access.call_args.kwargs["data"] == {"sub": "phone@test.com"}
+    assert refresh.call_args.kwargs["data"] == {"sub": "phone@test.com"}
+
+
+async def test_wrong_password_with_phone_counts_toward_lockout(client, phone_user):
+    failed = AsyncMock(return_value=(False, 0))
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        for p in _login_patches(record_failed_login=failed):
+            stack.enter_context(p)
+        r = await client.post("/api/v1/auth/login", data={"username": "+201001234567", "password": "wrong"})
+    assert r.status_code == 401 and r.json()["detail"]["code"] == "INVALID_CREDENTIALS"
+    assert failed.call_args.args[0].id == phone_user.id
+
+
+async def test_unconfirmed_phone_is_the_same_401(client, phone_user, db):
+    phone_user.phone_verified = False
+    db.add(phone_user)
+    await db.commit()
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        for p in _login_patches(record_failed_login=AsyncMock(return_value=(False, 0))):
+            stack.enter_context(p)
+        r = await client.post("/api/v1/auth/login", data={"username": "+201001234567", "password": "Secret!123"})
+    assert r.status_code == 401 and r.json()["detail"]["code"] == "INVALID_CREDENTIALS"
