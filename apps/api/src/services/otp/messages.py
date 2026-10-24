@@ -54,4 +54,4 @@ def otp_email(purpose: str, lang: str, code: str) -> tuple[str, str]:
             </div>
         </div>
     """
-    return subject, _email_layout(title=subject, body_content=body_content)
+    return subject, _email_layout(title=subject, body_content=body_content, lang=lang)

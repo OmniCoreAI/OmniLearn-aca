@@ -104,6 +104,9 @@ class MailingConfig(BaseModel):
     smtp_username: Optional[str] = None
     smtp_password: Optional[str] = None
     smtp_use_tls: Optional[bool] = True
+    # Absolute URL of the logo at the top of every email (a hosted image:
+    # many mail clients block embedded ones). Unset: the name is shown instead.
+    email_logo_url: Optional[str] = None
 
 
 class DatabaseConfig(BaseModel):
@@ -726,6 +729,11 @@ def get_omnilearn_config() -> OmniLearnConfig:
             ],
         ),
         mailing_config=MailingConfig(
+            email_logo_url=(
+                os.environ.get("OMNILEARN_EMAIL_LOGO_URL")
+                or yaml_config.get("mailing_config", {}).get("email_logo_url")
+                or None
+            ),
             email_provider=email_provider,
             system_email_address=system_email_address,
             system_email_name=(

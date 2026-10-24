@@ -181,3 +181,53 @@ class TestEmailsService:
             )
         body = send_email.call_args.kwargs["body"]
         assert "You've been invited" in body
+
+
+# --- The academy's look (option C) -----------------------------------------
+
+import pytest  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+from typing import Optional  # noqa: E402
+
+from src.services.otp.messages import otp_email  # noqa: E402
+from src.services.users.emails import STYLES, _email_layout  # noqa: E402
+
+
+def _layout_with(logo: Optional[str], lang: str) -> str:
+    config = SimpleNamespace(mailing_config=SimpleNamespace(email_logo_url=logo))
+    with patch("src.services.users.emails.get_omnilearn_config", return_value=config):
+        return _email_layout("T", "<p>body</p>", lang=lang)
+
+
+def test_layout_shows_academy_logo_and_no_omnilearn_mark():
+    html = _layout_with(logo="https://site.test/logo.png", lang="ar")
+    assert '<img src="https://site.test/logo.png"' in html
+    assert 'viewBox="0 0 1488 218"' not in html  # the OmniLearn wordmark
+
+
+def test_layout_without_logo_setting_shows_academy_name():
+    html = _layout_with(logo=None, lang="en")
+    assert "<img" not in html and "Anti-Corruption Academy" in html
+
+
+@pytest.mark.parametrize("lang,line", [
+    ("ar", "الأكاديمية الوطنية لمكافحة الفساد · هيئة الرقابة الإدارية"),
+    ("en", "Anti-Corruption Academy · Administrative Control Authority"),
+    ("fr", "Académie de lutte contre la corruption · Autorité de contrôle administratif"),
+    ("xx", "الأكاديمية الوطنية لمكافحة الفساد · هيئة الرقابة الإدارية"),
+])
+def test_layout_footer_follows_language(lang, line):
+    assert line in _layout_with(logo=None, lang=lang)
+
+
+def test_layout_uses_academy_palette():
+    html = _layout_with(logo=None, lang="en")
+    assert "#d4af37" in html and "#1b2b4b" in html and "#000000" not in html
+
+
+def test_otp_code_is_plain_text_in_navy_and_gold():
+    with patch("src.services.users.emails.get_omnilearn_config",
+               return_value=SimpleNamespace(mailing_config=SimpleNamespace(email_logo_url=None))):
+        _, html = otp_email("login", "ar", "482915")
+    assert ">482915<" in html and 'dir="rtl"' in html
+    assert "#1b2b4b" in STYLES["code"] and "#d4af37" in STYLES["code"]
