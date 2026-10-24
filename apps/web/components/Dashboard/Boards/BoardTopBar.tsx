@@ -3,10 +3,11 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
-import Image from 'next/image'
 import { ArrowLeft } from 'lucide-react'
 import ToolTip from '@components/Objects/StyledElements/Tooltip/Tooltip'
 import { getUriWithOrg } from '@services/config/config'
+import { useOrg } from '@components/Contexts/OrgContext'
+import OrgLogo from '@components/Dashboard/Shared/OrgLogo'
 
 interface BoardTopBarProps {
   boardName: string
@@ -18,6 +19,7 @@ export default function BoardTopBar({
   orgslug,
 }: BoardTopBarProps) {
   const { t } = useTranslation()
+  const org = useOrg() as any
 
   return (
     <div className="absolute top-4 left-4 z-20 pointer-events-none board-backbar">
@@ -39,15 +41,7 @@ export default function BoardTopBar({
         </ToolTip>
 
         <Link href={getUriWithOrg(orgslug, '/boards')}>
-          <div className="bg-black rounded-md w-[25px] h-[25px] flex items-center justify-center hover:opacity-80 transition-opacity">
-            <Image
-              src="/lrn.svg"
-              alt="OmniLearn"
-              width={14}
-              height={14}
-              className="invert"
-            />
-          </div>
+          <OrgLogo org={org} className="h-[25px] w-[25px]" fallbackClassName="text-[10px]" />
         </Link>
 
         <span className="text-sm font-bold text-neutral-800 truncate max-w-[220px]">

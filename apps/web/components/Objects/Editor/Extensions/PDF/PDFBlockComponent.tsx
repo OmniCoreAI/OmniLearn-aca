@@ -66,34 +66,33 @@ function PDFBlockComponent(props: any) {
     }
   }
 
-  const handleDownload = () => {
-    if (!fileId) return;
-
-    const pdfUrl = getActivityBlockMediaDirectory(
-      org?.org_uuid,
-      course?.courseStructure.course_uuid,
-      blockObject.content.activity_uuid || props.extension.options.activity.activity_uuid,
-      blockObject.block_uuid,
-      fileId,
-      'pdfBlock'
-    );
-
-    const link = document.createElement('a');
-    link.href = pdfUrl || '';
-    link.download = `document-${blockObject?.block_uuid || 'download'}.${blockObject?.content.file_format || 'pdf'}`;
-    link.setAttribute('download', '');
-    link.setAttribute('target', '_blank');
-    link.setAttribute('rel', 'noopener noreferrer');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async () => {
+    if (!pdfUrlRemote || !access_token) return
+    try {
+      const res = await fetch(pdfUrlRemote, {
+        headers: { Authorization: `Bearer ${access_token}` },
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('download failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `document-${blockObject?.block_uuid || 'download'}.${blockObject?.content.file_format || 'pdf'}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error(t('editor.blocks.pdf_block.download_failed', 'Could not download PDF'))
+    }
   };
 
   const handleExpand = () => {
     setIsModalOpen(true);
   };
 
-  const pdfUrl = blockObject ? getActivityBlockMediaDirectory(
+  const pdfUrlRemote = blockObject ? getActivityBlockMediaDirectory(
     org?.org_uuid,
     course?.courseStructure.course_uuid,
     blockObject.content.activity_uuid || props.extension.options.activity.activity_uuid,
@@ -101,6 +100,51 @@ function PDFBlockComponent(props: any) {
     fileId || '',
     'pdfBlock'
   ) : null;
+
+  const [pdfBlobUrl, setPdfBlobUrl] = React.useState<string | null>(null)
+  const [pdfLoadError, setPdfLoadError] = React.useState(false)
+
+  // Authenticated fetch — bare iframe src cannot send Bearer tokens
+  React.useEffect(() => {
+    if (!pdfUrlRemote || !access_token) {
+      setPdfBlobUrl(null)
+      return
+    }
+    let cancelled = false
+    let objectUrl: string | null = null
+    ;(async () => {
+      try {
+        const res = await fetch(pdfUrlRemote, {
+          headers: { Authorization: `Bearer ${access_token}` },
+          credentials: 'include',
+        })
+        if (!res.ok) throw new Error(String(res.status))
+        const raw = await res.blob()
+        const pdfBlob =
+          raw.type === 'application/pdf'
+            ? raw
+            : new Blob([raw], { type: 'application/pdf' })
+        objectUrl = URL.createObjectURL(pdfBlob)
+        if (!cancelled) {
+          setPdfBlobUrl(objectUrl)
+          setPdfLoadError(false)
+        } else {
+          URL.revokeObjectURL(objectUrl)
+        }
+      } catch {
+        if (!cancelled) {
+          setPdfBlobUrl(null)
+          setPdfLoadError(true)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [pdfUrlRemote, access_token])
+
+  const pdfUrl = pdfBlobUrl
 
   useEffect(() => { }, [course, org])
 
@@ -119,32 +163,54 @@ function PDFBlockComponent(props: any) {
   }
 
   // View mode with PDF
-  if (!isEditable && blockObject && pdfUrl) {
+  if (!isEditable && blockObject) {
     return (
       <>
         <NodeViewWrapper className="block-pdf">
           <div className="relative group">
-            <iframe
-              className="w-full h-96 rounded-lg nice-shadow bg-white"
-              src={pdfUrl}
-              title={t('editor.blocks.pdf_block.document_title')}
-            />
-            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={handleExpand}
-                className="p-2 outline-none bg-black/50 hover:bg-black/70 rounded-lg transition-colors"
-                title={t('editor.blocks.pdf_block.expand_pdf')}
-              >
-                <Expand className="w-4 h-4 text-white" />
-              </button>
-              <button
-                onClick={handleDownload}
-                className="p-2 outline-none bg-black/50 hover:bg-black/70 rounded-lg transition-colors"
-                title={t('editor.blocks.pdf_block.download_pdf')}
-              >
-                <Download className="w-4 h-4 text-white" />
-              </button>
-            </div>
+            {pdfUrl ? (
+              <iframe
+                className="w-full h-96 rounded-lg nice-shadow bg-white"
+                src={`${pdfUrl}#toolbar=1&navpanes=0`}
+                title={t('editor.blocks.pdf_block.document_title')}
+              />
+            ) : pdfLoadError ? (
+              <div className="flex h-96 flex-col items-center justify-center gap-2 rounded-lg bg-neutral-50 nice-shadow">
+                <AlertCircle className="text-amber-500" size={28} />
+                <p className="text-sm text-neutral-500">
+                  {t('editor.blocks.pdf_block.load_failed', 'Could not load PDF')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void handleDownload()}
+                  className="text-xs font-semibold text-neutral-700 underline"
+                >
+                  {t('editor.blocks.pdf_block.download_pdf')}
+                </button>
+              </div>
+            ) : (
+              <div className="flex h-96 items-center justify-center rounded-lg bg-neutral-50 nice-shadow">
+                <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+              </div>
+            )}
+            {pdfUrl && (
+              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={handleExpand}
+                  className="p-2 outline-none bg-black/50 hover:bg-black/70 rounded-lg transition-colors"
+                  title={t('editor.blocks.pdf_block.expand_pdf')}
+                >
+                  <Expand className="w-4 h-4 text-white" />
+                </button>
+                <button
+                  onClick={() => void handleDownload()}
+                  className="p-2 outline-none bg-black/50 hover:bg-black/70 rounded-lg transition-colors"
+                  title={t('editor.blocks.pdf_block.download_pdf')}
+                >
+                  <Download className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            )}
           </div>
         </NodeViewWrapper>
 
@@ -156,11 +222,13 @@ function PDFBlockComponent(props: any) {
           minHeight="xl"
           dialogContent={
             <div className="w-full h-[80vh]">
-              <iframe
-                className="w-full h-full rounded-lg shadow-lg border"
-                src={pdfUrl}
-                title={t('editor.blocks.pdf_block.document_title')}
-              />
+              {pdfUrl && (
+                <iframe
+                  className="w-full h-full rounded-lg shadow-lg border"
+                  src={`${pdfUrl}#toolbar=1&navpanes=0`}
+                  title={t('editor.blocks.pdf_block.document_title')}
+                />
+              )}
             </div>
           }
         />
@@ -256,13 +324,18 @@ function PDFBlockComponent(props: any) {
                   <Expand className="w-4 h-4 text-white" />
                 </button>
                 <button
-                  onClick={handleDownload}
+                  onClick={() => void handleDownload()}
                   className="p-2 outline-none bg-black/50 hover:bg-black/70 rounded-lg transition-colors"
                   title={t('editor.blocks.pdf_block.download_pdf')}
                 >
                   <Download className="w-4 h-4 text-white" />
                 </button>
               </div>
+            </div>
+          )}
+          {blockObject && !pdfUrl && !pdfLoadError && (
+            <div className="flex h-96 items-center justify-center rounded-lg bg-white nice-shadow">
+              <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
             </div>
           )}
         </div>
@@ -279,7 +352,7 @@ function PDFBlockComponent(props: any) {
             <div className="w-full h-[80vh]">
               <iframe
                 className="w-full h-full rounded-lg shadow-lg border"
-                src={pdfUrl}
+                src={`${pdfUrl}#toolbar=1&navpanes=0`}
                 title={t('editor.blocks.pdf_block.document_title')}
               />
             </div>

@@ -1,0 +1,11 @@
+# Facilities & Rooms
+
+**Locations** (campus, building, branch) and the **facilities** inside them — training rooms, lecture halls, labs — are defined once, then chosen for courses, course sessions, offerings, offering sessions and training programs. The old free-text *classroom / location* fields stay as a fallback.
+
+Each facility has a type, location, floor and room number, capacity, equipment (with quantities), weekly availability, blackout dates, hourly and daily cost, and a status (active, maintenance, inactive).
+
+## Booking conflicts
+
+When a session is saved in a room that is already booked at the same time — or during a blackout period — the save is refused with the conflicting booking listed. A manager can confirm and save anyway. The facility page lists its upcoming bookings.
+
+Pickers show only bookable, active rooms with their capacity; costs are visible to academy staff only.

@@ -32,6 +32,12 @@ from src.db.academic.course_profiles import (
 )
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import ensure_coordinator_authorship, get_user_author
+from src.services.administration.addons import course_addons_as_legacy, sync_legacy_course_addons
+from src.services.administration.facilities import (
+    check_session_booking,
+    facility_ref,
+    resolve_facility_id,
+)
 from src.services.academic.validation import resolve_org_user
 
 
@@ -62,7 +68,13 @@ async def _sessions_read(
             .order_by(CourseScheduleSession.order.asc())  # type: ignore
         )
     ).scalars().all()
-    return [CourseScheduleSessionRead.model_validate(s) for s in rows]
+    return [await _session_read(db_session, s) for s in rows]
+
+
+async def _session_read(db_session: AsyncSession, session: CourseScheduleSession) -> CourseScheduleSessionRead:
+    return CourseScheduleSessionRead(
+        **session.model_dump(), facility=await facility_ref(db_session, session.facility_id)
+    )
 
 
 async def build_profile_read(
@@ -89,12 +101,14 @@ async def build_profile_read(
     sessions = await _sessions_read(db_session, profile.id)
 
     return CourseAcademicProfileRead(
-        **profile.model_dump(),
+        **profile.model_dump(exclude={"add_ons"}),
         course_uuid=course.course_uuid,
         instructor=instructor,
         has_course_certification=bool(has_cert),
         assignment_count=int(assignment_count),
         sessions=sessions,
+        facility=await facility_ref(db_session, profile.facility_id),
+        add_ons=await course_addons_as_legacy(db_session, course.course_uuid),
     )
 
 
@@ -159,9 +173,16 @@ async def upsert_course_academic_profile(
             db_session, course.org_id, data.pop("instructor_uuid"), label="Instructor"
         )
 
+    allow_conflict = bool(data.pop("allow_conflict", False))
+    facility_changed = "facility_uuid" in data
+    facility_id = None
+    if facility_changed:
+        facility_id = await resolve_facility_id(db_session, course.org_id, data.pop("facility_uuid"))
+
     add_ons = None
     if "add_ons" in data:
-        # payload.add_ons are pydantic models; store as plain JSON dicts.
+        # Legacy field: mapped onto the add-on catalog + course attachments
+        # (Administration → Add-ons) instead of the deprecated JSON column.
         add_ons = [a.model_dump() for a in (payload.add_ons or [])]
         data.pop("add_ons", None)
 
@@ -179,7 +200,24 @@ async def upsert_course_academic_profile(
     if instructor_changed:
         profile.instructor_id = instructor_id
     if add_ons is not None:
-        profile.add_ons = add_ons
+        await sync_legacy_course_addons(db_session, course.org_id, course.course_uuid, add_ons)
+    if facility_changed:
+        if facility_id and profile.id and not allow_conflict:
+            # Sessions without their own room move to the new default: check them.
+            inheriting = (
+                await db_session.execute(
+                    select(CourseScheduleSession).where(
+                        CourseScheduleSession.profile_id == profile.id,
+                        CourseScheduleSession.facility_id.is_(None),  # type: ignore[union-attr]
+                    )
+                )
+            ).scalars().all()
+            for session in inheriting:
+                await check_session_booking(
+                    db_session, facility_id, session.start_date, session.end_date,
+                    exclude=("course_session", session.id),
+                )
+        profile.facility_id = facility_id
     profile.update_date = str(datetime.now())
 
     db_session.add(profile)
@@ -244,19 +282,28 @@ async def create_session(
         request, db_session, current_user, course.course_uuid, AccessAction.UPDATE
     )
     profile = await _ensure_profile(db_session, course)
+    facility_id = await resolve_facility_id(db_session, course.org_id, payload.facility_uuid)
+    await check_session_booking(
+        db_session,
+        facility_id or profile.facility_id,
+        payload.start_date,
+        payload.end_date,
+        allow_conflict=payload.allow_conflict,
+    )
 
     session = CourseScheduleSession(
         profile_id=profile.id,
         org_id=course.org_id,
+        facility_id=facility_id,
         session_uuid=f"session_{uuid4()}",
         creation_date=str(datetime.now()),
         update_date=str(datetime.now()),
-        **payload.model_dump(),
+        **payload.model_dump(exclude={"facility_uuid", "allow_conflict"}),
     )
     db_session.add(session)
     await db_session.commit()
     await db_session.refresh(session)
-    return CourseScheduleSessionRead.model_validate(session)
+    return await _session_read(db_session, session)
 
 
 async def _get_session_or_404(
@@ -292,14 +339,28 @@ async def update_session(
         raise HTTPException(status_code=404, detail="Session not found")
 
     session = await _get_session_or_404(db_session, profile.id, session_uuid)
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    allow_conflict = bool(data.pop("allow_conflict", False))
+    if "facility_uuid" in data:
+        session.facility_id = await resolve_facility_id(db_session, course.org_id, data.pop("facility_uuid"))
+        data["facility_id"] = session.facility_id
+    for key, value in data.items():
         setattr(session, key, value)
+    if {"facility_id", "start_date", "end_date"} & set(data):
+        await check_session_booking(
+            db_session,
+            session.facility_id or profile.facility_id,
+            session.start_date,
+            session.end_date,
+            exclude=("course_session", session.id),
+            allow_conflict=allow_conflict,
+        )
     session.update_date = str(datetime.now())
 
     db_session.add(session)
     await db_session.commit()
     await db_session.refresh(session)
-    return CourseScheduleSessionRead.model_validate(session)
+    return await _session_read(db_session, session)
 
 
 async def delete_session(

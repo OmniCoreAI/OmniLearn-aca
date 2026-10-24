@@ -1,8 +1,10 @@
 import { useOrg } from '@components/Contexts/OrgContext'
+import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
-import { Books, FolderSimple, Cube, ShoppingBag } from '@phosphor-icons/react'
+import { Books, FolderSimple, Cube, ShoppingBag, GraduationCap, CalendarBlank } from '@phosphor-icons/react'
 import { menuIcon } from '@components/Objects/Menus/menuIcons'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { getMenuColorClasses } from '@services/utils/ts/colorUtils'
@@ -14,15 +16,23 @@ const BUILTIN: Record<string, Builtin> = {
   library: { feature: 'folders', link: '/library', labelKey: 'library.library', Icon: FolderSimple },
   playgrounds: { feature: 'playgrounds', link: '/playgrounds', labelKey: 'common.playgrounds', Icon: Cube },
   store: { feature: 'payments', link: '/store', labelKey: 'common.store', Icon: ShoppingBag },
+  // Postgraduate student/applicant portal; shown to signed-in users only.
+  academics: { feature: '', link: '/academics', labelKey: 'academic.my_academics', Icon: GraduationCap },
+  // Role-aware events calendar (lectures, deadlines, exams); signed-in users only.
+  calendar: { feature: '', link: '/calendar', labelKey: 'calendar.my_calendar', Icon: CalendarBlank },
 }
 
 // Default order when an org has no custom menu config.
-const DEFAULT_ORDER = ['courses', 'library', 'playgrounds', 'store']
+const DEFAULT_ORDER = ['courses', 'library', 'playgrounds', 'store', 'academics', 'calendar']
 
 function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
   const { t } = useTranslation()
   const org = useOrg() as any
+  const session = useLHSession() as any
+  const signedIn = session?.status === 'authenticated' || !!session?.data?.tokens?.access_token
   const colors = getMenuColorClasses(props.primaryColor || '')
+  const branded = !!props.primaryColor
+  const pathname = usePathname() || ''
 
   const rf = org?.config?.config?.resolved_features
   const isEnabled = (feature: string) => rf?.[feature]?.enabled === true
@@ -52,7 +62,7 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
       const meta = BUILTIN[item.type]
       if (!meta) return null
       if (!item.enabled) return null
-      if (!isEnabled(meta.feature)) return null // plan/feature gating
+      if (meta.feature ? !isEnabled(meta.feature) : !signedIn) return null // plan/feature (or sign-in) gating
       return {
         key: item.type,
         label: item.label || t(meta.labelKey),
@@ -63,13 +73,34 @@ function MenuLinks(props: { orgslug: string; primaryColor?: string }) {
     })
     .filter(Boolean) as any[]
 
+  const isActive = (href: string) => {
+    const path = href.replace(/^https?:\/\/[^/]+/, '')
+    return path !== '/' && (pathname === path || pathname.startsWith(path + '/'))
+  }
+
   return (
-    <div className="pl-1">
-      <ul className="flex space-x-5">
+    <div className="ps-1">
+      <ul className="flex items-center gap-1">
         {rendered.map((it) => {
+          const active = !it.external && isActive(it.href)
           const content = (
-            <li className={`flex space-x-2 items-center ${colors.text} font-semibold`}>
-              <it.Icon size={20} weight="fill" /> <span>{it.label}</span>
+            <li
+              className={
+                branded
+                  ? `flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${colors.text} ${colors.hoverBg} ${active ? 'bg-black/10' : ''}`
+                  : `flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-ink))]'
+                        : 'text-[hsl(var(--dash-ink))]/70 hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]'
+                    }`
+              }
+            >
+              <it.Icon
+                size={18}
+                weight={active ? 'fill' : 'regular'}
+                className={!branded && active ? 'text-[hsl(var(--dash-accent))]' : undefined}
+              />
+              <span>{it.label}</span>
             </li>
           )
           return it.external ? (

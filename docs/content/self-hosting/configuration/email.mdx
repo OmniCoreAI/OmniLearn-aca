@@ -77,3 +77,42 @@ OmniLearn sends the following types of email:
 - **User invitations** -- when an admin invites a user to join the platform or an organization
 - **Password resets** -- when a user requests a password reset
 - **System notifications** -- important system-level notifications
+- **Academy notifications** -- enrollment, training assigned, course completed, certificate issued, session and assignment reminders
+
+Each organization can replace these messages with its own templates, choose which events are sent, and review a delivery log under **Administration → Communication** (see [Email & SMS](/platform/administration/communication)). Without a custom template, the built-in email is sent unchanged.
+
+## SMS
+
+SMS notifications are optional and use one provider for the whole instance, chosen with `OMNILEARN_SMS_PROVIDER`:
+
+| Provider | Use |
+| --- | --- |
+| `disabled` (default) | SMS messages are logged as *skipped* |
+| `log` | Development: messages are written to the API log, not sent |
+| `http` | Any SMS gateway with an HTTP API (for example a local Egyptian provider) |
+| `twilio` | Twilio's REST API |
+
+### Generic HTTP gateway
+
+```bash
+OMNILEARN_SMS_PROVIDER=http
+OMNILEARN_SMS_HTTP_URL=https://sms.example.com/api/send
+OMNILEARN_SMS_HTTP_METHOD=POST
+OMNILEARN_SMS_HTTP_HEADERS='{"Authorization": "Bearer your-key"}'
+OMNILEARN_SMS_HTTP_BODY='{"to": "{{to}}", "text": "{{message}}", "from": "{{sender}}"}'
+OMNILEARN_SMS_HTTP_CONTENT_TYPE=application/json
+OMNILEARN_SMS_SENDER=ACADEMY
+```
+
+`{{to}}`, `{{message}}` and `{{sender}}` are replaced in the body (JSON-escaped when the content type is JSON). Any 2xx response counts as sent. The gateway URL must be publicly reachable; private and internal addresses are blocked.
+
+### Twilio
+
+```bash
+OMNILEARN_SMS_PROVIDER=twilio
+OMNILEARN_TWILIO_ACCOUNT_SID=ACxxxxxxxx
+OMNILEARN_TWILIO_AUTH_TOKEN=your-token
+OMNILEARN_TWILIO_FROM=+15551234567
+```
+
+Phone numbers come from the member's profile. Egyptian numbers such as `01012345678` are normalized to `+201012345678`.

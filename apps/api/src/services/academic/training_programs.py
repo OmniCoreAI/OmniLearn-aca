@@ -25,6 +25,8 @@ from src.services.academic.authors import (
     get_user_author,
 )
 from src.services.academic.course_profiles import get_profile_read_for_course
+from src.services.administration.certificates import resolve_template_id, template_uuid_for
+from src.services.administration.facilities import facility_ref, resolve_facility_id
 from src.services.academic.validation import (
     assert_trainingprogram_code_unique,
     resolve_coordinator,
@@ -46,7 +48,13 @@ async def _to_read(db_session: AsyncSession, tp: TrainingProgram) -> TrainingPro
     """Assemble a TrainingProgramRead with authors + embedded coordinator."""
     authors = await get_resource_authors(db_session, tp.trainingprogram_uuid)
     coordinator = await get_user_author(db_session, tp.coordinator_id)
-    return TrainingProgramRead(**tp.model_dump(), authors=authors, coordinator=coordinator)
+    return TrainingProgramRead(
+        **tp.model_dump(),
+        authors=authors,
+        coordinator=coordinator,
+        facility=await facility_ref(db_session, tp.facility_id),
+        certificate_template_uuid=await template_uuid_for(db_session, tp.certificate_template_id),
+    )
 
 
 async def create_training_program(
@@ -79,6 +87,7 @@ async def create_training_program(
 
     tp.org_id = org_id
     tp.coordinator_id = coordinator_id
+    tp.facility_id = await resolve_facility_id(db_session, org_id, tp_object.facility_uuid)
     tp.trainingprogram_uuid = f"trainingprogram_{uuid4()}"
     tp.creation_date = str(datetime.now())
     tp.update_date = str(datetime.now())
@@ -177,6 +186,13 @@ async def update_training_program(
         )
         tp.coordinator_id = new_coordinator_id
 
+    if "facility_uuid" in update_data:
+        tp.facility_id = await resolve_facility_id(db_session, tp.org_id, update_data.pop("facility_uuid"))
+    if "certificate_template_uuid" in update_data:
+        tp.certificate_template_id = await resolve_template_id(
+            db_session, tp.org_id, update_data.pop("certificate_template_uuid")
+        )
+
     for key, value in update_data.items():
         setattr(tp, key, value)
     tp.update_date = str(datetime.now())
@@ -226,6 +242,10 @@ async def delete_training_program(
     await check_resource_access(
         request, db_session, current_user, tp.trainingprogram_uuid, AccessAction.DELETE
     )
+    from src.services.administration.audience import forget_resource
+
+    # Drop audience links the program put on its courses before they detach.
+    await forget_resource(db_session, "training_program", tp.trainingprogram_uuid)
     await db_session.delete(tp)
     await db_session.commit()
     return "Training program deleted"
@@ -283,6 +303,10 @@ async def link_course_to_training_program(
         )
     )
     await db_session.commit()
+    from src.services.administration.audience import sync_resource_audience
+
+    # The program's audiences now also reach this course.
+    await sync_resource_audience(db_session, "training_program", tp.trainingprogram_uuid)
     return "Course linked to training program"
 
 
@@ -319,6 +343,11 @@ async def unlink_course_from_training_program(
 
     await db_session.delete(link)
     await db_session.commit()
+    from src.services.administration.audience import sync_resource_audience
+
+    await sync_resource_audience(
+        db_session, "training_program", tp.trainingprogram_uuid, dropped_targets=[course_uuid]
+    )
     return "Course unlinked from training program"
 
 

@@ -9,7 +9,7 @@ from src.services.sms.brevo import BREVO_SMS_URL, send_sms
 
 
 def _config(key="k", sender="ACA"):
-    return SimpleNamespace(sms_config=SimpleNamespace(brevo_api_key=key, sms_sender=sender))
+    return SimpleNamespace(otp_sms_config=SimpleNamespace(brevo_api_key=key, sms_sender=sender))
 
 
 def _patched(response=None, error=None, key="k"):

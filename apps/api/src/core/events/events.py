@@ -12,6 +12,7 @@ from src.core.ee_hooks import run_ee_startup
 logger = logging.getLogger(__name__)
 
 _cleanup_task = None
+_reminder_task = None
 
 
 async def _periodic_migration_cleanup():
@@ -64,6 +65,14 @@ def startup_app(app: FastAPI) -> Callable:
         global _cleanup_task
         _cleanup_task = asyncio.create_task(_periodic_migration_cleanup())
 
+        # Notifications: audience → "course_assigned" and the reminder scanner.
+        from src.services.notifications import events as notification_events
+        from src.services.notifications.reminders import reminder_loop
+
+        notification_events.register()
+        global _reminder_task
+        _reminder_task = asyncio.create_task(reminder_loop())
+
         # Start Enterprise Edition Startup tasks if available
         run_ee_startup(app)
 
@@ -72,12 +81,13 @@ def startup_app(app: FastAPI) -> Callable:
 
 def shutdown_app(app: FastAPI) -> Callable:
     async def close_app() -> None:
-        if _cleanup_task:
-            _cleanup_task.cancel()
-            try:
-                await _cleanup_task
-            except asyncio.CancelledError:
-                pass
+        for task in (_cleanup_task, _reminder_task):
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
         # Wait for in-flight webhook deliveries before closing the HTTP client
         from src.services.webhooks.dispatch import close_webhook_client, _background_tasks as _webhook_tasks
         if _webhook_tasks:  # pragma: no cover
