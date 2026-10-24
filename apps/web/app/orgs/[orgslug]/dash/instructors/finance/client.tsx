@@ -1,6 +1,7 @@
 'use client'
 import React, { useMemo, useState } from 'react'
 import { Users as ChalkboardTeacher, Plus, Trash2, Calculator } from 'lucide-react'
+import { ClockCountdown, Coins, ListChecks, UsersThree } from '@phosphor-icons/react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -10,9 +11,13 @@ import AuthenticatedClientElement from '@components/Security/AuthenticatedClient
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
-import { AcademicPageShell, AcademicHeader } from '@components/Dashboard/Pages/Academic/AcademicShared'
+import { AcademicPageShell, AcademicHeader, AcademicPrimaryButton, AcademicEmptyState } from '@components/Dashboard/Pages/Academic/AcademicShared'
+import { GhostButton } from '@components/Dashboard/Pages/Academic/AcademicUI'
 import { InstructorTabs } from '@components/Dashboard/Pages/Instructors/InstructorTabs'
-import { Field, SubmitRow, inputCls } from '../../postgraduate/client'
+import { Field, FormActions, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import DashDataTable, { ToolbarSearch, ToolbarSelect } from '@components/Dashboard/Shared/DataTable/DashDataTable'
+import { PersonAvatar, formatAdminDate, useConfirm } from '@components/Dashboard/Pages/Administration/AdminUI'
 import {
   getInstructors,
   getInstructorWorkLogs,
@@ -22,24 +27,18 @@ import {
   computeInstructorRate,
 } from '@services/instructors/instructors'
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white rounded-xl nice-shadow border border-gray-100 p-4">
-      <p className="text-xs uppercase font-bold tracking-wide text-gray-400">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-    </div>
-  )
-}
-
 function InstructorFinanceHome({ orgslug }: { orgslug: string }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const org = useOrg() as any
   const orgId = org?.id as number | undefined
   const session = useLHSession() as any
   const access_token = session.data?.tokens?.access_token
   const queryClient = useQueryClient()
-
+  const { confirm, dialog } = useConfirm()
   const [modalOpen, setModalOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [instructor, setInstructor] = useState('all')
+  const [language, setLanguage] = useState('all')
 
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['instructor-worklogs', orgId],
@@ -47,12 +46,13 @@ function InstructorFinanceHome({ orgslug }: { orgslug: string }) {
     enabled: !!orgId && !!access_token,
     staleTime: 15_000,
   })
-  const { data: summary } = useQuery({
+  const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['instructor-finance-summary', orgId],
     queryFn: () => getInstructorFinanceSummary(orgId!, access_token),
     enabled: !!orgId && !!access_token,
     staleTime: 15_000,
   })
+  const all = logs as any[]
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['instructor-worklogs', orgId] })
@@ -60,115 +60,170 @@ function InstructorFinanceHome({ orgslug }: { orgslug: string }) {
   }
 
   const handleDelete = async (l: any) => {
-    if (!window.confirm(t('instructors.confirm_delete_log', 'Delete this work log?'))) return
+    const ok = await confirm({
+      title: t('instructors.delete_log_title', 'Delete this work log?'),
+      message: t('instructors.delete_log_message', '{{hours}} h by {{name}} — the cost is removed from the finance totals.', { hours: l.hours, name: l.instructor_name || '—' }),
+      confirmText: t('administration.common.delete', 'Delete'),
+    })
+    if (!ok) return
     try {
       await deleteInstructorWorkLog(l.worklog_uuid, access_token)
       toast.success(t('academic.deleted'))
       refresh()
-    } catch {
-      toast.error(t('academic.delete_failed'))
+    } catch (err: any) {
+      toast.error(err?.message || t('academic.delete_failed'))
     }
   }
+
+  const instructorOptions = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const l of all) if (l.instructor_uuid) seen.set(l.instructor_uuid, l.instructor_name || l.instructor_uuid)
+    return [...seen].map(([value, label]) => ({ value, label }))
+  }, [all])
+  const languageOptions = useMemo(() => [...new Set(all.map((l) => l.language).filter(Boolean))].map((l) => ({ value: l as string, label: l as string })), [all])
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return all.filter(
+      (l) =>
+        (instructor === 'all' || l.instructor_uuid === instructor) &&
+        (language === 'all' || l.language === language) &&
+        (!q || `${l.instructor_name || ''} ${l.description || ''}`.toLowerCase().includes(q))
+    )
+  }, [all, query, instructor, language])
+  const filtering = !!query || instructor !== 'all' || language !== 'all'
+  const currency = all.find((l) => l.currency)?.currency || ''
+  const money = (v: number | null | undefined, cur = currency) => `${Number(v || 0).toLocaleString(i18n.language, { maximumFractionDigits: 2 })} ${cur}`.trim()
+
+  const logButton = (
+    <AuthenticatedClientElement checkMethod="roles" action="create" ressourceType="instructors" orgId={orgId!}>
+      <AcademicPrimaryButton onClick={() => setModalOpen(true)}>
+        <Plus className="h-4 w-4" /> {t('instructors.log_hours', 'Log Hours')}
+      </AcademicPrimaryButton>
+    </AuthenticatedClientElement>
+  )
 
   return (
     <AcademicPageShell>
       <Breadcrumbs
         items={[
-          {
-            label: t('instructors.title', 'Instructors'),
-            href: getUriWithOrg(orgslug, '/dash/instructors'),
-            icon: <ChalkboardTeacher size={14} />,
-          },
+          { label: t('instructors.title', 'Instructors'), href: getUriWithOrg(orgslug, '/dash/instructors'), icon: <ChalkboardTeacher size={14} /> },
           { label: t('instructors.finance', 'Finance'), href: getUriWithOrg(orgslug, '/dash/instructors/finance') },
         ]}
       />
-      <AcademicHeader
-        title={t('instructors.finance', 'Finance')}
-        subtitle={t('instructors.finance_desc', 'Log delivered hours — cost is Hours × Rate')}
-        action={
-          <AuthenticatedClientElement checkMethod="roles" action="create" ressourceType="instructors" orgId={orgId!}>
-            <button
-              onClick={() => setModalOpen(true)}
-              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
-            >
-              <Plus className="w-4 h-4" /> {t('instructors.log_hours', 'Log Hours')}
-            </button>
-          </AuthenticatedClientElement>
-        }
-      />
-
+      <AcademicHeader title={t('instructors.finance', 'Finance')} subtitle={t('instructors.finance_desc', 'Log delivered hours — cost is Hours × Rate')} action={logButton} />
       <InstructorTabs orgslug={orgslug} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard label={t('instructors.total_hours', 'Total hours')} value={String(summary?.total_hours ?? 0)} />
-        <StatCard label={t('instructors.total_cost', 'Total cost')} value={String(summary?.total_amount ?? 0)} />
-        <StatCard label={t('instructors.entries', 'Entries')} value={String(summary?.entry_count ?? 0)} />
-      </div>
+      <DashStatCards
+        className="mb-6"
+        loading={summaryLoading}
+        stats={[
+          { key: 'hours', label: t('instructors.total_hours', 'Total hours'), value: Number(summary?.total_hours ?? 0), icon: ClockCountdown, tone: 'gold' },
+          { key: 'cost', label: t('instructors.total_cost', 'Total cost'), value: money(summary?.total_amount), icon: Coins, tone: 'rose' },
+          { key: 'entries', label: t('instructors.entries', 'Entries'), value: Number(summary?.entry_count ?? 0), icon: ListChecks, tone: 'stone' },
+          { key: 'instructors', label: t('instructors.paid_instructors', 'Instructors with hours'), value: instructorOptions.length, icon: UsersThree, tone: 'sand' },
+        ]}
+      />
 
-      <div className="bg-white rounded-xl nice-shadow border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-gray-400 text-xs uppercase border-b border-gray-100">
-              <th className="px-4 py-3 font-bold">{t('instructors.title', 'Instructor')}</th>
-              <th className="px-4 py-3 font-bold">{t('instructors.language', 'Language')}</th>
-              <th className="px-4 py-3 font-bold text-right">{t('instructors.hours', 'Hours')}</th>
-              <th className="px-4 py-3 font-bold text-right">{t('instructors.rate', 'Rate')}</th>
-              <th className="px-4 py-3 font-bold text-right">{t('instructors.amount', 'Amount')}</th>
-              <th className="px-4 py-3 font-bold">{t('instructors.date', 'Date')}</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {!isLoading && logs.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-gray-400">
-                  {t('instructors.no_logs', 'No work logs yet.')}
-                </td>
-              </tr>
-            )}
-            {logs.map((l: any) => (
-              <tr key={l.worklog_uuid} className="border-b border-gray-50 last:border-b-0">
-                <td className="px-4 py-3">
-                  <div className="font-medium text-gray-800">{l.instructor_name || '—'}</div>
-                  {l.description && <div className="text-xs text-gray-400">{l.description}</div>}
-                </td>
-                <td className="px-4 py-3 text-gray-600">{l.language || '—'}</td>
-                <td className="px-4 py-3 text-right text-gray-600">{l.hours}</td>
-                <td className="px-4 py-3 text-right text-gray-600">{l.rate_applied}</td>
-                <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                  {l.amount} {l.currency || ''}
-                </td>
-                <td className="px-4 py-3 text-gray-500">{(l.work_date || '').slice(0, 10)}</td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => handleDelete(l)}
-                    className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DashDataTable
+        rows={visible}
+        rowKey={(l: any) => l.worklog_uuid}
+        loading={isLoading}
+        initialSort={{ key: 'date', dir: 'desc' }}
+        itemLabel={(n) => t('instructors.worklogs_count', '{{count}} work logs', { count: n })}
+        toolbar={
+          <>
+            <ToolbarSearch value={query} onChange={setQuery} placeholder={t('instructors.search_logs', 'Search instructor or note')} />
+            <ToolbarSelect
+              label={t('instructors.instructor', 'Instructor')}
+              value={instructor}
+              onChange={setInstructor}
+              options={[{ value: 'all', label: t('administration.common.all', 'All') }, ...instructorOptions]}
+            />
+            {languageOptions.length ? (
+              <ToolbarSelect
+                label={t('instructors.language', 'Language')}
+                value={language}
+                onChange={setLanguage}
+                options={[{ value: 'all', label: t('administration.common.all', 'All') }, ...languageOptions]}
+              />
+            ) : null}
+          </>
+        }
+        empty={
+          <AcademicEmptyState
+            compact
+            icon={<ClockCountdown size={24} />}
+            title={filtering ? t('administration.common.no_matches', 'No matches') : t('instructors.no_logs_title', 'No work logs yet')}
+            description={
+              filtering ? t('administration.common.no_matches_hint', 'Try a different search or clear the filters.') : t('instructors.no_logs_hint', 'Log delivered hours to track what each instructor is owed.')
+            }
+            action={filtering ? undefined : logButton}
+          />
+        }
+        columns={[
+          {
+            key: 'instructor',
+            header: t('instructors.instructor', 'Instructor'),
+            primary: true,
+            sortValue: (l: any) => l.instructor_name || '',
+            cell: (l: any) => (
+              <div className="flex min-w-0 items-center gap-3">
+                <PersonAvatar name={l.instructor_name || '—'} size={32} />
+                <div className="min-w-0 leading-tight">
+                  <div className="truncate font-medium">{l.instructor_name || '—'}</div>
+                  {l.description ? <div className="truncate text-[11px] text-[hsl(var(--dash-muted))]">{l.description}</div> : null}
+                </div>
+              </div>
+            ),
+          },
+          { key: 'language', header: t('instructors.language', 'Language'), hideBelow: 'lg', hideOnMobile: true, cell: (l: any) => <span className="text-[13px]">{l.language || '—'}</span> },
+          { key: 'hours', header: t('instructors.hours', 'Hours'), align: 'end', sortValue: (l: any) => Number(l.hours), cell: (l: any) => <span className="tabular-nums">{l.hours}</span> },
+          {
+            key: 'rate',
+            header: t('instructors.rate', 'Rate'),
+            align: 'end',
+            hideBelow: 'lg',
+            hideOnMobile: true,
+            sortValue: (l: any) => Number(l.rate_applied),
+            cell: (l: any) => <span className="whitespace-nowrap tabular-nums text-[hsl(var(--dash-muted))]">{money(l.rate_applied, l.currency || '')}</span>,
+          },
+          {
+            key: 'amount',
+            header: t('instructors.amount', 'Amount'),
+            align: 'end',
+            sortValue: (l: any) => Number(l.amount),
+            cell: (l: any) => <span className="whitespace-nowrap font-semibold tabular-nums">{money(l.amount, l.currency || '')}</span>,
+          },
+          {
+            key: 'date',
+            header: t('instructors.date', 'Date'),
+            sortValue: (l: any) => l.work_date || '',
+            cell: (l: any) => <span className="whitespace-nowrap text-[12px] text-[hsl(var(--dash-muted))]">{l.work_date ? formatAdminDate(l.work_date, i18n.language) : '—'}</span>,
+          },
+        ]}
+        actions={(l: any) => [{ label: t('administration.common.delete', 'Delete'), icon: <Trash2 className="h-3.5 w-3.5" />, tone: 'danger' as const, onSelect: () => handleDelete(l) }]}
+      />
 
       <Modal
         isDialogOpen={modalOpen}
         onOpenChange={setModalOpen}
-        minWidth="md"
+        minWidth="sm"
         dialogTitle={t('instructors.log_hours', 'Log Hours')}
         dialogContent={
-          <WorkLogForm
-            orgId={orgId!}
-            access_token={access_token}
-            onDone={() => {
-              setModalOpen(false)
-              refresh()
-            }}
-          />
+          modalOpen ? (
+            <WorkLogForm
+              orgId={orgId!}
+              access_token={access_token}
+              onCancel={() => setModalOpen(false)}
+              onDone={() => {
+                setModalOpen(false)
+                refresh()
+              }}
+            />
+          ) : null
         }
       />
+      {dialog}
     </AcademicPageShell>
   )
 }
@@ -177,10 +232,12 @@ function WorkLogForm({
   orgId,
   access_token,
   onDone,
+  onCancel,
 }: {
   orgId: number
   access_token: string
   onDone: () => void
+  onCancel?: () => void
 }) {
   const { t } = useTranslation()
   const { data: instructors = [] } = useQuery({
@@ -247,7 +304,7 @@ function WorkLogForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <Field label={t('instructors.title', 'Instructor')}>
+      <Field label={t('instructors.instructor', 'Instructor')} required>
         <select
           className={inputCls}
           value={instructorUuid}
@@ -267,7 +324,7 @@ function WorkLogForm({
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label={t('instructors.hours', 'Hours')}>
+        <Field label={t('instructors.hours', 'Hours')} required>
           <input
             type="number"
             min={0}
@@ -317,28 +374,23 @@ function WorkLogForm({
           <input type="date" className={inputCls} value={workDate} onChange={(e) => setWorkDate(e.target.value)} />
         </Field>
         <div className="flex items-end">
-          <button
-            type="button"
-            onClick={doPreview}
-            disabled={!instructorUuid || hours === ''}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-          >
-            <Calculator className="w-4 h-4" /> {t('instructors.preview', 'Preview cost')}
-          </button>
+          <GhostButton type="button" onClick={doPreview} disabled={!instructorUuid || hours === ''} className="w-full justify-center py-2">
+            <Calculator className="h-4 w-4" /> {t('instructors.preview', 'Preview cost')}
+          </GhostButton>
         </div>
       </div>
 
       {preview && (
-        <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 text-sm">
+        <div className="rounded-2xl bg-[hsl(var(--dash-canvas))]/70 p-3 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-500">
+            <span className="text-[hsl(var(--dash-muted))]">
               {preview.hours} × {preview.rate_applied}
             </span>
-            <span className="font-bold text-gray-900">
+            <span className="font-bold text-[hsl(var(--dash-ink))]">
               {preview.amount} {preview.currency || ''}
             </span>
           </div>
-          <div className="text-xs text-gray-400 mt-1">
+          <div className="text-xs text-[hsl(var(--dash-muted))] mt-1">
             {t('instructors.rate_source', 'Rate source')}: {t(`instructors.source_${preview.rate_source}`, preview.rate_source) as string}
           </div>
         </div>
@@ -348,7 +400,7 @@ function WorkLogForm({
         <textarea className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
       </Field>
 
-      <SubmitRow saving={saving} />
+      <FormActions saving={saving} onCancel={onCancel} />
     </form>
   )
 }

@@ -287,10 +287,13 @@ async def test_events_startup_shutdown_and_reconcile(monkeypatch):
     cleanup_temp_migrations.assert_called_once()
     run_ee_startup.assert_called_once_with(app)
     assert core_events._cleanup_task is fake_task
+    # The notification reminder scanner is started too.
+    assert core_events._reminder_task is fake_task
 
     close_webhook_client = AsyncMock()
     close_database = AsyncMock()
     monkeypatch.setattr(core_events, "_cleanup_task", fake_task)
+    monkeypatch.setattr(core_events, "_reminder_task", fake_task)
     monkeypatch.setattr(
         "src.services.webhooks.dispatch.close_webhook_client",
         close_webhook_client,
@@ -300,7 +303,8 @@ async def test_events_startup_shutdown_and_reconcile(monkeypatch):
     close_app = core_events.shutdown_app(app)
     await close_app()
 
-    fake_task.cancel.assert_called_once()
+    # Both background tasks (cleanup + reminders) are cancelled on shutdown.
+    assert fake_task.cancel.call_count == 2
     close_webhook_client.assert_awaited_once()
     close_database.assert_awaited_once_with(app)
 

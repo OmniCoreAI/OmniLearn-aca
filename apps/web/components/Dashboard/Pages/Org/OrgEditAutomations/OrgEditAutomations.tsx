@@ -439,7 +439,7 @@ const OrgEditAutomations: React.FC = () => {
                     setNewSecret(null)
                     setIsCreateDialogOpen(true)
                   }}
-                  className="bg-[hsl(var(--dash-accent))] text-white hover:bg-black/90"
+                  className="bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))] hover:bg-black/90"
                 >
                   <Plus size={16} className="mr-2" />
                   Add Endpoint

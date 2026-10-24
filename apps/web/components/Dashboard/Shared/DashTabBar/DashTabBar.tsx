@@ -6,6 +6,7 @@ import { PlanLevel } from '@services/plans/plans'
 import PlanBadge from '@components/Dashboard/Shared/PlanRestricted/PlanBadge'
 import { usePlan } from '@components/Hooks/usePlan'
 import ToolTip from '@components/Objects/StyledElements/Tooltip/Tooltip'
+import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
 import { cn } from '@/lib/utils'
 
 export interface DashTabItem {
@@ -74,7 +75,7 @@ export function DashTabBar({ tabs }: DashTabBarProps) {
   }, [])
 
   return (
-    <div className="relative min-w-0 overflow-hidden">
+    <div className="relative w-fit min-w-0 max-w-full overflow-hidden rounded-full">
       <div
         className={cn(
           'pointer-events-none absolute inset-y-0 left-0 z-10 flex w-12 items-center bg-gradient-to-r from-[hsl(var(--dash-surface))] to-transparent transition-opacity duration-200',
@@ -92,11 +93,11 @@ export function DashTabBar({ tabs }: DashTabBarProps) {
 
       <div
         ref={scrollRef}
-        className="flex gap-1 overflow-x-auto text-sm font-medium scrollbar-hide"
+        className={TAB_TRACK}
       >
         {tabs.map((tab) => {
           const inner = (
-            <div className="mx-1 flex items-center gap-2 px-3 py-2">
+            <div className="flex items-center gap-2 px-3.5 py-1.5">
               {tab.icon}
               <div className="flex items-center whitespace-nowrap">
                 {tab.label}
@@ -122,12 +123,7 @@ export function DashTabBar({ tabs }: DashTabBarProps) {
             )
           }
 
-          const tabClass = cn(
-            'w-fit cursor-pointer rounded-full text-center transition-all',
-            tab.active
-              ? 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]'
-              : 'text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))] hover:text-[hsl(var(--dash-ink))]'
-          )
+          const tabClass = tabItemClass(tab.active, 'w-fit cursor-pointer px-0 py-0 text-center')
 
           if (tab.href) {
             return (

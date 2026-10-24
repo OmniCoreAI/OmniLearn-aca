@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 from datetime import datetime
 from fastapi import HTTPException, Request
@@ -18,15 +18,21 @@ from src.db.academic.cohorts import (
 )
 from src.db.academic.semesters import Semester
 from src.db.academic.links import SemesterCourse
+from src.db.academic.calendar import AcademicTerm, AcademicYear
+from src.db.academic.curricula import Curriculum, CurriculumStatus
+from src.db.academic.offerings import CohortMembership, CourseOffering, MembershipStatus
 from src.db.courses.courses import Course
 from src.security.rbac import AccessAction, AccessContext, check_resource_access
 from src.services.academic.authors import get_user_author
 from src.services.academic.validation import (
     assert_status_transition,
     resolve_coordinator,
+    resolve_org_user,
     validate_cohort_payload,
     COHORT_STATUS_TRANSITIONS,
 )
+from src.services.academic import students as students_svc
+from src.services.academic.offerings import delete_offering_group
 
 
 async def _get_cohort_or_404(db_session: AsyncSession, cohort_uuid: str) -> Cohort:
@@ -46,10 +52,10 @@ async def _get_program_or_404(db_session: AsyncSession, program_uuid: str) -> Pr
 
 
 async def _enrolled_count(db_session: AsyncSession, cohort: Cohort) -> int:
-    if not cohort.usergroup_id:
-        return 0
-    statement = select(func.count()).select_from(UserGroupUser).where(
-        UserGroupUser.usergroup_id == cohort.usergroup_id
+    """Active students (cohort memberships)."""
+    statement = select(func.count()).select_from(CohortMembership).where(
+        CohortMembership.cohort_id == cohort.id,
+        CohortMembership.status == MembershipStatus.ACTIVE,
     )
     return int((await db_session.execute(statement)).scalar() or 0)
 
@@ -57,9 +63,86 @@ async def _enrolled_count(db_session: AsyncSession, cohort: Cohort) -> int:
 async def _to_read(db_session: AsyncSession, cohort: Cohort) -> CohortRead:
     coordinator = await get_user_author(db_session, cohort.coordinator_id)
     enrolled = await _enrolled_count(db_session, cohort)
+    curriculum = await db_session.get(Curriculum, cohort.curriculum_id) if cohort.curriculum_id else None
+    term = await db_session.get(AcademicTerm, cohort.intake_term_id) if cohort.intake_term_id else None
+    offering_count = (
+        await db_session.execute(
+            select(func.count()).select_from(CourseOffering).where(CourseOffering.cohort_id == cohort.id)
+        )
+    ).scalar() or 0
     return CohortRead(
-        **cohort.model_dump(), coordinator=coordinator, enrolled_count=enrolled
+        **cohort.model_dump(),
+        coordinator=coordinator,
+        enrolled_count=enrolled,
+        offering_count=int(offering_count),
+        curriculum_uuid=curriculum.curriculum_uuid if curriculum else None,
+        curriculum_version=curriculum.version if curriculum else None,
+        intake_term_uuid=term.term_uuid if term else None,
+        intake_term_code=term.code if term else None,
     )
+
+
+async def _resolve_curriculum(
+    db_session: AsyncSession, program: Program, curriculum_uuid: Optional[str]
+) -> Optional[int]:
+    """Explicit version, else the program's latest ACTIVE version (if any)."""
+    if curriculum_uuid:
+        curriculum = (
+            await db_session.execute(select(Curriculum).where(Curriculum.curriculum_uuid == curriculum_uuid))
+        ).scalars().first()
+        if not curriculum or curriculum.program_id != program.id:
+            raise HTTPException(status_code=400, detail="Curriculum does not belong to this program")
+        if curriculum.status == CurriculumStatus.RETIRED:
+            raise HTTPException(status_code=409, detail="A retired curriculum cannot be assigned")
+        return curriculum.id
+    active = (
+        await db_session.execute(
+            select(Curriculum)
+            .where(Curriculum.program_id == program.id, Curriculum.status == CurriculumStatus.ACTIVE)
+            .order_by(Curriculum.version.desc())  # type: ignore
+        )
+    ).scalars().first()
+    return active.id if active else None
+
+
+async def _resolve_intake_term(
+    db_session: AsyncSession, org_id: int, term_uuid: Optional[str]
+) -> Optional[AcademicTerm]:
+    if not term_uuid:
+        return None
+    term = (
+        await db_session.execute(select(AcademicTerm).where(AcademicTerm.term_uuid == term_uuid))
+    ).scalars().first()
+    if not term or term.org_id != org_id:
+        raise HTTPException(status_code=400, detail="Intake term not found")
+    return term
+
+
+async def _generate_cohort_code(
+    db_session: AsyncSession, program: Program, cohort: Cohort, term: Optional[AcademicTerm]
+) -> Optional[str]:
+    """``<PROGRAM_CODE>-<YEAR>`` (e.g. MSC-AI-2026); suffixed if a second intake shares the year."""
+    if not program.code:
+        return None
+    year = None
+    if term and term.code and term.code[-4:].isdigit():
+        year = term.code[-4:]
+    elif cohort.start_date and cohort.start_date[:4].isdigit():
+        year = cohort.start_date[:4]
+    elif cohort.academic_year and cohort.academic_year[:4].isdigit():
+        year = cohort.academic_year[:4]
+    if not year:
+        return None
+    base = f"{program.code}-{year}"
+    candidate, n = base, 1
+    while (
+        await db_session.execute(
+            select(Cohort).where(Cohort.org_id == program.org_id, Cohort.code == candidate)
+        )
+    ).scalars().first():
+        n += 1
+        candidate = f"{base}-{n}"
+    return candidate
 
 
 async def create_cohort(
@@ -81,11 +164,23 @@ async def create_cohort(
         db_session, program.org_id, cohort_object.coordinator_uuid
     )
 
+    curriculum_id = await _resolve_curriculum(db_session, program, cohort_object.curriculum_uuid)
+    intake_term = await _resolve_intake_term(db_session, program.org_id, cohort_object.intake_term_uuid)
+
     cohort = Cohort.model_validate(
-        cohort_object,
+        cohort_object.model_dump(exclude={"curriculum_uuid", "intake_term_uuid", "coordinator_uuid"}),
         update={"org_id": program.org_id, "program_id": program.id},
     )
     cohort.coordinator_id = coordinator_id
+    cohort.curriculum_id = curriculum_id
+    if intake_term:
+        cohort.intake_term_id = intake_term.id
+        if not cohort.start_date:
+            cohort.start_date = intake_term.start_date
+        if not cohort.academic_year:
+            year = await db_session.get(AcademicYear, intake_term.academic_year_id)
+            cohort.academic_year = year.code if year else None
+    cohort.code = await _generate_cohort_code(db_session, program, cohort, intake_term)
     cohort.cohort_uuid = f"cohort_{uuid4()}"
     cohort.creation_date = str(datetime.now())
     cohort.update_date = str(datetime.now())
@@ -95,6 +190,7 @@ async def create_cohort(
         name=f"{cohort.name} (Cohort)",
         description=f"Enrollment group for cohort {cohort.name}",
         org_id=program.org_id,
+        group_type="cohort",
         usergroup_uuid=f"usergroup_{uuid4()}",
         creation_date=str(datetime.now()),
         update_date=str(datetime.now()),
@@ -184,6 +280,25 @@ async def update_cohort(
         cohort.coordinator_id = await resolve_coordinator(
             db_session, cohort.org_id, coordinator_uuid
         )
+    if "curriculum_uuid" in update_data:
+        curriculum_uuid = update_data.pop("curriculum_uuid")
+        program = await db_session.get(Program, cohort.program_id)
+        new_id = await _resolve_curriculum(db_session, program, curriculum_uuid) if curriculum_uuid else None  # type: ignore[arg-type]
+        if new_id != cohort.curriculum_id:
+            has_offerings = (
+                await db_session.execute(
+                    select(func.count()).select_from(CourseOffering).where(CourseOffering.cohort_id == cohort.id)
+                )
+            ).scalar() or 0
+            if has_offerings:
+                raise HTTPException(
+                    status_code=409,
+                    detail="The cohort already has offerings; its curriculum version can no longer change",
+                )
+            cohort.curriculum_id = new_id
+    if "intake_term_uuid" in update_data:
+        term = await _resolve_intake_term(db_session, cohort.org_id, update_data.pop("intake_term_uuid"))
+        cohort.intake_term_id = term.id if term else None
 
     for key, value in update_data.items():
         setattr(cohort, key, value)
@@ -205,9 +320,81 @@ async def delete_cohort(
     await check_resource_access(
         request, db_session, current_user, cohort.cohort_uuid, AccessAction.DELETE
     )
+    await assert_cohort_deletable(db_session, cohort)
+    await delete_cohort_dependents(db_session, cohort)
     await db_session.delete(cohort)
     await db_session.commit()
     return "Cohort deleted"
+
+
+async def assert_cohort_deletable(db_session: AsyncSession, cohort: Cohort, label: str = "cohort") -> None:
+    """Deleting a cohort cascades to its student records, registrations and
+    applications. Once official results or admission decisions exist that
+    history must be kept, so the cohort is archived instead."""
+    from src.db.academic.admissions import AdmissionApplication, ApplicationStatus
+    from src.db.academic.offerings import Enrollment, EnrollmentStatus
+
+    member_ids = select(CohortMembership.id).where(CohortMembership.cohort_id == cohort.id)
+    offering_ids = select(CourseOffering.id).where(CourseOffering.cohort_id == cohort.id)
+    results = (
+        await db_session.execute(
+            select(func.count()).select_from(Enrollment).where(
+                Enrollment.status.in_([EnrollmentStatus.COMPLETED, EnrollmentStatus.FAILED]),  # type: ignore[attr-defined]
+                Enrollment.membership_id.in_(member_ids) | Enrollment.offering_id.in_(offering_ids),  # type: ignore[union-attr,attr-defined]
+            )
+        )
+    ).scalar() or 0
+    decided = (
+        await db_session.execute(
+            select(func.count()).select_from(AdmissionApplication).where(
+                AdmissionApplication.cohort_id == cohort.id,
+                AdmissionApplication.status.in_(  # type: ignore[attr-defined]
+                    [
+                        ApplicationStatus.ACCEPTED,
+                        ApplicationStatus.WAITLISTED,
+                        ApplicationStatus.REJECTED,
+                        ApplicationStatus.ENROLLED,
+                    ]
+                ),
+            )
+        )
+    ).scalar() or 0
+    if results or decided:
+        parts = []
+        if results:
+            parts.append(f"{results} official course result(s)")
+        if decided:
+            parts.append(f"{decided} admission decision(s)")
+        advice = "archive the program" if label == "program" else "archive the cohort"
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cohort {cohort.code or cohort.name} has {' and '.join(parts)}; "
+            f"these records must be kept, so {advice} instead of deleting it",
+        )
+
+
+async def delete_cohort_dependents(db_session: AsyncSession, cohort: Cohort) -> None:
+    """Remove the access groups a cohort owns (its own + its offerings' rosters),
+    which would otherwise be orphaned by the FK's SET NULL."""
+    offerings = (
+        await db_session.execute(select(CourseOffering).where(CourseOffering.cohort_id == cohort.id))
+    ).scalars().all()
+    for offering in offerings:
+        await delete_offering_group(db_session, offering)
+    from src.services.administration.audience import forget_cohort
+
+    await forget_cohort(db_session, cohort)
+    if cohort.usergroup_id:
+        group = await db_session.get(UserGroup, cohort.usergroup_id)
+        if group:
+            for model in (UserGroupResource, UserGroupUser):
+                rows = (
+                    await db_session.execute(select(model).where(model.usergroup_id == group.id))
+                ).scalars().all()
+                for row in rows:
+                    await db_session.delete(row)
+            await db_session.delete(group)
+            cohort.usergroup_id = None
 
 
 async def _course_uuids_for_cohort(db_session: AsyncSession, cohort: Cohort) -> List[str]:
@@ -270,34 +457,24 @@ async def enroll_user_in_cohort(
     if not cohort.usergroup_id:
         raise HTTPException(status_code=409, detail="Cohort has no enrollment group")
 
-    existing = (
+    user = await db_session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
+    await resolve_org_user(db_session, cohort.org_id, user.user_uuid, label="Student")
+
+    already = (
         await db_session.execute(
-            select(UserGroupUser).where(
-                UserGroupUser.usergroup_id == cohort.usergroup_id,
-                UserGroupUser.user_id == user_id,
+            select(CohortMembership).where(
+                CohortMembership.cohort_id == cohort.id, CohortMembership.user_id == user_id
             )
         )
     ).scalars().first()
-    if existing:
+    if already:
         return "User already enrolled"
 
-    # Hard-enforce the cohort capacity at enrollment time.
-    if cohort.capacity is not None:
-        current_count = await _enrolled_count(db_session, cohort)
-        if current_count >= cohort.capacity:
-            raise HTTPException(
-                status_code=409, detail="Cohort is at full capacity"
-            )
-
-    db_session.add(
-        UserGroupUser(
-            usergroup_id=cohort.usergroup_id,
-            user_id=user_id,
-            org_id=cohort.org_id,
-            creation_date=str(datetime.now()),
-            update_date=str(datetime.now()),
-        )
-    )
+    # Creates the student record (student number), joins the cohort group,
+    # enforces capacity and registers the student in required offerings.
+    await students_svc.admit_user(db_session, cohort, user_id)
     await db_session.commit()
 
     # Make sure the group is linked to all current cohort courses.
@@ -323,16 +500,28 @@ async def unenroll_user_from_cohort(
 
     membership = (
         await db_session.execute(
+            select(CohortMembership).where(
+                CohortMembership.cohort_id == cohort.id, CohortMembership.user_id == user_id
+            )
+        )
+    ).scalars().first()
+    if membership:
+        await students_svc.remove_membership(db_session, cohort, membership)
+        await db_session.commit()
+        return "User unenrolled from cohort"
+
+    # Legacy group-only member (pre student-records data).
+    group_member = (
+        await db_session.execute(
             select(UserGroupUser).where(
                 UserGroupUser.usergroup_id == cohort.usergroup_id,
                 UserGroupUser.user_id == user_id,
             )
         )
     ).scalars().first()
-    if not membership:
+    if not group_member:
         raise HTTPException(status_code=404, detail="User is not enrolled in this cohort")
-
-    await db_session.delete(membership)
+    await db_session.delete(group_member)
     await db_session.commit()
     return "User unenrolled from cohort"
 

@@ -774,3 +774,27 @@ class TestAnalyticsRouter:
         for route in routes:
             response = await client.get(route)
             assert response.status_code == 401
+
+
+class TestDashboardHomeRoute:
+    async def test_home_requires_authentication(self, app, client):
+        app.dependency_overrides[get_current_user] = lambda: AnonymousUser()
+        response = await client.get("/api/v1/analytics/dashboard/home", params={"org_id": 1})
+        assert response.status_code == 401
+
+    async def test_home_returns_overview_for_admins(self, client, db_session):
+        overview = {"totals": {"courses": 2}, "enrollment_trend": []}
+        with (
+            _analytics_guard_patches(),
+            patch(
+                "src.routers.analytics.get_home_overview",
+                new=AsyncMock(return_value=overview),
+            ) as get_overview,
+        ):
+            response = await client.get(
+                "/api/v1/analytics/dashboard/home", params={"org_id": 1, "months": 12}
+            )
+
+        assert response.status_code == 200
+        assert response.json() == overview
+        get_overview.assert_awaited_once_with(1, db_session, months=12)

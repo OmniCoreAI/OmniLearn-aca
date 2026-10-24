@@ -1,0 +1,61 @@
+import { Callout } from 'nextra/components'
+
+# Entities & Coordinators
+
+An **entity** (الجهة) is an organization the academy trains for — a ministry, government body, university or company. Entities are *not* separate tenants: they live inside the academy and share its courses.
+
+## Creating an entity
+
+Give the entity a name (English and Arabic), code, type, optional parent entity, contact details and logo. Each entity automatically gets an **all members** group, which is maintained by the platform and cannot be edited by hand.
+
+Tabs on the entity page:
+
+| Tab | What it holds |
+| --- | --- |
+| Overview | Details, coordinators and what coordinators may do |
+| Members | People, with their position, employee ID, groups and status |
+| Groups | Departments and other groups inside the entity |
+| Positions | Positions specific to this entity (shared positions are managed under **Positions**) |
+| Instructors | Instructors linked to or proposed by the entity |
+| Available & assigned learning | Courses and programs made available to the entity and who they are assigned to |
+| Progress & activity | Enrollment, progress, certificates and last activity per member and per course |
+| Imports | Excel imports of members |
+
+## The Entity Coordinator (منسق الجهة)
+
+A coordinator manages **only their own entity**. Make someone a coordinator from the entity's Overview tab, choosing an existing user or creating a new account. Trainees get platform role 2, **Entity Coordinator**; academy admins keep their own role.
+
+Coordinators work from **My entity** in the sidebar. What they can do is switched on per entity:
+
+- add, edit and deactivate members;
+- import members from Excel;
+- create groups and choose their members;
+- assign the training the academy made available to the entity (to the whole entity, a group, a position or individual members);
+- propose instructors, if the academy allows it (off by default). Proposed instructors stay pending until the academy approves them.
+
+Coordinators can always review their members and follow their progress. They cannot see other entities, academy settings, finance, instructor rates or the academy-wide user list.
+
+<Callout type="warning">
+Role 2 used to grant academy-wide administration. It is now limited to entities. Move any academy staff who held role 2 to **Academy Admin** before upgrading.
+</Callout>
+
+## Assigning training to audiences
+
+On a course's **Access** tab (and on a training program page), **Assign to audiences** lets you choose entities, user groups, positions (optionally within one entity), cohorts or individual people:
+
+- **Assign** restricts the course to those audiences (plus staff). Options: enroll them automatically, notify them, and a due date.
+- **Make available** (entities only) grants nothing yet: it lets that entity's coordinator assign the course to their own people.
+
+Assignments are applied through the existing user-group access, so they follow membership changes: new members, a changed position or a deactivated member update access automatically. A training program's audiences also reach every course in the program. Inactive groups keep their links but no longer grant access.
+
+<Callout type="info">
+Assigned members can open a course only once it is published. Public courses stay open to everyone; switch the course to **Users only** for assignments to restrict access.
+</Callout>
+
+## Importing members from Excel
+
+1. Download the template — it has dropdowns for the entity's positions and groups. Headers may be in English or Arabic.
+2. Upload the filled `.xlsx` or `.csv` file (up to 5 MB and 5,000 rows).
+3. Review: every row is checked (required fields, email format, duplicates in the file, employee IDs, phone numbers, positions, groups, existing accounts). Nothing is created yet.
+4. Confirm: new accounts are created and existing ones linked, members join their groups, and a course made available to the entity can be assigned to everyone. New accounts receive a link to set their password.
+5. Download the rows that need fixing, correct them and import them again.

@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.user_organizations import UserOrganization
 from src.db.users import AnonymousUser, APITokenUser, PublicUser
-from src.security.rbac.constants import ADMIN_OR_MAINTAINER_ROLE_IDS
+from src.security.rbac.constants import ACADEMY_ADMIN_ROLE_IDS
 from src.security.rbac.rbac import _load_applicable_roles
 from src.security.superadmin import is_user_superadmin
 
@@ -45,7 +45,7 @@ async def authorize_finance_management(
     if not membership:
         raise _bad("You are not a member of this organization", 403)
 
-    if membership.role_id in ADMIN_OR_MAINTAINER_ROLE_IDS:
+    if membership.role_id in ACADEMY_ADMIN_ROLE_IDS:
         return user_id
 
     roles = await _load_applicable_roles(db_session, user_id, org_id)

@@ -1,0 +1,25 @@
+# Certificate Templates
+
+**Administration → Certificates** designs the certificates learners receive.
+
+A template has:
+
+- a layout (classic, modern, minimal, bordered) and orientation (landscape or portrait);
+- colors, a font suited to Arabic or English, text direction and a border style;
+- a background image, the academy logo and a second logo (for example a partner entity);
+- a title, a line above and below the learner's name, and a footer, all with `{{variables}}`: `{{student_name}}`, `{{course_name}}`, `{{program_name}}`, `{{completion_date}}`, `{{issue_date}}`, `{{certificate_id}}`, `{{instructor_name}}`, `{{org_name}}`, `{{certification_name}}`;
+- up to three signatures (name, title, signature image);
+- a QR code linking to the public verification page, and the certificate number.
+
+## Which template is used
+
+1. The template chosen on the course's **Certification** tab.
+2. The template of the training program the course belongs to.
+3. The academy's default template.
+4. Otherwise, the course's built-in pattern, as before.
+
+## Certificate numbers
+
+Each template has a number format, for example `EACA-{YYYY}-{SEQ:5}` → `EACA-2026-00042`. Tokens: `{YYYY}`, `{YY}`, `{MM}` and `{SEQ:n}` (a counter of *n* digits that restarts for each new prefix, such as each year). The number is stored with the issued certificate and shown on it and on the verification page.
+
+The same design is used for the editor preview, the course preview, the learner's PDF download and the public verification page.

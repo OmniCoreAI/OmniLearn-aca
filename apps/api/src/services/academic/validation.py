@@ -82,6 +82,9 @@ def validate_cohort_payload(data: dict) -> None:
     if data.get("capacity") is not None and data["capacity"] < 0:
         raise _bad("Capacity cannot be negative")
 
+    if data.get("admission_status") not in (None, "open", "closed"):
+        raise _bad("Admission status must be 'open' or 'closed'")
+
     academic_year = data.get("academic_year")
     if academic_year and not ACADEMIC_YEAR_RE.match(academic_year):
         raise _bad("Academic year must look like '2025' or '2025/2026'")

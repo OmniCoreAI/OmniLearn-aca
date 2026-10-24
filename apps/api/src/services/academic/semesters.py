@@ -7,6 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.users import PublicUser, AnonymousUser
 from src.db.courses.courses import Course
+from src.db.usergroup_resources import UserGroupResource
 from src.db.academic.cohorts import Cohort
 from src.db.academic.semesters import (
     Semester,
@@ -256,6 +257,21 @@ async def unlink_course_from_semester(
 
     link = await _get_link_or_404(db_session, semester.id, course_uuid)
     await db_session.delete(link)
+
+    # Revoke the cohort group's access grant so enrolled students do not keep
+    # reaching a course that is no longer part of their study plan.
+    cohort = await db_session.get(Cohort, semester.cohort_id)
+    if cohort and cohort.usergroup_id:
+        grants = (
+            await db_session.execute(
+                select(UserGroupResource).where(
+                    UserGroupResource.usergroup_id == cohort.usergroup_id,
+                    UserGroupResource.resource_uuid == course_uuid,
+                )
+            )
+        ).scalars().all()
+        for grant in grants:
+            await db_session.delete(grant)
     await db_session.commit()
     return "Course unlinked from semester"
 
