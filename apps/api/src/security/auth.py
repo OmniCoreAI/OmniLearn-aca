@@ -3,6 +3,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.events.database import get_db_session
 from src.db.users import AnonymousUser, APITokenUser, PublicUser, SuperadminAPITokenUser, User, UserRead
+from src.services.users.login_identifier import resolve_login_user
 from src.services.users.users import security_get_user
 from config.config import get_omnilearn_config
 from pydantic import BaseModel
@@ -118,11 +119,15 @@ class TokenData(BaseModel):
 #### Classes ####################################################
 async def authenticate_user(
     request: Request,
-    email: str,
+    identifier: str,
     password: str,
     db_session: AsyncSession,
 ) -> User | bool:
-    user = await security_get_user(request, db_session, email)
+    """The user if `identifier` (an email, or a confirmed mobile number) and
+    `password` match, else False."""
+    row = await resolve_login_user(db_session, identifier)
+    # A detached copy, as security_get_user returned.
+    user = User(**row.model_dump()) if row else None
     if not user:
         # SECURITY: run a real password-verify against a dummy hash so
         # unknown-user responses take roughly the same time as known-user
