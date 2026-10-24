@@ -75,6 +75,23 @@ class TestEmailsService:
         assert "reset?email=user%2Btag%40test.com&amp;resetCode=code%20123" in first_body
         assert "reset-password?email=user%2Btag%40test.com&amp;resetCode=code%20123" in second_body
 
+    def test_send_password_reset_email_links_to_external_reset_page(self):
+        with patch("src.services.users.emails.send_email", return_value=True) as send_email:
+            send_password_reset_email(
+                "code 123",
+                _user(),
+                _org(),
+                "user+tag@test.com",
+                "https://app.test",
+                reset_page_url="https://www.example.org/forgot-password",
+            )
+        body = send_email.call_args.kwargs["body"]
+        assert (
+            'href="https://www.example.org/forgot-password?email=user%2Btag%40test.com&amp;resetCode=code%20123"'
+            in body
+        )
+        assert "https://app.test/reset" not in body
+
     def test_send_invitation_role_change_and_verification_email(self):
         with patch("src.services.users.emails.send_email", return_value=True) as send_email:
             send_invitation_email(
@@ -164,3 +181,70 @@ class TestEmailsService:
             )
         body = send_email.call_args.kwargs["body"]
         assert "You've been invited" in body
+
+
+# --- The academy's look (option C) -----------------------------------------
+
+import pytest  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+from typing import Optional  # noqa: E402
+
+from src.services.otp.messages import otp_email  # noqa: E402
+from src.services.users.emails import STYLES, _email_layout  # noqa: E402
+
+
+def _layout_with(logo: Optional[str], lang: str) -> str:
+    config = SimpleNamespace(mailing_config=SimpleNamespace(email_logo_url=logo))
+    with patch("src.services.users.emails.get_omnilearn_config", return_value=config):
+        return _email_layout("T", "<p>body</p>", lang=lang)
+
+
+def test_layout_shows_academy_logo_and_no_omnilearn_mark():
+    html = _layout_with(logo="https://site.test/logo.png", lang="ar")
+    assert '<img src="https://site.test/logo.png"' in html
+    assert 'viewBox="0 0 1488 218"' not in html  # the OmniLearn wordmark
+
+
+def test_layout_without_logo_setting_shows_academy_name():
+    html = _layout_with(logo=None, lang="en")
+    assert "<img" not in html and "Anti-Corruption Academy" in html
+
+
+@pytest.mark.parametrize("lang,line", [
+    ("ar", "الأكاديمية الوطنية لمكافحة الفساد · هيئة الرقابة الإدارية"),
+    ("en", "Anti-Corruption Academy · Administrative Control Authority"),
+    ("fr", "Académie de lutte contre la corruption · Autorité de contrôle administratif"),
+    ("ar-EG", "الأكاديمية الوطنية لمكافحة الفساد · هيئة الرقابة الإدارية"),
+    ("en-US", "Anti-Corruption Academy · Administrative Control Authority"),
+    ("fr-FR", "Académie de lutte contre la corruption · Autorité de contrôle administratif"),
+    # Unknown: English, as the LMS emails' text falls back to (translations.t).
+    ("xx", "Anti-Corruption Academy · Administrative Control Authority"),
+])
+def test_layout_footer_follows_language(lang, line):
+    assert line in _layout_with(logo=None, lang=lang)
+
+
+def test_layout_uses_academy_palette():
+    html = _layout_with(logo=None, lang="en")
+    assert "#d4af37" in html and "#1b2b4b" in html and "#000000" not in html
+
+
+def test_otp_code_is_plain_text_in_navy_and_gold():
+    with patch("src.services.users.emails.get_omnilearn_config",
+               return_value=SimpleNamespace(mailing_config=SimpleNamespace(email_logo_url=None))):
+        _, html = otp_email("login", "ar", "482915")
+    assert ">482915<" in html and 'dir="rtl"' in html
+    assert "#1b2b4b" in STYLES["code"] and "#d4af37" in STYLES["code"]
+
+
+def test_otp_email_in_an_unknown_language_closes_in_arabic_like_its_text():
+    # The code emails fall back to Arabic text; the closing line must match.
+    with patch("src.services.users.emails.get_omnilearn_config",
+               return_value=SimpleNamespace(mailing_config=SimpleNamespace(email_logo_url=None))):
+        _, html = otp_email("login", "xx", "482915")
+    assert "الأكاديمية الوطنية لمكافحة الفساد · هيئة الرقابة الإدارية" in html
+
+
+def test_logo_has_width_and_height_for_outlook():
+    html = _layout_with(logo="https://site.test/logo.png", lang="ar")
+    assert 'width="67"' in html and 'height="64"' in html

@@ -3,10 +3,10 @@ from typing import Literal, Optional
 from fastapi import Depends, APIRouter, HTTPException, Response, status, Request, Form
 from pydantic import BaseModel, EmailStr
 from sqlmodel import select
-from src.db.users import AnonymousUser, User, UserRead
+from src.db.users import AnonymousUser, UserRead
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.events.database import get_db_session
-from config.config import get_omnilearn_config
+from config.config import get_omnilearn_config, get_shared_cookie_domain
 from src.core.deployment_mode import get_deployment_mode
 from src.security.auth import (
     authenticate_user,
@@ -24,6 +24,7 @@ from src.security.auth import (
     JWT_REFRESH_COOKIE_NAME,
     JWT_COOKIE_NAME,
 )
+from src.services.users.login_identifier import resolve_login_user
 from src.services.users.users import security_get_user
 from src.services.auth.utils import signWithGoogle, get_google_user_info
 from src.services.dev.dev import isDevModeEnabled
@@ -61,9 +62,12 @@ def get_cookie_domain_for_request(request: Request) -> str | None:
     """
     Determine the appropriate cookie domain based on the tenancy mode.
 
-    - tenancy == "single": always returns None. Cookies are host-only on
-      whatever Host the request arrived with — same code path serves
-      localhost dev and self-hosted VPS deployments on any domain.
+    - tenancy == "single": None (host-only cookies on whatever Host the
+      request arrived with) — same code path serves localhost dev and
+      self-hosted VPS deployments on any domain. Exception: a dotted
+      OMNILEARN_COOKIE_DOMAIN (get_shared_cookie_domain) is returned for
+      requests from under it, so the session is shared with sibling sites
+      such as the main website that logs users in.
     - tenancy == "multi":
         - request from a subdomain of OMNILEARN_DOMAIN → configured cookie
           domain (e.g. ".omnilearn.io") so subdomains share the session.
@@ -73,9 +77,6 @@ def get_cookie_domain_for_request(request: Request) -> str | None:
     config = get_omnilearn_config()
     tenancy = config.hosting_config.tenancy
 
-    if tenancy == "single":
-        return None
-
     origin = request.headers.get("origin", "")
     referer = request.headers.get("referer", "")
     host = request.headers.get("host", "")
@@ -84,12 +85,19 @@ def get_cookie_domain_for_request(request: Request) -> str | None:
     config_cookie_domain = config.hosting_config.cookie_config.domain
 
     check_value = origin or referer or host
-    if not check_value:
-        return config_cookie_domain
 
     # Strip protocol, path, and port for hostname comparison.
     check_value = check_value.replace("https://", "").replace("http://", "")
-    check_value = check_value.split("/")[0].split(":")[0]
+    check_value = check_value.split("/")[0].split(":")[0].lower()
+
+    if tenancy == "single":
+        shared = get_shared_cookie_domain(config)
+        if shared and (check_value.endswith(shared) or check_value == shared[1:]):
+            return shared
+        return None
+
+    if not check_value:
+        return config_cookie_domain
 
     # In multi mode, localhost should not appear in practice (would indicate
     # misconfig). Treat it as host-only as a safety net.
@@ -360,9 +368,8 @@ async def login(
     if not user:
         # Unknown user OR wrong password — responses are indistinguishable.
         # The row lookup below runs behind that wall for lockout bookkeeping.
-        user_record = (await db_session.execute(
-            select(User).where(User.email == username)
-        )).scalars().first()
+        # The same lookup as sign-in, so a phone number counts toward lockout too.
+        user_record = await resolve_login_user(db_session, username)
         if user_record:
             await record_failed_login(
                 user_record,
@@ -413,10 +420,10 @@ async def login(
 
     # Step 6: Issue tokens
     access_token = create_access_token(
-        data={"sub": username},
+        data={"sub": user.email},
         expires_delta=JWT_ACCESS_TOKEN_EXPIRES
     )
-    refresh_token = create_refresh_token(data={"sub": username})
+    refresh_token = create_refresh_token(data={"sub": user.email})
 
     set_auth_cookies(response, access_token, refresh_token, request)
 

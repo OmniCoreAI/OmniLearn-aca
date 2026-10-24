@@ -29,6 +29,12 @@ interface InstanceInfo {
   tenancy: 'multi' | 'single'
   frontend_domain: string
   top_domain: string
+  // Single tenancy: parent domain the session cookies are shared on, and the
+  // login/sign-up pages on the main website (null when the LMS hosts them).
+  cookie_domain?: string | null
+  login_url?: string | null
+  signup_url?: string | null
+  password_reset_url?: string | null
 }
 
 // Cached instance info from backend (30-second TTL)
@@ -140,7 +146,7 @@ async function isAdminSubdomain(host: string | null, instance: InstanceInfo): Pr
  * - localhost in either mode → '' (browsers refuse `Domain=.localhost`)
  */
 function cookieDomainFor(instance: InstanceInfo, customDomain?: string): string {
-  if (instance.tenancy === 'single') return ''
+  if (instance.tenancy === 'single') return instance.cookie_domain || ''
   if (customDomain) return ''
   if (instance.top_domain === 'localhost') return ''
   return `.${instance.top_domain}`
@@ -174,7 +180,28 @@ function setInstanceCookies(response: NextResponse, info: InstanceInfo) {
   response.cookies.set({ name: 'OL_frontend_domain', value: info.frontend_domain, path: '/' })
   response.cookies.set({ name: 'OL_top_domain', value: info.top_domain, path: '/' })
   response.cookies.set({ name: 'OL_mode', value: info.mode, path: '/' })
+  if (info.cookie_domain) {
+    response.cookies.set({ name: 'OL_cookie_domain', value: info.cookie_domain, path: '/' })
+  } else {
+    response.cookies.delete('OL_cookie_domain')
+  }
   return response
+}
+
+/**
+ * The main-website page to send /login or /signup to, or null when the LMS
+ * shows its own. The platform-admin login (/admin/login) always stays here.
+ */
+function externalAuthUrlFor(pathname: string, instance: InstanceInfo): string | null {
+  if (pathname === '/login' || pathname === '/auth/login') return instance.login_url || null
+  if (pathname === '/signup' || pathname === '/auth/signup') return instance.signup_url || null
+  return null
+}
+
+/** The main-website password reset page for /forgot and /reset, or null. */
+function externalResetUrlFor(pathname: string, instance: InstanceInfo): string | null {
+  const resetPaths = ['/forgot', '/reset', '/auth/forgot', '/auth/reset']
+  return resetPaths.includes(pathname) ? instance.password_reset_url || null : null
 }
 
 /**
@@ -277,6 +304,32 @@ export default async function proxy(req: NextRequest) {
   // -------------------------------------------------------------------------
   if (pathname === '/home') {
     return NextResponse.rewrite(new URL(`${pathname}${search}`, req.url))
+  }
+
+  // -------------------------------------------------------------------------
+  // 3a. Login/sign-up/password reset hosted on the main website
+  //     (OMNILEARN_LOGIN_URL / _SIGNUP_URL / _PASSWORD_RESET_URL) — send the
+  //     user there: a reset link keeps its email and code, login/sign-up get
+  //     where to come back.
+  // -------------------------------------------------------------------------
+  const resetPage = externalResetUrlFor(pathname, instance)
+  if (resetPage) {
+    const target = new URL(resetPage)
+    for (const key of ['email', 'resetCode']) {
+      const value = req.nextUrl.searchParams.get(key)
+      if (value) target.searchParams.set(key, value)
+    }
+    return NextResponse.redirect(target)
+  }
+  const externalAuthUrl = externalAuthUrlFor(pathname, instance)
+  if (externalAuthUrl) {
+    const target = new URL(externalAuthUrl)
+    const back = req.nextUrl.searchParams.get('redirect')
+    target.searchParams.set(
+      'next',
+      new URL(back && back.startsWith('/') && !back.startsWith('//') ? back : '/', req.url).toString(),
+    )
+    return NextResponse.redirect(target)
   }
 
   // -------------------------------------------------------------------------

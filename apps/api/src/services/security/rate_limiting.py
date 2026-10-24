@@ -61,14 +61,22 @@ def get_client_ip(request: Request) -> str:
         # Check for forwarded headers (reverse proxy)
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
-            # Take the first IP in the chain (original client)
-            client_ip = forwarded.split(",")[0].strip()
-            # Validate it's a real IP, not garbage
-            try:
-                ipaddress.ip_address(client_ip)
-                return client_ip
-            except ValueError:
-                pass
+            # nginx's $proxy_add_x_forwarded_for appends to what the client
+            # sent, so the first entries are the client's to forge. The
+            # right-most address that isn't one of our own (private/loopback)
+            # proxies is the one nginx actually saw connect.
+            chain = []
+            for entry in forwarded.split(","):
+                try:
+                    chain.append(str(ipaddress.ip_address(entry.strip())))
+                except ValueError:
+                    continue
+            for client_ip in reversed(chain):
+                if not _is_trusted_proxy(client_ip):
+                    return client_ip
+            if chain:
+                # Every hop is private (e.g. local development).
+                return chain[0]
 
         # Check for real IP header
         real_ip = request.headers.get("X-Real-IP")

@@ -32,6 +32,7 @@ def _config(**overrides):
     mailing = SimpleNamespace(
         email_provider=overrides.pop("email_provider", "resend"),
         system_email_address=overrides.pop("system_email_address", "system@test.com"),
+        system_email_name=overrides.pop("system_email_name", "OmniLearn"),
         resend_api_key=overrides.pop("resend_api_key", "resend-test-key"),
         smtp_host=overrides.pop("smtp_host", "smtp.test"),
         smtp_port=overrides.pop("smtp_port", 587),
@@ -325,6 +326,29 @@ class TestEmailUtilsService:
         smtp_client.login.assert_called_once_with("smtp-user", "smtp-pass")
         smtp_client.sendmail.assert_called_once()
         smtp_client.quit.assert_called_once()
+
+    def test_send_email_uses_configured_sender_name(self):
+        with patch(
+            "src.services.email.utils.get_omnilearn_config",
+            return_value=_config(email_provider="resend", system_email_name="Anti-Corruption Academy"),
+        ), patch(
+            "src.services.email.utils.resend.Emails.send",
+            return_value={"id": "msg-1"},
+        ) as mock_resend_send:
+            send_email("to@test.com", "Hello", "<p>Body</p>")
+        assert mock_resend_send.call_args.args[0]["from"] == "Anti-Corruption Academy <system@test.com>"
+
+        # A non-ASCII (Arabic) name is RFC 2047-encoded in the SMTP From header.
+        smtp_client = Mock()
+        with patch(
+            "src.services.email.utils.get_omnilearn_config",
+            return_value=_config(email_provider="smtp", system_email_name="أكاديمية مكافحة الفساد"),
+        ), patch("src.services.email.utils.smtplib.SMTP", return_value=smtp_client):
+            send_email("to@test.com", "Hello", "<p>Body</p>")
+        raw = smtp_client.sendmail.call_args.args[2]
+        from_line = next(line for line in raw.splitlines() if line.startswith("From:"))
+        assert "=?utf-8?" in from_line and "<system@test.com>" in from_line
+        assert from_line.isascii()
 
     def test_send_email_smtp_without_tls_or_login(self):
         smtp_client = Mock()

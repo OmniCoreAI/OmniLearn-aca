@@ -2,10 +2,10 @@
   "name": "omnilearn-docs",
   "version": "0.1.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "node scripts/generate-llms-full.mjs && next build",
+    "dev": "node init && next dev",
+    "build": "node init && node scripts/generate-llms-full.mjs && next build",
     "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind && next-sitemap",
-    "start": "next start",
+    "start": "node init && next start",
     "lint": "next lint"
   },
   "dependencies": {
