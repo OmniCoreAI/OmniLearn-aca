@@ -1,7 +1,7 @@
 'use client'
 import React from 'react'
 import Link from 'next/link'
-import { User, Lock, ShoppingBag, Settings } from 'lucide-react'
+import { ACCOUNT_NAV_ITEMS } from './AccountSidebar'
 import { getUriWithOrg } from '@services/config/config'
 import { useTranslation } from 'react-i18next'
 
@@ -10,34 +10,28 @@ interface AccountActionsMobileProps {
   currentSubpage: string
 }
 
-const NAV_ITEMS = [
-  { id: 'general', icon: Settings, labelKey: 'account.general' },
-  { id: 'profile', icon: User, labelKey: 'account.profile' },
-  { id: 'security', icon: Lock, labelKey: 'account.security' },
-  { id: 'purchases', icon: ShoppingBag, labelKey: 'account.purchases' },
-]
-
 export function AccountActionsMobile({ orgslug, currentSubpage }: AccountActionsMobileProps) {
   const { t } = useTranslation()
 
   return (
     <nav aria-label="Account mobile actions" className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-      <div className="mx-3 mb-4 bg-white/95 backdrop-blur-sm rounded-xl nice-shadow p-2">
+      <div className="mx-3 mb-4 rounded-2xl border border-[hsl(var(--dash-border))]/70 bg-white/95 p-1.5 shadow-[0_12px_32px_-12px_hsl(220_30%_20%/0.35)] backdrop-blur-sm">
         <div className="flex items-center justify-around">
-          {NAV_ITEMS.map((item) => {
+          {ACCOUNT_NAV_ITEMS.map((item) => {
             const Icon = item.icon
             const isActive = currentSubpage === item.id
             return (
               <Link
                 key={item.id}
                 href={getUriWithOrg(orgslug, `/account/${item.id}`)}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 transition-colors ${
                   isActive
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-[hsl(var(--dash-accent-soft))] text-[hsl(var(--dash-ink))]'
+                    : 'text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))]'
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={18} className={isActive ? 'text-[hsl(var(--dash-accent))]' : ''} />
                 <span className="text-[10px] font-medium truncate max-w-[60px]">
                   {t(item.labelKey)}
                 </span>

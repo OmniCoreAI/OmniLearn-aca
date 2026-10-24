@@ -26,6 +26,7 @@ from src.db.users import AnonymousUser, PublicUser, APITokenUser
 from src.db.resource_authors import ResourceAuthor, ResourceAuthorshipEnum, ResourceAuthorshipStatusEnum
 from src.db.usergroup_resources import UserGroupResource
 from src.db.usergroup_user import UserGroupUser
+from src.db.usergroups import UserGroup
 from src.security.rbac.types import AccessAction, AccessContext, AccessDecision, ResourceConfig
 from src.security.rbac.config import get_resource_config, RESOURCE_CONFIGS
 from src.security.rbac.rbac import (
@@ -821,9 +822,15 @@ class ResourceAccessChecker:
 
         # Check if user is a member of any linked UserGroup
         usergroup_ids = [ugr.usergroup_id for ugr in usergroup_resources]
-        membership_stmt = select(UserGroupUser).where(
-            UserGroupUser.usergroup_id.in_(usergroup_ids),
-            UserGroupUser.user_id == user_id
+        # Inactive groups keep their links but no longer grant access.
+        membership_stmt = (
+            select(UserGroupUser)
+            .join(UserGroup, UserGroup.id == UserGroupUser.usergroup_id)  # type: ignore[arg-type]
+            .where(
+                UserGroupUser.usergroup_id.in_(usergroup_ids),
+                UserGroupUser.user_id == user_id,
+                UserGroup.status != "inactive",
+            )
         )
         membership = (await self.db_session.execute(membership_stmt)).scalars().first()
 

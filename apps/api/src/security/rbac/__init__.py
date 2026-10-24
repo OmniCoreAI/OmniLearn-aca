@@ -87,8 +87,10 @@ from src.security.rbac.constants import (
     MAINTAINER_ROLE_ID,
     ADMIN_ROLE_IDS,
     ADMIN_OR_MAINTAINER_ROLE_IDS,
+    ACADEMY_ADMIN_ROLE_IDS,
     is_admin,
     is_admin_or_maintainer,
+    is_academy_admin,
     has_elevated_privileges,
 )
 
@@ -129,7 +131,9 @@ __all__ = [
     "MAINTAINER_ROLE_ID",
     "ADMIN_ROLE_IDS",
     "ADMIN_OR_MAINTAINER_ROLE_IDS",
+    "ACADEMY_ADMIN_ROLE_IDS",
     "is_admin",
     "is_admin_or_maintainer",
+    "is_academy_admin",
     "has_elevated_privileges",
 ]

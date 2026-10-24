@@ -18,7 +18,7 @@ _TIMEOUT = 10
 
 async def send_sms(to_e164: str, content: str, tag: str = "otp") -> bool:
     """Sends `content` to an E.164 number; True once Brevo accepted it."""
-    sms = get_omnilearn_config().sms_config
+    sms = get_omnilearn_config().otp_sms_config
     if not sms.brevo_api_key or not sms.sms_sender:
         logger.warning("SMS not sent: OMNILEARN_BREVO_API_KEY / OMNILEARN_SMS_SENDER not set")
         return False

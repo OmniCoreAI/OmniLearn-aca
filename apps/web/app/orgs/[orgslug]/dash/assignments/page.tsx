@@ -30,6 +30,8 @@ import {
 import Link from 'next/link';
 import React, { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next';
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import { Backpack as BackpackIcon, CheckCircle, EyeSlash, Lightning } from '@phosphor-icons/react'
 
 type StatusFilter = 'all' | 'published' | 'drafts';
 
@@ -159,32 +161,18 @@ function AssignmentsHome() {
           <Breadcrumbs items={[
             { label: t('common.assignments'), href: '/dash/assignments', icon: <Backpack size={14} /> }
           ]} />
-          <h1 className="pt-3 flex font-bold text-4xl">{t('dashboard.assignments.home.title')}</h1>
+          <h1 className="pt-3 text-2xl font-semibold tracking-tight text-[hsl(var(--dash-ink))] sm:text-[1.75rem]">{t('dashboard.assignments.home.title')}</h1>
         </div>
 
-        {/* Stats bar */}
-        <div className="flex flex-wrap gap-3">
-          <StatPill
-            icon={<Backpack size={14} className="text-gray-500" />}
-            label={t('dashboard.assignments.home.stats.total')}
-            value={stats.total}
-          />
-          <StatPill
-            icon={<CheckCircle2 size={14} className="text-emerald-500" />}
-            label={t('dashboard.assignments.home.stats.published')}
-            value={stats.published}
-          />
-          <StatPill
-            icon={<EyeOff size={14} className="text-gray-500" />}
-            label={t('dashboard.assignments.home.stats.drafts')}
-            value={stats.drafts}
-          />
-          <StatPill
-            icon={<Zap size={14} className="text-amber-500" />}
-            label={t('dashboard.assignments.home.stats.auto_graded')}
-            value={stats.auto_graded}
-          />
-        </div>
+        <DashStatCards
+          loading={!courseAssignments}
+          stats={[
+            { key: 'total', label: t('dashboard.assignments.home.stats.total'), value: stats.total, icon: BackpackIcon, tone: 'rose' },
+            { key: 'published', label: t('dashboard.assignments.home.stats.published'), value: stats.published, icon: CheckCircle, tone: 'stone' },
+            { key: 'drafts', label: t('dashboard.assignments.home.stats.drafts'), value: stats.drafts, icon: EyeSlash, tone: 'gold' },
+            { key: 'auto', label: t('dashboard.assignments.home.stats.auto_graded'), value: stats.auto_graded, icon: Lightning, tone: 'sand' },
+          ]}
+        />
 
         {/* Toolbar */}
         <div className='flex flex-col sm:flex-row gap-3 items-stretch sm:items-center'>
@@ -343,26 +331,6 @@ function AssignmentsHome() {
 
 // ---------- helper components ----------
 
-function StatPill({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number
-}) {
-  return (
-    <div className='flex items-center gap-2 bg-white nice-shadow rounded-xl px-3.5 py-2'>
-      {icon}
-      <span className='text-[10px] uppercase tracking-wider font-semibold text-gray-400'>
-        {label}
-      </span>
-      <span className='text-sm font-bold text-gray-900'>{value}</span>
-    </div>
-  )
-}
-
 function FilterPill({
   icon,
   label,
@@ -401,8 +369,8 @@ function CourseCard({
   assignments: any[]
   originalCount: number
   org: any
-  removeAssignmentPrefix: (uuid: string) => string
-  removeCoursePrefix: (uuid: string) => string
+  removeAssignmentPrefix: (_uuid: string) => string
+  removeCoursePrefix: (_uuid: string) => string
 }) {
   const { t } = useTranslation()
 
@@ -463,7 +431,7 @@ function AssignmentCard({
 }: {
   assignment: any
   org: any
-  removeAssignmentPrefix: (uuid: string) => string
+  removeAssignmentPrefix: (_uuid: string) => string
 }) {
   const { t } = useTranslation()
   const gradingBadge = assignment.grading_type ? GRADING_TYPE_BADGE[assignment.grading_type] : null

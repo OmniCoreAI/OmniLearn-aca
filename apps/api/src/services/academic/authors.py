@@ -96,3 +96,23 @@ async def ensure_coordinator_authorship(
             update_date=str(datetime.now()),
         )
     )
+
+
+async def revoke_maintainer_authorship(
+    db_session: AsyncSession, resource_uuid: str, user_id: Optional[int]
+) -> None:
+    """Remove a MAINTAINER authorship granted for a role the user no longer
+    holds (e.g. a replaced offering instructor). CREATOR rows are never
+    touched. Does not flush/commit."""
+    if not user_id:
+        return
+    row = (
+        await db_session.execute(
+            select(ResourceAuthor).where(
+                ResourceAuthor.resource_uuid == resource_uuid,
+                ResourceAuthor.user_id == user_id,
+            )
+        )
+    ).scalars().first()
+    if row and row.authorship == ResourceAuthorshipEnum.MAINTAINER:
+        await db_session.delete(row)

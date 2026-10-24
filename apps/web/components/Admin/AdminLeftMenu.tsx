@@ -3,6 +3,7 @@ import {
   Buildings,
   ChartBar,
   Key,
+  Shield,
   SignOut,
   User,
   Users,
@@ -68,6 +69,11 @@ function AdminTopMenu() {
             href="/admin/developers"
             icon={<Key size={16} weight="fill" />}
             label="Developers"
+          />
+          <NavLink
+            href="/admin/portal-access"
+            icon={<Shield size={16} weight="fill" />}
+            label="Portal Access"
           />
         </nav>
 

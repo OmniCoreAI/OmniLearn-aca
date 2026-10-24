@@ -14,12 +14,16 @@ import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { useFormik } from 'formik'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
+import { GroupClassificationFields } from './GroupClassificationFields'
 
 type EditUserGroupProps = {
     usergroup: {
         id: number,
         name: string,
         description: string,
+        entity_uuid?: string | null,
+        group_type?: string,
+        status?: string,
     }
 }
 
@@ -45,6 +49,9 @@ function EditUserGroup(props: EditUserGroupProps) {
         initialValues: {
             name: props.usergroup.name,
             description: props.usergroup.description,
+            entity_uuid: props.usergroup.entity_uuid || '',
+            group_type: props.usergroup.group_type || 'general',
+            status: props.usergroup.status || 'active',
         },
         validate: getValidate(t),
         onSubmit: async (values) => {
@@ -91,6 +98,7 @@ function EditUserGroup(props: EditUserGroupProps) {
                     />
                 </Form.Control>
             </FormField>
+            <GroupClassificationFields values={formik.values} onChange={(field, value) => formik.setFieldValue(field, value)} />
             <div className="flex py-4">
                 <Form.Submit asChild>
                     <button className="w-full bg-black text-white font-bold text-center p-2 rounded-md shadow-md hover:cursor-pointer">

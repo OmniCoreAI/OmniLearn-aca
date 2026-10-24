@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query/keys'
 import { useTranslation } from 'react-i18next'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
+import { AudiencePanel } from '@components/Dashboard/Pages/Administration/AudiencePanel'
 
 type EditCourseAccessProps = {
     orgslug: string
@@ -228,6 +229,10 @@ function EditCourseAccess(_props: EditCourseAccessProps) {
 
                 {/* User groups (Users-table styled) */}
                 {isClientPublic === false && <UserGroupsSection usergroups={usergroups} />}
+            </div>
+            {/* Audience assignment (entities, groups, positions, cohorts, people) */}
+            <div className="ml-10 mr-10 mx-auto mt-6">
+                <AudiencePanel resourceType="course" resourceUuid={courseStructure.course_uuid} isPublic={isClientPublic === true} />
             </div>
         </div>
     );
