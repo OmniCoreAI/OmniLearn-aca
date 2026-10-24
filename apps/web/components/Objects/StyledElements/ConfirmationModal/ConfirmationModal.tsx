@@ -1,5 +1,6 @@
 'use client'
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from '@components/Objects/StyledElements/Modal/Modal'
 import { AlertTriangle, Info } from 'lucide-react'
 
@@ -11,44 +12,67 @@ type ModalParams = {
   dialogTrigger?: React.ReactNode
   status?: 'warning' | 'info'
   buttonid?: string
+  /** Controlled mode (e.g. opened from a row action menu) — omit to use `dialogTrigger`. */
+  open?: boolean
+  onOpenChange?: (_open: boolean) => void
+  cancelButtonText?: string
 }
 
 const ConfirmationModal = (params: ModalParams) => {
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const { t } = useTranslation()
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const controlled = params.open !== undefined
+  const isDialogOpen = controlled ? !!params.open : internalOpen
+  const setOpen = React.useCallback(
+    (open: boolean) => {
+      if (controlled) params.onOpenChange?.(open)
+      else setInternalOpen(open)
+    },
+    [controlled, params]
+  )
   const isWarning = params.status === 'warning'
-  const iconColors = isWarning ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
-  const buttonColors = isWarning
-    ? 'text-white bg-red-500 hover:bg-red-600'
-    : 'text-white bg-blue-500 hover:bg-blue-600'
 
   const handleConfirm = React.useCallback(() => {
     params.functionToExecute()
-    setIsDialogOpen(false)
-  }, [params])
+    setOpen(false)
+  }, [params, setOpen])
 
   return (
     <Modal
       isDialogOpen={isDialogOpen}
-      onOpenChange={setIsDialogOpen}
+      onOpenChange={setOpen}
       dialogTrigger={params.dialogTrigger}
       noPadding
-      customWidth="sm:max-w-[600px] sm:min-w-[500px]"
+      customWidth="sm:max-w-[480px]"
       dialogContent={
-        <div className="flex space-x-4 tracking-tight p-6 pr-10">
-          <div className={`shrink-0 p-6 rounded-xl flex items-center ${iconColors}`}>
-            {isWarning ? <AlertTriangle size={35} /> : <Info size={35} />}
-          </div>
-          <div className="pt-1 w-auto grow">
-            <div className="text-xl font-bold text-black">{params.dialogTitle}</div>
-            <div className="text-md text-gray-500 leading-tight mt-1">
-              {params.confirmationMessage}
-            </div>
-            <div className="flex flex-row-reverse mt-4">
+        <div className="flex gap-4 p-6 pe-10">
+          <span
+            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+              isWarning
+                ? 'bg-[hsl(var(--dash-warn-soft))] text-[hsl(var(--dash-warn))]'
+                : 'bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]'
+            }`}
+          >
+            {isWarning ? <AlertTriangle size={20} /> : <Info size={20} />}
+          </span>
+          <div className="min-w-0 grow">
+            <div className="text-lg font-semibold tracking-tight text-[hsl(var(--dash-ink))]">{params.dialogTitle}</div>
+            <div className="mt-1 text-sm leading-relaxed text-[hsl(var(--dash-muted))]">{params.confirmationMessage}</div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-full border border-[hsl(var(--dash-border))] bg-white px-4 py-2 text-sm font-medium text-[hsl(var(--dash-ink))] transition-colors hover:bg-[hsl(var(--dash-canvas))]"
+              >
+                {params.cancelButtonText || t('administration.common.cancel', 'Cancel')}
+              </button>
               <button
                 type="button"
                 id={params.buttonid}
                 onClick={handleConfirm}
-                className={`rounded-md text-sm px-3 py-2 font-bold flex justify-center items-center cursor-pointer ${buttonColors} hover:shadow-lg transition duration-300 ease-in-out`}
+                className={`rounded-full px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 ${
+                  isWarning ? 'bg-[hsl(var(--dash-warn))]' : 'bg-[hsl(var(--dash-ink))]'
+                }`}
               >
                 {params.confirmationButtonText}
               </button>

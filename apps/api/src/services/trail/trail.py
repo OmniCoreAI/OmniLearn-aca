@@ -356,6 +356,9 @@ async def add_activity_to_trail(
                 "course": {"course_uuid": course.course_uuid, "name": course.name},
             },
         )
+        from src.services.notifications import events as notification_events
+
+        await notification_events.course_completed(db_session, course, user.id, str(datetime.now()))
 
     statement = select(TrailRun).where(TrailRun.trail_id == trail.id, TrailRun.user_id == user.id)
     trail_runs_raw = (await db_session.execute(statement)).scalars().all()
@@ -498,6 +501,9 @@ async def add_course_to_trail(
             "course": {"course_uuid": course.course_uuid, "name": course.name},
         },
     )
+    from src.services.notifications import events as notification_events
+
+    await notification_events.course_enrolled(db_session, course, user.id)
 
     statement = select(TrailRun).where(TrailRun.trail_id == trail.id, TrailRun.user_id == user.id)
     trail_runs_raw = (await db_session.execute(statement)).scalars().all()

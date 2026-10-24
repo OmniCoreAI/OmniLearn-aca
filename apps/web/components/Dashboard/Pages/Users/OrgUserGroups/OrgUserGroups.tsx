@@ -11,7 +11,7 @@ import { getAPIUrl } from '@services/config/config'
 import { searchMatchesAny } from '@/lib/search/normalize'
 import { deleteUserGroup } from '@services/usergroups/usergroups'
 import { apiFetch } from '@services/utils/ts/requests'
-import { Pencil, SquareUserRound, Users, X, Search, Calendar } from 'lucide-react'
+import { Pencil, SquareUserRound, Users, X, Search, Calendar, Lock } from 'lucide-react'
 import React, { useState, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -30,6 +30,9 @@ function OrgUserGroups() {
     const [editUserGroupModal, setEditUserGroupModal] = React.useState(false)
     const [selectedUserGroup, setSelectedUserGroup] = React.useState(null) as any
     const [searchValue, setSearchValue] = useState('')
+    const [entityFilter, setEntityFilter] = useState('')
+    const [typeFilter, setTypeFilter] = useState('')
+    const [statusFilter, setStatusFilter] = useState('')
 
     const { data: usergroups, isLoading: isUsergroupsLoading } = useQuery({
         queryKey: queryKeys.usergroups.list(org?.id),
@@ -42,11 +45,19 @@ function OrgUserGroups() {
     // Filter usergroups based on search
     const filteredUsergroups = useMemo(() => {
         if (!usergroups) return []
-        if (!searchValue.trim()) return usergroups
         return usergroups.filter((group: any) =>
-            searchMatchesAny([group.name, group.description], searchValue)
+            (!searchValue.trim() || searchMatchesAny([group.name, group.description, group.entity_name], searchValue)) &&
+            (!entityFilter || (entityFilter === '_none' ? !group.entity_uuid : group.entity_uuid === entityFilter)) &&
+            (!typeFilter || (group.group_type || 'general') === typeFilter) &&
+            (!statusFilter || (group.status || 'active') === statusFilter)
         )
-    }, [usergroups, searchValue])
+    }, [usergroups, searchValue, entityFilter, typeFilter, statusFilter])
+    const entityChoices = useMemo(() => {
+        const seen = new Map<string, string>()
+        ;(usergroups || []).forEach((g: any) => g.entity_uuid && seen.set(g.entity_uuid, g.entity_name || g.entity_uuid))
+        return Array.from(seen.entries())
+    }, [usergroups])
+    const filterCls = "rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs focus:outline-none"
 
     const deleteUserGroupUI = async (usergroup_id: any) => {
         const toastId = toast.loading(t('dashboard.users.usergroups.toasts.deleting'));
@@ -115,6 +126,29 @@ function OrgUserGroups() {
                     </div>
                 </div>
 
+                {/* Filters: entity / type / status */}
+                <div className="flex flex-wrap items-center gap-2 px-4 sm:px-6 pt-3">
+                    <select className={filterCls} value={entityFilter} onChange={(e) => setEntityFilter(e.target.value)}>
+                        <option value="">{t('entities.all_entities', 'All entities')}</option>
+                        <option value="_none">{t('entities.no_entity', 'None (academy-wide)')}</option>
+                        {entityChoices.map(([uuid, name]) => (
+                            <option key={uuid} value={uuid}>{name}</option>
+                        ))}
+                    </select>
+                    <select className={filterCls} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                        <option value="">{t('entities.all_types', 'All types')}</option>
+                        {['general', 'department', 'cohort', 'system'].map((g) => (
+                            <option key={g} value={g}>{String(t(`entities.group_type_${g}`, g))}</option>
+                        ))}
+                    </select>
+                    <select className={filterCls} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                        <option value="">{t('entities.all_statuses', 'All statuses')}</option>
+                        {['active', 'inactive'].map((st) => (
+                            <option key={st} value={st}>{String(t(`administration.common.status_${st}`, st))}</option>
+                        ))}
+                    </select>
+                </div>
+
                 {/* Content */}
                 <div className="px-3 py-2">
                     {/* UserGroups List */}
@@ -169,6 +203,20 @@ function OrgUserGroups() {
                                                     {usergroup.name}
                                                 </span>
                                                 <MemberCountBadge usergroup_id={usergroup.id} org_id={org.id} access_token={access_token} />
+                                                {usergroup.entity_name && (
+                                                    <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 text-xs">{usergroup.entity_name}</Badge>
+                                                )}
+                                                {usergroup.group_type && usergroup.group_type !== 'general' && (
+                                                    <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-xs">
+                                                        {usergroup.managed && <Lock className="w-3 h-3 mr-1" />}
+                                                        {String(t(`entities.group_type_${usergroup.group_type}`, usergroup.group_type))}
+                                                    </Badge>
+                                                )}
+                                                {usergroup.status === 'inactive' && (
+                                                    <Badge variant="secondary" className="bg-rose-50 text-rose-700 text-xs">
+                                                        {String(t('administration.common.status_inactive', 'inactive'))}
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 {usergroup.description && (
@@ -192,7 +240,12 @@ function OrgUserGroups() {
                                         </div>
                                     </div>
 
-                                    {/* Actions */}
+                                    {/* Actions — automatic (system) groups are read-only */}
+                                    {usergroup.managed ? (
+                                        <span className="ml-4 text-xs text-gray-400">
+                                            {t('entities.managed_group', 'Maintained automatically')}
+                                        </span>
+                                    ) : (
                                     <div className="flex items-center gap-2 ml-4">
                                         <Modal
                                             isDialogOpen={
@@ -254,6 +307,7 @@ function OrgUserGroups() {
                                             status="warning"
                                         ></ConfirmationModal>
                                     </div>
+                                    )}
                                 </div>
                             ))
                         )}

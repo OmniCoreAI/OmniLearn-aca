@@ -32,11 +32,12 @@ class TestRoleConstants:
         assert ADMIN_ROLE_ID in ADMIN_ROLE_IDS
         assert len(ADMIN_ROLE_IDS) == 1
 
-    def test_admin_or_maintainer_role_ids_contains_both(self):
-        """Test that ADMIN_OR_MAINTAINER_ROLE_IDS contains both roles."""
+    def test_admin_or_maintainer_role_ids_is_academy_admin_only(self):
+        """Role 2 (Entity Coordinator) is entity-scoped: the deprecated alias
+        now only holds the academy admin role."""
         assert ADMIN_ROLE_ID in ADMIN_OR_MAINTAINER_ROLE_IDS
-        assert MAINTAINER_ROLE_ID in ADMIN_OR_MAINTAINER_ROLE_IDS
-        assert len(ADMIN_OR_MAINTAINER_ROLE_IDS) == 2
+        assert MAINTAINER_ROLE_ID not in ADMIN_OR_MAINTAINER_ROLE_IDS
+        assert len(ADMIN_OR_MAINTAINER_ROLE_IDS) == 1
 
     def test_role_id_sets_are_immutable(self):
         """Test that role ID sets are frozen (immutable)."""
@@ -66,8 +67,8 @@ class TestRoleHelperFunctions:
         assert is_admin_or_maintainer(ADMIN_ROLE_ID) is True
 
     def test_is_admin_or_maintainer_with_maintainer_role(self):
-        """Test is_admin_or_maintainer returns True for maintainer role."""
-        assert is_admin_or_maintainer(MAINTAINER_ROLE_ID) is True
+        """Role 2 is the entity-scoped Entity Coordinator, not an academy admin."""
+        assert is_admin_or_maintainer(MAINTAINER_ROLE_ID) is False
 
     def test_is_admin_or_maintainer_with_member_role(self):
         """Test is_admin_or_maintainer returns False for member roles."""
@@ -80,8 +81,8 @@ class TestRoleHelperFunctions:
         assert has_elevated_privileges(ADMIN_ROLE_ID) is True
 
     def test_has_elevated_privileges_with_maintainer_role(self):
-        """Test has_elevated_privileges returns True for maintainer role."""
-        assert has_elevated_privileges(MAINTAINER_ROLE_ID) is True
+        """Role 2 (Entity Coordinator) has no academy-wide privileges."""
+        assert has_elevated_privileges(MAINTAINER_ROLE_ID) is False
 
     def test_has_elevated_privileges_with_member_role(self):
         """Test has_elevated_privileges returns False for member roles."""
@@ -99,7 +100,7 @@ class TestRoleConstantsIntegration:
         assert user_role_id in ADMIN_OR_MAINTAINER_ROLE_IDS
 
         user_role_id = 2
-        assert user_role_id in ADMIN_OR_MAINTAINER_ROLE_IDS
+        assert user_role_id not in ADMIN_OR_MAINTAINER_ROLE_IDS
 
         user_role_id = 3
         assert user_role_id not in ADMIN_OR_MAINTAINER_ROLE_IDS

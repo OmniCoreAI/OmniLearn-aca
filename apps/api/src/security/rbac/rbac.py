@@ -11,12 +11,13 @@ from src.db.user_organizations import UserOrganization
 from src.db.users import APITokenUser
 from src.db.usergroup_resources import UserGroupResource
 from src.db.usergroup_user import UserGroupUser
+from src.db.usergroups import UserGroup
 from src.security.rbac.utils import (
     check_element_type,
     check_course_permissions_with_own,
     get_element_organization_id,
 )
-from src.security.rbac.constants import ADMIN_OR_MAINTAINER_ROLE_IDS
+from src.security.rbac.constants import ACADEMY_ADMIN_ROLE_IDS
 from src.security.superadmin import is_user_superadmin
 
 logger = logging.getLogger(__name__)
@@ -87,9 +88,15 @@ async def check_usergroup_access(
     usergroup_ids = [ugr.usergroup_id for ugr in usergroup_resources]
     logger.info("[USERGROUP_ACCESS] UserGroup IDs linked to resource: %s", usergroup_ids)
 
-    membership_stmt = select(UserGroupUser).where(
-        UserGroupUser.usergroup_id.in_(usergroup_ids),
-        UserGroupUser.user_id == user_id
+    # Inactive groups keep their links but no longer grant access.
+    membership_stmt = (
+        select(UserGroupUser)
+        .join(UserGroup, UserGroup.id == UserGroupUser.usergroup_id)  # type: ignore[arg-type]
+        .where(
+            UserGroupUser.usergroup_id.in_(usergroup_ids),
+            UserGroupUser.user_id == user_id,
+            UserGroup.status != "inactive",
+        )
     )
     membership = (await db_session.execute(membership_stmt)).scalars().first()
 
@@ -358,7 +365,7 @@ async def authorization_verify_based_on_org_admin_status(
         select(UserOrganization)
         .where(UserOrganization.user_id == user_id)
         .where(UserOrganization.org_id == target_org_id)
-        .where(UserOrganization.role_id.in_(ADMIN_OR_MAINTAINER_ROLE_IDS))
+        .where(UserOrganization.role_id.in_(ACADEMY_ADMIN_ROLE_IDS))
     )
 
     user_org = (await db_session.execute(statement)).scalars().first()
