@@ -214,7 +214,11 @@ def test_layout_without_logo_setting_shows_academy_name():
     ("ar", "الأكاديمية الوطنية لمكافحة الفساد · هيئة الرقابة الإدارية"),
     ("en", "Anti-Corruption Academy · Administrative Control Authority"),
     ("fr", "Académie de lutte contre la corruption · Autorité de contrôle administratif"),
-    ("xx", "الأكاديمية الوطنية لمكافحة الفساد · هيئة الرقابة الإدارية"),
+    ("ar-EG", "الأكاديمية الوطنية لمكافحة الفساد · هيئة الرقابة الإدارية"),
+    ("en-US", "Anti-Corruption Academy · Administrative Control Authority"),
+    ("fr-FR", "Académie de lutte contre la corruption · Autorité de contrôle administratif"),
+    # Unknown: English, as the LMS emails' text falls back to (translations.t).
+    ("xx", "Anti-Corruption Academy · Administrative Control Authority"),
 ])
 def test_layout_footer_follows_language(lang, line):
     assert line in _layout_with(logo=None, lang=lang)
@@ -231,3 +235,16 @@ def test_otp_code_is_plain_text_in_navy_and_gold():
         _, html = otp_email("login", "ar", "482915")
     assert ">482915<" in html and 'dir="rtl"' in html
     assert "#1b2b4b" in STYLES["code"] and "#d4af37" in STYLES["code"]
+
+
+def test_otp_email_in_an_unknown_language_closes_in_arabic_like_its_text():
+    # The code emails fall back to Arabic text; the closing line must match.
+    with patch("src.services.users.emails.get_omnilearn_config",
+               return_value=SimpleNamespace(mailing_config=SimpleNamespace(email_logo_url=None))):
+        _, html = otp_email("login", "xx", "482915")
+    assert "الأكاديمية الوطنية لمكافحة الفساد · هيئة الرقابة الإدارية" in html
+
+
+def test_logo_has_width_and_height_for_outlook():
+    html = _layout_with(logo="https://site.test/logo.png", lang="ar")
+    assert 'width="67"' in html and 'height="64"' in html

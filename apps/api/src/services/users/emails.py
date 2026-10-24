@@ -6,7 +6,7 @@ from urllib.parse import quote
 from pydantic import EmailStr
 from src.db.organizations import OrganizationRead
 from src.db.users import UserRead
-from src.services.email.translations import t
+from src.services.email.translations import normalize_language, t
 from src.services.email.utils import send_email
 from config.config import get_omnilearn_config
 
@@ -50,16 +50,22 @@ STYLES = {
 
 
 def _email_layout(title: str, body_content: str, footer_note: str = "", lang: str = "en") -> str:
-    """Wrap content in the academy's email layout."""
-    name = ACADEMY_NAME.get(lang, ACADEMY_NAME["ar"])
-    footer_line = ACADEMY_FOOTER.get(lang, ACADEMY_FOOTER["ar"])
-    direction = "rtl" if lang not in ACADEMY_NAME or lang == "ar" else "ltr"
+    """Wrap content in the academy's email layout. `lang` is the language the
+    content is in; like the translations (t), "en-US" means en and an
+    unsupported language means English."""
+    code = normalize_language(lang)
+    if code not in ACADEMY_NAME:
+        code = "en"
+    name = ACADEMY_NAME[code]
+    footer_line = ACADEMY_FOOTER[code]
+    direction = "rtl" if code == "ar" else "ltr"
 
     logo_url = get_omnilearn_config().mailing_config.email_logo_url
     if logo_url:
+        # Both dimensions: Outlook ignores CSS sizes (logo.png is 250x239).
         header = (
             f'<img src="{html.escape(logo_url, quote=True)}" alt="{html.escape(name)}" '
-            f'height="64" style="{STYLES["logo"]}" />'
+            f'width="67" height="64" style="{STYLES["logo"]}" />'
         )
     else:
         header = f'<p style="{STYLES["brand"]}">{html.escape(name)}</p>'

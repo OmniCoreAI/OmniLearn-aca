@@ -43,7 +43,9 @@ def otp_sms(purpose: str, lang: str, code: str) -> str:
 
 def otp_email(purpose: str, lang: str, code: str) -> tuple[str, str]:
     """(subject, html) for a sign-in or password reset code."""
-    t = _EMAIL.get(lang, _EMAIL["ar"])
+    # The text falls back to Arabic; the frame's closing line follows the same language.
+    lang = lang if lang in _EMAIL else "ar"
+    t = _EMAIL[lang]
     subject = t["subject"].get(purpose, t["subject"]["login"])
     body_content = f"""
         <div dir="{t['dir']}">
