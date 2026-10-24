@@ -313,3 +313,15 @@ def test_email_based_wrappers_lowercase_inputs(func, input_value, expected_key):
     assert retry_after == 33
     mock_check.assert_called_once()
     assert mock_check.call_args.kwargs["key"] == expected_key
+
+
+def test_get_client_ip_ignores_a_spoofed_first_forwarded_entry():
+    # nginx's $proxy_add_x_forwarded_for appends to whatever the client sent,
+    # so the first entry is the client's to choose; the right-most address
+    # that isn't one of our proxies is the one nginx actually saw.
+    request = Mock()
+    request.client = Mock(host="127.0.0.1")
+    # (Public addresses: Python counts documentation ranges such as
+    # 203.0.113.0/24 as private.)
+    request.headers = {"X-Forwarded-For": "1.1.1.1, 8.8.4.4, 172.17.0.1"}
+    assert get_client_ip(request) == "8.8.4.4"

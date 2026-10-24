@@ -101,4 +101,4 @@ def wrap_email(body_html: str, language: str) -> str:
     from src.services.users.emails import _email_layout
 
     content = f'<div dir="rtl" style="text-align:right">{body_html}</div>' if language == "ar" else body_html
-    return _email_layout(title="", body_content=content)
+    return _email_layout(title="", body_content=content, lang=language)

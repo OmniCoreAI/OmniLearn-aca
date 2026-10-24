@@ -39,7 +39,6 @@ __pycache__/
 *$py.class
 
 # vscode
-.vscode/
 
 # Flyio
 .flyio/

@@ -18,6 +18,7 @@ from src.services.users.emails import (
     send_password_reset_email_platform,
 )
 from src.services.email.utils import get_base_url_from_request
+from src.services.security.rate_limiting import get_client_ip
 from src.db.users import (
     AnonymousUser,
     PublicUser,
@@ -64,6 +65,19 @@ def generate_secure_reset_code(length: int = 8) -> str:
     return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
+async def set_user_password(db_session: AsyncSession, user: User, new_password: str) -> None:
+    """
+    Stores a new (already validated) password. ``password_changed_at`` makes
+    get_current_user reject every token issued before now, so other sessions
+    end with the old password.
+    """
+    user.password = security_hash_password(new_password)
+    user.password_changed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+
 async def send_reset_password_code(
     request: Request,
     db_session: AsyncSession,
@@ -80,7 +94,9 @@ async def send_reset_password_code(
     - Logs attempts for security audit
     """
     # Rate limit by IP before any email lookup (prevents enumeration timing attacks)
-    _ip = request.client.host if request.client else "unknown"
+    # The visitor's IP, also when the request comes through a trusted proxy
+    # such as the main website's server (which forwards it).
+    _ip = get_client_ip(request)
     ip_rate_key = f"pwd_reset_ip:{_ip}"
     try:
         _r_ip = _get_redis_connection()
@@ -168,6 +184,7 @@ async def send_reset_password_code(
 
     from src.services.notifications.dispatcher import send_event_email
 
+    reset_page = OL_CONFIG.hosting_config.password_reset_url or f"{base_url}/reset"
     isEmailSent = await send_event_email(
         db_session,
         org.id,
@@ -176,7 +193,7 @@ async def send_reset_password_code(
         user=user,
         variables={
             "reset_code": generated_reset_code,
-            "reset_link": f"{base_url}/reset?email={_quote(str(user_read.email), safe='')}"
+            "reset_link": f"{reset_page}?email={_quote(str(user_read.email), safe='')}"
             f"&resetCode={_quote(generated_reset_code, safe='')}",
         },
         fallback=lambda: send_password_reset_email(
@@ -186,6 +203,7 @@ async def send_reset_password_code(
             email=user_read.email,
             base_url=base_url,
             lang=get_org_default_language(org_config),
+            reset_page_url=OL_CONFIG.hosting_config.password_reset_url,
         ),
     )
 
@@ -303,16 +321,10 @@ async def change_password_with_reset_code(
             detail="Invalid or expired reset code",
         )
 
-    # Change password
-    user.password = security_hash_password(new_password)
-    user.password_changed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     if reset_code_object.get("reset_code_type") == "password_setup":
         # The user just chose their own password for an academy-created account.
         user.must_change_password = False
-    db_session.add(user)
-
-    await db_session.commit()
-    await db_session.refresh(user)
+    await set_user_password(db_session, user, new_password)
 
     # Delete reset code (one-time use)
     r.delete(reset_key)
@@ -482,12 +494,7 @@ async def change_password_with_reset_code_platform(
             detail="Invalid or expired reset code",
         )
 
-    user.password = security_hash_password(new_password)
-    user.password_changed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    db_session.add(user)
-
-    await db_session.commit()
-    await db_session.refresh(user)
+    await set_user_password(db_session, user, new_password)
 
     r.delete(reset_key)
 

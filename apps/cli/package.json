@@ -1,7 +1,7 @@
 {
   "name": "omnilearn",
   "version": "1.5.1",
-  "description": "The official OmniLearn CLI — deploy, manage, and operate your OmniLearn instance",
+  "description": "The official OmniLearn CLI \u2014 deploy, manage, and operate your OmniLearn instance",
   "type": "module",
   "bin": {
     "omnilearn": "./dist/bin/omnilearn.js"
@@ -10,8 +10,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "node init && tsup",
+    "dev": "node init && tsup --watch",
     "prepublishOnly": "tsup",
     "test": "bun run build && vitest run tests/unit.test.ts tests/ee.test.ts tests/commands.test.ts tests/backup-restore.test.ts tests/prompt.test.ts tests/content-migration.test.ts tests/doctor-port.test.ts tests/doctor-dns.test.ts tests/start-migrated.test.ts tests/domain-port.test.ts tests/update-migration.test.ts tests/backup-archive-fail.test.ts tests/setup-ee-preflight.test.ts tests/update-ee.test.ts tests/setup-ci-port.test.ts",
     "test:integration": "bun run build && vitest run tests/integration.test.ts",

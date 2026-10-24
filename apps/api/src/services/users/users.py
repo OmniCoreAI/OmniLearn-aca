@@ -43,6 +43,7 @@ from src.db.users import (
 from src.db.user_organizations import UserOrganization
 from src.security.rbac.constants import ADMIN_ROLE_ID
 from src.security.security import security_hash_password, security_verify_password
+from src.services.users.phone import claim_verified_phone
 from src.services.security.password_validation import validate_password_complexity
 from src.services.analytics.analytics import track
 from src.services.analytics import events as analytics_events
@@ -95,6 +96,10 @@ async def create_user(
     user.update_date = str(datetime.now())
 
     # Verifications
+
+    # A phone confirmed by SMS code (phone_token) becomes the account's.
+    if user_object.phone_token:
+        await claim_verified_phone(db_session, user, user_object.phone_token)
 
     # Check if Organization exists
     statement = select(Organization).where(Organization.id == org_id)

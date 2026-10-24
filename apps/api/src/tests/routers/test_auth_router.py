@@ -23,12 +23,12 @@ from src.routers.auth import (
 from src.security.auth import get_current_user
 
 
-def _mock_config(tenancy: str = "multi"):
+def _mock_config(tenancy: str = "multi", cookie_domain: str = ".omnilearn.test"):
     return SimpleNamespace(
         hosting_config=SimpleNamespace(
             tenancy=tenancy,
             domain="omnilearn.test",
-            cookie_config=SimpleNamespace(domain=".omnilearn.test"),
+            cookie_config=SimpleNamespace(domain=cookie_domain),
         )
     )
 
@@ -99,24 +99,46 @@ class TestAuthHelpers:
             assert get_cookie_domain_for_request(custom_request) is None
             assert get_cookie_domain_for_request(localhost_request) is None
 
-    def test_get_cookie_domain_single_tenancy_is_always_host_only(self):
+    def test_get_cookie_domain_single_tenancy_is_host_only_without_shared_domain(self):
         # In single tenancy the same code path serves localhost dev and any
-        # self-hosted VPS hostname — cookies are always host-only.
-        for origin in (
-            "https://app.omnilearn.test",  # would be subdomain match in multi
-            "https://learn.someschool.edu",  # arbitrary VPS host
-            "http://localhost:3000",
-            "",
-        ):
+        # self-hosted VPS hostname — cookies are host-only unless a dotted
+        # parent cookie domain is configured.
+        for cookie_domain in (".localhost", "omnilearn.test", ""):
+            for origin in (
+                "https://app.omnilearn.test",  # would be subdomain match in multi
+                "https://learn.someschool.edu",  # arbitrary VPS host
+                "http://localhost:3000",
+                "",
+            ):
+                request = Mock()
+                request.headers = {"origin": origin, "referer": "", "host": ""}
+                with patch(
+                    "src.routers.auth.get_omnilearn_config",
+                    return_value=_mock_config(tenancy="single", cookie_domain=cookie_domain),
+                ):
+                    assert get_cookie_domain_for_request(request) is None, (
+                        f"single tenancy must return None for origin {origin!r} "
+                        f"with cookie domain {cookie_domain!r}"
+                    )
+
+    def test_get_cookie_domain_single_tenancy_shares_dotted_parent(self):
+        # A dotted parent lets sibling sites (the main website's login) share
+        # the session — only for hosts under that parent.
+        cases = {
+            "https://lms.omnilearn.test": ".omnilearn.test",
+            "https://omnilearn.test": ".omnilearn.test",
+            "https://learn.someschool.edu": None,
+            "https://evilomnilearn.test": None,
+            "http://localhost:3000": None,
+        }
+        for origin, expected in cases.items():
             request = Mock()
             request.headers = {"origin": origin, "referer": "", "host": ""}
             with patch(
                 "src.routers.auth.get_omnilearn_config",
                 return_value=_mock_config(tenancy="single"),
             ):
-                assert get_cookie_domain_for_request(request) is None, (
-                    f"single tenancy must return None for origin {origin!r}"
-                )
+                assert get_cookie_domain_for_request(request) == expected, origin
 
     def test_is_request_secure_prefers_proxy_headers_for_local_proxy(self):
         request = Mock()
@@ -685,3 +707,78 @@ class TestAuthRouter:
         ):
             response = await client.delete("/api/v1/auth/logout")
         assert response.status_code == 401
+
+
+# --- Password sign-in with a confirmed phone number --------------------------
+
+
+@pytest.fixture
+async def phone_user(db):
+    from src.security.security import security_hash_password
+
+    user = User(
+        username="phoneuser",
+        first_name="Phone",
+        last_name="User",
+        email="phone@test.com",
+        password=security_hash_password("Secret!123"),
+        user_uuid="user_phone",
+        email_verified=True,
+        phone="+201001234567",
+        phone_verified=True,
+        creation_date=str(datetime.now()),
+        update_date=str(datetime.now()),
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+def _login_patches(**extra):
+    patches = [
+        patch("src.routers.auth.check_login_rate_limit", return_value=(True, None)),
+        patch("src.routers.auth.set_auth_cookies"),
+        patch("src.routers.auth.get_deployment_mode", return_value="oss"),
+        patch("src.routers.auth.get_token_expiry_ms", return_value=12345),
+    ]
+    patches += [patch(f"src.routers.auth.{name}", value) for name, value in extra.items()]
+    return patches
+
+
+async def test_login_with_phone_issues_tokens_for_the_email(client, phone_user):
+    access, refresh = Mock(return_value="a"), Mock(return_value="r")
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        for p in _login_patches(create_access_token=access, create_refresh_token=refresh):
+            stack.enter_context(p)
+        r = await client.post("/api/v1/auth/login", data={"username": "01001234567", "password": "Secret!123"})
+    assert r.status_code == 200
+    assert access.call_args.kwargs["data"] == {"sub": "phone@test.com"}
+    assert refresh.call_args.kwargs["data"] == {"sub": "phone@test.com"}
+
+
+async def test_wrong_password_with_phone_counts_toward_lockout(client, phone_user):
+    failed = AsyncMock(return_value=(False, 0))
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        for p in _login_patches(record_failed_login=failed):
+            stack.enter_context(p)
+        r = await client.post("/api/v1/auth/login", data={"username": "+201001234567", "password": "wrong"})
+    assert r.status_code == 401 and r.json()["detail"]["code"] == "INVALID_CREDENTIALS"
+    assert failed.call_args.args[0].id == phone_user.id
+
+
+async def test_unconfirmed_phone_is_the_same_401(client, phone_user, db):
+    phone_user.phone_verified = False
+    db.add(phone_user)
+    await db.commit()
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        for p in _login_patches(record_failed_login=AsyncMock(return_value=(False, 0))):
+            stack.enter_context(p)
+        r = await client.post("/api/v1/auth/login", data={"username": "+201001234567", "password": "Secret!123"})
+    assert r.status_code == 401 and r.json()["detail"]["code"] == "INVALID_CREDENTIALS"
