@@ -105,6 +105,23 @@ async def _course_program(
     if academic:
         return academic.program_uuid, academic.name, "postgraduate"
 
+    # Course offerings: the content course of a cohort offering belongs to the
+    # cohort's program.
+    from src.db.academic.cohorts import Cohort
+    from src.db.academic.offerings import CourseOffering
+
+    offered = (
+        await db_session.execute(
+            select(Program)
+            .join(Cohort, Cohort.program_id == Program.id)
+            .join(CourseOffering, CourseOffering.cohort_id == Cohort.id)
+            .join(Course, Course.id == CourseOffering.content_course_id)
+            .where(Course.org_id == org_id, Course.course_uuid == course_uuid)
+        )
+    ).scalars().first()
+    if offered:
+        return offered.program_uuid, offered.name, "postgraduate"
+
     training = (
         await db_session.execute(
             select(TrainingProgram)

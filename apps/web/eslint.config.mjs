@@ -47,4 +47,18 @@ export default [
             "react-hooks/set-state-in-render": "warn",
         },
     },
+    {
+        // Vendored ReUI event calendar. Its type-signature parameter names and
+        // global `React.*` type references trip the base JS rules, so lint it
+        // with the TypeScript-aware unused-vars rule instead.
+        files: [
+            "components/ui/reui-event-calendar.tsx",
+            "components/ui/reui-event-calendar-utils/**",
+        ],
+        rules: {
+            "no-undef": "off",
+            "no-unused-vars": "off",
+            "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }],
+        },
+    },
 ];

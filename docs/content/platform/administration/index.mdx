@@ -1,0 +1,41 @@
+import { Callout } from 'nextra/components'
+
+# Administration & Configuration
+
+**Dashboard → Administration & Configuration** is where academy staff create the reusable building blocks the rest of the platform selects from — instructors, rooms, add-ons, entities, message templates and certificate designs. Each item is created once and then picked from a list everywhere else; nothing needs a developer.
+
+## The setup path
+
+The **Overview** page tracks a quick-start checklist in this order:
+
+1. Instructor categories (default hourly rates)
+2. Instructors / trainers
+3. Rooms and facilities
+4. Add-ons
+5. Entities (الجهات) and their coordinators
+6. User groups
+7. Email and SMS templates
+8. Certificate templates
+9. Courses — where everything above is attached
+
+Each course has a **Delivery & Resources** tab that shows this chain for the course (audience, instructor, room, add-ons, certificate, messages) and lets you attach the missing pieces.
+
+## General configuration
+
+**General Configuration** holds the shared lists used across the section:
+
+- **Categories** — facility types, equipment, add-on categories, entity types, location types and course categories. Each has an English and Arabic name, a code, a color and an order. A category that is in use cannot be deleted; make it inactive instead.
+- **Currencies & taxes** — the default currency, the currencies offered in price forms, and tax rates (for example VAT 14%).
+
+## Who can use it
+
+| Who | Access |
+| --- | --- |
+| Academy Admin (role 1) | Everything |
+| Custom roles | Only the areas their role grants: **Configuration**, **Entities**, **Communications**, **Instructors** |
+| Entity Coordinator (role 2) | Nothing here — they use **My entity** instead (see [Entities & Coordinators](./entities)) |
+| Instructors and learners | Only the pickers (room, instructor, add-on lists), which never show costs or rates |
+
+<Callout type="info">
+Every page in this section is also controlled by the portal-visibility settings (Super Admin → Portal Access), like the rest of the dashboard sidebar.
+</Callout>

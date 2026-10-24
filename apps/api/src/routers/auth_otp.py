@@ -109,14 +109,14 @@ async def _find_user(db_session: AsyncSession, channel: Channel, identifier: str
 
 
 def _sms_country_allowed(phone: str) -> bool:
-    allowed = get_omnilearn_config().sms_config.sms_allowed_countries
+    allowed = get_omnilearn_config().otp_sms_config.sms_allowed_countries
     if not allowed:
         return True
     return phonenumbers.region_code_for_number(phonenumbers.parse(phone)) in allowed
 
 
 def _sms_budget_left() -> bool:
-    return allow_sms(get_omnilearn_config().sms_config.sms_hourly_budget)
+    return allow_sms(get_omnilearn_config().otp_sms_config.sms_hourly_budget)
 
 
 async def _deliver(

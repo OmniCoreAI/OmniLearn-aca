@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getCertificateByUuid } from '@services/courses/certifications';
 import CertificatePreview from '@components/Dashboard/Pages/Course/EditCourseCertification/CertificatePreview';
+import { TemplateCertificateView, TemplateCertificateHandle } from '@components/Certificates/TemplateCertificate';
 import { Shield, CheckCircle, XCircle, AlertTriangle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getUriWithOrg } from '@services/config/config';
@@ -20,6 +21,7 @@ const CertificateVerificationPage: React.FC<CertificateVerificationPageProps> = 
   const [error, setError] = useState<string | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<'valid' | 'invalid' | 'loading'>('loading');
   const org = useOrg() as any;
+  const templateRef = useRef<TemplateCertificateHandle>(null);
 
   useTrackView(AnalyticsEvent.CertificateVerificationViewed, { verification_status: verificationStatus }, !isLoading);
 
@@ -188,6 +190,9 @@ const CertificateVerificationPage: React.FC<CertificateVerificationPageProps> = 
             <div className="bg-white rounded-2xl p-6 nice-shadow">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Certificate Preview</h2>
               <div className="max-w-2xl mx-auto" id="certificate-preview">
+                {certificateData.render ? (
+                  <TemplateCertificateView ref={templateRef} render={certificateData.render} verifyUrl={qrCodeLink} orgLogo={org?.logo_image} />
+                ) : (
                 <CertificatePreview
                   certificationName={certificateData.certification.config.certification_name}
                   certificationDescription={certificateData.certification.config.certification_description}
@@ -202,6 +207,7 @@ const CertificateVerificationPage: React.FC<CertificateVerificationPageProps> = 
                   })}
                   qrCodeLink={qrCodeLink}
                 />
+                )}
               </div>
             </div>
 

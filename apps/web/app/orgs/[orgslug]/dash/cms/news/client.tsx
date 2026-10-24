@@ -14,6 +14,8 @@ import {
   X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import { Newspaper as NewspaperIcon, CheckCircle, PencilSimple, CalendarBlank } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
@@ -204,6 +206,12 @@ function NewsListClient({ orgslug }: { orgslug: string }) {
     })
   }
 
+  const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+  const stats = {
+    published: allItems.filter((n: any) => n.published).length,
+    recent: allItems.filter((n: any) => n.published && new Date(n.published_at || n.creation_date).getTime() >= monthAgo).length,
+  }
+
   return (
     <AcademicPageShell>
       <Breadcrumbs
@@ -222,12 +230,23 @@ function NewsListClient({ orgslug }: { orgslug: string }) {
           <AdminAuthorization authorizationMode="component">
             <Link
               href={getUriWithOrg(orgslug, '/dash/cms/news/new')}
-              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] flex items-center gap-2 hover:brightness-110 transition-all"
             >
               <Plus className="w-4 h-4" /> {t('cms.news.new', 'New article')}
             </Link>
           </AdminAuthorization>
         }
+      />
+
+      <DashStatCards
+        className="mb-6"
+        loading={isLoading}
+        stats={[
+          { key: 'total', label: t('cms.news.stats.total', 'Articles'), value: allItems.length, icon: NewspaperIcon, tone: 'rose' },
+          { key: 'published', label: t('cms.news.stats.published', 'Published'), value: stats.published, icon: CheckCircle, tone: 'stone' },
+          { key: 'drafts', label: t('cms.news.stats.drafts', 'Drafts'), value: allItems.length - stats.published, icon: PencilSimple, tone: 'gold' },
+          { key: 'recent', label: t('cms.news.stats.recent', 'Last 30 days'), value: stats.recent, hint: t('cms.news.stats.recent_hint', 'Published recently'), icon: CalendarBlank, tone: 'sand' },
+        ]}
       />
 
       {!isLoading && allItems.length > 0 ? (
@@ -345,7 +364,7 @@ function NewsListClient({ orgslug }: { orgslug: string }) {
             action={
               <Link
                 href={getUriWithOrg(orgslug, '/dash/cms/news/new')}
-                className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white"
+                className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))]"
               >
                 <Plus className="w-4 h-4" /> {t('cms.news.new', 'New article')}
               </Link>
@@ -421,7 +440,7 @@ function NewsListClient({ orgslug }: { orgslug: string }) {
                     onClick={() => goToPage(page as number)}
                     className={`min-w-[2.25rem] rounded-lg px-3 py-2 text-sm font-medium transition ${
                       safePage === page
-                        ? 'bg-[hsl(var(--dash-accent))] text-white'
+                        ? 'bg-[hsl(var(--dash-accent))] text-[hsl(var(--dash-ink))]'
                         : 'border border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] text-[hsl(var(--dash-muted))] hover:bg-[hsl(var(--dash-canvas))]'
                     }`}
                   >

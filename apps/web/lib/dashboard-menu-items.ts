@@ -99,6 +99,6 @@ export const DASHBOARD_MENU_ITEMS: DashboardMenuItem[] = [
     id: 'organization',
     href: '/dash/org/settings/general',
     icon: Buildings,
-    labelKey: 'common.organization',
+    labelKey: 'common.academy_settings',
   },
 ]

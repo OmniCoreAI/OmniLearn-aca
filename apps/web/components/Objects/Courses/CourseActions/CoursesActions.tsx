@@ -221,7 +221,7 @@ function CoursesActions({ courseuuid, orgslug, course, trailData }: CourseAction
 
     if (contributorStatus === 'ACTIVE') {
       return (
-        <div className="w-full bg-green-50 text-green-700 border border-green-200 py-3 rounded-lg nice-shadow font-semibold flex items-center justify-center gap-2 mt-3">
+        <div className="w-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 mt-3">
           <UserPen className="w-5 h-5" />
           {t('courses.you_are_contributor')}
         </div>
@@ -388,7 +388,7 @@ function CoursesActions({ courseuuid, orgslug, course, trailData }: CourseAction
   // Show join organization prompt for authenticated users who are not part of the org
   if (session.data?.user && !isUserPartOfTheOrg) {
     return (
-      <div className="bg-white shadow-md shadow-gray-300/25 outline outline-1 outline-neutral-200/40 rounded-lg overflow-hidden p-4">
+      <div className="dash-card rounded-2xl overflow-hidden p-4">
         <div className="space-y-4">
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg nice-shadow">
             <div className="flex items-center gap-3">
@@ -401,7 +401,7 @@ function CoursesActions({ courseuuid, orgslug, course, trailData }: CourseAction
           </div>
           <a
             href={getUriWithOrg(orgslug, '/signup')}
-            className="w-full bg-neutral-900 text-white py-3 rounded-lg nice-shadow font-semibold hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-[hsl(var(--dash-ink))] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-colors flex items-center justify-center gap-2"
           >
             <UserPlus className="w-5 h-5" />
             {t('courses.join_organization')}
@@ -415,9 +415,9 @@ function CoursesActions({ courseuuid, orgslug, course, trailData }: CourseAction
     // User already enrolled / started — show "you own this" notice + leave button
     if (isStarted) {
       return (
-        <div className="bg-white nice-shadow rounded-lg overflow-hidden p-4">
+        <div className="dash-card rounded-2xl overflow-hidden p-4">
           <div className="space-y-4">
-            <div className="p-4 bg-green-50 rounded-lg">
+            <div className="p-4 bg-emerald-500/10 rounded-xl">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                 <h3 className="text-green-800 font-semibold">{t('courses.you_own_this_course')}</h3>
@@ -430,10 +430,10 @@ function CoursesActions({ courseuuid, orgslug, course, trailData }: CourseAction
               onClick={handleCourseAction}
               disabled={isActionLoading}
               aria-label={t('courses.leave_course')}
-              className="w-full py-3 rounded-lg nice-shadow font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer bg-red-500 text-white hover:bg-red-600 disabled:bg-red-400"
+              className="w-full py-3 rounded-xl border border-[hsl(var(--dash-border))] bg-white font-semibold text-[hsl(var(--dash-warn))] transition-colors flex items-center justify-center gap-2 cursor-pointer hover:border-[hsl(var(--dash-warn))]/40 hover:bg-[hsl(var(--dash-warn-soft))] disabled:opacity-60"
             >
               {isActionLoading
-                ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 : renderActionButton('leave')
               }
             </button>
@@ -470,14 +470,14 @@ function CoursesActions({ courseuuid, orgslug, course, trailData }: CourseAction
           onClick={handleCourseAction}
           disabled={isActionLoading}
           aria-label={isStarted ? t('courses.leave_course') : t('courses.start_course')}
-          className={`w-full py-3 rounded-lg nice-shadow font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+          className={`w-full py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer ${
             isStarted
-              ? 'bg-red-500 text-white hover:bg-red-600 disabled:bg-red-400'
-              : 'bg-neutral-900 text-white hover:bg-neutral-800 disabled:bg-neutral-700'
+              ? 'border border-[hsl(var(--dash-border))] bg-white text-[hsl(var(--dash-warn))] hover:border-[hsl(var(--dash-warn))]/40 hover:bg-[hsl(var(--dash-warn-soft))] disabled:opacity-60'
+              : 'bg-[hsl(var(--dash-ink))] text-white shadow-[0_8px_20px_-10px_hsl(0_0%_8%/0.6)] hover:opacity-90 disabled:opacity-60'
           }`}
         >
           {isActionLoading ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
           ) : (
             renderActionButton(isStarted ? 'leave' : 'start')
           )}

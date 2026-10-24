@@ -11,6 +11,9 @@ import OrgUserGroups from '@components/Dashboard/Pages/Users/OrgUserGroups/OrgUs
 import OrgRoles from '@components/Dashboard/Pages/Users/OrgRoles/OrgRoles'
 import OrgAuditLogs from '@components/Dashboard/Pages/Org/OrgAuditLogs/OrgAuditLogs'
 import { useTranslation } from 'react-i18next'
+import DashStatCards from '@components/Dashboard/Shared/DashStatCards'
+import { useHomeOverview } from '@components/Dashboard/Home/homeData'
+import { UsersThree, UserPlus as UserPlusIcon, GraduationCap } from '@phosphor-icons/react'
 import { DashTabBar, DashTabItem } from '@components/Dashboard/Shared/DashTabBar/DashTabBar'
 
 export type SettingsParams = {
@@ -105,7 +108,7 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
 
   return (
     <div className="grid h-screen w-full grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]">
-      <div className="relative z-10 flex-shrink-0 border-b border-[hsl(var(--dash-border))] bg-[hsl(var(--dash-surface))] px-4 tracking-tight sm:px-10">
+      <div className="relative z-10 flex-shrink-0 border-b border-[hsl(var(--dash-border))]/70 bg-[hsl(var(--dash-canvas))] px-4 tracking-tight sm:px-10">
         <div className="pb-4 pt-6">
           <Breadcrumbs items={[
             { label: t('common.users'), href: '/dash/users/settings/users', icon: <Users size={14} /> }
@@ -132,13 +135,38 @@ function UsersSettingsPage(props: { params: Promise<SettingsParams> }) {
         transition={{ duration: 0.1, type: 'spring', stiffness: 80 }}
         className="min-w-0 overflow-y-auto overflow-x-hidden"
       >
-        {params.subpage == 'users' ? <OrgUsers /> : ''}
+        {params.subpage == 'users' ? (
+          <>
+            <div className="px-4 pt-6 sm:px-10">
+              <UsersStats />
+            </div>
+            <OrgUsers />
+          </>
+        ) : ''}
         {params.subpage == 'usergroups' ? <OrgUserGroups /> : ''}
         {params.subpage == 'add' ? <OrgUsersAdd /> : ''}
         {params.subpage == 'roles' ? <><div className="h-6"></div><OrgRoles /></> : ''}
         {params.subpage == 'audit-logs' ? <><div className="h-6"></div><OrgAuditLogs /></> : ''}
       </motion.div>
     </div>
+  )
+}
+
+/** Membership totals, from the same overview the dashboard home uses. */
+function UsersStats() {
+  const { t } = useTranslation()
+  const { data, isLoading, isError } = useHomeOverview()
+  const totals = data?.totals
+  return (
+    <DashStatCards
+      loading={isLoading}
+      error={isError}
+      stats={[
+        { key: 'members', label: t('dashboard.users.stats.members', 'Members'), value: totals?.members ?? 0, icon: UsersThree, tone: 'rose' },
+        { key: 'new', label: t('dashboard.users.stats.new', 'New this month'), value: totals?.members_30d ?? 0, hint: t('dashboard.users.stats.new_hint', 'Joined in the last 30 days'), icon: UserPlusIcon, tone: 'stone' },
+        { key: 'learners', label: t('dashboard.users.stats.learners', 'Enrolled learners'), value: totals?.students ?? 0, hint: t('dashboard.users.stats.learners_hint', 'In at least one course'), icon: GraduationCap, tone: 'gold' },
+      ]}
+    />
   )
 }
 

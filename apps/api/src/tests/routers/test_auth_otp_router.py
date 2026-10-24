@@ -239,7 +239,7 @@ async def test_failed_sms_can_be_requested_again_at_once(client, outbox, db):
 
 def _sms_config(budget=100, countries=None):
     from types import SimpleNamespace
-    return SimpleNamespace(sms_config=SimpleNamespace(
+    return SimpleNamespace(otp_sms_config=SimpleNamespace(
         brevo_api_key="k", sms_sender="ACA",
         sms_hourly_budget=budget, sms_allowed_countries=countries or [],
     ))

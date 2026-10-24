@@ -1,12 +1,15 @@
 import { getBackendUrl, getConfig } from '@services/config/config'
+import { isLocalhost } from '@services/utils/ts/hostUtils'
 
 function getMediaUrl() {
-  const mediaUrl = getConfig('NEXT_PUBLIC_OMNILEARN_MEDIA_URL');
-  if (mediaUrl) {
-    return mediaUrl;
-  } else {
-    return getBackendUrl();
+  // Prefer same-origin /content in the browser so cookies + Next/nginx proxies work.
+  // Absolute backend URL is still used on the server and when a dedicated media CDN is set.
+  const mediaUrl = getConfig('NEXT_PUBLIC_OMNILEARN_MEDIA_URL')
+  if (mediaUrl) return mediaUrl
+  if (typeof window !== 'undefined' && isLocalhost(window.location.hostname)) {
+    return '/'
   }
+  return getBackendUrl()
 }
 
 function getApiUrl() {
@@ -69,6 +72,10 @@ export function getProgramThumbnailMediaDirectory(
   fileId: string
 ) {
   return `${getMediaUrl()}content/orgs/${orgUUID}/programs/${programUUID}/thumbnails/${fileId}`
+}
+
+export function getProgramBannerMediaDirectory(orgUUID: string, programUUID: string, fileId: string) {
+  return `${getMediaUrl()}content/orgs/${orgUUID}/programs/${programUUID}/banners/${fileId}`
 }
 
 export function getTrainingProgramThumbnailMediaDirectory(
@@ -148,7 +155,7 @@ export function getTaskRefFileDir(
   activityUUID: string,
   assignmentUUID: string,
   assignmentTaskUUID: string,
-  fileID : string
+  fileID: string
 
 ) {
   let uri = `${getMediaUrl()}content/orgs/${orgUUID}/courses/${courseUUID}/activities/${activityUUID}/assignments/${assignmentUUID}/tasks/${assignmentTaskUUID}/${fileID}`
@@ -161,7 +168,7 @@ export function getTaskFileSubmissionDir(
   activityUUID: string,
   assignmentUUID: string,
   assignmentTaskUUID: string,
-  fileSubID : string
+  fileSubID: string
 ) {
   let uri = `${getMediaUrl()}content/orgs/${orgUUID}/courses/${courseUUID}/activities/${activityUUID}/assignments/${assignmentUUID}/tasks/${assignmentTaskUUID}/subs/${fileSubID}`
   return uri
@@ -184,9 +191,16 @@ export function getActivityMediaDirectory(
   }
 }
 
+/** Public org-level asset (instructor photos, facility images, entity logos…). */
+export function getOrgContentUrl(orgUUID: string, path: string) {
+  return `${getMediaUrl()}content/orgs/${orgUUID}/${path}`
+}
+
 export function getOrgLogoMediaDirectory(orgUUID: string, fileId: string) {
-  let uri = `${getMediaUrl()}content/orgs/${orgUUID}/logos/${fileId}`
-  return uri
+  if (!fileId) return ''
+  // Allow absolute URLs (e.g. hosted org logos) — same pattern as news covers.
+  if (fileId.startsWith('http://') || fileId.startsWith('https://')) return fileId
+  return `${getMediaUrl()}content/orgs/${orgUUID}/logos/${fileId}`
 }
 
 export function getNewsCoverMediaDirectory(

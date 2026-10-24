@@ -308,6 +308,18 @@ async def create_certificate_user(
         updated_at=str(datetime.now()),
     )
 
+    # Template serial number (e.g. EACA-2026-00042) when a template applies.
+    try:
+        from src.services.administration.certificates import assign_serial
+
+        serial_course = (
+            await db_session.execute(select(Course).where(Course.id == certification.course_id))
+        ).scalars().first()
+        if serial_course:
+            await assign_serial(db_session, certificate_user, serial_course, certification)
+    except Exception as e:
+        logger.warning("Certificate serial could not be assigned: %s", e)
+
     db_session.add(certificate_user)
     await db_session.commit()
     await db_session.refresh(certificate_user)
@@ -343,6 +355,11 @@ async def create_certificate_user(
                         "user_certification_uuid": certificate_user.user_certification_uuid,
                     },
                 },
+            )
+            from src.services.notifications import events as notification_events
+
+            await notification_events.certificate_issued(
+                db_session, course, user_id, certificate_user.user_certification_uuid
             )
     except Exception as e:
         logger.warning("Certificate tracking failed (non-critical): %s", e)
@@ -396,12 +413,16 @@ async def get_user_certificates_for_course(
     # Build a map of certification_id -> Certifications (already fetched above)
     cert_map = {cert.id: cert for cert in certifications if cert.id}
 
+    from src.services.administration.certificates import render_context
+
     result = []
     for cert_user in cert_users:
         certification = cert_map.get(cert_user.certification_id)
+        render = await render_context(db_session, cert_user, certification, course) if certification else None
         result.append({
             "certificate_user": CertificateUserRead(**cert_user.model_dump()),
-            "certification": CertificationRead(**certification.model_dump()) if certification else None
+            "certification": CertificationRead(**certification.model_dump()) if certification else None,
+            "render": render.model_dump() if render else None,
         })
 
     return result
@@ -547,6 +568,9 @@ async def get_certificate_by_user_certification_uuid(
         )
 
     # No RBAC check - allow anyone to access certificates by UUID
+    from src.services.administration.certificates import render_context
+
+    render = await render_context(db_session, certificate_user, certification, course)
 
     return {
         "certificate_user": CertificateUserRead(**certificate_user.model_dump()),
@@ -557,7 +581,9 @@ async def get_certificate_by_user_certification_uuid(
             "name": course.name,
             "description": course.description,
             "thumbnail_image": course.thumbnail_image,
-        }
+        },
+        # Template design + variables; None → the legacy pattern is drawn.
+        "render": render.model_dump() if render else None,
     }
 
 
