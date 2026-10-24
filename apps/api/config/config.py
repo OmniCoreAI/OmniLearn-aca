@@ -84,17 +84,29 @@ class HostingConfig(BaseModel):
     self_hosted: bool
     cookie_config: CookieConfig
     content_delivery: ContentDeliveryConfig
+    # Login and sign-up pages hosted outside the LMS (e.g. the main website).
+    # When set, the LMS's own /login and /signup redirect there.
+    login_url: Optional[str] = None
+    signup_url: Optional[str] = None
+    # Page on the main website where users reset their password. When set,
+    # reset emails link there and the LMS's /forgot and /reset redirect to it.
+    password_reset_url: Optional[str] = None
 
 
 class MailingConfig(BaseModel):
     email_provider: Literal["resend", "smtp"]
     system_email_address: str
+    # Display name on outgoing email ("<name> <address>").
+    system_email_name: str = "OmniLearn"
     resend_api_key: Optional[str] = None
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = 587
     smtp_username: Optional[str] = None
     smtp_password: Optional[str] = None
     smtp_use_tls: Optional[bool] = True
+    # Absolute URL of the logo at the top of every email (a hosted image:
+    # many mail clients block embedded ones). Unset: the name is shown instead.
+    email_logo_url: Optional[str] = None
 
 
 class SMSConfig(BaseModel):
@@ -168,6 +180,17 @@ class InternalPaymentsConfig(BaseModel):
     stripe: InternalStripeConfig
 
 
+class SmsConfig(BaseModel):
+    # Brevo API key (Brevo → SMTP & API → API keys); SMS is off without it.
+    brevo_api_key: Optional[str] = None
+    # The "From" shown on the phone: up to 11 letters/digits, approved in Brevo.
+    sms_sender: Optional[str] = None
+    # Most code SMS the whole site sends in an hour: caps what abuse can cost.
+    sms_hourly_budget: int = 100
+    # Countries (ISO alpha-2) codes may be texted to; empty = any.
+    sms_allowed_countries: list[str] = []
+
+
 class OmniLearnConfig(BaseModel):
     site_name: str
     site_description: str
@@ -179,7 +202,10 @@ class OmniLearnConfig(BaseModel):
     security_config: SecurityConfig
     ai_config: AIConfig
     mailing_config: MailingConfig
+    # Notifications and reminders (Administration → Communication).
     sms_config: SMSConfig = Field(default_factory=SMSConfig)
+    # Sign-in, reset and phone-verification codes, sent through Brevo.
+    otp_sms_config: SmsConfig = SmsConfig()
     payments_config: InternalPaymentsConfig
     tinybird_config: TinybirdConfig | None
     judge0_config: Judge0Config | None
@@ -214,6 +240,23 @@ def _normalize_sql_url_for_runtime(url: str | None) -> str | None:
     if "@db/" in url:
         return url.replace("@db/", "@127.0.0.1:5433/")
     return url
+
+
+def get_shared_cookie_domain(config: OmniLearnConfig) -> Optional[str]:
+    """
+    The parent domain a single-tenant LMS shares its session cookies with
+    (e.g. ".example.com", so www.example.com can log users in for
+    lms.example.com), or None when cookies stay host-only. Only a dotted,
+    non-localhost OMNILEARN_COOKIE_DOMAIN opts in; multi tenancy has its own
+    rules (routers/auth.py).
+    """
+    hosting = config.hosting_config
+    domain = (hosting.cookie_config.domain or "").strip().lower()
+    if hosting.tenancy != "single":
+        return None
+    if not domain.startswith(".") or domain == ".localhost":
+        return None
+    return domain
 
 
 def get_omnilearn_config() -> OmniLearnConfig:
@@ -292,6 +335,9 @@ def get_omnilearn_config() -> OmniLearnConfig:
     env_cookie_domain = os.environ.get("OMNILEARN_COOKIE_DOMAIN")
     env_frontend_domain = os.environ.get("OMNILEARN_FRONTEND_DOMAIN")
     env_tenancy = os.environ.get("OMNILEARN_TENANCY")
+    env_login_url = os.environ.get("OMNILEARN_LOGIN_URL")
+    env_signup_url = os.environ.get("OMNILEARN_SIGNUP_URL")
+    env_password_reset_url = os.environ.get("OMNILEARN_PASSWORD_RESET_URL")
 
     # Allowed origins should be a comma separated string
     if env_allowed_origins:
@@ -495,6 +541,7 @@ def get_omnilearn_config() -> OmniLearnConfig:
     env_email_provider = os.environ.get("OMNILEARN_EMAIL_PROVIDER")
     env_resend_api_key = os.environ.get("OMNILEARN_RESEND_API_KEY")
     env_system_email_address = os.environ.get("OMNILEARN_SYSTEM_EMAIL_ADDRESS")
+    env_system_email_name = os.environ.get("OMNILEARN_SYSTEM_EMAIL_NAME")
     env_smtp_host = os.environ.get("OMNILEARN_SMTP_HOST")
     env_smtp_port = os.environ.get("OMNILEARN_SMTP_PORT")
     env_smtp_username = os.environ.get("OMNILEARN_SMTP_USERNAME")
@@ -593,6 +640,13 @@ def get_omnilearn_config() -> OmniLearnConfig:
         self_hosted=bool(self_hosted),
         cookie_config=cookie_config,
         content_delivery=content_delivery,
+        login_url=env_login_url or yaml_config.get("hosting_config", {}).get("login_url") or None,
+        signup_url=env_signup_url or yaml_config.get("hosting_config", {}).get("signup_url") or None,
+        password_reset_url=(
+            env_password_reset_url
+            or yaml_config.get("hosting_config", {}).get("password_reset_url")
+            or None
+        ),
     )
 
     # Tenancy validation and deprecation warnings — only enforce in non-test
@@ -706,9 +760,41 @@ def get_omnilearn_config() -> OmniLearnConfig:
         security_config=SecurityConfig(auth_jwt_secret_key=auth_jwt_secret_key),
         ai_config=ai_config,
         redis_config=RedisConfig(redis_connection_string=redis_connection_string),
+        otp_sms_config=SmsConfig(
+            brevo_api_key=os.environ.get("OMNILEARN_BREVO_API_KEY")
+            or yaml_config.get("sms_config", {}).get("brevo_api_key")
+            or None,
+            sms_sender=os.environ.get("OMNILEARN_SMS_SENDER")
+            or yaml_config.get("sms_config", {}).get("sms_sender")
+            or None,
+            sms_hourly_budget=int(
+                os.environ.get("OMNILEARN_SMS_HOURLY_BUDGET")
+                or yaml_config.get("sms_config", {}).get("sms_hourly_budget")
+                or 100
+            ),
+            sms_allowed_countries=[
+                c.strip().upper()
+                for c in (
+                    os.environ.get("OMNILEARN_SMS_ALLOWED_COUNTRIES")
+                    or yaml_config.get("sms_config", {}).get("sms_allowed_countries")
+                    or ""
+                ).split(",")
+                if c.strip()
+            ],
+        ),
         mailing_config=MailingConfig(
+            email_logo_url=(
+                os.environ.get("OMNILEARN_EMAIL_LOGO_URL")
+                or yaml_config.get("mailing_config", {}).get("email_logo_url")
+                or None
+            ),
             email_provider=email_provider,
             system_email_address=system_email_address,
+            system_email_name=(
+                env_system_email_name
+                or yaml_config.get("mailing_config", {}).get("system_email_name")
+                or "OmniLearn"
+            ),
             resend_api_key=resend_api_key,
             smtp_host=smtp_host,
             smtp_port=smtp_port,

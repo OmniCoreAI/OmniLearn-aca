@@ -6,7 +6,7 @@ from src.core.events.database import get_db_session
 from src.core.ee_hooks import is_multi_org_allowed
 from src.core.deployment_mode import get_deployment_mode
 from src.services.orgs.cache import get_cached_instance_info, set_cached_instance_info
-from config.config import get_omnilearn_config
+from config.config import get_omnilearn_config, get_shared_cookie_domain
 
 router = APIRouter()
 
@@ -58,6 +58,12 @@ async def get_instance_info(db_session: AsyncSession = Depends(get_db_session)):
         "default_org_slug": default_org_slug,
         "frontend_domain": frontend_domain,
         "top_domain": top_domain,
+        # Single tenancy only: the parent domain the session cookies are
+        # shared on, and the login/sign-up pages hosted on the main website.
+        "cookie_domain": get_shared_cookie_domain(config),
+        "login_url": config.hosting_config.login_url,
+        "signup_url": config.hosting_config.signup_url,
+        "password_reset_url": config.hosting_config.password_reset_url,
     }
 
     set_cached_instance_info(result)

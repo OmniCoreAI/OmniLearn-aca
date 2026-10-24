@@ -353,6 +353,9 @@ async def connect_to_db(app: FastAPI):
         # Create all tables
         if not is_testing:
             await conn.run_sync(SQLModel.metadata.create_all)
+            # create_all doesn't add columns to existing tables.
+            from src.db.schema_patches import ensure_user_phone_columns
+            await ensure_user_phone_columns(conn)
     app.db_engine = engine  # type: ignore
     logging.info("OmniLearn database has been started.")
 

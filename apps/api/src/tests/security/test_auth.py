@@ -100,30 +100,30 @@ class TestAuth:
     @pytest.mark.asyncio
     async def test_authenticate_user_success(self, mock_request, mock_db_session, mock_user):
         """Test successful user authentication"""
-        with patch('src.security.auth.security_get_user', new_callable=AsyncMock) as mock_get_user, \
+        with patch('src.security.auth.resolve_login_user', new_callable=AsyncMock) as mock_get_user, \
              patch('src.security.auth.security_verify_password', return_value=True):
             
             mock_get_user.return_value = mock_user
             
             result = await authenticate_user(
                 request=mock_request,
-                email="test@example.com",
+                identifier="test@example.com",
                 password="correct_password",
                 db_session=mock_db_session
             )
             
-            assert result == mock_user
-            mock_get_user.assert_called_once_with(mock_request, mock_db_session, "test@example.com")
+            assert result.email == mock_user.email
+            mock_get_user.assert_called_once_with(mock_db_session, "test@example.com")
 
     @pytest.mark.asyncio
     async def test_authenticate_user_user_not_found(self, mock_request, mock_db_session):
         """Test authentication when user is not found"""
-        with patch('src.security.auth.security_get_user', new_callable=AsyncMock) as mock_get_user:
+        with patch('src.security.auth.resolve_login_user', new_callable=AsyncMock) as mock_get_user:
             mock_get_user.return_value = None
             
             result = await authenticate_user(
                 request=mock_request,
-                email="nonexistent@example.com",
+                identifier="nonexistent@example.com",
                 password="password",
                 db_session=mock_db_session
             )
@@ -133,14 +133,14 @@ class TestAuth:
     @pytest.mark.asyncio
     async def test_authenticate_user_wrong_password(self, mock_request, mock_db_session, mock_user):
         """Test authentication with wrong password"""
-        with patch('src.security.auth.security_get_user', new_callable=AsyncMock) as mock_get_user, \
+        with patch('src.security.auth.resolve_login_user', new_callable=AsyncMock) as mock_get_user, \
              patch('src.security.auth.security_verify_password', return_value=False):
             
             mock_get_user.return_value = mock_user
             
             result = await authenticate_user(
                 request=mock_request,
-                email="test@example.com",
+                identifier="test@example.com",
                 password="wrong_password",
                 db_session=mock_db_session
             )

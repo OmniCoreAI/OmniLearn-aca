@@ -26,6 +26,9 @@ class UserCreate(UserBase):
     first_name: str = ""
     last_name: str = ""
     password: str
+    # From /auth/otp/verify-phone: the account gets that number, verified.
+    # Never stored itself.
+    phone_token: Optional[str] = None
 
 
 class UserUpdate(UserBase):
@@ -58,6 +61,8 @@ class UserRead(UserBase):
     # True when an admin provisioned this account with a temporary password;
     # the frontend forces a password change before the user can proceed.
     must_change_password: bool = False
+    phone: Optional[str] = None
+    phone_verified: bool = False
 
 
 class AdminUserCreate(SQLModel):
@@ -189,6 +194,7 @@ class SuperadminAPITokenUser(SQLModel):
 class User(UserBase, table=True):
     __table_args__ = (
         Index("ix_user_email", "email"),
+        Index("ix_user_phone", "phone", unique=True),
         {"extend_existing": True},
     )
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -205,6 +211,11 @@ class User(UserBase, table=True):
     password_changed_at: Optional[datetime] = Field(default=None)
     # Forces a password change on next login (admin-provisioned accounts).
     must_change_password: bool = Field(default=False)
+    # E.164 (src/services/phone.py), set only from an SMS-verified number
+    # (sign-up's phone_token), never from a request body. Not on UserBase so
+    # UserCreate/UserUpdate can't carry it.
+    phone: Optional[str] = Field(default=None)
+    phone_verified: bool = Field(default=False)
     creation_date: str = ""
     update_date: str = ""
 
