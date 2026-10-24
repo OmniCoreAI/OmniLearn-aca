@@ -391,13 +391,29 @@ async def send_invite_email(
             pass
 
     try:
-        result = send_invitation_email(
-            email=email,
-            org_name=org.name,
-            inviter_username=user.username,
-            invite_code=invite_code,
-            signup_url=signup_url,
-            lang=lang,
+        from src.services.notifications.dispatcher import send_event_email
+
+        result = await send_event_email(
+            db_session,
+            org.id,
+            "invitation",
+            to=email,
+            variables={
+                "invite_link": signup_url,
+                "inviter_name": user.username,
+                "invite_code": invite_code or "",
+                "user_first_name": "",
+                "user_full_name": "",
+                "user_email": email,
+            },
+            fallback=lambda: send_invitation_email(
+                email=email,
+                org_name=org.name,
+                inviter_username=user.username,
+                invite_code=invite_code,
+                signup_url=signup_url,
+                lang=lang,
+            ),
         )
         return result is not None
     except Exception:

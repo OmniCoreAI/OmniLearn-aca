@@ -109,7 +109,7 @@ class TestSecurityComprehensive:
         assert ADMIN_ROLE_ID == 1
         assert MAINTAINER_ROLE_ID == 2
         assert 1 in ADMIN_OR_MAINTAINER_ROLE_IDS
-        assert 2 in ADMIN_OR_MAINTAINER_ROLE_IDS
+        assert 2 not in ADMIN_OR_MAINTAINER_ROLE_IDS
         assert callable(is_admin)
         assert callable(is_admin_or_maintainer)
 

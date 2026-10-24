@@ -1355,30 +1355,26 @@ async def consume_magic_link_token(
 # -- Bulk enrollment ----------------------------------------------------------
 
 
-async def bulk_enroll_users(
-    token_user: APITokenUser,
-    course_uuid: str,
-    user_ids: List[int],
-    request: Request,
+async def enroll_users_in_course(
     db_session: AsyncSession,
+    org_id: int,
+    course: Course,
+    user_ids: List[int],
 ) -> dict:
-    """Enroll a batch of users in a course. Returns summary of results."""
+    """Idempotently enroll org members in a course (Trail + TrailRun).
 
-    course = (await db_session.execute(
-        select(Course).where(
-            Course.course_uuid == course_uuid,
-            Course.org_id == token_user.org_id,
-        )
-    )).scalars().first()
-    if not course:
-        raise HTTPException(status_code=404, detail="Course not found")
+    Shared by the bulk-enroll API and audience auto-enrollment. Commits.
+    """
+    user_ids = list(dict.fromkeys(user_ids))
+    if not user_ids:
+        return {"enrolled": [], "already_enrolled": [], "skipped": []}
 
     # Pre-fetch memberships, existing enrollments, and trails in 3 queries total
     member_ids = set(
         (await db_session.execute(
             select(UserOrganization.user_id).where(
                 UserOrganization.user_id.in_(user_ids),
-                UserOrganization.org_id == token_user.org_id,
+                UserOrganization.org_id == org_id,
             )
         )).scalars().all()
     )
@@ -1387,7 +1383,7 @@ async def bulk_enroll_users(
             select(TrailRun.user_id).where(
                 TrailRun.course_id == course.id,
                 TrailRun.user_id.in_(user_ids),
-                TrailRun.org_id == token_user.org_id,
+                TrailRun.org_id == org_id,
             )
         )).scalars().all()
     )
@@ -1413,7 +1409,7 @@ async def bulk_enroll_users(
         t.user_id: t
         for t in (await db_session.execute(
             select(Trail).where(
-                Trail.org_id == token_user.org_id,
+                Trail.org_id == org_id,
                 Trail.user_id.in_(to_enroll),
             )
         )).scalars().all()
@@ -1424,7 +1420,7 @@ async def bulk_enroll_users(
     for user_id in to_enroll:
         if user_id not in trails_by_user:
             t = Trail(
-                org_id=token_user.org_id,
+                org_id=org_id,
                 user_id=user_id,
                 trail_uuid=f"trail_{uuid4()}",
                 creation_date=str(now),
@@ -1443,7 +1439,7 @@ async def bulk_enroll_users(
         db_session.add(TrailRun(
             trail_id=trail.id if trail.id is not None else 0,
             course_id=course.id if course.id is not None else 0,
-            org_id=token_user.org_id,
+            org_id=org_id,
             user_id=user_id,
             creation_date=str(now),
             update_date=str(now),
@@ -1455,7 +1451,7 @@ async def bulk_enroll_users(
     for user_id in enrolled:
         await track(
             event_name=analytics_events.COURSE_ENROLLED,
-            org_id=token_user.org_id,
+            org_id=org_id,
             user_id=user_id,
             properties={"course_uuid": course.course_uuid},
         )
@@ -1465,6 +1461,27 @@ async def bulk_enroll_users(
         "already_enrolled": already_enrolled,
         "skipped": skipped,
     }
+
+
+async def bulk_enroll_users(
+    token_user: APITokenUser,
+    course_uuid: str,
+    user_ids: List[int],
+    request: Request,
+    db_session: AsyncSession,
+) -> dict:
+    """Enroll a batch of users in a course. Returns summary of results."""
+
+    course = (await db_session.execute(
+        select(Course).where(
+            Course.course_uuid == course_uuid,
+            Course.org_id == token_user.org_id,
+        )
+    )).scalars().first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    return await enroll_users_in_course(db_session, token_user.org_id, course, user_ids)
 
 
 async def list_course_enrollments(

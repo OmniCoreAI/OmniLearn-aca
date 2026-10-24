@@ -24,6 +24,7 @@ import httpx
 from src.services.analytics.analytics import track
 from src.services.analytics.cache import get_cached_result, set_cached_result
 from src.services.analytics.events import ALLOWED_FRONTEND_EVENTS
+from src.services.analytics.home_overview import get_home_overview
 from src.services.orgs.users import _csv_safe
 from src.services.analytics.queries import (
     ALL_QUERIES,
@@ -447,6 +448,35 @@ async def query_dashboard_detail(
         }
 
     return {"data": ch_data, "users": users_map}
+
+
+# -------------------------------------------------------------------
+# GET /dashboard/home — PostgreSQL overview for the dashboard home
+# (declared before /dashboard/{query_name} so "home" isn't shadowed)
+# -------------------------------------------------------------------
+@router.get(
+    "/dashboard/home",
+    summary="Dashboard home overview",
+    description="Totals, monthly enrollment trend, learning-activity heatmap, top and recent courses, and a recent-activity feed, computed from PostgreSQL. Works without the analytics backend. Requires org admin privileges.",
+    responses={
+        200: {"description": "Overview payload"},
+        401: {"description": "Authentication required"},
+        403: {"description": "User is not an admin of this organization"},
+    },
+)
+async def query_dashboard_home(
+    org_id: int,
+    months: int = 7,
+    current_user: PublicUser | AnonymousUser | APITokenUser = Depends(get_current_user),
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    if isinstance(current_user, AnonymousUser):
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    await _verify_org_membership(resolve_acting_user_id(current_user), org_id, db_session)
+    await _verify_org_admin(resolve_acting_user_id(current_user), org_id, db_session)
+
+    return await get_home_overview(org_id, db_session, months=months)
 
 
 # -------------------------------------------------------------------

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function useDebounce<T>(valueOrCallback: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(valueOrCallback);
+  // Lazy initializer: passing a callback straight to useState would make React
+  // call it during render.
+  const [debouncedValue, setDebouncedValue] = useState<T>(() => valueOrCallback);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const callbackRef = useRef(valueOrCallback);
 

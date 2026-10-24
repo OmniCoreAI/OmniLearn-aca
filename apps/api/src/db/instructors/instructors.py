@@ -11,10 +11,11 @@ category for the chosen delivery language and computes ``hours × rate``.
 from enum import Enum
 from typing import List, Optional
 
-from sqlalchemy import Column, Enum as SAEnum, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import Column, Enum as SAEnum, ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
+from src.db.administration.lookups import ConfigStatus, status_column
 from src.db.users import UserReadAuthor
 
 
@@ -22,6 +23,9 @@ class InstructorStatus(str, Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     ON_LEAVE = "on_leave"
+    # Invited by an entity coordinator; the academy approves (and sets the
+    # category/rate) before the instructor can be assigned.
+    PENDING_APPROVAL = "pending_approval"
 
 
 # ---------------------------------------------------------------------------
@@ -35,11 +39,13 @@ class InstructorCategoryBase(SQLModel):
     # Base/default rate used when a delivery language has no explicit rate row.
     hourly_rate: Optional[float] = None
     currency: Optional[str] = None
+    status: ConfigStatus = ConfigStatus.ACTIVE
 
 
 class InstructorCategory(InstructorCategoryBase, table=True):
     __table_args__ = ({"extend_existing": True},)
     id: Optional[int] = Field(default=None, primary_key=True)
+    status: ConfigStatus = Field(default=ConfigStatus.ACTIVE, sa_column=status_column())
     org_id: int = Field(
         sa_column=Column(Integer, ForeignKey("organization.id", ondelete="CASCADE"), index=True)
     )
@@ -89,6 +95,7 @@ class InstructorCategoryUpdate(SQLModel):
     description: Optional[str] = None
     hourly_rate: Optional[float] = None
     currency: Optional[str] = None
+    status: Optional[ConfigStatus] = None
     # When provided, the language-rate table is fully replaced with this set.
     language_rates: Optional[List[InstructorCategoryLanguageRateInput]] = None
 
@@ -114,9 +121,14 @@ class InstructorBase(SQLModel):
     languages: Optional[List[str]] = Field(default=None, sa_column=Column(JSONB))
     # Free-form contact block: phone, alt_email, address, etc.
     contact_info: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
-    # Instructor-level fallback rate (used only when the category has no rate).
+    # Instructor-level override: when set it wins over the category rates.
     hourly_rate: Optional[float] = None
     status: InstructorStatus = Field(default=InstructorStatus.ACTIVE)
+    bio: Optional[str] = Field(default=None, sa_column=Column(Text))
+    # Expertise tags (e.g. ["Cybersecurity", "AI"]).
+    specializations: Optional[List[str]] = Field(default=None, sa_column=Column(JSONB))
+    # {"slots": [{"day": "sun", "start": "09:00", "end": "15:00"}], "notes": "…"}
+    availability: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
 
 
 class Instructor(InstructorBase, table=True):
@@ -143,15 +155,33 @@ class Instructor(InstructorBase, table=True):
         default=InstructorStatus.ACTIVE,
         sa_column=Column(SAEnum(InstructorStatus, name="instructor_status"), nullable=True),
     )
+    # Photo file name (org content: instructors/{instructor_uuid}/images/).
+    profile_image: Optional[str] = None
+    # Entity (Administration → Entities) that proposed / employs this instructor.
+    entity_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("entity.id", ondelete="SET NULL"), nullable=True, index=True),
+    )
     instructor_uuid: str = Field(default="", index=True)
     creation_date: str = ""
     update_date: str = ""
     extra_metadata: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
 
 
+class InstructorNewUser(SQLModel):
+    """Account to create when the instructor is not yet a platform user."""
+
+    first_name: str
+    last_name: str = ""
+    email: str
+    phone: Optional[str] = None
+
+
 class InstructorCreate(InstructorBase):
-    # The platform user this instructor extends, addressed by public user_uuid.
-    user_uuid: str
+    # The platform user this instructor extends, addressed by public user_uuid…
+    user_uuid: Optional[str] = None
+    # …or a new account created on the fly (gets the Instructor role).
+    new_user: Optional[InstructorNewUser] = None
     # Category addressed by its public uuid (optional).
     category_uuid: Optional[str] = None
     extra_metadata: Optional[dict] = None
@@ -164,7 +194,17 @@ class InstructorUpdate(SQLModel):
     hourly_rate: Optional[float] = None
     status: Optional[InstructorStatus] = None
     category_uuid: Optional[str] = None
+    bio: Optional[str] = None
+    specializations: Optional[List[str]] = None
+    availability: Optional[dict] = None
     extra_metadata: Optional[dict] = None
+
+
+class InstructorApprove(SQLModel):
+    """Academy approval of a pending instructor (category + optional override)."""
+
+    category_uuid: Optional[str] = None
+    hourly_rate: Optional[float] = None
 
 
 class InstructorRead(InstructorBase):
@@ -175,6 +215,36 @@ class InstructorRead(InstructorBase):
     user: Optional[UserReadAuthor] = None
     category_id: Optional[int] = None
     category: Optional[InstructorCategoryRead] = None
+    profile_image: Optional[str] = None
+    entity_id: Optional[int] = None
+    entity_uuid: Optional[str] = None
+    entity_name: Optional[str] = None
+    # Resolved for the default delivery language (no language-specific row).
+    effective_hourly_rate: Optional[float] = None
+    rate_source: Optional[str] = None
+    rate_currency: Optional[str] = None
+    # Distinct courses taught or co-authored (filled on list reads).
+    course_count: int = 0
     creation_date: str
     update_date: str
     extra_metadata: Optional[dict] = None
+    # Returned once, only when the instructor's account was just created.
+    temporary_password: Optional[str] = None
+
+
+class InstructorOption(SQLModel):
+    """Picker projection — names and expertise only, never rates."""
+
+    instructor_uuid: str
+    user_uuid: str
+    name: str
+    category_name: Optional[str] = None
+    specializations: List[str] = []
+
+
+class InstructorCourseRead(SQLModel):
+    course_uuid: str
+    name: str
+    published: bool = False
+    # profile (course instructor) | offering (offering instructor/TA) | author
+    source: str

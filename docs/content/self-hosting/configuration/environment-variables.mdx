@@ -109,6 +109,21 @@ optional: the feature stays disabled or uses a runtime fallback when the variabl
 | `OMNILEARN_SMTP_PASSWORD` | SMTP authentication password. | secret string | unset | API, CLI |
 | `OMNILEARN_SMTP_USE_TLS` | Enables TLS for SMTP. | boolean | `true` | API, CLI |
 
+## SMS
+
+| Variable | Description | Type | Default / required | Used by |
+| --- | --- | --- | --- | --- |
+| `OMNILEARN_SMS_PROVIDER` | SMS provider for notifications. | enum: `disabled`, `log`, `http`, `twilio` | `disabled` | API |
+| `OMNILEARN_SMS_SENDER` | Sender name / number passed to the provider. | string | unset | API |
+| `OMNILEARN_SMS_HTTP_URL` | Gateway endpoint when `OMNILEARN_SMS_PROVIDER=http`. Must be a public address. | URL | unset; required for `http` | API |
+| `OMNILEARN_SMS_HTTP_METHOD` | HTTP method for the gateway. | string | `POST` | API |
+| `OMNILEARN_SMS_HTTP_HEADERS` | Extra request headers as a JSON object. | JSON | `{}` | API |
+| `OMNILEARN_SMS_HTTP_BODY` | Request body with `{{to}}`, `{{message}}`, `{{sender}}` placeholders. | string | JSON body with `to`, `message`, `sender` | API |
+| `OMNILEARN_SMS_HTTP_CONTENT_TYPE` | Content type of the request body. | string | `application/json` | API |
+| `OMNILEARN_TWILIO_ACCOUNT_SID` | Twilio account SID when `OMNILEARN_SMS_PROVIDER=twilio`. | string | unset | API |
+| `OMNILEARN_TWILIO_AUTH_TOKEN` | Twilio auth token. | secret string | unset | API |
+| `OMNILEARN_TWILIO_FROM` | Twilio sender number (falls back to `OMNILEARN_SMS_SENDER`). | phone | unset | API |
+
 ## Content storage
 
 | Variable | Description | Type | Default / required | Used by |

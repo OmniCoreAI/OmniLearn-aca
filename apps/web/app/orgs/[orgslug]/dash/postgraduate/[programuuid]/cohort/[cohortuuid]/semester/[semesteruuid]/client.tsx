@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
-import Modal from '@components/Objects/StyledElements/Modal/Modal'
+import { PostgradDrawer, useActionDialog } from '@components/Dashboard/Pages/Academic/AcademicDialogs'
 import AuthenticatedClientElement from '@components/Security/AuthenticatedClientElement'
 import CourseThumbnail, { removeCoursePrefix } from '@components/Objects/Thumbnails/CourseThumbnail'
 import AttachCourseModal from '@components/Dashboard/Pages/Academic/AttachCourseModal'
@@ -17,8 +17,9 @@ import {
   AcademicPageShell,
   AcademicHeader,
   AcademicEmptyState,
+  AcademicGridSkeleton,
 } from '@components/Dashboard/Pages/Academic/AcademicShared'
-import { Field, SubmitRow, inputCls } from '../../../../../client'
+import { Field, SubmitRow, inputCls } from '@components/Dashboard/Pages/Academic/AcademicForm'
 import {
   getProgram,
   getCohort,
@@ -52,6 +53,7 @@ function SemesterDetail({
   const semester_uuid = `semester_${semesteruuid}`
 
   const [attachOpen, setAttachOpen] = useState(false)
+  const { ask, dialog } = useActionDialog()
   const [editing, setEditing] = useState<any>(null)
   const [profileCourse, setProfileCourse] = useState<any>(null)
 
@@ -81,7 +83,13 @@ function SemesterDetail({
     queryClient.invalidateQueries({ queryKey: ['academic', 'semester-courses', semester_uuid] })
 
   const handleUnlink = async (course_uuid: string) => {
-    if (!window.confirm(t('academic.confirm_delete'))) return
+    const ok = await ask({
+      title: t('academic.sem.unlink_title', 'Remove this course from the semester?'),
+      message: t('academic.sem.unlink_message', 'The course itself is kept; only its link to this legacy semester is removed.'),
+      confirmText: t('academic.coh.remove', 'Remove'),
+      tone: 'danger',
+    })
+    if (ok === null) return
     try {
       await unlinkCourseFromSemester(semester_uuid, course_uuid, access_token)
       toast.success(t('academic.updated'))
@@ -115,7 +123,7 @@ function SemesterDetail({
           <AuthenticatedClientElement checkMethod="roles" action="update" ressourceType="programs" orgId={orgId!}>
             <button
               onClick={() => setAttachOpen(true)}
-              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-white flex items-center gap-2 hover:brightness-110 transition-all"
+              className="rounded-full bg-[hsl(var(--dash-accent))] px-5 py-2 text-xs font-semibold text-[hsl(var(--dash-ink))] flex items-center gap-2 hover:brightness-110 transition-all"
             >
               <Plus className="w-4 h-4" /> {t('academic.add_course')}
             </button>
@@ -123,6 +131,7 @@ function SemesterDetail({
         }
       />
 
+      {isLoading && <AcademicGridSkeleton count={4} />}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {!isLoading && courses.length === 0 && (
           <AcademicEmptyState title={t('academic.no_courses')} description={t('academic.no_courses_desc')} />
@@ -138,12 +147,12 @@ function SemesterDetail({
             {(course.code || course.credit_hours != null) && (
               <div className="absolute bottom-2 left-2 z-10 flex flex-wrap gap-1">
                 {course.code && (
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-muted))]">
                     {course.code}
                   </span>
                 )}
                 {course.credit_hours != null && (
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-100 text-cyan-700">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[hsl(var(--dash-tile-sky))] text-[hsl(var(--dash-tile-sky-fg))]">
                     {course.credit_hours} {t('academic.credit_hours')}
                   </span>
                 )}
@@ -153,21 +162,21 @@ function SemesterDetail({
               <button
                 onClick={() => setProfileCourse(course)}
                 title={t('academic.academic_profile')}
-                className="p-1.5 rounded-md bg-white/90 nice-shadow text-gray-500 hover:text-black"
+                className="p-1.5 rounded-md bg-white/90 nice-shadow text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))]"
               >
                 <SlidersHorizontal className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setEditing(course)}
                 title={t('academic.edit')}
-                className="p-1.5 rounded-md bg-white/90 nice-shadow text-gray-500 hover:text-black"
+                className="p-1.5 rounded-md bg-white/90 nice-shadow text-[hsl(var(--dash-muted))] hover:text-[hsl(var(--dash-accent))]"
               >
                 <Pencil className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleUnlink(course.course_uuid)}
                 title={t('academic.delete')}
-                className="p-1.5 rounded-md bg-white/90 nice-shadow text-gray-500 hover:text-red-600"
+                className="p-1.5 rounded-md bg-white/90 nice-shadow text-[hsl(var(--dash-muted))] hover:text-red-500"
               >
                 <Unlink className="w-4 h-4" />
               </button>
@@ -176,7 +185,7 @@ function SemesterDetail({
         ))}
       </div>
 
-      <Modal
+      <PostgradDrawer
         isDialogOpen={attachOpen}
         onOpenChange={setAttachOpen}
         minWidth="md"
@@ -195,7 +204,7 @@ function SemesterDetail({
         }
       />
 
-      <Modal
+      <PostgradDrawer
         isDialogOpen={!!editing}
         onOpenChange={(open: boolean) => !open && setEditing(null)}
         minWidth="sm"
@@ -217,7 +226,7 @@ function SemesterDetail({
         }
       />
 
-      <Modal
+      <PostgradDrawer
         isDialogOpen={!!profileCourse}
         onOpenChange={(open: boolean) => !open && setProfileCourse(null)}
         minWidth="md"
@@ -235,6 +244,7 @@ function SemesterDetail({
           )
         }
       />
+      {dialog}
     </AcademicPageShell>
   )
 }
@@ -283,7 +293,7 @@ function CourseMetaForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <p className="text-sm text-gray-500">{course?.name}</p>
+      <p className="text-sm text-[hsl(var(--dash-muted))]">{course?.name}</p>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('academic.code')}>
           <input className={inputCls} value={code} onChange={(e) => setCode(e.target.value)} />
