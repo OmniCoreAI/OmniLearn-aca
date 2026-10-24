@@ -22,9 +22,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from config.config import get_omnilearn_config
 from src.core.deployment_mode import get_deployment_mode
 from src.core.events.database import get_db_session
-from src.db.users import User, UserRead
+from src.db.users import PublicUser, User, UserRead
 from src.routers.auth import get_token_expiry_ms, set_auth_cookies
-from src.security.auth import create_access_token, create_refresh_token
+from src.security.auth import create_access_token, create_refresh_token, get_current_user
 from src.services.email.utils import send_email
 from src.services.otp.messages import Language, otp_email, otp_sms
 from src.services.otp.phone_token import decode_phone_token, issue_phone_token  # noqa: F401
@@ -40,6 +40,7 @@ from src.services.security.password_validation import validate_password_complexi
 from src.services.security.rate_limiting import get_client_ip
 from src.services.sms.brevo import send_sms
 from src.services.users.password_reset import set_user_password
+from src.services.users.phone import claim_verified_phone
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -76,6 +77,10 @@ class PhoneVerify(BaseModel):
     phone: str
     region: Optional[str] = "EG"
     code: str
+
+
+class PhoneAttach(BaseModel):
+    phone_token: str
 
 
 def _error(status_code: int, code: str, message: str) -> HTTPException:
@@ -255,3 +260,24 @@ async def api_verify_phone(body: PhoneVerify):
     if not verify_code("verify_phone", "sms", phone, body.code):
         raise _error(400, "INVALID_CODE", "The code is wrong or has expired")
     return {"phone": phone, "phone_token": issue_phone_token(phone)}
+
+
+@router.post("/phone", response_model=UserRead, summary="Add a phone confirmed by code to the signed-in account")
+async def api_attach_phone(
+    body: PhoneAttach,
+    current_user=Depends(get_current_user),
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    # A real user session only: an API token's id is the token's, not a user's.
+    if not isinstance(current_user, (PublicUser, User)):
+        raise _error(401, "NOT_SIGNED_IN", "Sign in to add a phone number")
+    user = (await db_session.execute(select(User).where(User.id == current_user.id))).scalars().first()
+    if not user:
+        raise _error(401, "NOT_SIGNED_IN", "Sign in to add a phone number")
+    if user.phone_verified:
+        raise _error(409, "PHONE_ALREADY_VERIFIED", "Your account already has a verified phone number")
+    await claim_verified_phone(db_session, user, body.phone_token)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return UserRead.model_validate(user)
