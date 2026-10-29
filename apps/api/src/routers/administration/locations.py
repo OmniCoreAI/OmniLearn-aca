@@ -4,10 +4,17 @@ from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.events.database import get_db_session
-from src.db.administration.facilities import LocationCreate, LocationRead, LocationUpdate
+from src.db.administration.facilities import (
+    FloorPlanRead,
+    FloorPlanSave,
+    LocationCreate,
+    LocationRead,
+    LocationUpdate,
+)
 from src.db.users import PublicUser
 from src.security.auth import get_current_user
 from src.services.administration import facilities as svc
+from src.services.administration import floor_plans
 
 router = APIRouter()
 
@@ -48,3 +55,26 @@ async def api_delete_location(
     current_user: PublicUser = Depends(get_current_user),
 ) -> str:
     return await svc.delete_location(db_session, current_user, location_uuid)
+
+
+@router.get("/{location_uuid}/floor-plan", response_model=FloorPlanRead, summary="Get a building's floor plan")
+async def api_get_floor_plan(
+    location_uuid: str,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> FloorPlanRead:
+    return await floor_plans.get_floor_plan(db_session, current_user, location_uuid)
+
+
+@router.put(
+    "/{location_uuid}/floor-plan",
+    response_model=FloorPlanRead,
+    summary="Save a building's floor plan (creates and updates its rooms)",
+)
+async def api_save_floor_plan(
+    location_uuid: str,
+    payload: FloorPlanSave,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> FloorPlanRead:
+    return await floor_plans.save_floor_plan(db_session, current_user, location_uuid, payload)

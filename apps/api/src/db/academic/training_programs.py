@@ -117,3 +117,33 @@ class TrainingProgramRead(TrainingProgramBase):
     creation_date: str
     update_date: str
     extra_metadata: Optional[dict] = None
+
+
+class CatalogCourse(SQLModel):
+    course_uuid: str
+    name: str
+    description: Optional[str] = None
+    thumbnail_image: Optional[str] = None
+
+
+class TrainingProgramCatalogItem(SQLModel):
+    """A published training program as a learner sees it."""
+
+    trainingprogram_uuid: str
+    name: str
+    description: Optional[str] = None
+    about: Optional[str] = None
+    training_type: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    location: Optional[str] = None
+    capacity: Optional[int] = None
+    is_paid: bool = False
+    price: Optional[float] = None
+    currency: Optional[str] = None
+    thumbnail_image: Optional[str] = None
+    # Assigned to the learner (directly or through a group / entity / cohort),
+    # as opposed to open to every member.
+    assigned: bool = False
+    courses: List[CatalogCourse] = []
+

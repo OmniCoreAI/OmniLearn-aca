@@ -19,7 +19,7 @@ const SYSTEM_ROLES: { uuid: string; label: string }[] = [
   { uuid: 'role_global_user', label: 'Trainee' },
 ]
 
-const SECTION_ORDER: DashNavSection[] = ['overview', 'academic', 'teaching', 'manage', 'administration']
+const SECTION_ORDER: DashNavSection[] = ['overview', 'academic', 'teaching', 'manage', 'reports', 'administration']
 
 export default function PortalAccessManager() {
   const session = useLHSession() as any
@@ -56,6 +56,10 @@ export default function PortalAccessManager() {
   if (isLoading || !remote) {
     return <PageLoading />
   }
+
+  // Sections switched off in the .env file: hidden for every role, so the
+  // per-role toggles don't apply until the section is turned back on.
+  const offItems = new Set<string>(remote.disabled_items || [])
 
   const toggleItem = async (roleUuid: string, itemId: string, checked: boolean) => {
     const current = new Set(visibility[roleUuid] || [])
@@ -109,13 +113,24 @@ export default function PortalAccessManager() {
               </tr>
               {(itemsBySection[section] || []).map((item) => (
                 <tr key={item.id} className="border-b border-white/[0.04]">
-                  <td className="py-2.5 pr-4 text-white/80">{item.fallbackLabel}</td>
+                  <td className={`py-2.5 pr-4 ${offItems.has(item.id) ? 'text-white/40' : 'text-white/80'}`}>
+                    {item.fallbackLabel}
+                    {offItems.has(item.id) && (
+                      <span
+                        title={item.module ? `Turned off for everyone with OMNILEARN_FEATURE_${item.module.toUpperCase()}=false` : undefined}
+                        className="ml-2 rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/50"
+                      >
+                        Off in .env
+                      </span>
+                    )}
+                  </td>
                   {SYSTEM_ROLES.map((role) => {
                     const checked = visibility[role.uuid]?.has(item.id) ?? false
                     return (
                       <td key={role.uuid} className="text-center py-2.5 px-4">
                         <Switch
                           checked={checked}
+                          disabled={offItems.has(item.id)}
                           onCheckedChange={(v) => toggleItem(role.uuid, item.id, v)}
                         />
                       </td>

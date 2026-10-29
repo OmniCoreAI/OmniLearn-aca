@@ -1,10 +1,8 @@
 import React, { useState } from 'react'
-import { removeCourse, startCourse } from '@services/courses/activity'
 import { revalidateTags } from '@services/utils/ts/requests'
 import { useRouter } from 'next/navigation'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import { getUriWithOrg } from '@services/config/config'
-import { getOffersByResource } from '@services/payments/offers'
 import { UserPen, ClockIcon, ArrowRight, BookOpen, UserPlus } from 'lucide-react'
 import { OfferCard } from './OfferCard'
 import { applyForContributor } from '@services/courses/courses'
@@ -12,9 +10,7 @@ import toast from 'react-hot-toast'
 import { useContributorStatus } from '../../../../hooks/useContributorStatus'
 import CourseProgress from '../CourseProgress/CourseProgress'
 import UserAvatar from '@components/Objects/UserAvatar'
-import { useOrg, useOrgMembership } from '@components/Contexts/OrgContext'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { queryKeys } from '@/lib/query/keys'
+import { useCourseEnrollment } from './useCourseEnrollment'
 import { useTranslation } from 'react-i18next'
 import { useOmniLearnAnalytics, AnalyticsEvent } from '@services/analytics'
 
@@ -51,102 +47,33 @@ interface CourseActionsProps {
     org_id: number
   }
   trailData?: any
+  /**
+   * 'card' renders progress plus start/leave. 'extras' leaves those to the
+   * page and only shows what the page can't: join-the-academy, paid offers
+   * and the contributor button.
+   */
+  variant?: 'card' | 'extras'
 }
 
-function CoursesActions({ courseuuid, orgslug, course, trailData }: CourseActionsProps) {
+function CoursesActions({ courseuuid, orgslug, course, trailData, variant = 'card' }: CourseActionsProps) {
   const { t } = useTranslation()
   const router = useRouter()
   const session = useLHSession() as any
-  const [isActionLoading, setIsActionLoading] = useState(false)
   const [isContributeLoading, setIsContributeLoading] = useState(false)
   const { contributorStatus, refetch } = useContributorStatus(courseuuid)
   const [isProgressOpen, setIsProgressOpen] = useState(false)
-  const org = useOrg() as any
-  const { isUserPartOfTheOrg } = useOrgMembership()
-  const queryClient = useQueryClient()
   const { track } = useOmniLearnAnalytics('learner')
+  const {
+    isStarted,
+    linkedOffers,
+    offersLoading: isLoading,
+    isActionLoading,
+    handleCourseAction,
+    isUserPartOfTheOrg,
+  } = useCourseEnrollment({ course, courseuuid, orgslug, trailData })
 
   // Clean up course UUID by removing 'course_' prefix if it exists
   const cleanCourseUuid = course.course_uuid?.replace('course_', '');
-  const resourceUuid = cleanCourseUuid ? `course_${cleanCourseUuid}` : null;
-
-  const isStarted = trailData?.runs?.find(
-    (run: any) => {
-      const cleanRunCourseUuid = run.course?.course_uuid?.replace('course_', '');
-      return cleanRunCourseUuid === cleanCourseUuid;
-    }
-  ) ?? false;
-
-  // Public endpoint — no auth needed, works for unauthenticated visitors too
-  const { data: offersResult, isLoading } = useQuery({
-    queryKey: ['offers', 'by-resource', org?.id, resourceUuid],
-    queryFn: () => getOffersByResource(org.id, resourceUuid!),
-    enabled: !!org && !!resourceUuid,
-    staleTime: 60_000,
-  });
-  const linkedOffers: any[] = offersResult?.data ?? [];
-
-  const handleCourseAction = async () => {
-    if (!session.data?.user) {
-      track(AnalyticsEvent.CourseSignupPrompted, {
-        reason: 'unauthenticated',
-        intended_action: isStarted ? 'leave_course' : 'start_course',
-      })
-      router.push(getUriWithOrg(orgslug, '/signup'))
-      return
-    }
-
-    // Check if user is part of the organization
-    if (!isUserPartOfTheOrg) {
-      router.push(getUriWithOrg(orgslug, '/signup'))
-      return
-    }
-
-    setIsActionLoading(true)
-    const loadingToast = toast.loading(
-      isStarted ? t('courses.leave_course') + '...' : t('courses.start_course') + '...'
-    )
-
-    try {
-      if (isStarted) {
-        await removeCourse('course_' + courseuuid, orgslug, session.data?.tokens?.access_token)
-        if (org?.id) queryClient.invalidateQueries({ queryKey: queryKeys.trail.org(org.id) })
-        track(AnalyticsEvent.CourseLeft, { course_uuid: cleanCourseUuid })
-        toast.success(t('courses.leave_course_success'), { id: loadingToast })
-      } else {
-        await startCourse('course_' + courseuuid, orgslug, session.data?.tokens?.access_token)
-        if (org?.id) queryClient.invalidateQueries({ queryKey: queryKeys.trail.org(org.id) })
-        track(AnalyticsEvent.CourseStarted, {
-          course_uuid: cleanCourseUuid,
-          total_activities: course.chapters?.reduce((acc: number, chapter: any) => acc + chapter.activities.length, 0) || 0,
-          has_offers: linkedOffers.length > 0,
-        })
-        toast.success(t('courses.start_course_success'), { id: loadingToast })
-
-        // Get the first activity from the first chapter
-        const firstChapter = course.chapters?.[0]
-        const firstActivity = firstChapter?.activities?.[0]
-
-        if (firstActivity) {
-          // Redirect to the first activity
-          router.push(
-            getUriWithOrg(orgslug, '') +
-            `/course/${courseuuid}/activity/${firstActivity.activity_uuid.replace('activity_', '')}`
-          )
-        }
-      }
-    } catch (error) {
-      console.error('Failed to perform course action:', error)
-      toast.error(
-        isStarted
-          ? t('courses.leave_course_error')
-          : t('courses.start_course_error'),
-        { id: loadingToast }
-      )
-    } finally {
-      setIsActionLoading(false)
-    }
-  }
 
   const handleApplyToContribute = async () => {
     if (!session.data?.user) {
@@ -382,7 +309,7 @@ function CoursesActions({ courseuuid, orgslug, course, trailData }: CourseAction
   };
 
   if (isLoading) {
-    return <div className="animate-pulse h-20 bg-gray-100 rounded-lg nice-shadow" />
+    return variant === 'extras' ? null : <div className="animate-pulse h-20 bg-gray-100 rounded-lg nice-shadow" />
   }
 
   // Show join organization prompt for authenticated users who are not part of the org
@@ -414,6 +341,7 @@ function CoursesActions({ courseuuid, orgslug, course, trailData }: CourseAction
   if (linkedOffers.length > 0) {
     // User already enrolled / started — show "you own this" notice + leave button
     if (isStarted) {
+      if (variant === 'extras') return renderContributorButton()
       return (
         <div className="dash-card rounded-2xl overflow-hidden p-4">
           <div className="space-y-4">
@@ -458,6 +386,8 @@ function CoursesActions({ courseuuid, orgslug, course, trailData }: CourseAction
       </div>
     )
   }
+
+  if (variant === 'extras') return renderContributorButton()
 
   return (
     <div className="bg-white shadow-md shadow-gray-300/25 outline outline-1 outline-neutral-200/40 rounded-lg overflow-hidden p-4">

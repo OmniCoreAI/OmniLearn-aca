@@ -260,19 +260,28 @@ async def add_bulk_course_contributors(
             })
             continue
 
-        if user.id in authorship_map:
+        existing = authorship_map.get(user.id)
+        if existing and existing.authorship_status == ResourceAuthorshipStatusEnum.PENDING:
+            # Adding someone who already applied approves their application.
+            existing.authorship_status = ResourceAuthorshipStatusEnum.ACTIVE
+            existing.update_date = current_time
+            db_session.add(existing)
+            results["successful"].append({"username": username, "user_id": user.id})
+            continue
+        if existing:
             results["failed"].append({
                 "username": username,
                 "reason": "User already has an authorship role for this course"
             })
             continue
 
-        # Create contributor (add to session, commit after the loop)
+        # Added by a course owner or admin, so active right away — only
+        # self-applications (apply_course_contributor) wait for approval.
         resource_author = ResourceAuthor(
             resource_uuid=course_uuid,
             user_id=user.id,
             authorship=ResourceAuthorshipEnum.CONTRIBUTOR,
-            authorship_status=ResourceAuthorshipStatusEnum.PENDING,
+            authorship_status=ResourceAuthorshipStatusEnum.ACTIVE,
             creation_date=current_time,
             update_date=current_time,
         )
@@ -293,6 +302,16 @@ async def add_bulk_course_contributors(
             for item in list(results["successful"]):
                 results["failed"].append({"username": item["username"], "reason": f"Database error: {db_err}"})
             results["successful"] = []
+
+    if results["successful"]:
+        from src.services.notifications.assignments import slug, staff_assigned
+
+        await staff_assigned(
+            db_session, course.org_id, [item["user_id"] for item in results["successful"]], "contributor", course.name,
+            f"/dash/courses/course/{slug(course.course_uuid, 'course_')}/content",
+            actor_id=resolve_acting_user_id(current_user), resource=("course", course.course_uuid),
+        )
+        await db_session.refresh(course)
 
     if results["successful"]:
         await dispatch_webhooks(

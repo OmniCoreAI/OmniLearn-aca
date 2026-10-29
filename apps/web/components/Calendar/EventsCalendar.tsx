@@ -191,7 +191,7 @@ const DATE_LOCALES: Record<string, () => Promise<Locale>> = {
   zh: () => import('date-fns/locale/zh-CN').then((m) => m.zhCN),
 }
 
-function useDateLocale(language: string) {
+export function useDateLocale(language: string) {
   const code = language.split('-')[0]!
   const [loaded, setLoaded] = useState<{ code: string; locale: Locale } | null>(null)
   useEffect(() => {

@@ -151,7 +151,7 @@ export function EntityForm({
         <Field label={t('administration.common.code', 'Code')} hint={t('administration.common.code_hint', 'Leave empty to generate one.')}>
           <input className={inputCls} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder={t('administration.common.code_auto', 'Auto')} />
         </Field>
-        <Field label={t('entities.type', 'Organization type')}>
+        <Field label={t('entities.type', 'Entity type')}>
           <select className={inputCls} value={form.entity_type_uuid} onChange={set('entity_type_uuid')}>
             <option value="">—</option>
             {types.map((o) => (
@@ -161,7 +161,7 @@ export function EntityForm({
             ))}
           </select>
         </Field>
-        <Field label={t('entities.parent', 'Part of')} hint={t('entities.parent_hint', 'For a department or branch of another organization.')}>
+        <Field label={t('entities.parent', 'Part of')} hint={t('entities.parent_hint', 'For a department or branch of another entity.')}>
           <select className={inputCls} value={form.parent_uuid} onChange={set('parent_uuid')}>
             <option value="">—</option>
             {parents.map((o) => (
@@ -171,7 +171,7 @@ export function EntityForm({
             ))}
           </select>
         </Field>
-        <Field label={t('administration.common.status', 'Status')} hint={t('entities.status_hint', 'Inactive organizations keep their members and history.')}>
+        <Field label={t('administration.common.status', 'Status')} hint={t('entities.status_hint', 'Inactive entities keep their members and history.')}>
           <select className={inputCls} value={form.status} onChange={set('status')}>
             {ENTITY_STATUSES.map((st) => (
               <option key={st} value={st}>
@@ -223,13 +223,13 @@ export function EntityForm({
 
       <FormSection
         title={t('entities.coordinator_permissions', 'What coordinators of this entity can do')}
-        description={t('entities.coordinator_permissions_desc', 'Coordinators only ever see their own organization’s members and training.')}
+        description={t('entities.coordinator_permissions_desc', 'Coordinators only ever see their own entity’s members and training.')}
         columns={1}
       >
         <CoordinatorPermissionsEditor value={permissions} onChange={setPermissions} />
       </FormSection>
 
-      <FormActions saving={saving} onCancel={onCancel} sticky={!!onCancel} submitLabel={entity ? t('academic.save', 'Save') : t('entities.create', 'Create organization')} />
+      <FormActions saving={saving} onCancel={onCancel} sticky={!!onCancel} submitLabel={entity ? t('academic.save', 'Save') : t('entities.create', 'Create entity')} />
     </form>
   )
 }

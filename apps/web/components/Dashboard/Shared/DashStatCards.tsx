@@ -43,7 +43,7 @@ export function DeltaChip({ current, previous, className }: { current: number; p
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
+        'inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
         up ? 'bg-emerald-500/12 text-emerald-700' : 'bg-[hsl(var(--dash-warn))]/10 text-[hsl(var(--dash-warn))]',
         className
       )}

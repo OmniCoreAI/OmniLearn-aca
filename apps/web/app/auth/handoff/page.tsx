@@ -107,7 +107,7 @@ export default function AuthHandoffPage() {
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
         <AlertTriangle className="w-10 h-10 text-amber-500" />
         <p className="text-lg font-medium text-neutral-800">{error}</p>
-        <Link href="/auth/login" className="text-sm text-blue-600 hover:underline">
+        <Link href="/login" className="text-sm text-blue-600 hover:underline">
           Go to login
         </Link>
       </div>

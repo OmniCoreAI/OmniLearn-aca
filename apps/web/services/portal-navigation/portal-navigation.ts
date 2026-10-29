@@ -10,6 +10,10 @@ import { RequestBodyWithAuthHeader, getResponseMetadata } from '@services/utils/
 export type PortalNavigationResponse = {
   items: { id: string; section: string }[]
   visibility: Record<string, string[]>
+  /** Platform sections switched on/off in the API .env file (OMNILEARN_FEATURE_*). */
+  modules?: Record<string, boolean>
+  /** Sidebar items hidden for everyone, superadmins included, because their section is off. */
+  disabled_items?: string[]
 }
 
 export async function getPortalNavigation(access_token?: string) {

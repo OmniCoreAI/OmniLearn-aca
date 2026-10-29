@@ -14,6 +14,7 @@ import {
 } from '@phosphor-icons/react'
 import { HomeCard } from './HomeCard'
 import { HomeOverview, useHomeOverview } from './homeData'
+import { useModules } from '@/lib/modules'
 
 type AttentionKey = keyof NonNullable<HomeOverview['attention']>
 
@@ -39,6 +40,7 @@ const ITEMS: { key: AttentionKey; href: string; icon: React.ElementType; tint: s
 export default function NeedsAttention() {
   const { t } = useTranslation()
   const { data, isLoading } = useHomeOverview()
+  const { isPathEnabled } = useModules()
 
   const labels: Record<AttentionKey, string> = {
     submissions_to_grade: t('dashboard.home.attention.submissions_to_grade', 'Submissions to grade'),
@@ -52,12 +54,13 @@ export default function NeedsAttention() {
   // into one "all clear" line so the card never fills up with zeros.
   const { rows, clearKeys } = useMemo(() => {
     const counts = data?.attention
-    const all = ITEMS.map((item) => ({ ...item, count: counts?.[item.key] ?? 0 }))
+    // Work in a section switched off in the .env file isn't listed.
+    const all = ITEMS.filter((item) => isPathEnabled(item.href)).map((item) => ({ ...item, count: counts?.[item.key] ?? 0 }))
     return {
       rows: all.filter((r) => r.count > 0).sort((a, b) => b.count - a.count),
       clearKeys: all.filter((r) => r.count === 0).map((r) => r.key),
     }
-  }, [data])
+  }, [data, isPathEnabled])
   const clear = clearKeys.map((key) => labels[key])
   const waiting = rows.reduce((sum, r) => sum + r.count, 0)
 

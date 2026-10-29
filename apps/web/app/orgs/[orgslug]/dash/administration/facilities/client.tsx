@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Eye, LayoutGrid, List, Pencil, Plus, Power, Trash2 } from 'lucide-react'
+import { Eye, LayoutGrid, List, Map as MapIcon, Pencil, Plus, Power, Trash2 } from 'lucide-react'
 import { Door } from '@phosphor-icons/react'
 import {
   AcademicPageShell,
@@ -26,6 +26,7 @@ import {
 } from '@components/Dashboard/Pages/Administration/AdminUI'
 import { FacilitiesTabs } from '@components/Dashboard/Pages/Administration/FacilitiesTabs'
 import { FACILITY_STATUSES, FacilityForm } from '@components/Dashboard/Pages/Administration/FacilityForm'
+import FacilitiesPlanPreview from '@components/Dashboard/Pages/Administration/FloorPlan/FacilitiesPlanPreview'
 import { deleteFacility, getFacilities, updateFacility } from '@services/administration/administration'
 import { getOrgContentUrl } from '@services/media/media'
 import { getUriWithOrg } from '@services/config/config'
@@ -48,14 +49,18 @@ function FacilitiesHome({ orgslug }: { orgslug: string }) {
   const [type, setType] = useState('all')
   const [location, setLocation] = useState('all')
   const [status, setStatus] = useState('all')
-  const [view, changeView] = useStoredView<'table' | 'cards'>(VIEW_KEY, 'table')
+  const [view, changeView] = useStoredView<'table' | 'cards' | 'plan'>(VIEW_KEY, 'table')
 
   const { data: facilities = [], isLoading } = useQuery({
     queryKey: ['administration', 'facilities', orgId],
     queryFn: () => getFacilities(orgId, access_token),
     enabled: ready,
   })
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['administration', 'facilities', orgId] })
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['administration', 'facilities', orgId] })
+    // Plans show each room's name, capacity and equipment from its facility.
+    queryClient.invalidateQueries({ queryKey: ['administration', 'floor-plan'] })
+  }
   const openForm = (f: any) => {
     setEditing(f)
     setOpen(true)
@@ -115,6 +120,7 @@ function FacilitiesHome({ orgslug }: { orgslug: string }) {
     )
   }, [facilities, query, type, location, status])
   const filtering = !!query || type !== 'all' || location !== 'all' || status !== 'all'
+  const visibleUuids = useMemo(() => (filtering ? new Set(visible.map((f) => f.facility_uuid as string)) : null), [filtering, visible])
 
   const detailHref = (f: any) => getUriWithOrg(orgslug, `/dash/administration/facilities/${f.facility_uuid}`)
   const statusLabel = (st: string) => String(t(`administration.facilities.status_${st}`, st))
@@ -170,6 +176,9 @@ function FacilitiesHome({ orgslug }: { orgslug: string }) {
       </button>
       <button type="button" role="tab" aria-selected={view === 'cards'} aria-label={t('administration.common.view_cards', 'Cards')} onClick={() => changeView('cards')} className={tabItemClass(view === 'cards', 'px-2.5 py-1')}>
         <LayoutGrid className="h-3.5 w-3.5" />
+      </button>
+      <button type="button" role="tab" aria-selected={view === 'plan'} aria-label={t('administration.floor_plan.view_plan', 'Floor plan')} title={t('administration.floor_plan.view_plan', 'Floor plan')} onClick={() => changeView('plan')} className={tabItemClass(view === 'plan', 'px-2.5 py-1')}>
+        <MapIcon className="h-3.5 w-3.5" />
       </button>
     </div>
   )
@@ -328,7 +337,9 @@ function FacilitiesHome({ orgslug }: { orgslug: string }) {
             </span>
             {viewToggle}
           </div>
-          {isLoading ? null : visible.length === 0 ? (
+          {view === 'plan' ? (
+            <FacilitiesPlanPreview orgslug={orgslug} facilities={facilities as any[]} visibleUuids={visibleUuids} onEdit={openForm} />
+          ) : isLoading ? null : visible.length === 0 ? (
             <div className="dash-card rounded-[1.25rem] px-6 py-14">{empty}</div>
           ) : (
             <AcademicGrid>

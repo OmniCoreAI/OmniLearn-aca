@@ -114,6 +114,7 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
         "webhooks",
         "portal_navigation",
         "calendar",
+        "inbox",
     ]:
         install_router_module(f"src.routers.{name}", f"src.routers.{name}")
 
@@ -124,6 +125,12 @@ def _install_stub_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     sys.modules["src.routers.integrations"].zapier = sys.modules[
         "src.routers.integrations.zapier"
+    ]
+    install_router_module(
+        "src.routers.integrations.zoom", "src.routers.integrations.zoom"
+    )
+    sys.modules["src.routers.integrations"].zoom = sys.modules[
+        "src.routers.integrations.zoom"
     ]
 
     install_router_module("src.routers.ai.ai", "src.routers.ai.ai")

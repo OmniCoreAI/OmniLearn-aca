@@ -248,3 +248,55 @@ class InstructorCourseRead(SQLModel):
     published: bool = False
     # profile (course instructor) | offering (offering instructor/TA) | author
     source: str
+
+
+class MyTrainingProgramRead(SQLModel):
+    trainingprogram_uuid: str
+    name: str
+    training_type: Optional[str] = None
+    published: bool = False
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    # coordinator | trainer (teaches one of its courses) | staff (creator / maintainer / contributor)
+    role: str
+
+
+class MyOfferingRead(SQLModel):
+    offering_uuid: str
+    code: str
+    course_code: str
+    course_name: str
+    term_code: Optional[str] = None
+    status: str
+    # lecturer | assistant
+    role: str
+
+
+class MySessionRead(SQLModel):
+    session_uuid: str
+    title: str
+    course_uuid: str
+    course_name: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    location: Optional[str] = None
+    # course (they teach the course) | guest (they teach this session only)
+    role: str
+
+
+class MyProgramRead(SQLModel):
+    program_uuid: str
+    name: str
+    # coordinator (of the program) | cohort_coordinator
+    role: str
+
+
+class MyAssignmentsRead(SQLModel):
+    """Everything a staff member is assigned to teach or run in one org."""
+
+    courses: List[InstructorCourseRead] = []
+    # Postgraduate programs they coordinate (program or one of its cohorts).
+    programs: List[MyProgramRead] = []
+    offerings: List[MyOfferingRead] = []
+    training_programs: List[MyTrainingProgramRead] = []
+    upcoming_sessions: List[MySessionRead] = []

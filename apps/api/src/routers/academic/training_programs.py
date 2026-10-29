@@ -8,6 +8,7 @@ from src.db.users import PublicUser
 from src.db.academic.links import TrainingProgramCourseRead
 from src.db.academic.training_programs import (
     TrainingProgramCreate,
+    TrainingProgramCatalogItem,
     TrainingProgramRead,
     TrainingProgramUpdate,
 )
@@ -16,6 +17,7 @@ from src.security.auth import get_current_user
 from src.services.academic.training_programs import (
     create_training_program,
     get_training_program,
+    get_training_program_catalog,
     get_training_programs_by_org,
     update_training_program,
     delete_training_program,
@@ -67,6 +69,19 @@ async def api_list_training_programs(
     return await get_training_programs_by_org(
         request, org_id, current_user, db_session, page, limit
     )
+
+
+@router.get(
+    "/org/{org_id}/catalog",
+    response_model=List[TrainingProgramCatalogItem],
+    summary="Published training programs the caller may join (learner catalog)",
+)
+async def api_training_program_catalog(
+    org_id: int,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> List[TrainingProgramCatalogItem]:
+    return await get_training_program_catalog(org_id, current_user, db_session)
 
 
 @router.get(

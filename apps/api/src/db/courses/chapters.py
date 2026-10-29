@@ -29,6 +29,18 @@ class ChapterBase(SQLModel):
 class Chapter(ChapterBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     chapter_uuid: str = Field(default="", index=True)
+    # The lecture (CourseScheduleSession) this chapter belongs to, when the
+    # course is organised by lectures. Deleting the lecture keeps the chapter.
+    lecture_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(
+            "lecture_id",
+            Integer,
+            ForeignKey("courseschedulesession.id", ondelete="SET NULL"),
+            nullable=True,
+            index=True,
+        ),
+    )
     creation_date: str = ""
     update_date: str = ""
     extra_metadata: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
@@ -38,7 +50,8 @@ class ChapterCreate(ChapterBase):
     # referenced order here will be ignored and just used for validation
     # used order will be the next available.
     extra_metadata: Optional[dict] = None
-    pass
+    # Put the chapter in this lecture (session uuid) of the course.
+    lecture_uuid: Optional[str] = None
 
 
 class ChapterUpdate(SQLModel):
@@ -47,6 +60,8 @@ class ChapterUpdate(SQLModel):
     thumbnail_image: Optional[str] = None
     lock_type: Optional[LockType] = None
     extra_metadata: Optional[dict] = None
+    # Move the chapter to another lecture of the course ("" = no lecture).
+    lecture_uuid: Optional[str] = None
 
 
 class ChapterRead(ChapterBase):
@@ -56,6 +71,8 @@ class ChapterRead(ChapterBase):
     creation_date: str
     update_date: str
     extra_metadata: Optional[dict] = None
+    lecture_id: Optional[int] = None
+    lecture_uuid: Optional[str] = None
     # Computed per-request: whether current user is denied access to this chapter's
     # content (and, by cascade, its activities). Metadata (name, thumbnail) is still
     # returned so TOC navigation still renders a lock placeholder.

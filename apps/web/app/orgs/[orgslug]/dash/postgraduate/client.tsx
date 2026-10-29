@@ -25,6 +25,8 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Breadcrumbs } from '@components/Objects/Breadcrumbs/Breadcrumbs'
+import { KanbanBoard, type KanbanColumn, type KanbanTask } from '@/components/ui/kanban-board'
+import { useKanbanMessages } from '@components/Dashboard/Shared/useKanbanMessages'
 import AuthenticatedClientElement from '@components/Security/AuthenticatedClientElement'
 import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
@@ -319,61 +321,73 @@ function Spotlight({ p, orgslug, orgUuid, onEdit }: { p: any; orgslug: string; o
 }
 
 /** Draft → Active → Suspended → Archived columns. */
-function BoardView({ programs, orgslug, actionsFor }: { programs: any[]; orgslug: string; actionsFor: (_p: any) => DashRowAction[] }) {
+function BoardView({
+  programs,
+  orgslug,
+  actionsFor,
+  onSetStatus,
+}: {
+  programs: any[]
+  orgslug: string
+  actionsFor: (_p: any) => DashRowAction[]
+  onSetStatus: (_p: any, _status: Status) => Promise<boolean>
+}) {
   const { t, levelLabel, statusLabel, duration, seats, fee } = useProgramText()
-  const order: Status[] = ['draft', 'active', 'suspended', 'archived']
-  return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {order.map((status) => {
-        const items = programs.filter((p) => statusOf(p) === status)
-        return (
-          <div key={status} className="flex min-h-[200px] flex-col rounded-[1.25rem] bg-[hsl(var(--dash-ink))]/[0.03] p-2">
-            <div className="flex items-center gap-2 px-2 pb-2.5 pt-1.5">
-              <span className={cn('h-2 w-2 rounded-full', STATUS_STYLE[status].dot)} />
-              <span className="text-sm font-semibold text-[hsl(var(--dash-ink))]">{statusLabel(status)}</span>
-              <span className="ms-auto rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[hsl(var(--dash-muted))] shadow-sm">{items.length}</span>
-            </div>
-            <div className="space-y-2">
-              {items.map((p) => {
-                const style = levelStyle(p.program_level)
-                return (
-                  <div
-                    key={p.program_uuid}
-                    className={cn(
-                      'group relative rounded-2xl border bg-white p-3 shadow-[0_1px_2px_hsl(220_30%_20%/0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-14px_hsl(220_30%_20%/0.35)]',
-                      status === 'active' ? 'border-emerald-200' : 'border-[hsl(var(--dash-border))]/70'
-                    )}
-                  >
-                    <div className="absolute end-1.5 top-1.5">
-                      <RowActionsMenu actions={actionsFor(p)} label={t('administration.table.actions', 'Actions')} />
-                    </div>
-                    <Link href={getUriWithOrg(orgslug, `/dash/postgraduate/${idOf(p)}`)} className="block pe-8">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[hsl(var(--dash-muted))]">
-                        <style.Icon size={13} weight="duotone" style={{ color: style.dot }} /> {levelLabel(p)}
-                        {p.code ? <span className="font-mono text-[10px]">· {p.code}</span> : null}
-                      </span>
-                      <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-[hsl(var(--dash-ink))]">{p.name}</p>
-                      {duration(p) ? <p className="mt-1 text-[11px] text-[hsl(var(--dash-muted))]">{duration(p)}</p> : null}
-                      <div className="mt-2 flex items-center justify-between text-[11px] text-[hsl(var(--dash-muted))]">
-                        <span className="inline-flex items-center gap-1">
-                          <Users size={12} /> {seats(p)}
-                        </span>
-                        <span className="font-semibold text-[hsl(var(--dash-ink))]">{fee(p)}</span>
-                      </div>
-                    </Link>
-                  </div>
-                )
-              })}
-              {items.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-[hsl(var(--dash-border))] px-3 py-6 text-center text-xs text-[hsl(var(--dash-muted))]">
-                  {t('training.column_empty', 'Nothing here')}
-                </p>
-              ) : null}
-            </div>
+  const messages = useKanbanMessages()
+  const columns = useMemo<KanbanColumn[]>(() => {
+    const order: Status[] = ['draft', 'active', 'suspended', 'archived']
+    return order.map((status) => ({
+      id: status,
+      name: statusLabel(status),
+      icon: <span className={cn('h-2 w-2 rounded-full', STATUS_STYLE[status].dot)} />,
+      tasks: programs.filter((p) => statusOf(p) === status).map((p) => ({ id: p.program_uuid, title: p.name, data: p })),
+    }))
+  }, [programs, statusLabel])
+
+  const renderCard = (task: KanbanTask) => {
+    const p = task.data
+    const status = statusOf(p)
+    const style = levelStyle(p.program_level)
+    return (
+      <div
+        className={cn(
+          'relative rounded-2xl border bg-white p-3 shadow-[0_1px_2px_hsl(220_30%_20%/0.04)]',
+          status === 'active' ? 'border-emerald-200' : 'border-[hsl(var(--dash-border))]/70'
+        )}
+      >
+        <div className="absolute end-1.5 top-1.5">
+          <RowActionsMenu actions={actionsFor(p)} label={t('administration.table.actions', 'Actions')} />
+        </div>
+        <Link href={getUriWithOrg(orgslug, `/dash/postgraduate/${idOf(p)}`)} draggable={false} className="block pe-8">
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[hsl(var(--dash-muted))]">
+            <style.Icon size={13} weight="duotone" style={{ color: style.dot }} /> {levelLabel(p)}
+            {p.code ? <span className="font-mono text-[10px]">· {p.code}</span> : null}
+          </span>
+          <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-[hsl(var(--dash-ink))]">{p.name}</p>
+          {duration(p) ? <p className="mt-1 text-[11px] text-[hsl(var(--dash-muted))]">{duration(p)}</p> : null}
+          <div className="mt-2 flex items-center justify-between text-[11px] text-[hsl(var(--dash-muted))]">
+            <span className="inline-flex items-center gap-1">
+              <Users size={12} /> {seats(p)}
+            </span>
+            <span className="font-semibold text-[hsl(var(--dash-ink))]">{fee(p)}</span>
           </div>
-        )
-      })}
-    </div>
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <KanbanBoard
+      columns={columns}
+      columnWidth="fill"
+      minColumnWidth={250}
+      reorderable={false}
+      label={t('training.view_board', 'Board')}
+      emptyLabel={t('training.column_empty', 'Nothing here')}
+      renderCard={renderCard}
+      onMove={(task, _from, to) => onSetStatus(task.data, to as Status)}
+      messages={messages}
+    />
   )
 }
 
@@ -428,6 +442,24 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
       refresh()
     } catch (err: any) {
       toast.error(err?.message || t('academic.update_failed'))
+    }
+  }
+  // Board drops: update the list at once so the card stays where it was dropped.
+  const setStatusFromBoard = async (p: any, status: Status) => {
+    const key = ['academic', 'programs', orgId]
+    const before = queryClient.getQueryData(key)
+    queryClient.setQueryData(key, (list: any) =>
+      Array.isArray(list) ? list.map((x) => (x.program_uuid === p.program_uuid ? { ...x, status } : x)) : list
+    )
+    try {
+      await updateProgram(p.program_uuid, { status }, access_token)
+      toast.success(t('administration.common.updated', 'Saved'))
+      refresh()
+      return true
+    } catch (err: any) {
+      queryClient.setQueryData(key, before)
+      toast.error(err?.message || t('academic.update_failed'))
+      return false
     }
   }
   const actionsFor = (p: any): DashRowAction[] => {
@@ -567,7 +599,7 @@ function ProgramsHome({ orgslug }: { orgslug: string }) {
       ) : visible.length === 0 ? (
         empty
       ) : view === 'board' ? (
-        <BoardView programs={visible} orgslug={orgslug} actionsFor={actionsFor} />
+        <BoardView programs={visible} orgslug={orgslug} actionsFor={actionsFor} onSetStatus={setStatusFromBoard} />
       ) : view === 'list' ? (
         <DashDataTable
           rows={visible}

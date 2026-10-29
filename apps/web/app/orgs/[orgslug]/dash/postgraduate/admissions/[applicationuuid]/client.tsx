@@ -460,7 +460,7 @@ function ApplicationDetail({ orgslug, applicationuuid }: { orgslug: string; appl
                     </div>
                     <StatusPill status={d.status} label={String(t(`academic.docstatus_${d.status}`, d.status))} />
                     <div className="flex shrink-0 items-center">
-                      <IconAction label={t('academic.open', 'Open')} onClick={() => openApplicationDocument(uuid, d.document_uuid, access_token).catch((e) => toast.error(e.message))}>
+                      <IconAction label={t('academic.open', 'Open')} onClick={() => openApplicationDocument(uuid, d.document_uuid, access_token, d.original_name).catch((e) => toast.error(e.message))}>
                         <Eye size={16} />
                       </IconAction>
                       {reviewable && d.status !== 'verified' ? (

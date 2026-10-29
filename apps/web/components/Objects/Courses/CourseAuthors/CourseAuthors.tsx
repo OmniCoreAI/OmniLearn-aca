@@ -146,7 +146,7 @@ const MultipleAuthors = ({ authors, isMobile }: { authors: Author[], isMobile: b
   )
 }
 
-const UpdatesSection = () => {
+export const UpdatesSection = () => {
   const { t } = useTranslation()
   const [selectedView, setSelectedView] = React.useState('list')
   const adminStatus = useAdminStatus()
@@ -164,10 +164,12 @@ const UpdatesSection = () => {
   return (
     <div className="mt-2 pt-2">
       <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <Rss size={14} className="text-neutral-400" />
-            <span className="text-sm font-semibold text-neutral-600">{t('courses.course_updates')}</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--dash-canvas))] text-[hsl(var(--dash-ink))]/75">
+              <Rss size={16} />
+            </span>
+            <span className="text-[16.5px] font-bold tracking-tight text-[hsl(var(--dash-ink))]">{t('courses.course_updates')}</span>
           </div>
           {updates && updates.length > 0 && (
             <span className="px-2 py-0.5 text-[11px] font-medium bg-neutral-100 text-neutral-500 rounded-full">
@@ -211,7 +213,7 @@ const UpdatesSection = () => {
   )
 }
 
-const NewUpdateForm = ({ setSelectedView }: { setSelectedView: (view: string) => void }) => {
+const NewUpdateForm = ({ setSelectedView }: { setSelectedView: (_view: string) => void }) => {
   const { t } = useTranslation()
   const org = useOrg() as any
   const course = useCourse() as any
@@ -311,7 +313,7 @@ const UpdatesListView = () => {
 
   if (!updates || updates.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 px-4 text-center bg-neutral-50/50 rounded-lg border border-dashed border-neutral-200">
+      <div className="flex flex-col items-center justify-center py-7 px-4 text-center bg-[hsl(var(--dash-canvas))]/60 rounded-2xl">
         <TentTree size={28} className="text-neutral-400 mb-2" />
         <p className="text-sm text-neutral-600 font-medium">{t('courses.no_updates_yet')}</p>
         <p className="text-xs text-neutral-400 mt-1">{t('courses.no_updates_desc')}</p>

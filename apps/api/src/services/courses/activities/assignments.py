@@ -31,6 +31,11 @@ from src.db.courses.assignments import (
 )
 from src.db.courses.certifications import CertificateUser, Certifications
 from src.db.courses.courses import Course
+from src.services.courses.lecture_access import (
+    check_course_content_access,
+    lecture_of_activity,
+    teaches_lecture,
+)
 from src.db.organizations import Organization
 from src.db.trail_runs import TrailRun
 from src.db.trail_steps import TrailStep
@@ -94,8 +99,12 @@ async def authorize_assignment_access(
     course_uuid: str,
     access_action: AccessAction,
     token_action: str | None = None,
+    activity_id: int | None = None,
 ) -> None:
     """Authorize an assignment operation for either a user session or an API token.
+
+    ``activity_id`` (the assignment's activity) lets the instructor of the
+    lecture that holds it manage the assignment without course-wide rights.
 
     Sessions keep the existing course-scoped RBAC (``check_resource_access``).
     API tokens are authorized against the single ``assignments`` rights bucket,
@@ -117,6 +126,15 @@ async def authorize_assignment_access(
             resource_type_override="assignments",
         )
         return
+    if activity_id is not None:
+        course = (
+            await db_session.execute(select(Course).where(Course.course_uuid == course_uuid))
+        ).scalars().first()
+        if course is not None:
+            await check_course_content_access(
+                request, db_session, current_user, course, access_action, activity_id=activity_id
+            )
+            return
     await check_resource_access(request, db_session, current_user, course_uuid, access_action)
 
 
@@ -125,6 +143,7 @@ async def _is_assignment_instructor(
     current_user: PublicUser | AnonymousUser | APITokenUser,
     course_uuid: str,
     db_session: AsyncSession,
+    activity_id: int | None = None,
 ) -> bool:
     """Whether the principal has instructor-level (grading) authority on the course.
 
@@ -134,9 +153,17 @@ async def _is_assignment_instructor(
     """
     if isinstance(current_user, APITokenUser):
         return True
-    return await authorization_verify_based_on_roles(
-        request, current_user.id, "update", course_uuid, db_session
-    )
+    if await authorization_verify_based_on_roles(request, current_user.id, "update", course_uuid, db_session):
+        return True
+    # The instructor of the lecture holding the assignment grades it too.
+    if activity_id is not None:
+        course = (
+            await db_session.execute(select(Course).where(Course.course_uuid == course_uuid))
+        ).scalars().first()
+        lecture = await lecture_of_activity(db_session, activity_id)
+        if course is not None and await teaches_lecture(db_session, current_user, course, lecture):
+            return True
+    return False
 
 
 def _is_assignment_past_due(assignment: Assignment) -> bool:
@@ -729,7 +756,10 @@ async def create_assignment(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.CREATE)
+    await authorize_assignment_access(
+        request, db_session, current_user, course.course_uuid, AccessAction.CREATE,
+        activity_id=assignment_object.activity_id,
+    )
 
     # Usage check
     await check_limits_with_usage("assignments", course.org_id, db_session)
@@ -842,7 +872,7 @@ async def update_assignment(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE, activity_id=assignment.activity_id)
 
     # Update only the fields that were passed in
     for var, value in vars(assignment_object).items():
@@ -886,7 +916,7 @@ async def delete_assignment(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.DELETE)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.DELETE, activity_id=assignment.activity_id)
 
     # Feature usage
     await decrease_feature_usage("assignments", course.org_id, db_session)
@@ -936,7 +966,7 @@ async def delete_assignment_from_activity_uuid(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.DELETE)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.DELETE, activity_id=assignment.activity_id)
 
      # Feature usage
     await decrease_feature_usage("assignments", course.org_id, db_session)
@@ -980,7 +1010,7 @@ async def create_assignment_task(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.CREATE)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.CREATE, activity_id=assignment.activity_id)
 
     # Create Assignment Task
     assignment_task = AssignmentTask(**assignment_task_object.model_dump())
@@ -1037,7 +1067,7 @@ async def read_assignment_tasks(
     )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ, activity_id=assignment.activity_id)
 
     # return assignment tasks read
     return [
@@ -1085,7 +1115,7 @@ async def read_assignment_task(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ, activity_id=assignment.activity_id)
 
     # return assignment task read
     return AssignmentTaskRead.model_validate(assignmenttask)
@@ -1139,7 +1169,7 @@ async def put_assignment_task_reference_file(
     org = (await db_session.execute(org_statement)).scalars().first()
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE, token_action="create")
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE, token_action="create", activity_id=assignment.activity_id)
 
     # Upload reference file
     if reference_file and reference_file.filename and activity and org:
@@ -1277,7 +1307,7 @@ async def update_assignment_task(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE, activity_id=assignment.activity_id)
 
     # Update only the fields that were passed in
     for var, value in vars(assignment_task_object).items():
@@ -1333,7 +1363,7 @@ async def delete_assignment_task(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.DELETE)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.DELETE, activity_id=assignment.activity_id)
 
     # Delete Assignment Task
     await db_session.delete(assignment_task)
@@ -1443,7 +1473,9 @@ async def handle_assignment_task_submission(
         _block_api_tokens(current_user)
         submitter = current_user
         # SECURITY: Check if user has instructor/admin permissions for grading
-        is_instructor = await authorization_verify_based_on_roles(request, current_user.id, "update", course.course_uuid, db_session)
+        is_instructor = await _is_assignment_instructor(
+            request, current_user, course.course_uuid, db_session, activity_id=assignment.activity_id
+        )
         is_token_submit = False
 
     # For non-instructors (session students AND token submit-on-behalf), the call
@@ -1490,7 +1522,9 @@ async def handle_assignment_task_submission(
             await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.READ)
     else:
         # SECURITY: Instructors/admins need update permission to grade
-        await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+        await check_course_content_access(
+            request, db_session, current_user, course, AccessAction.UPDATE, activity_id=assignment.activity_id
+        )
 
     # Try to find existing submission by user_id and assignment_task_id first (for save progress functionality)
     statement = select(AssignmentTaskSubmission).where(
@@ -1598,10 +1632,10 @@ async def read_user_assignment_task_submissions(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ, activity_id=assignment.activity_id)
 
     # Ownership check: non-instructors may only read their own submissions
-    is_instructor = await _is_assignment_instructor(request, current_user, course.course_uuid, db_session)
+    is_instructor = await _is_assignment_instructor(request, current_user, course.course_uuid, db_session, activity_id=assignment.activity_id)
     if not is_instructor and int(user_id) != int(current_user.id):
         raise HTTPException(
             status_code=403,
@@ -1774,7 +1808,7 @@ async def read_assignment_task_submissions(
         )
 
     # Only instructors may list all submissions for a task
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE, token_action="read")
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE, token_action="read", activity_id=assignment.activity_id)
 
     statement = select(AssignmentTaskSubmission).where(
         AssignmentTaskSubmission.assignment_task_id == assignment_task.id
@@ -1836,12 +1870,14 @@ async def update_assignment_task_submission(
             detail="Course not found",
         )
 
-    is_instructor = await authorization_verify_based_on_roles(
-        request, current_user.id, "update", course.course_uuid, db_session
-    )
+    is_instructor = await _is_assignment_instructor(
+            request, current_user, course.course_uuid, db_session, activity_id=assignment.activity_id
+        )
 
     if is_instructor:
-        await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+        await check_course_content_access(
+            request, db_session, current_user, course, AccessAction.UPDATE, activity_id=assignment.activity_id
+        )
     else:
         await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.READ)
         if assignment_task_submission.user_id != current_user.id:
@@ -2228,10 +2264,10 @@ async def read_assignment_submissions(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ, activity_id=assignment.activity_id)
 
     # Check if user has instructor/admin privileges on this course
-    is_instructor = await _is_assignment_instructor(request, current_user, course.course_uuid, db_session)
+    is_instructor = await _is_assignment_instructor(request, current_user, course.course_uuid, db_session, activity_id=assignment.activity_id)
 
     # Non-instructors can only see their own submissions
     statement = select(AssignmentUserSubmission).where(
@@ -2298,10 +2334,10 @@ async def read_user_assignment_submissions(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ, activity_id=assignment.activity_id)
 
     # Ownership check: non-instructors may only read their own submissions
-    is_instructor = await _is_assignment_instructor(request, current_user, course.course_uuid, db_session)
+    is_instructor = await _is_assignment_instructor(request, current_user, course.course_uuid, db_session, activity_id=assignment.activity_id)
     if not is_instructor and int(user_id) != int(current_user.id):
         raise HTTPException(
             status_code=403,
@@ -2379,14 +2415,14 @@ async def update_assignment_submission(
         )
 
     # Check if user is an instructor/admin (has UPDATE permission)
-    is_instructor = await _is_assignment_instructor(request, current_user, course.course_uuid, db_session)
+    is_instructor = await _is_assignment_instructor(request, current_user, course.course_uuid, db_session, activity_id=assignment.activity_id)
 
     if is_instructor:
         # Instructors/admins can update any submission (e.g., for grading)
-        await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+        await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE, activity_id=assignment.activity_id)
     else:
         # Regular users need READ access and can only update their own submissions
-        await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ)
+        await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ, activity_id=assignment.activity_id)
         if str(assignment_user_submission.user_id) != str(current_user.id):
             raise HTTPException(
                 status_code=403,
@@ -2812,7 +2848,7 @@ async def grade_assignment_submission(
         )
 
     # SECURITY: Require course ownership or instructor role for grading
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE, activity_id=assignment.activity_id)
 
     # Check if assignment user submission exists
     statement = select(AssignmentUserSubmission).where(
@@ -2871,10 +2907,10 @@ async def get_grade_assignment_submission(
         )
 
     # RBAC check
-    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ)
+    await authorize_assignment_access(request, db_session, current_user, course.course_uuid, AccessAction.READ, activity_id=assignment.activity_id)
 
     # Ownership check: non-instructors may only read their own grade
-    is_instructor = await _is_assignment_instructor(request, current_user, course.course_uuid, db_session)
+    is_instructor = await _is_assignment_instructor(request, current_user, course.course_uuid, db_session, activity_id=assignment.activity_id)
     if not is_instructor and str(user_id) != str(current_user.id):
         raise HTTPException(
             status_code=403,

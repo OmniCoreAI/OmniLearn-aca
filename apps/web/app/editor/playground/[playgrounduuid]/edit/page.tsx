@@ -23,7 +23,7 @@ export default async function EditPlaygroundPage({ params }: { params: PageParam
   const access_token = session?.tokens?.access_token
 
   if (!access_token) {
-    redirect('/auth/login')
+    redirect('/login')
   }
 
   let playground

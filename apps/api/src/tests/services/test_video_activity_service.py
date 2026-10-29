@@ -40,7 +40,7 @@ class TestCreateVideoActivity:
         self, mock_request, db, org, course, chapter, admin_user
     ):
         with patch(
-            "src.services.courses.activities.video.check_resource_access",
+            "src.services.courses.activities.video.check_course_content_access",
             new_callable=AsyncMock,
         ):
             with pytest.raises(HTTPException) as exc:
@@ -59,7 +59,7 @@ class TestCreateVideoActivity:
         self, mock_request, db, org, course, chapter, admin_user
     ):
         with patch(
-            "src.services.courses.activities.video.check_resource_access",
+            "src.services.courses.activities.video.check_course_content_access",
             new_callable=AsyncMock,
         ):
             with pytest.raises(HTTPException) as exc:
@@ -78,7 +78,7 @@ class TestCreateVideoActivity:
         self, mock_request, db, org, course, chapter, admin_user
     ):
         with patch(
-            "src.services.courses.activities.video.check_resource_access",
+            "src.services.courses.activities.video.check_course_content_access",
             new_callable=AsyncMock,
         ), patch(
             "src.services.courses.activities.video.upload_video",
@@ -120,7 +120,7 @@ class TestCreateExternalVideoActivity:
             chapter_id=chapter.id,
         )
         with patch(
-            "src.services.courses.activities.video.check_resource_access",
+            "src.services.courses.activities.video.check_course_content_access",
             new_callable=AsyncMock,
         ):
             result = await create_external_video_activity(

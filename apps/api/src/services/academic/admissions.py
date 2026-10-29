@@ -85,6 +85,9 @@ from src.services.academic.common import (
     require_academic_member,
 )
 from src.services.academic.validation import resolve_org_user
+from src.services.notifications import inbox
+from src.services.notifications.assignments import slug
+from src.services.notifications.dispatcher import notify, org_language, org_variables
 
 OPEN_STATES = {
     ApplicationStatus.DRAFT,
@@ -108,6 +111,96 @@ DOCUMENT_TYPES = [
     "photo",
     "other",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+
+DECISION_TITLES = {
+    ApplicationStatus.ACCEPTED: "You have been accepted to {program}",
+    ApplicationStatus.REJECTED: "Your application to {program} was not successful",
+    ApplicationStatus.WAITLISTED: "You are on the waiting list for {program}",
+}
+# Inbox types that also go out by email / SMS (catalog events of the same key,
+# switchable in the academy's Communication settings).
+EMAILED = {
+    "application_accepted",
+    "application_rejected",
+    "application_waitlisted",
+    "application_enrolled",
+    "application_document_rejected",
+    "application_interview",
+}
+# Events whose ``body`` is a note from staff, shown in the email.
+DECISION_NOTE_EVENTS = {"application_accepted", "application_rejected", "application_waitlisted", "application_document_rejected"}
+DOCUMENT_LABELS = {
+    "degree_certificate": ("degree certificate", "شهادة التخرج"),
+    "transcript": ("transcript", "كشف الدرجات"),
+    "national_id": ("national ID", "بطاقة الرقم القومي"),
+    "passport": ("passport", "جواز السفر"),
+    "language_certificate": ("language certificate", "شهادة اللغة"),
+    "cv": ("CV", "السيرة الذاتية"),
+    "recommendation_letter": ("recommendation letter", "خطاب التوصية"),
+    "statement_of_purpose": ("statement of purpose", "خطاب الغرض"),
+    "experience_letter": ("experience letter", "شهادة الخبرة"),
+    "photo": ("photo", "الصورة الشخصية"),
+    "other": ("document", "المستند"),
+}
+
+
+async def _notify(
+    db_session: AsyncSession,
+    application: AdmissionApplication,
+    type: str,
+    title: str,
+    current_user: Principal,
+    *,
+    body: Optional[str] = None,
+    staff: bool = False,
+    extra: Optional[dict] = None,
+    email: bool = True,
+) -> None:
+    """In-app notice to the applicant, or with ``staff`` to the program
+    coordinator. The person who made the change is never told about it.
+    Decisions, enrolment, rejected documents and interviews are also
+    emailed (see ``EMAILED``)."""
+    program = await db_session.get(Program, application.program_id)
+    name = program.name if program else application.application_number
+    key = slug(application.application_uuid, "application_")
+    if staff:
+        recipient = program.coordinator_id if program else None
+        link = f"/dash/postgraduate/admissions/{key}"
+    else:
+        recipient = application.applicant_id
+        link = f"/admissions/{key}"
+    if not recipient or recipient == resolve_acting_user_id(current_user):
+        return
+    await inbox.push(
+        db_session, application.org_id, [recipient], type, title.format(program=name, number=application.application_number),
+        body=body, link=link,
+        payload={"application_uuid": application.application_uuid, "name": name, "number": application.application_number, **(extra or {})},
+    )
+    if email and type in EMAILED:
+        extra = extra or {}
+        base = (await org_variables(db_session, application.org_id)).get("platform_url", "")
+        document = DOCUMENT_LABELS.get(extra.get("document_type", ""))
+        language = await org_language(db_session, application.org_id)
+        await notify(
+            db_session, application.org_id, type, [recipient],
+            {
+                "program_name": name,
+                "application_number": application.application_number,
+                "decision_note": body if type in DECISION_NOTE_EVENTS else "",
+                "application_url": f"{base}{link}" if base else "",
+                "academics_url": f"{base}/academics" if base else "",
+                "student_number": extra.get("student_number", ""),
+                "document_name": (document[1] if language == "ar" else document[0]) if document else "",
+                "interview_date": extra.get("date", ""),
+                "interview_time": extra.get("time", ""),
+                "interview_location": extra.get("location") or "",
+            },
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -520,6 +613,7 @@ async def evaluate_checks(db_session: AsyncSession, application: AdmissionApplic
                 status=status,
                 detail=detail,
                 overridden=overridden,
+                document_type=cfg.get("document_type") if rtype == RequirementType.DOCUMENT else None,
             )
         )
     return checks
@@ -904,6 +998,7 @@ async def submit_application(
     application.submitted_at = now()
     await _set_status(db_session, application, current_user, ApplicationStatus.SUBMITTED, action="submitted")
     await db_session.commit()
+    await _notify(db_session, application, "application_submitted", "New application {number} for {program}", current_user, staff=True)
     await db_session.refresh(application)
     return await _read_for(db_session, application, staff)
 
@@ -1020,6 +1115,9 @@ async def decide(
         action="decision_override" if data.override_requirements and data.decision == ApplicationStatus.ACCEPTED else "decision",
     )
     await db_session.commit()
+    await _notify(
+        db_session, application, f"application_{data.decision.value}", DECISION_TITLES[data.decision], current_user, body=data.note
+    )
     await db_session.refresh(application)
     return await _read(db_session, application)
 
@@ -1041,6 +1139,10 @@ async def enroll_applicant(
         note=f"Student number {membership.student_number}",
     )
     await db_session.commit()
+    await _notify(
+        db_session, application, "application_enrolled", "You are now a student of {program}", current_user,
+        body=f"Your student number is {membership.student_number}", extra={"student_number": membership.student_number},
+    )
     await db_session.refresh(application)
     return await _read(db_session, application)
 
@@ -1054,6 +1156,7 @@ async def withdraw_application(
         raise conflict("This application is already closed")
     await _set_status(db_session, application, current_user, ApplicationStatus.WITHDRAWN, note=note, action="withdrawn")
     await db_session.commit()
+    await _notify(db_session, application, "application_withdrawn", "Your application to {program} was withdrawn", current_user, body=note)
     await db_session.refresh(application)
     return await _read_for(db_session, application, staff)
 
@@ -1120,13 +1223,14 @@ async def serve_document(
 ):
     from src.services.courses.transfer.storage_utils import get_content_delivery_type
     from src.services.media.media_serve import _headers, _mime_for, _serve_fs, _serve_s3
+    from src.services.utils.http_headers import content_disposition
 
     application = await _get(db_session, application_uuid)
     await _require_applicant_or_staff(request, db_session, current_user, application, write=False)
     document = await _get_document(db_session, application, document_uuid)
     mime = document.mime_type or _mime_for(document.storage_key)
     headers = _headers(mime, False)
-    headers["Content-Disposition"] = f'inline; filename="{document.original_name.replace(chr(34), "")}"'
+    headers["Content-Disposition"] = content_disposition(document.original_name)
     if get_content_delivery_type() == "s3api":
         return _serve_s3(document.storage_key, mime, headers, None, False)
     return _serve_fs(document.storage_key, mime, headers, None, False)
@@ -1155,6 +1259,12 @@ async def review_document(
         note=f"{document.document_type}: {data.note or ''}".strip(": "),
     )
     await db_session.commit()
+    if data.status == DocumentStatus.REJECTED:
+        await _notify(
+            db_session, application, "application_document_rejected",
+            f"Please upload a new {document.document_type.replace('_', ' ')} for {{program}}", current_user, body=data.note,
+            extra={"document_type": document.document_type},
+        )
     return await _read(db_session, application)
 
 
@@ -1289,6 +1399,19 @@ async def _panel_ids(db_session: AsyncSession, org_id: int, uuids: List[str]) ->
     return ids
 
 
+async def _notify_interview(
+    db_session: AsyncSession, application: AdmissionApplication, interview: AdmissionInterview, current_user: Principal, *, moved: bool = False
+) -> None:
+    title = "Your interview for {program} was moved" if moved else "Interview scheduled for {program}"
+    at = (interview.scheduled_at or "").replace("T", " ")
+    when = " · ".join(filter(None, [at[:16], interview.location]))
+    await _notify(
+        db_session, application, "application_interview", title, current_user, body=when,
+        extra={"when": when, "date": at[:10], "time": at[11:16], "location": interview.location, "moved": moved},
+        email=bool(at),  # no email until there is a date to give
+    )
+
+
 async def schedule_interview(
     request: Request, application_uuid: str, data: InterviewCreate, current_user: Principal, db_session: AsyncSession
 ) -> ApplicationRead:
@@ -1309,6 +1432,7 @@ async def schedule_interview(
     db_session.add(interview)
     await _log(db_session, application, current_user, "interview_scheduled", note=data.scheduled_at)
     await db_session.commit()
+    await _notify_interview(db_session, application, interview, current_user)
     return await _read(db_session, application)
 
 
@@ -1328,6 +1452,7 @@ async def update_interview(
     if interview.application_id != application.id:
         raise bad_request("Interview does not belong to this application")
     update = data.model_dump(exclude_unset=True)
+    moved = any(k in update and update[k] != getattr(interview, k) for k in ("scheduled_at", "location"))
     if "panel_uuids" in update:
         interview.panel = await _panel_ids(db_session, application.org_id, update.pop("panel_uuids") or [])
     if update.get("score") is not None and not (0 <= update["score"] <= 100):
@@ -1346,6 +1471,8 @@ async def update_interview(
             + (f", score {interview.score:g}" if interview.score is not None else ""),
         )
     await db_session.commit()
+    if moved and interview.status == InterviewStatus.SCHEDULED:
+        await _notify_interview(db_session, application, interview, current_user, moved=True)
     return await _read(db_session, application)
 
 

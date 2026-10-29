@@ -10,6 +10,7 @@ from src.db.academic.course_profiles import (
     CourseScheduleSessionCreate,
     CourseScheduleSessionRead,
     CourseScheduleSessionUpdate,
+    MyLectureRead,
 )
 from src.security.auth import get_current_user
 from src.services.academic.course_profiles import (
@@ -19,9 +20,27 @@ from src.services.academic.course_profiles import (
     create_session,
     update_session,
     delete_session,
+    list_my_lectures,
 )
 
 router = APIRouter()
+
+
+@router.get(
+    "/lectures/mine",
+    response_model=List[MyLectureRead],
+    summary="Lectures I teach",
+    description=(
+        "Lectures (sessions of courses organised by lectures) taught by the signed-in user — "
+        "their own, or those without an instructor in courses they teach. Dated lectures first."
+    ),
+)
+async def api_my_lectures(
+    org_id: int,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> List[MyLectureRead]:
+    return await list_my_lectures(db_session, current_user, org_id)
 
 
 @router.get(

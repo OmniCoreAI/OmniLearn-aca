@@ -7,6 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.events.database import get_db_session
 from src.db.users import PublicUser
 from src.security.auth import get_current_user
+from src.security.modules import disabled_nav_items, module_states
 from src.security.superadmin import require_superadmin
 from src.services.portal_navigation.portal_navigation import (
     get_nav_registry_and_visibility,
@@ -19,6 +20,10 @@ router = APIRouter()
 class PortalNavigationRead(BaseModel):
     items: List[dict]
     visibility: Dict[str, List[str]]
+    # Platform sections switched on/off in the .env file, and the sidebar
+    # items hidden for everyone (super admins included) because of it.
+    modules: Dict[str, bool] = {}
+    disabled_items: List[str] = []
 
 
 class PortalNavigationUpdate(BaseModel):
@@ -40,7 +45,12 @@ async def api_get_portal_navigation(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> PortalNavigationRead:
     items, visibility = await get_nav_registry_and_visibility(db_session)
-    return PortalNavigationRead(items=items, visibility=visibility)
+    return PortalNavigationRead(
+        items=items,
+        visibility=visibility,
+        modules=module_states(),
+        disabled_items=disabled_nav_items(),
+    )
 
 
 @router.put(

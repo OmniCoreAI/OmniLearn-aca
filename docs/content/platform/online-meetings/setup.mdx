@@ -1,0 +1,103 @@
+import { Callout, Steps } from 'nextra/components'
+
+# Setup
+
+You need one Zoom Marketplace **General app** in the academy's own Zoom account. Its credentials do two jobs: they let OmniLearn act for the connected Zoom user (OAuth), and they sign Meeting SDK joins for classes embedded in the LMS.
+
+<Callout type="warning">
+Create the app in **the same Zoom account you'll connect**. Since March 2026, Zoom only lets the Meeting SDK join meetings outside the app's own account with extra app-privilege (OBF) tokens. Keeping the app and the meetings in one account avoids that requirement.
+</Callout>
+
+## 1. Create the Zoom app
+
+<Steps>
+
+### Create a General app
+
+In [Zoom Marketplace](https://marketplace.zoom.us/) → **Develop → Build App**, choose **General App** with **user-managed** authorization. A Zoom account owner or admin should create it.
+
+### Basic information → OAuth
+
+- **OAuth redirect URL:** `https://<your-lms-domain>/dash/administration/zoom/callback`
+- **OAuth allow list:** add the same URL.
+
+Locally, use `http://localhost:3002/dash/administration/zoom/callback`, or whatever URL the LMS shows under **Administration → Online meetings (Zoom)**.
+
+### Features → Embed → Meeting SDK
+
+Turn the Meeting SDK on. The app's Client ID and Client Secret then sign SDK joins, so no separate SDK key is needed.
+
+### Features → Access → Event subscription
+
+Add a subscription with:
+
+- **Event notification endpoint URL:** `https://<your-api-domain>/api/v1/integrations/zoom/webhook`. The exact URL is shown on the LMS's Zoom page.
+- **Events:**
+  - **Meeting:** started, ended, updated, deleted, participant joined, participant left
+  - **Recording:** started, stopped, completed
+  - **App:** deauthorized
+
+Copy the **Secret Token**. Zoom validates the URL immediately, so set the secret on the server (step 2) **before** you press **Validate**.
+
+### Scopes
+
+Add these scopes (granular names):
+
+| Scope | Used for |
+| --- | --- |
+| `user:read:user` | Identify the connected Zoom user and account |
+| `user:read:zak` | Let instructors start meetings as host inside the LMS |
+| `meeting:write:meeting` | Create meetings |
+| `meeting:update:meeting` | Edit meetings |
+| `meeting:delete:meeting` | Cancel meetings |
+| `meeting:read:meeting` | Meeting status, fresh host start link |
+| `meeting:read:list_past_participants` | Attendance sync after a class |
+| `cloud_recording:read:list_recording_files` | Recording links |
+
+</Steps>
+
+## 2. Configure the server
+
+Add the app's credentials to the root `.env` (never commit real values) and restart the API:
+
+```bash
+OMNILEARN_ZOOM_CLIENT_ID=your-client-id
+OMNILEARN_ZOOM_CLIENT_SECRET=your-client-secret
+OMNILEARN_ZOOM_REDIRECT_URI=https://lms.example.org/dash/administration/zoom/callback
+OMNILEARN_ZOOM_WEBHOOK_SECRET_TOKEN=your-event-secret-token
+```
+
+Only set `OMNILEARN_ZOOM_SDK_KEY` / `OMNILEARN_ZOOM_SDK_SECRET` when the Meeting SDK runs from a different app. `OMNILEARN_ZOOM_SDK_VERSION` pins the Web SDK version (default `6.2.0`). See [Environment Variables](/self-hosting/configuration/environment-variables#zoom-online-meetings).
+
+The tables come from migration `adc1d2e3f4a5` (`alembic upgrade head`). Development databases built by `create_all` get them at API startup.
+
+## 3. Connect the academy's Zoom account
+
+An administrator opens **Administration → Online meetings (Zoom)**, checks that the setup list is green, and clicks **Connect Zoom**. Zoom asks for consent and sends them back to the LMS, and the page shows the connected Zoom user. Meetings are created under that user, so connect a licensed account the academy uses for teaching.
+
+If Zoom later rejects the connection, the page says **Zoom needs reconnecting** and instructors see the same notice. That happens when the app is removed from Zoom, access is revoked, or the refresh token expires after 90 days unused. Click **Reconnect Zoom**.
+
+## Security notes
+
+- **Secrets stay server-side.** Client secret, SDK secret, OAuth tokens and host ZAKs never reach the browser. OAuth tokens and meeting passcodes are stored Fernet-encrypted.
+- **Refresh is serialized.** Access tokens refresh five minutes before expiry. Zoom rotates refresh tokens, so refreshes are serialized per academy with a Redis lock.
+- **OAuth state is bound to the admin.** `state` is a signed, ten-minute, single-use token tied to the admin who started the connection.
+- **Webhooks are verified.** Each request must carry a valid `x-zm-signature` (HMAC-SHA256 of `v0:{timestamp}:{body}`) with a timestamp within five minutes. An event only applies to a meeting created under the same Zoom account.
+- **Join signatures are short-lived.** They're issued only after the LMS checks enrollment or host rights. Host signatures (role 1) and ZAKs go to class hosts only.
+- **Start links aren't stored.** A meeting's start URL embeds a host token, so it's fetched fresh when a host clicks **Open in Zoom app**.
+- **Requests are rate-limited.** Per user: meeting changes 60/hour, join tokens 30/minute, start links 30 per 5 minutes. Syncs are limited per meeting.
+- **Logs omit credentials.** No tokens, passcodes or signatures are logged. Browsers get short, translated messages, and Zoom's error details go to the server log.
+
+## Local development
+
+1. In the Zoom app, add `http://localhost:3002/dash/administration/zoom/callback` as a redirect URL.
+2. Webhooks need a public HTTPS URL. Tunnel the API, for example with `cloudflared tunnel --url http://localhost:1338` or `ngrok http 1338`, and use `https://<tunnel>/api/v1/integrations/zoom/webhook`. Without webhooks everything still works: use **Refresh status** and **Sync from Zoom**.
+3. The embedded meeting is served from `apps/web/public/zoom/meeting.html` and loads Zoom's SDK from `source.zoom.us`. HD video and gallery view need cross-origin isolation (`COOP: same-origin` and `COEP: require-corp`). Without it the meeting still joins, in a reduced mode.
+
+## Production checklist
+
+- HTTPS on the LMS and API domains, and the redirect and webhook URLs updated in the Zoom app.
+- `OMNILEARN_ZOOM_*` set as secrets in your deployment, not in images or Git.
+- Redis available for refresh locking, OAuth state replay protection and rate limits.
+- The event subscription validated, with the events above.
+- An admin connected Zoom and created a test meeting on a lecture.

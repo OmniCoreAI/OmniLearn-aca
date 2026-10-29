@@ -6,6 +6,7 @@ import {
   EnvelopeSimple,
   Door,
   Package,
+  ShieldCheck,
   SlidersHorizontal,
   SquaresFour,
   UsersThree,
@@ -84,6 +85,13 @@ export const ADMIN_NAV_LINKS: AdminNavLink[] = [
     labelKey: 'administration.nav.certificates',
     fallback: 'Certificates',
     icon: (size) => <Certificate size={size} />,
+  },
+  {
+    navId: 'administration',
+    href: '/dash/administration/roles',
+    labelKey: 'administration.nav.roles',
+    fallback: 'Roles & portals',
+    icon: (size) => <ShieldCheck size={size} />,
   },
   {
     navId: 'administration',

@@ -1,0 +1,48 @@
+import { Callout } from 'nextra/components'
+
+# Teaching & Joining
+
+## Instructors: create a meeting for a lecture
+
+Meetings are created from the lecture itself:
+
+- **Training courses:** in the course's **Delivery** tab (or a training program / semester course panel), every session in **Schedule** has **Create online meeting**.
+- **Postgraduate offerings:** on the offering's **Schedule** tab, every session has the same control.
+
+The form starts from the lecture's title, date, start time and length. You can change any of these and set:
+
+- **Time zone.** The meeting runs at that wall-clock time in that zone.
+- **Recurrence:** daily, weekly on chosen days, or monthly, with a number of occurrences.
+- **Passcode.** Leave it empty and Zoom generates one.
+- **Waiting room**, join before host, host and participant video, mute on entry.
+- **Recording:** none, cloud, or on the host's computer.
+- **Only signed-in Zoom users.** Keep this off so students can join from the LMS without a Zoom account.
+- **Alternative hosts:** colleagues in the academy's Zoom account.
+
+Click **Create meeting**. Zoom creates the meeting and the lecture shows its status.
+
+### Running and managing it
+
+Each lecture with a meeting shows its status: **Upcoming**, **Live**, **Ended**, **Canceled**, or **Needs attention** (for example, deleted directly in Zoom). It also offers these actions:
+
+- **Start in LMS** opens the class inside the LMS as host.
+- **Open in Zoom app** starts it in the Zoom desktop or mobile app instead.
+- **Copy link** copies the Zoom join link, for guests outside the LMS.
+- **Edit** changes the schedule or settings (mirrored to Zoom), or **shares recordings with students**.
+- **Refresh status** re-reads the meeting from Zoom. Rarely needed when webhooks are configured.
+- **Attendance & recordings** opens the class reports.
+- **Cancel meeting** deletes it in Zoom. Students see it as canceled.
+
+**Dashboard → Online classes** (`/dash/online-classes`) lists every meeting you host. Administrators see all of the academy's meetings there.
+
+## Students: join a class
+
+On the course page, **Online classes** lists the course's upcoming and live classes. When a class is live, a red **Join meeting** banner appears at the top.
+
+**Join online class** opens the class inside the LMS. The browser asks for camera and microphone access, then the Zoom meeting starts in the page. If the class hasn't started yet, the page waits and updates when the instructor starts it.
+
+<Callout type="info">
+Only enrolled students see a course's online classes. Anyone else who opens a class link is told they're not enrolled.
+</Callout>
+
+If the embedded meeting can't load (an old browser, or a network that blocks Zoom), use **Open in Zoom app**.

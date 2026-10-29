@@ -11,6 +11,7 @@ from src.db.instructors.instructors import (
     InstructorOption,
     InstructorRead,
     InstructorUpdate,
+    MyAssignmentsRead,
 )
 from src.db.users import PublicUser
 from src.security.auth import get_current_user
@@ -20,9 +21,11 @@ from src.services.instructors.instructors import (
     create_instructor,
     delete_instructor,
     get_instructor,
+    list_instructor_assignments,
     list_instructor_courses,
     list_instructor_options,
     list_instructors,
+    list_my_assignments,
     unassign_instructor_course,
     update_instructor,
     upload_instructor_image,
@@ -66,6 +69,19 @@ async def api_instructor_options(
     current_user: PublicUser = Depends(get_current_user),
 ) -> List[InstructorOption]:
     return await list_instructor_options(db_session, current_user, org_id)
+
+
+@router.get(
+    "/org/{org_id}/me/assignments",
+    response_model=MyAssignmentsRead,
+    summary="Courses and training programs the signed-in user is assigned to",
+)
+async def api_my_assignments(
+    org_id: int,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> MyAssignmentsRead:
+    return await list_my_assignments(db_session, current_user, org_id)
 
 
 @router.get("/{instructor_uuid}", response_model=InstructorRead, summary="Get an instructor")
@@ -131,6 +147,19 @@ async def api_instructor_courses(
     current_user: PublicUser = Depends(get_current_user),
 ) -> List[InstructorCourseRead]:
     return await list_instructor_courses(db_session, current_user, instructor_uuid)
+
+
+@router.get(
+    "/{instructor_uuid}/assignments",
+    response_model=MyAssignmentsRead,
+    summary="Everything the instructor teaches or runs: courses, offerings, programs, sessions",
+)
+async def api_instructor_assignments(
+    instructor_uuid: str,
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: PublicUser = Depends(get_current_user),
+) -> MyAssignmentsRead:
+    return await list_instructor_assignments(db_session, current_user, instructor_uuid)
 
 
 @router.post(

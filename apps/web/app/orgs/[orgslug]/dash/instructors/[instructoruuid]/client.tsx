@@ -26,6 +26,7 @@ import {
 } from '@components/Dashboard/Pages/Administration/AdminUI'
 import { InstructorForm, WEEKDAYS } from '@components/Dashboard/Pages/Instructors/InstructorForm'
 import { ApproveInstructorForm } from '@components/Dashboard/Pages/Instructors/ApproveInstructorForm'
+import { InstructorAssignmentsPanel } from '@components/Dashboard/Pages/Instructors/InstructorAssignmentsPanel'
 import {
   assignInstructorCourse,
   getInstructor,
@@ -37,13 +38,15 @@ import {
 } from '@services/instructors/instructors'
 import { getOrgLmsCourses } from '@services/academic/core'
 import { cn } from '@/lib/utils'
+import { useModules } from '@/lib/modules'
 
 const nameOf = (i: any) => `${i?.user?.first_name || ''} ${i?.user?.last_name || ''}`.trim() || i?.user?.username || '—'
-const TABS = ['overview', 'courses', 'availability', 'activity'] as const
+const TABS = ['overview', 'courses', 'assignments', 'availability', 'activity'] as const
 type Tab = (typeof TABS)[number]
 
 function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instructorUuid: string }) {
   const { t, i18n } = useTranslation()
+  const financeOn = useModules().isModuleEnabled('finance')
   const { org, orgId, access_token, ready } = useAdminContext()
   const queryClient = useQueryClient()
   const router = useRouter()
@@ -153,6 +156,7 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
   const tabLabels: Record<Tab, string> = {
     overview: t('instructors.tab_overview', 'Overview'),
     courses: t('instructors.tab_courses', 'Courses ({{count}})', { count: (courses as any[]).length }),
+    assignments: t('instructors.tab_assignments', 'Programs & schedule'),
     availability: t('instructors.availability', 'Availability'),
     activity: t('instructors.tab_activity', 'Activity'),
   }
@@ -249,7 +253,7 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
                   ) : null}
                 </DetailItem>
                 <DetailItem label={t('instructors.languages_short', 'Languages')}>{(instructor.languages || []).join(', ')}</DetailItem>
-                {instructor.entity_name ? <DetailItem label={t('instructors.entity', 'Organization')}>{instructor.entity_name}</DetailItem> : null}
+                {instructor.entity_name ? <DetailItem label={t('instructors.entity', 'Entity')}>{instructor.entity_name}</DetailItem> : null}
                 <DetailItem label={t('administration.common.created', 'Created')}>{formatAdminDate(instructor.creation_date, i18n.language)}</DetailItem>
               </dl>
             </AdminCard>
@@ -285,7 +289,7 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
                 </p>
               )}
             </AdminCard>
-            <AdminCard
+            {financeOn && <AdminCard
               title={t('instructors.finance', 'Finance')}
               action={
                 <Link className="text-xs font-semibold text-[hsl(var(--dash-accent))] hover:underline" href={getUriWithOrg(orgslug, '/dash/instructors/finance')}>
@@ -299,7 +303,7 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
                 </DetailItem>
                 <DetailItem label={t('instructors.total_cost', 'Total cost')}>{money(totalAmount, instructor.rate_currency)}</DetailItem>
               </dl>
-            </AdminCard>
+            </AdminCard>}
           </div>
         </div>
       ) : null}
@@ -357,6 +361,10 @@ function InstructorDetail({ orgslug, instructorUuid }: { orgslug: string; instru
               : []
           }
         />
+      ) : null}
+
+      {tab === 'assignments' ? (
+        <InstructorAssignmentsPanel orgslug={orgslug} instructorUuid={instructorUuid} access_token={access_token} />
       ) : null}
 
       {tab === 'availability' ? (

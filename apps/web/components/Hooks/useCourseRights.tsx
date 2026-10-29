@@ -21,6 +21,8 @@ export interface CourseRights {
     grade_assignments: boolean
     mark_activities_done: boolean
     create_certifications: boolean
+    /** update_content, or teaches at least one lecture of a course organised by lectures */
+    edit_lecture_content: boolean
   }
   ownership: {
     is_owner: boolean
@@ -28,6 +30,11 @@ export interface CourseRights {
     is_maintainer: boolean
     is_contributor: boolean
     authorship_status: string
+  }
+  /** Courses organised by lectures: the lectures (session uuids) this user may edit. */
+  lectures?: {
+    organized: boolean
+    taught: string[]
   }
   roles: {
     is_admin: boolean

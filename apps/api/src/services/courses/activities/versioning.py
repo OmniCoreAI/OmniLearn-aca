@@ -12,6 +12,7 @@ from typing import List, Optional
 from src.security.rbac import check_resource_access, AccessAction
 from src.security.features_utils.usage import check_feature_access
 from src.services.webhooks.dispatch import dispatch_webhooks
+from src.services.courses.lecture_access import check_course_content_access
 
 # Maximum number of versions to keep per activity
 # Change this constant to adjust how many saves are stored
@@ -297,7 +298,9 @@ async def restore_activity_version(
             detail="Course not found",
         )
 
-    await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.UPDATE, activity_id=activity.id
+    )
 
     # Get the version to restore
     statement = (

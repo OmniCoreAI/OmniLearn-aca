@@ -194,6 +194,16 @@ class TestCSRFExemptions:
         req = _make_request(headers={"stripe-signature": "t=123,v1=abc"})
         assert mw._is_csrf_exempt(req) is True
 
+    def test_zoom_webhook_exempt_only_on_its_route(self):
+        """Zoom webhooks are HMAC-signed; the header alone exempts nothing else."""
+        mw = self._make_middleware()
+        req = _make_request(headers={"x-zm-signature": "v0=abc"})
+        req.url.path = "/api/v1/integrations/zoom/webhook"
+        assert mw._is_csrf_exempt(req) is True
+        other = _make_request(headers={"x-zm-signature": "v0=abc"})
+        other.url.path = "/api/v1/users/profile"
+        assert mw._is_csrf_exempt(other) is False
+
     def test_internal_key_exempt(self):
         """Internal service-to-service calls (collab server) use a shared key, not cookies."""
         mw = self._make_middleware()

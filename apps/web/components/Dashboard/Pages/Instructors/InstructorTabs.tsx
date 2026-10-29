@@ -6,16 +6,18 @@ import { useTranslation } from 'react-i18next'
 import { getUriWithOrg } from '@services/config/config'
 import { TAB_TRACK, tabItemClass } from '@components/Dashboard/Shared/dashStyles'
 import { cn } from '@/lib/utils'
+import { useModules } from '@/lib/modules'
 
 export function InstructorTabs({ orgslug }: { orgslug: string }) {
   const { t } = useTranslation()
   const pathname = usePathname() || ''
+  const { isPathEnabled } = useModules()
 
   const tabs = [
     { href: '/dash/instructors', label: t('instructors.directory', 'Directory'), exact: true },
     { href: '/dash/instructors/categories', label: t('instructors.categories', 'Categories & Rates') },
     { href: '/dash/instructors/finance', label: t('instructors.finance', 'Finance') },
-  ]
+  ].filter((tab) => isPathEnabled(tab.href))
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname.endsWith(href) : pathname.includes(href)

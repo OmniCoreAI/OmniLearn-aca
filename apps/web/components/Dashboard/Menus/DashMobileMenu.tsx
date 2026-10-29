@@ -14,6 +14,7 @@ import {
   ChartBar,
   Chalkboard,
   ChalkboardSimple,
+  VideoCamera,
   Cube,
   FolderSimple,
   GraduationCap,
@@ -27,6 +28,7 @@ import {
   CaretDown,
   MagnifyingGlass,
   IdentificationCard,
+  PresentationChart,
 } from '@phosphor-icons/react'
 import { DiscordIcon } from '@components/Objects/Icons/DiscordIcon'
 import Link from 'next/link'
@@ -214,12 +216,14 @@ function DashMobileMenu() {
                 {isItemVisible('cms-news') && <PanelItem href="/dash/cms/news" icon={<Newspaper size={15} weight="fill" />} label={t('cms.news.title', 'News')} active={isActive('/dash/cms/news')} onClick={close} />}
                 {isEnabled('folders') && isItemVisible('library') && <PanelItem href="/dash/library" icon={<FolderSimple size={15} weight="fill" />} label={t('library.library')} active={isActive('/dash/library')} onClick={close} />}
                 {isItemVisible('postgraduate-teaching') && <PanelItem href="/dash/postgraduate/teaching" icon={<Chalkboard size={15} weight="fill" />} label={t('academic.my_teaching', 'My Teaching')} active={isActive('/dash/postgraduate/teaching')} onClick={close} />}
+                {isItemVisible('online-classes') && <PanelItem href="/dash/online-classes" icon={<VideoCamera size={15} weight="fill" />} label={t('online_meetings.dashboard.title', 'Online classes')} active={isActive('/dash/online-classes')} onClick={close} />}
                 {isItemVisible('assignments') && <PanelItem href="/dash/assignments" icon={<Files size={15} weight="fill" />} label={t('common.assignments')} active={isActive('/dash/assignments')} onClick={close} />}
                 {isItemVisible('users') && <PanelItem href="/dash/users/settings/users" icon={<Users size={15} weight="fill" />} label={t('common.users')} active={isActive('/dash/users')} onClick={close} />}
                 {isEnabled('boards') && isItemVisible('boards') && <PanelItem href="/dash/boards" icon={<ChalkboardSimple size={15} weight="fill" />} label="Boards" active={isActive('/dash/boards')} onClick={close} />}
                 {isEnabled('playgrounds') && isItemVisible('playgrounds') && <PanelItem href="/dash/playgrounds" icon={<Cube size={15} weight="fill" />} label="Playgrounds" active={isActive('/dash/playgrounds')} onClick={close} />}
                 {isEnabled('payments') && isItemVisible('payments') && <PanelItem href="/dash/payments/overview" icon={<CurrencyCircleDollar size={15} weight="fill" />} label={t('common.payments')} active={isActive('/dash/payments')} onClick={close} />}
                 {isItemVisible('analytics') && <PanelItem href="/dash/analytics" icon={<ChartBar size={15} weight="fill" />} label="Analytics" active={isActive('/dash/analytics')} onClick={close} />}
+                {isItemVisible('reports') && <PanelItem href="/dash/reports" icon={<PresentationChart size={15} weight="fill" />} label={t('reports.title', 'Reports')} active={isActive('/dash/reports')} onClick={close} />}
                 {isItemVisible('organization') && <PanelItem href="/dash/org/settings/general" icon={<Buildings size={15} weight="fill" />} label={t('common.academy_settings', 'Academy settings')} active={isActive('/dash/org')} onClick={close} />}
                 {ADMIN_NAV_LINKS.filter((link) => isItemVisible(link.navId)).map((link) => (
                   <PanelItem key={link.href} href={link.href} icon={link.icon(15)} label={t(link.labelKey, link.fallback)} active={isAdminLinkActive(link, pathname)} onClick={close} />

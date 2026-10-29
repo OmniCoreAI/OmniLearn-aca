@@ -80,7 +80,7 @@ function CoordinatorAssignForm({ entityUuid, onDone, onCancel }: { entityUuid: s
         </div>
       )}
       <p className="rounded-xl bg-[hsl(var(--dash-canvas))]/70 px-3 py-2 text-xs text-[hsl(var(--dash-muted))]">
-        {t('entities.coordinator_role_hint', 'Trainees get the Entity Coordinator role; academy admins keep theirs. Coordinators only ever see this organization.')}
+        {t('entities.coordinator_role_hint', 'Trainees get the Entity Coordinator role; academy admins keep theirs. Coordinators only ever see this entity.')}
       </p>
       <div className="flex items-center justify-end gap-2 pt-1">
         <button
@@ -120,7 +120,7 @@ export function EntityOverview({ entity, isAcademy }: { entity: any; isAcademy: 
   const removeCoordinator = async (c: any) => {
     const ok = await confirm({
       title: t('entities.remove_coordinator_title', 'Stop {{name}} coordinating?', { name: personName(c) }),
-      message: t('entities.confirm_remove_coordinator', 'They stay a member of the organization but lose coordinator access.'),
+      message: t('entities.confirm_remove_coordinator', 'They stay a member of the entity but lose coordinator access.'),
       confirmText: t('entities.remove_coordinator', 'Stop being coordinator'),
     })
     if (!ok) return
@@ -178,7 +178,7 @@ export function EntityOverview({ entity, isAcademy }: { entity: any; isAcademy: 
 
         <AdminCard
           title={t('entities.coordinator_permissions', 'What coordinators can do')}
-          description={t('entities.coordinator_permissions_desc', 'Applies to every coordinator of this organization.')}
+          description={t('entities.coordinator_permissions_desc', 'Applies to every coordinator of this entity.')}
           action={
             isAcademy && permsDirty ? (
               <div className="flex items-center gap-2">
@@ -203,7 +203,7 @@ export function EntityOverview({ entity, isAcademy }: { entity: any; isAcademy: 
 
       <AdminCard
         title={t('entities.coordinators', 'Coordinators')}
-        description={t('entities.coordinators_desc', 'They follow this organization’s people and training.')}
+        description={t('entities.coordinators_desc', 'They follow this entity’s people and training.')}
         action={
           isAcademy ? (
             <button

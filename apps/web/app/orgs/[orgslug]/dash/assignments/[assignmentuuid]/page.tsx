@@ -59,7 +59,7 @@ function AssignmentEdit() {
     if (isMobile) {
         // TODO: Work on a better mobile experience
         return (
-          <div className="h-screen w-full bg-[hsl(var(--dash-canvas))] flex items-center justify-center p-4">
+          <div className="h-[calc(100dvh-var(--dash-topbar-h,0px))] w-full bg-[hsl(var(--dash-canvas))] flex items-center justify-center p-4">
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
               <h2 className="text-xl font-bold mb-4">{t('dashboard.assignments.detail.mobile.title')}</h2>
               <Monitor className='mx-auto my-5' size={60} />    
@@ -71,7 +71,7 @@ function AssignmentEdit() {
     }
     
     return (
-        <div className='flex w-full flex-col h-screen'>
+        <div className='flex w-full flex-col h-[calc(100dvh-var(--dash-topbar-h,0px))]'>
             <AssignmentProvider assignment_uuid={'assignment_' + params.assignmentuuid}>
                 <div className='flex flex-col bg-white z-10 nice-shadow relative'>
                     <div className='flex justify-between mr-10 h-full'>

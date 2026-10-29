@@ -19,6 +19,11 @@ from src.db.courses.chapters import (
 from src.db.courses.courses import Course
 from fastapi import HTTPException, status, Request
 from src.security.rbac import check_resource_access, AccessAction
+from src.db.academic.course_profiles import CourseAcademicProfile, CourseScheduleSession
+from src.services.courses.lecture_access import (
+    check_course_content_access,
+    get_course_lecture,
+)
 from src.services.courses.locks import (
     batch_accessible_restricted_uuids,
     is_locked_for_user,
@@ -29,6 +34,32 @@ from src.services.courses.locks import (
 ####################################################
 # CRUD
 ####################################################
+
+
+async def _fill_lecture_uuids(db_session: AsyncSession, chapters: List[ChapterRead]) -> None:
+    ids = {c.lecture_id for c in chapters if c.lecture_id}
+    if not ids:
+        return
+    rows = (
+        await db_session.execute(
+            select(CourseScheduleSession.id, CourseScheduleSession.session_uuid).where(
+                CourseScheduleSession.id.in_(ids)  # type: ignore[union-attr]
+            )
+        )
+    ).all()
+    uuids = dict(rows)
+    for chapter in chapters:
+        chapter.lecture_uuid = uuids.get(chapter.lecture_id) if chapter.lecture_id else None
+
+
+async def _lecture_for_course(db_session: AsyncSession, course: Course, lecture_uuid: str) -> CourseScheduleSession:
+    """A lecture of ``course``, which must be organised by lectures."""
+    profile = (
+        await db_session.execute(select(CourseAcademicProfile).where(CourseAcademicProfile.course_id == course.id))
+    ).scalars().first()
+    if profile is None or not profile.organize_by_lectures:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This course is not organised by lectures")
+    return await get_course_lecture(db_session, course, lecture_uuid)
 
 
 async def create_chapter(
@@ -50,10 +81,16 @@ async def create_chapter(
             detail="Course not found",
         )
 
-    # RBAC check
-    await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.CREATE)
+    lecture = (
+        await _lecture_for_course(db_session, course, chapter_object.lecture_uuid)
+        if chapter_object.lecture_uuid
+        else None
+    )
+    # RBAC check — course editors, or the instructor of the lecture it goes into
+    await check_course_content_access(request, db_session, current_user, course, AccessAction.CREATE, lecture=lecture)
 
     # complete chapter object
+    chapter.lecture_id = lecture.id if lecture else None
     chapter.course_id = chapter_object.course_id
     chapter.chapter_uuid = f"chapter_{uuid4()}"
     chapter.creation_date = str(datetime.now())
@@ -73,7 +110,9 @@ async def create_chapter(
     db_session.add(chapter)
     await db_session.flush()
 
-    chapter_read = ChapterRead(**chapter.model_dump(), activities=[])
+    chapter_read = ChapterRead(
+        **chapter.model_dump(), activities=[], lecture_uuid=lecture.session_uuid if lecture else None
+    )
 
     # Create CourseChapter link atomically with the chapter insert
     course_chapter = CourseChapter(
@@ -119,7 +158,9 @@ async def get_chapter(
         )
 
     # RBAC check
-    await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.READ)
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.READ, chapter_id=chapter.id
+    )
 
     # Get activities for this chapter
     statement = (
@@ -136,6 +177,7 @@ async def get_chapter(
         activities=[ActivityRead(**activity.model_dump()) for activity in activities],
     )
 
+    await _fill_lecture_uuids(db_session, [chapter])
     await _apply_locks_to_chapters([chapter], course, current_user, db_session)
 
     return chapter
@@ -165,11 +207,29 @@ async def update_chapter(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course does not exist"
         )
 
-    await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.UPDATE, chapter_id=chapter.id
+    )
+
+    # Moving to another lecture: the target must be one the user may edit too.
+    if "lecture_uuid" in (getattr(chapter_object, "model_fields_set", None) or set()):
+        target = (
+            await _lecture_for_course(db_session, course, chapter_object.lecture_uuid)
+            if chapter_object.lecture_uuid
+            else None
+        )
+        if target is None:
+            # Taking a chapter out of every lecture is a course-level edit.
+            await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+        else:
+            await check_course_content_access(
+                request, db_session, current_user, course, AccessAction.UPDATE, lecture=target
+            )
+        chapter.lecture_id = target.id if target else None
 
     # Update only the fields that were passed in
     for var, value in vars(chapter_object).items():
-        if var in ("org_id", "course_id"):
+        if var in ("org_id", "course_id", "lecture_uuid"):
             continue
         if value is not None:
             setattr(chapter, var, value)
@@ -208,8 +268,9 @@ async def delete_chapter(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
-    await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.DELETE)
-
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.DELETE, chapter_id=chapter.id
+    )
 
     # Remove all linked chapter activities
     statement = select(ChapterActivity).where(ChapterActivity.chapter_id == chapter.id)
@@ -370,6 +431,7 @@ async def get_course_chapters(
         for chapter in chapters:
             chapter.activities = chapter_activities_map.get(chapter.id, [])
 
+    await _fill_lecture_uuids(db_session, chapters)
     await _apply_locks_to_chapters(chapters, course, current_user, db_session)
 
     return chapters
@@ -694,3 +756,75 @@ async def reorder_chapters_and_activities(
     await db_session.commit()
 
     return {"detail": "Chapters and activities reordered successfully"}
+
+
+async def reorder_lecture_content(
+    request: Request,
+    course_uuid: str,
+    lecture_uuid: str,
+    lecture_order: ChapterUpdateOrder,
+    current_user: PublicUser,
+    db_session: AsyncSession,
+):
+    """Reorder one lecture's chapters, and the activities inside them.
+
+    Open to the lecture's instructor (the course-wide reorder is not). The
+    payload must list every chapter of the lecture and every activity in those
+    chapters exactly once; activities may move between the lecture's chapters
+    but never out of the lecture. The chapters keep the course positions they
+    already hold, so other lectures are untouched.
+    """
+    course = (await db_session.execute(select(Course).where(Course.course_uuid == course_uuid))).scalars().first()
+    if not course:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course does not exist")
+    lecture = await _lecture_for_course(db_session, course, lecture_uuid)
+    await check_course_content_access(request, db_session, current_user, course, AccessAction.UPDATE, lecture=lecture)
+
+    chapter_ids = set(
+        (
+            await db_session.execute(
+                select(Chapter.id).where(Chapter.course_id == course.id, Chapter.lecture_id == lecture.id)
+            )
+        ).scalars().all()
+    )
+    requested_chapters = [co.chapter_id for co in lecture_order.chapter_order_by_ids]
+    if len(requested_chapters) != len(set(requested_chapters)) or set(requested_chapters) != chapter_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Send every chapter of the lecture exactly once"
+        )
+
+    links = (
+        await db_session.execute(
+            select(CourseChapter).where(CourseChapter.course_id == course.id, CourseChapter.chapter_id.in_(chapter_ids))  # type: ignore[attr-defined]
+        )
+    ).scalars().all() if chapter_ids else []
+    link_by_chapter = {link.chapter_id: link for link in links}
+    if set(link_by_chapter) != chapter_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A chapter of the lecture is not in the course outline")
+    for slot, chapter_id in zip(sorted(link.order for link in links), requested_chapters):
+        link_by_chapter[chapter_id].order = slot
+        db_session.add(link_by_chapter[chapter_id])
+
+    existing = (
+        await db_session.execute(select(ChapterActivity).where(ChapterActivity.chapter_id.in_(chapter_ids)))  # type: ignore[attr-defined]
+    ).scalars().all() if chapter_ids else []
+    by_activity = {ca.activity_id: ca for ca in existing}
+    requested_activities = [
+        (co.chapter_id, ao.activity_id, index)
+        for co in lecture_order.chapter_order_by_ids
+        for index, ao in enumerate(co.activities_order_by_ids)
+    ]
+    activity_ids = [activity_id for _, activity_id, _ in requested_activities]
+    if len(activity_ids) != len(set(activity_ids)) or set(activity_ids) != set(by_activity) or len(existing) != len(by_activity):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Send every activity of the lecture exactly once"
+        )
+    now = str(datetime.now())
+    for chapter_id, activity_id, index in requested_activities:
+        link = by_activity[activity_id]
+        link.chapter_id = chapter_id
+        link.order = index
+        link.update_date = now
+        db_session.add(link)
+    await db_session.commit()
+    return {"detail": "Lecture content reordered"}

@@ -116,3 +116,17 @@ export async function removeUserGroupFromChapter(
   )
   return errorHandling(result)
 }
+
+/** Reorder one lecture's chapters and their activities (lecture instructors may do this). */
+export async function reorderLectureContent(
+  course_uuid: string,
+  lecture_uuid: string,
+  data: { chapter_order_by_ids: { chapter_id: number; activities_order_by_ids: { activity_id: number }[] }[] },
+  access_token: string
+) {
+  const result: any = await fetch(
+    `${getAPIUrl()}chapters/course/${course_uuid}/lectures/${lecture_uuid}/order`,
+    RequestBodyWithAuthHeader('PUT', data, null, access_token)
+  )
+  return errorHandling(result)
+}

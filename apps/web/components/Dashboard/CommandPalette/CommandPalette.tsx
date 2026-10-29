@@ -12,6 +12,7 @@ import {
 
 import { useCommandPalette } from './CommandPaletteContext'
 import { dashboardPages } from '@/lib/dashboard-search/registry'
+import { useModules } from '@/lib/modules'
 import type { SearchMeta } from '@/lib/dashboard-search/types'
 import {
   useContentSearch,
@@ -45,15 +46,18 @@ const CONTENT_TYPE_ORDER: ContentResultType[] = [
 function usePagesFiltered(): SearchMeta[] {
   const { org } = useOrgMembership()
   const resolvedFeatures = org?.config?.config?.resolved_features
+  const { isPathEnabled } = useModules()
   return useMemo(
     () =>
       dashboardPages.filter((p) => {
+        if (!isPathEnabled(p.href)) return false
         if (!p.featureKey) return true
         const rf = resolvedFeatures?.[p.featureKey]
         if (rf) return rf.enabled
         return isFeatureAvailable(p.featureKey)
       }),
-    [resolvedFeatures],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [resolvedFeatures, org],
   )
 }
 

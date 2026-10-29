@@ -54,7 +54,8 @@ function CourseOverviewPage(props: { params: Promise<CourseOverviewParams> }) {
       label: t('dashboard.courses.settings.tabs.content'),
       icon: GalleryVerticalEnd,
       href: `/dash/courses/course/${params.courseuuid}/content`,
-      requiredPermission: 'update_content' as const
+      // Lecture instructors edit their lectures' content without course-wide rights.
+      requiredPermission: 'edit_lecture_content' as const
     },
     {
       key: 'access',
@@ -121,7 +122,7 @@ function CourseOverviewPage(props: { params: Promise<CourseOverviewParams> }) {
   // Access denied (rights loaded but no tabs visible)
   if (!rightsLoading && visibleTabs.length === 0) {
     return (
-      <div className="h-screen w-full bg-[hsl(var(--dash-canvas))] flex items-center justify-center">
+      <div className="h-[calc(100dvh-var(--dash-topbar-h,0px))] w-full bg-[hsl(var(--dash-canvas))] flex items-center justify-center">
         <div className="text-center">
           <Lock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">{t('dashboard.courses.settings.access_denied.title')}</h3>
@@ -135,7 +136,7 @@ function CourseOverviewPage(props: { params: Promise<CourseOverviewParams> }) {
   // no sequential waterfall. The tab content is gated by hasPermission() which returns
   // false (safe default) until rights finish loading.
   return (
-    <div className="h-screen w-full bg-[hsl(var(--dash-canvas))] grid grid-rows-[auto_1fr] grid-cols-1">
+    <div className="h-[calc(100dvh-var(--dash-topbar-h,0px))] w-full bg-[hsl(var(--dash-canvas))] grid grid-rows-[auto_1fr] grid-cols-1">
       <CourseProvider courseuuid={courseuuid} withUnpublishedActivities={true}>
         <div className="pl-4 pr-4 sm:pl-10 sm:pr-10 text-sm tracking-tight bg-[hsl(var(--dash-surface))] z-10 nice-shadow relative min-w-0 overflow-hidden">
           <CourseOverviewTop params={params} />
@@ -177,7 +178,7 @@ function CourseOverviewPage(props: { params: Promise<CourseOverviewParams> }) {
                 <div className="h-32 bg-gray-200 rounded w-full max-w-2xl mt-6" />
               </div>
             ) : null}
-            {!rightsLoading && params.subpage == 'content' && hasPermission('update_content') ? (
+            {!rightsLoading && params.subpage == 'content' && hasPermission('edit_lecture_content') ? (
               <EditCourseStructure orgslug={params.orgslug} />
             ) : null}
             {!rightsLoading && params.subpage == 'general' && hasPermission('update') ? (

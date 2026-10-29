@@ -5,7 +5,9 @@ import { useOrg } from '@components/Contexts/OrgContext'
 import { useLHSession } from '@components/Contexts/LHSessionContext'
 import useAdminStatus from '@components/Hooks/useAdminStatus'
 import { getPortalNavigation, PortalNavigationResponse } from '@services/portal-navigation/portal-navigation'
-import { DASH_NAV_ITEM_IDS } from '@/lib/dash-nav-items'
+import { getMyAssignments } from '@services/instructors/instructors'
+import { DASH_NAV_ITEM_IDS, navItemModule } from '@/lib/dash-nav-items'
+import { useModules } from '@/lib/modules'
 
 const SYSTEM_ROLE_UUIDS = new Set([
   'role_global_admin',
@@ -19,6 +21,13 @@ interface UsePortalNavVisibilityReturn {
   /** null means "no restriction — fall back to isAdmin all-or-nothing" (custom/unknown role, or data not loaded yet). */
   visibleItemIds: Set<string> | null
   isItemVisible: (_itemId: string) => boolean
+  /**
+   * Whether the viewer has a staff dashboard at all: the legacy admin flag, or
+   * at least one visible sidebar item (e.g. an Instructor's reduced sidebar).
+   * The one rule for "staff vs learner" — the dashboard guard, the learner
+   * home's redirect and the portal's dashboard link all use it.
+   */
+  hasAnyPortalAccess: boolean
 }
 
 /**
@@ -33,6 +42,12 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
   const { isAdmin, userRoles, loading: adminStatusLoading } = useAdminStatus() as any
   const access_token = session?.data?.tokens?.access_token
   const isSuperadmin = session?.data?.user?.is_superadmin === true
+  const { modules } = useModules()
+  // Sections switched off in the .env file are gone for everyone, superadmins included.
+  const isModuleOn = (itemId: string) => {
+    const itemModule = navItemModule(itemId)
+    return !itemModule || modules[itemModule] !== false
+  }
 
   const { data: rawResponse, isLoading } = useSWR(
     access_token ? ['portal-navigation'] : null,
@@ -40,8 +55,31 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
   )
   const data: PortalNavigationResponse | undefined = rawResponse?.data ?? rawResponse
 
+  // Access follows assignment: whoever coordinates or teaches something gets
+  // its section, whatever their role's default sidebar. Academy admins
+  // already see everything, so they skip the lookup.
+  const heldRoleUuids: string[] = (userRoles || [])
+    .filter((r: any) => r.org?.id === org?.id)
+    .map((r: any) => r.role?.role_uuid)
+    .filter(Boolean)
+  const needsAssignments = !!org?.id && !isSuperadmin && !heldRoleUuids.includes('role_global_admin')
+  const { data: rawAssignments, isLoading: assignmentsLoading } = useSWR(
+    access_token && needsAssignments ? ['my-assignments', org?.id] : null,
+    () => getMyAssignments(org.id, access_token),
+    { revalidateOnFocus: false }
+  )
+  const assignments: any = rawAssignments?.data ?? rawAssignments
+  const assignedItems = useMemo(() => {
+    const items: string[] = []
+    if (assignments?.training_programs?.length) items.push('training-programs')
+    if (assignments?.offerings?.length) items.push('postgraduate-teaching')
+    // Program / cohort coordinators work in the Postgraduate Studies office pages.
+    if (assignments?.programs?.length) items.push('postgraduate')
+    return items
+  }, [assignments])
+
   const visibleItemIds = useMemo(() => {
-    if (isSuperadmin) return new Set(DASH_NAV_ITEM_IDS)
+    if (isSuperadmin) return new Set(DASH_NAV_ITEM_IDS.filter(isModuleOn))
     if (!data?.visibility || !org?.id) return null
 
     const roleUuidsHeld: string[] = (userRoles || [])
@@ -60,18 +98,26 @@ function usePortalNavVisibility(): UsePortalNavVisibilityReturn {
       const items = data.visibility[uuid] || []
       items.forEach((id: string) => union.add(id))
     })
-    return union
-  }, [data, org?.id, userRoles, isSuperadmin])
+    assignedItems.forEach((id) => union.add(id))
+    return new Set(Array.from(union).filter(isModuleOn))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, org?.id, userRoles, isSuperadmin, assignedItems, modules])
 
   const isItemVisible = (itemId: string) => {
+    if (!isModuleOn(itemId)) return false
     if (visibleItemIds === null) return isAdmin === true
     return visibleItemIds.has(itemId)
   }
 
+  const hasAnyPortalAccess = isAdmin === true || (visibleItemIds?.size ?? 0) > 0
+
   return {
-    loading: adminStatusLoading || isLoading,
+    // The route guard must wait for assignments too, or a deep link to an
+    // assigned section bounces before they arrive.
+    loading: adminStatusLoading || isLoading || assignmentsLoading,
     visibleItemIds,
     isItemVisible,
+    hasAnyPortalAccess,
   }
 }
 

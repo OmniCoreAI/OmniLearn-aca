@@ -13,12 +13,26 @@ function getSessionId(): string {
   return id
 }
 
+/**
+ * Events the API stores (apps/api src/services/analytics/events.py,
+ * ALLOWED_FRONTEND_EVENTS). Anything else is rejected with 400, so it only
+ * goes to PostHog.
+ */
+export const BACKEND_EVENTS: ReadonlySet<string> = new Set([
+  'page_view',
+  'course_view',
+  'activity_view',
+  'search_query',
+  'time_on_activity',
+])
+
 export async function trackEvent(
   eventName: string,
   orgId: number,
   properties: Record<string, unknown>,
   accessToken: string
 ): Promise<void> {
+  if (!BACKEND_EVENTS.has(eventName)) return
   try {
     const url = `${getAPIUrl()}analytics/events`
     await fetch(url, {

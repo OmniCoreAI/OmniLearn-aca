@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from src.db.users import AnonymousUser
 from src.core.events.database import get_db_session
 from src.db.trails import TrailCreate, TrailRead
 from src.security.auth import get_current_user
 from src.security.features_utils.dependencies import require_courses_feature
+from src.services.trail.overview import LearnerOverview, get_learner_overview
 from src.services.trail.trail import (
     Trail,
     add_activity_to_trail,
@@ -88,6 +90,30 @@ async def api_get_trail_by_org_id(
     return await get_user_trail_with_orgid(
         request, user, org_id=org_id, db_session=db_session
     )
+
+
+@router.get(
+    "/org/{org_id}/overview",
+    response_model=LearnerOverview,
+    summary="Get the current user's learning overview",
+    description=(
+        "The signed-in learner's own dashboard data in an organization: enrolled courses with "
+        "progress and next lesson, daily activity for the last 90 days, totals, assessments and "
+        "recent activity. Learning time is estimated from completed lessons."
+    ),
+    responses={
+        200: {"description": "Learning overview for the current user.", "model": LearnerOverview},
+        401: {"description": "Authentication required"},
+    },
+)
+async def api_get_learner_overview(
+    org_id: int,
+    user=Depends(get_current_user),
+    db_session=Depends(get_db_session),
+) -> LearnerOverview:
+    if isinstance(user, AnonymousUser):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+    return await get_learner_overview(user.id, org_id, db_session)
 
 
 @router.post(

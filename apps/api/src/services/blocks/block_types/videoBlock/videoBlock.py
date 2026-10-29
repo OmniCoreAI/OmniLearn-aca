@@ -11,6 +11,7 @@ from src.db.users import AnonymousUser, PublicUser
 from src.security.org_auth import is_org_member
 from src.security.rbac import check_resource_access, AccessAction
 from src.services.blocks.utils.upload_files import upload_file_and_return_file_object
+from src.services.courses.lecture_access import check_course_content_access
 
 
 async def create_video_block(
@@ -53,7 +54,9 @@ async def create_video_block(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
         )
-    await check_resource_access(request, db_session, current_user, course.course_uuid, AccessAction.UPDATE)
+    await check_course_content_access(
+        request, db_session, current_user, course, AccessAction.UPDATE, activity_id=activity.id
+    )
 
     # get block id
     block_uuid = str(f"block_{uuid4()}")
