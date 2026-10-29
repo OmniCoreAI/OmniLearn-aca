@@ -43,7 +43,7 @@ from src.db.users import (
 from src.db.user_organizations import UserOrganization
 from src.security.rbac.constants import ADMIN_ROLE_ID
 from src.security.security import security_hash_password, security_verify_password
-from src.services.otp.phone_token import decode_phone_token
+from src.services.users.phone import claim_verified_phone
 from src.services.security.password_validation import validate_password_complexity
 from src.services.analytics.analytics import track
 from src.services.analytics import events as analytics_events
@@ -99,27 +99,7 @@ async def create_user(
 
     # A phone confirmed by SMS code (phone_token) becomes the account's.
     if user_object.phone_token:
-        phone = decode_phone_token(user_object.phone_token)
-        if not phone:
-            raise HTTPException(
-                status_code=400,
-                detail={"code": "INVALID_PHONE_TOKEN", "message": "Verify your phone number again"},
-            )
-        holder = (await db_session.execute(select(User).where(User.phone == phone))).scalars().first()
-        if holder and holder.phone_verified:
-            raise HTTPException(
-                status_code=409,
-                detail={"code": "PHONE_IN_USE", "message": "This phone number is already used by another account"},
-            )
-        if holder:
-            # Unverified (copied from old free-text data): whoever proves the
-            # number by SMS gets it. Flushed now so the unique index never
-            # sees both accounts holding it.
-            holder.phone = None
-            db_session.add(holder)
-            await db_session.flush()
-        user.phone = phone
-        user.phone_verified = True
+        await claim_verified_phone(db_session, user, user_object.phone_token)
 
     # Check if Organization exists
     statement = select(Organization).where(Organization.id == org_id)
